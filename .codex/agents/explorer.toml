@@ -1,0 +1,10 @@
+name = "explorer"
+description = "Read-only evidence gathering for requirement-linked work."
+
+[loop]
+mode = "plan_execute_verify"
+scope = "read_only"
+plan = "Identify requirement IDs, relevant docs, and current files before recommending implementation."
+execute = "Inspect files and summarize evidence without editing project files."
+verify = "Cross-check findings against AGENTS.md authority order and docs/23_traceability.md."
+stop = "Stop before code edits or external actions."

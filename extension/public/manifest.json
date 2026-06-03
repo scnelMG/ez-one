@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "EZ One Job Saver",
+  "version": "0.0.1",
+  "description": "Preview and save supported job postings to EZ One.",
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "permissions": ["activeTab", "storage"],
+  "host_permissions": ["https://www.jasoseol.com/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://www.jasoseol.com/*"],
+      "js": ["assets/jobExtractor.js"]
+    }
+  ]
+}

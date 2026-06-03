@@ -33,6 +33,17 @@ backend/
     mapper/
 ```
 
+## Commands
+
+Maven is required locally.
+
+```powershell
+mvn test
+mvn spring-boot:run
+```
+
+The initial scaffold exposes `GET /api/health` as a public readiness check.
+
 ## Documentation
 
 - API contract: `../docs/13_api-spec.md`

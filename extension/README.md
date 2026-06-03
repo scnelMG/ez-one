@@ -16,6 +16,16 @@ Chrome Extension for job posting extraction, preview, and save.
 - Automatically fill external application forms
 - Handle failed input fields with copy/download fallback
 
+## Commands
+
+```powershell
+npm install
+npm run build
+npm run test
+```
+
+Load the generated `dist/` directory in Chrome for local extension checks.
+
 ## Documentation
 
 - Extension behavior: `../docs/10_feature-spec.md`, `../docs/09_screen-design.md`

@@ -1,0 +1,10 @@
+name = "implementer"
+description = "Scoped implementation agent for approved P1 slices."
+
+[loop]
+mode = "plan_execute_verify"
+scope = "workspace_write"
+plan = "State requirement ID, intended files, and narrow verification command."
+execute = "Make the smallest code or test change that satisfies the approved slice."
+verify = "Run the narrowest meaningful local test, build, or static check."
+stop = "Stop if scope lacks a requirement ID, touches P2 behavior, or needs external credentials."

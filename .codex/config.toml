@@ -1,0 +1,11 @@
+[features]
+multi_agent = true
+
+[agents.explorer]
+layer = ".codex/agents/explorer.toml"
+
+[agents.reviewer]
+layer = ".codex/agents/reviewer.toml"
+
+[agents.implementer]
+layer = ".codex/agents/implementer.toml"
