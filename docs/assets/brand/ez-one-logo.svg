@@ -1,38 +1,29 @@
-<svg width="1536" height="864" viewBox="0 0 1536 864" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+<svg width="1536" height="864" viewBox="0 0 1536 864" preserveAspectRatio="xMidYMid meet" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
   <title id="title">EZ-ONE logo</title>
   <desc id="desc">EZ-ONE wordmark with a document check icon and Korean tagline.</desc>
   <defs>
-    <linearGradient id="purple" x1="120" y1="190" x2="1390" y2="610" gradientUnits="userSpaceOnUse">
+    <linearGradient id="brandPurple" x1="188" y1="235" x2="1350" y2="620" gradientUnits="userSpaceOnUse">
       <stop stop-color="#6D4DFF"/>
-      <stop offset="1" stop-color="#7C5CFF"/>
+      <stop offset="1" stop-color="#7A5CFF"/>
     </linearGradient>
-    <linearGradient id="dark" x1="460" y1="250" x2="820" y2="570" gradientUnits="userSpaceOnUse">
+    <linearGradient id="brandDark" x1="470" y1="290" x2="790" y2="540" gradientUnits="userSpaceOnUse">
       <stop stop-color="#111827"/>
       <stop offset="1" stop-color="#0B1020"/>
     </linearGradient>
-    <filter id="softShadow" x="80" y="160" width="1380" height="560" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#111827" flood-opacity="0.14"/>
-    </filter>
   </defs>
 
   <rect width="1536" height="864" fill="#FFFFFF"/>
 
-  <g filter="url(#softShadow)">
-    <path d="M210 323C210 278.817 245.817 243 290 243H397L478 324V525C478 569.183 442.183 605 398 605H290C245.817 605 210 569.183 210 525V323Z" stroke="url(#purple)" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M397 244V311C397 323.15 406.85 333 419 333H477" stroke="url(#purple)" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M276 483L322 529L391 460" stroke="url(#purple)" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+  <g stroke="url(#brandPurple)" stroke-width="24" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M177 332C177 285.056 215.056 247 262 247H359L446 334V535C446 581.944 407.944 620 361 620H262C215.056 620 177 581.944 177 535V332Z"/>
+    <path d="M359 248V315C359 331.569 372.431 345 389 345H445"/>
+    <path d="M245 485L307 547L382 466"/>
   </g>
 
-  <g filter="url(#softShadow)">
-    <path d="M579 342H691C710.33 342 726 326.33 726 307C726 287.67 710.33 272 691 272H533C513.67 272 498 287.67 498 307V556C498 575.33 513.67 591 533 591H694C713.33 591 729 575.33 729 556C729 536.67 713.33 521 694 521H579V458H663C682.33 458 698 442.33 698 423C698 403.67 682.33 388 663 388H579V342Z" fill="url(#dark)"/>
-    <path d="M759 272H903C922.33 272 938 287.67 938 307V316C938 323.956 935.287 331.673 930.308 337.884L810 521H907C926.33 521 942 536.67 942 556C942 575.33 926.33 591 907 591H758C738.67 591 723 575.33 723 556V548C723 540.011 725.735 532.265 730.75 526.043L851 342H759C739.67 342 724 326.33 724 307C724 287.67 739.67 272 759 272Z" fill="url(#dark)"/>
-    <rect x="944" y="434" width="112" height="52" rx="22" fill="url(#dark)"/>
-    <path d="M1168 274C1252.5 274 1315 337.247 1315 431.5C1315 525.753 1252.5 589 1168 589C1083.5 589 1021 525.753 1021 431.5C1021 337.247 1083.5 274 1168 274ZM1168 344C1126.03 344 1099 378.664 1099 431.5C1099 484.336 1126.03 519 1168 519C1209.97 519 1237 484.336 1237 431.5C1237 378.664 1209.97 344 1168 344Z" fill="url(#purple)"/>
-    <path d="M1342 306C1342 287.222 1357.22 272 1376 272H1394C1406.46 272 1417.91 278.823 1423.86 289.771L1510 448V306C1510 287.222 1525.22 272 1544 272H1553C1571.78 272 1587 287.222 1587 306V557C1587 575.778 1571.78 591 1553 591H1535C1522.54 591 1511.09 584.177 1505.14 573.229L1419 415V557C1419 575.778 1403.78 591 1385 591H1376C1357.22 591 1342 575.778 1342 557V306Z" fill="url(#purple)" transform="translate(-150 0)"/>
-    <path d="M1404 342H1517C1536.33 342 1552 326.33 1552 307C1552 287.67 1536.33 272 1517 272H1358C1338.67 272 1323 287.67 1323 307V556C1323 575.33 1338.67 591 1358 591H1519C1538.33 591 1554 575.33 1554 556C1554 536.67 1538.33 521 1519 521H1404V458H1488C1507.33 458 1523 442.33 1523 423C1523 403.67 1507.33 388 1488 388H1404V342Z" fill="url(#purple)" transform="translate(-20 0)"/>
-  </g>
+  <text x="505" y="575" fill="url(#brandDark)" font-family="Arial Black, Arial, sans-serif" font-size="210" font-weight="900" letter-spacing="8">EZ-</text>
+  <text x="885" y="575" fill="url(#brandPurple)" font-family="Arial Black, Arial, sans-serif" font-size="210" font-weight="900" letter-spacing="8">ONE</text>
 
-  <text x="768" y="720" text-anchor="middle" font-family="Pretendard, Noto Sans KR, Arial, sans-serif" font-size="66" font-weight="800" fill="#111827">
+  <text x="768" y="720" text-anchor="middle" font-family="Pretendard, Noto Sans KR, Malgun Gothic, Arial, sans-serif" font-size="64" font-weight="800" fill="#111827">
     쉽게 <tspan fill="#6D4DFF">지원(Z-ONE)</tspan>하자
   </text>
 </svg>
