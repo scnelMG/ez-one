@@ -1,18 +1,50 @@
-## Summary
+## 요약
 
 -
 
-## Related Documents
+## 요구사항 / 범위
 
-- Requirements:
+- 요구사항 ID:
+- 범위: P1 / P2 / IA-only / docs / chore
+- 담당자:
+- 리뷰어:
+
+## API 계약
+
+- 엔드포인트:
+- 요청 DTO:
+- 응답 DTO:
+- 오류 케이스:
+- 소유권 검증 규칙:
+
+## 관련 문서
+
+- 요구사항:
 - API:
 - ERD:
-- Test Plan:
+- 테스트 계획:
+- 화면:
 
-## Checklist
+## 체크리스트
 
-- [ ] I updated API documentation for API changes.
-- [ ] I updated ERD/migration documentation for DB changes.
-- [ ] I added or updated tests for changed behavior.
-- [ ] I checked that secrets and real personal data are not included.
-- [ ] I verified affected app commands locally.
+- [ ] 요구사항 ID와 범위가 명확하다.
+- [ ] P2 또는 IA-only 동작을 활성 P1 동작으로 승격하지 않았다.
+- [ ] 프론트/백엔드가 함께 바뀌는 경우 API 계약을 합의했다.
+- [ ] API 변경 시 API 문서를 갱신했다.
+- [ ] DB 변경 시 ERD/마이그레이션 문서를 갱신했다.
+- [ ] 화면 또는 테스트 기준이 바뀐 경우 관련 문서를 갱신했다.
+- [ ] 변경된 동작에 대한 테스트를 추가하거나 갱신했다.
+- [ ] secrets, 실제 토큰, 개인정보가 포함되지 않았는지 확인했다.
+- [ ] 영향받는 앱 명령을 로컬에서 검증했다.
+
+## 검증
+
+-
+
+## 스크린샷 / 참고
+
+-
+
+## 후속 작업
+
+-
