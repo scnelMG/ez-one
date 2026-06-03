@@ -1,0 +1,39 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# Java / Spring
+backend/build/
+backend/target/
+backend/.gradle/
+backend/out/
+
+# Node / Vue / Extension
+node_modules/
+frontend/dist/
+frontend/.vite/
+extension/dist/
+
+# Test / Coverage
+coverage/
+.nyc_output/
+
+# Local files
+*.local
+tmp/
+temp/
