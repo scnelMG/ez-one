@@ -1,4 +1,4 @@
-# 30. Agent Workflow
+# 31. Agent Workflow
 
 This scaffold gives each project agent a bounded plan-execute-verify loop while keeping final scope and completion decisions with the root Codex session.
 
