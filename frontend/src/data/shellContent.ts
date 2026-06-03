@@ -3,41 +3,47 @@ export interface ShellCardContent {
   title: string
   body: string
   status: string
+  meta?: string
 }
 
 export const dashboardCards: ShellCardContent[] = [
   {
     kicker: 'DASH-001',
     title: '지원 현황 요약',
-    body: '지원 완료, 임박한 마감, 진행 중 작업, 저장한 공고 현황을 이곳에 모읍니다.',
-    status: '준비중'
+    body: '지원 완료 3건, 진행 중 5건, 저장한 공고 12건을 상태별로 묶어 보여줍니다.',
+    status: 'P1',
+    meta: '이번 주 기준'
   },
   {
-    kicker: 'JOB-001',
-    title: '공고함 미리보기',
-    body: '저장한 공고를 마감 임박 순으로 보여주고 각 지원 워크스페이스로 연결합니다.',
-    status: '준비중'
+    kicker: 'JOB-012',
+    title: '오늘 마감',
+    body: '마감이 임박한 공고를 가장 먼저 보여주고 공고함 필터로 바로 연결합니다.',
+    status: 'D-0',
+    meta: '2건'
   },
   {
     kicker: 'REC-001',
     title: '추천 공고',
-    body: 'P2 수집원을 활성화하지 않고 프로필 기반 추천 공고 영역만 준비합니다.',
-    status: '준비중'
+    body: '온보딩 선호 직무와 기술 스택을 기준으로 추천 후보만 표시합니다.',
+    status: 'P1',
+    meta: '프로필 기반'
   }
 ]
 
 export const basketCards: ShellCardContent[] = [
   {
     kicker: 'JOB-001',
-    title: '저장 공고 목록',
-    body: '회사, 직무, 마감일, 출처, 지원 상태 열을 사용할 수 있도록 자리를 잡아둡니다.',
-    status: '비어있음'
+    title: '공고 목록',
+    body: '회사, 직무, 지원 상태, 마감일, 저장 출처를 한 줄에서 비교합니다.',
+    status: '12건',
+    meta: '마감 임박순'
   },
   {
-    kicker: 'COMMON-001',
-    title: '필터와 정렬',
-    body: '검색어, 지원 상태, 마감일 정렬은 API 슬라이스 구현 시 연결합니다.',
-    status: '대기'
+    kicker: 'JOB-014',
+    title: '상태 필터',
+    body: '전체, 진행 중, 지원 완료, 미지원 상태로 공고함을 빠르게 좁힙니다.',
+    status: 'P1',
+    meta: '4개 상태'
   }
 ]
 
@@ -45,34 +51,36 @@ export const workspaceCards: ShellCardContent[] = [
   {
     kicker: 'WS-001',
     title: '워크스페이스 헤더',
-    body: '공고, 회사, 마감일, 현재 지원 상태가 상단에 배치됩니다.',
-    status: '준비중'
+    body: '회사명, 직무, 마감일, 지원 상태와 공고 원문 링크를 상단에 고정합니다.',
+    status: 'P1'
   },
   {
     kicker: 'WS-002',
-    title: '자기소개서 작성 영역',
-    body: '문항별 초안, 저장 상태, 버전 관리 동작을 연결할 자리를 준비합니다.',
-    status: '준비중'
+    title: '자기소개서 캔버스',
+    body: '문항별 초안과 저장 상태를 한 화면에서 관리하는 작성 영역입니다.',
+    status: 'P1'
   },
   {
     kicker: 'REF-001',
     title: '참고자료 보드',
-    body: 'JD, 뉴스, DART, 인재상, 프롬프트, 메모 참고자료는 P1에서 수동 입력으로 둡니다.',
-    status: '준비중'
+    body: 'JD, 뉴스, DART, 인재상, 프롬프트, 메모를 수동 입력 기준으로 정리합니다.',
+    status: 'P1'
   }
 ]
 
 export const documentProfileCards: ShellCardContent[] = [
   {
     kicker: 'PROFILE-001',
-    title: '재사용 서류 정보',
-    body: '학력, 경력, 프로젝트, 자격증, 수상, 커스텀 항목을 이곳에서 관리합니다.',
-    status: '준비중'
+    title: '반복 서류 정보',
+    body: '학력, 경력, 프로젝트, 자격증, 수상, 활동을 섹션별로 관리합니다.',
+    status: 'P1'
   },
   {
     kicker: 'PROFILE-001',
     title: '커스텀 항목',
-    body: '기업별 반복 입력 항목을 준비하되 확장 프로그램 자동 입력은 P2로 남깁니다.',
-    status: '준비중'
+    body: '기업별 반복 질문에 맞춰 필요한 입력 항목을 직접 추가합니다.',
+    status: 'P1'
   }
 ]
+
+export const p2ReservedItems = ['과거 지원 이력', '알림 센터', '주간 캘린더', '고객지원']

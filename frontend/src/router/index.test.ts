@@ -13,4 +13,13 @@ describe('router', () => {
     expect(routeNames).toContain('recommendations')
     expect(routeNames).toContain('notion-settings')
   })
+
+  it('does not activate P2-only route shells', () => {
+    const routePaths = router.getRoutes().map((route) => route.path)
+
+    expect(routePaths).not.toContain('/history')
+    expect(routePaths).not.toContain('/alerts')
+    expect(routePaths).not.toContain('/basket/calendar')
+    expect(routePaths).not.toContain('/mypage/support')
+  })
 })

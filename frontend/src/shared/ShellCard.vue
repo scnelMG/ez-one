@@ -6,6 +6,7 @@
     </div>
     <h2>{{ title }}</h2>
     <p>{{ body }}</p>
+    <strong v-if="meta" class="shell-card-meta">{{ meta }}</strong>
   </article>
 </template>
 
@@ -15,5 +16,6 @@ defineProps<{
   title: string
   body: string
   status: string
+  meta?: string
 }>()
 </script>

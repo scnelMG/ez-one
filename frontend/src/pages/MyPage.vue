@@ -3,17 +3,21 @@
     <PageHeader
       eyebrow="MY-001 / MY-003"
       title="마이페이지"
-      description="계정 정보와 선호 정보 수정은 온보딩과 같은 프로필 모델을 사용합니다."
+      description="계정 정보와 온보딩 선호 정보를 같은 프로필 모델로 확인하고 수정합니다."
     />
 
-    <section class="form-shell" aria-label="마이페이지 화면 골격">
+    <section class="form-shell" aria-label="마이페이지 기본 정보">
       <label>
         닉네임
         <input value="EZ One 사용자" readonly />
       </label>
       <label>
-        희망 근무 지역
-        <input value="서울, 원격" readonly />
+        로그인 방식
+        <input value="Google" readonly />
+      </label>
+      <label>
+        선호 근무 지역
+        <input value="서울, 경기" readonly />
       </label>
     </section>
   </AppLayout>

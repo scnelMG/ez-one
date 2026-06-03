@@ -8,6 +8,7 @@ const makeRouter = () =>
     routes: [
       { path: '/', component: MainPage },
       { path: '/basket', component: { template: '<div>공고함</div>' } },
+      { path: '/workspaces/:workspaceId', component: { template: '<div>워크스페이스</div>' } },
       { path: '/recommendations', component: { template: '<div>추천공고</div>' } },
       { path: '/document-profile', component: { template: '<div>서류정보</div>' } },
       { path: '/mypage/notion', component: { template: '<div>노션</div>' } }
@@ -15,7 +16,7 @@ const makeRouter = () =>
   })
 
 describe('MainPage', () => {
-  it('renders the dashboard route shell', async () => {
+  it('renders the Korean P1 dashboard route shell', async () => {
     const router = makeRouter()
     router.push('/')
     await router.isReady()
@@ -27,6 +28,8 @@ describe('MainPage', () => {
     })
 
     expect(wrapper.text()).toContain('지원 현황 대시보드')
+    expect(wrapper.text()).toContain('오늘 마감')
+    expect(wrapper.text()).toContain('공고함')
     expect(wrapper.text()).toContain('DASH-001')
     expect(wrapper.text()).toContain('JOB-001')
     expect(wrapper.text()).toContain('REC-001')
