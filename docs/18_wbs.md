@@ -52,3 +52,28 @@
 | DEV-EXT-002 | 확장 프로그램 서류 입력 보조 고도화 | 공고 저장 안정화 이후 |
 | DEV-MM-001 | Mattermost raw 수집과 후보화 | Should/P2 |
 | DEV-P2-001 | 기업 정보 hover/자동 참고자료/과거 지원 통계 | P2/P3 |
+## 2026-06-04 진행 기록
+
+### 완료된 개발 단위
+
+| ID | 작업 | 상태 | 비고 |
+| --- | --- | --- | --- |
+| DEV-BASE-001 | 프로젝트 스캐폴드와 로컬 실행 기준 | 완료 | `main` 반영 |
+| DEV-AUTH-001 | Google 로그인 구현 | 완료 | `AUTH-001`, token 발급, refresh token hash 저장 |
+| DEV-FE-SHELL-001 | 한국어 프론트 route shell | 완료 | P1 route shell 완성, P2 route 미활성 |
+
+### 다음으로 진행할 작업
+
+| 우선순위 | ID | 작업 | 이유 |
+| --- | --- | --- | --- |
+| 1 | DEV-ONB-001 | 온보딩 프로필 저장/건너뛰기 | 로그인 직후 P1 흐름이며 추천공고/마이페이지/워크스페이스 기본값의 기반 |
+| 2 | DEV-JOB-001 | 공고함 저장/중복 처리 | P1 핵심 루프의 공고 저장 진입점 |
+| 3 | DEV-JOB-002 | 저장 공고별 워크스페이스 자동 생성 | 공고 저장 이후 자기소개서/참고자료 작업으로 이어지는 연결부 |
+
+DEV-ONB-001 시작 기준:
+
+- 요구사항 ID: `ONB-001`, `ONB-002`, `AUTH-013`, `AUTH-014`, `MY-002`, `MY-003`
+- API 계약: `GET /api/me/profile`, `PUT /api/me/profile`
+- DB: `user_profiles`
+- 프론트 범위: `/onboarding`, `/mypage`의 프로필 입력 모델 공유
+- TDD 시작점: backend service/controller test, frontend profile API client/store test

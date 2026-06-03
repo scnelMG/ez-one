@@ -130,3 +130,22 @@ PR은 한 번에 리뷰할 수 있을 만큼 작게 만든다.
 | `reviewer` | diff, 범위, 테스트, P1/P2 경계를 읽기 전용으로 검토한다 |
 
 최종 범위와 완료 판정은 루트 Codex 또는 사람 팀이 결정한다.
+# 2026-06-04 커밋 메시지 규칙
+
+커밋 메시지는 한글로 작성한다.
+
+규칙:
+
+- 형식은 `<유형>(<범위>): <한글 요약>`을 사용한다.
+- 유형은 `feat`, `fix`, `docs`, `refactor`, `test`, `chore` 중 하나를 사용한다.
+- 범위는 `auth`, `onboarding`, `dashboard`, `basket`, `workspace`, `references`, `document-profile`, `recommendations`, `notion`, `extension`, `infra`, `docs`처럼 작업 영역을 짧게 쓴다.
+- 요약은 팀원이 히스토리만 보고 변경 의도를 이해할 수 있게 한국어로 쓴다.
+- 이미 원격에 올라간 커밋은 히스토리 보호를 위해 메시지만 바꾸려고 강제 푸시하지 않는다.
+
+예시:
+
+```text
+docs(readme): 루트 README를 제품 소개 중심으로 정리
+feat(auth): Google 로그인 성공 흐름 구현
+test(router): P2 전용 라우트 미등록 검증 추가
+```

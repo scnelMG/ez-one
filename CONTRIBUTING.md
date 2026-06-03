@@ -41,26 +41,28 @@ Do not start from memory when the docs define the behavior.
 
 Use lowercase English names and hyphens.
 
-## Commit Messages
+## 커밋 메시지
 
-Format:
+커밋 메시지는 한글로 작성한다. 이 프로젝트는 한국어 문서와 한국어 웹서비스를 기준으로 협업하므로, 히스토리만 읽어도 팀원이 변경 의도를 바로 이해할 수 있어야 한다.
+
+형식:
 
 ```text
-<type>(<scope>): <summary>
+<유형>(<범위>): <한글 요약>
 ```
 
-Allowed types:
+유형은 아래 값을 사용한다.
 
-| Type | Use |
+| 유형 | 사용 시점 |
 | --- | --- |
-| `feat` | New requirement-facing behavior |
-| `fix` | Bug fix |
-| `docs` | Documentation only |
-| `refactor` | Internal change without behavior change |
-| `test` | Test addition or fix |
-| `chore` | Build, config, dependency, maintenance |
+| `feat` | 요구사항에 연결된 새 기능 |
+| `fix` | 버그 수정 |
+| `docs` | 문서 변경 |
+| `refactor` | 동작 변경 없는 내부 구조 개선 |
+| `test` | 테스트 추가 또는 수정 |
+| `chore` | 빌드, 설정, 의존성, 유지보수 |
 
-Recommended scopes:
+권장 범위:
 
 ```text
 auth
@@ -77,18 +79,18 @@ infra
 docs
 ```
 
-Examples:
+예시:
 
 ```text
-feat(auth): add Google login callback
-feat(basket): create workspace when saving job
-fix(workspace): block access to another user's draft
-docs(api): update basket job response
-test(notion): cover job-only sync failure log
-chore(frontend): configure Vite aliases
+feat(auth): Google 로그인 성공 흐름 구현
+feat(basket): 공고 저장 시 워크스페이스 생성
+fix(workspace): 다른 사용자의 초안 접근 차단
+docs(api): 공고함 응답 계약 갱신
+test(notion): 공고 전용 동기화 실패 로그 검증
+chore(frontend): Vite 별칭 설정
 ```
 
-Keep one commit focused on one requirement, bug, or mechanical change.
+좋은 커밋 메시지는 무엇을 바꿨는지보다 왜 필요한 변경인지 이해할 수 있게 쓴다. 커밋 하나는 하나의 요구사항, 버그, 문서 변경, 또는 기계적 변경에 집중한다.
 
 ## Pull Request Checklist
 

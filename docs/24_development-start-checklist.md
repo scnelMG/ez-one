@@ -29,3 +29,36 @@
 ## 현재 제외
 
 구현 결과, 테스트 실행 결과, 트러블슈팅, 회고는 개발 후 작성한다.
+## 2026-06-04 개발 진행 상태
+
+현재 `main`에는 초기 스캐폴드, 협업 규칙 문서, AUTH-001 Google 로그인 구현, 한국어 프론트 route shell이 반영되어 있다.
+
+### 완료
+
+| 항목 | 상태 | 근거 |
+| --- | --- | --- |
+| 프로젝트 스캐폴드 | 완료 | `backend`, `frontend`, `extension`, `docs`, `infra` 기본 구조 생성 |
+| 에이전트 협업 규칙 | 완료 | `docs/30_team-collaboration-workflow.md`, `docs/31_agent-workflow.md` |
+| AUTH-001 Google 로그인 | 완료 | `POST /api/auth/google`, JWT 발급, refresh token hash 저장, README/Notion 기록 |
+| 프론트 route shell | 완료 | `/login`, `/onboarding`, `/`, `/basket`, `/workspaces/:workspaceId`, `/document-profile`, `/recommendations`, `/mypage`, `/mypage/notion` |
+| P2 route 비활성 경계 | 완료 | `/history`, `/alerts`, `/basket/calendar`, `/mypage/support` 미등록 테스트 추가 |
+
+### 검증
+
+| 명령 | 결과 |
+| --- | --- |
+| `cd frontend && npm run test` | 통과: 3 files, 4 tests |
+| `cd frontend && npm run build` | 통과 |
+| `rg "path: '/history'|path: '/alerts'|path: '/basket/calendar'|path: '/mypage/support'" frontend/src` | 결과 없음 |
+| `rg "�|怨|吏|異|\\?쒕|\\?몄|\\?⑤|\\?" frontend/src` | 결과 없음 |
+
+### 다음 작업 후보
+
+다음 P1 구현은 `DEV-ONB-001`을 추천한다. 이유는 실제 Google 로그인 이후 첫 사용자 흐름이 온보딩이고, 추천공고/마이페이지/워크스페이스 기본값이 모두 프로필 데이터를 기준으로 이어지기 때문이다.
+
+시작 전 계약:
+
+- 요구사항: `ONB-001`, `ONB-002`, `AUTH-013`, `AUTH-014`, `MY-002`, `MY-003`
+- API: `GET /api/me/profile`, `PUT /api/me/profile`
+- DB: `user_profiles`
+- 테스트 우선순위: 프로필 조회 empty/default, 저장 validation, 사용자 ownership, 프론트 API client/store 상태
