@@ -1,9 +1,11 @@
 package com.ezone.backend.security;
 
 import com.ezone.backend.domain.UserAccount;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.stereotype.Component;
 
 @Component
+@ConditionalOnMissingBean(AuthTokenIssuer.class)
 public class UnconfiguredAuthTokenIssuer implements AuthTokenIssuer {
 
     @Override
