@@ -1,0 +1,13 @@
+package com.ezone.backend.security;
+
+import com.ezone.backend.domain.UserAccount;
+import org.springframework.stereotype.Component;
+
+@Component
+public class UnconfiguredAuthTokenIssuer implements AuthTokenIssuer {
+
+    @Override
+    public IssuedTokenPair issueFor(UserAccount user) {
+        throw new IllegalStateException("Auth token issuer is not configured yet.");
+    }
+}
