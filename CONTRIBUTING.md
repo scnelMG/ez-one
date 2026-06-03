@@ -27,6 +27,7 @@ Do not start from memory when the docs define the behavior.
 - Prefer small PRs that can be reviewed in one sitting.
 - Do not mix unrelated backend, frontend, extension, and docs changes unless they belong to the same requirement or vertical slice.
 - Delete merged branches after merge.
+- 2인 팀 협업 규칙은 `docs/30_team-collaboration-workflow.md`를 따른다.
 
 ## Branch Rules
 
@@ -94,8 +95,10 @@ Keep one commit focused on one requirement, bug, or mechanical change.
 Every PR should include:
 
 - Requirement ID
+- 담당자와 리뷰어
 - Scope: P1, P2, IA-only, docs, or chore
 - Summary of behavior changes
+- 프론트/백엔드가 함께 바뀌는 경우 API 계약 메모
 - Screenshots or screen notes for UI changes
 - API/DB/doc changes
 - Tests run
