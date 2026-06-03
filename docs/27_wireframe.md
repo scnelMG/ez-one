@@ -1,6 +1,6 @@
-﻿# 와이어프레임
+# 와이어프레임
 
-Source of truth: Notion `27. 와이어프레임 정리 - 09로 통합됨`
+기준 원본: Notion `27. 와이어프레임 정리 - 09로 통합됨`
 
 이 문서는 별도 기준 문서가 아니라 `docs/09_screen-design.md`의 보조 문서다. 화면과 IA 기준은 `docs/09_screen-design.md`로 통합한다.
 

@@ -1,61 +1,61 @@
-# Glossary
+# 00. 용어사전
 
-Source of truth: Notion `00. 용어사전`
+기준 원본: Notion `00. 용어사전`
 
-This document defines the terms used across requirements, API, ERD, screen design, and tests. Use these terms consistently in code, UI copy, API names, and database comments unless a later architecture decision changes them.
+이 문서는 요구사항, API, ERD, 화면설계, 테스트에서 사용하는 용어를 정의한다. 이후 아키텍처 결정으로 변경되지 않는 한 코드, UI 문구, API 이름, DB 주석에서 이 용어를 일관되게 사용한다.
 
-## Product Terms
+## 제품 용어
 
-| Term | Definition | Example | Related docs |
+| 용어 | 정의 | 예시 | 관련 문서 |
 | --- | --- | --- | --- |
-| EZ One | Job application workspace service for saving postings and preparing applications. | Service name shown in docs and UI | `docs/02_project_plan.md` |
-| 공고 | A job posting managed inside EZ One. It may come from an external page, recommendation, or manual input. | Backend developer posting from Jasoseol.com | `JOB-001`, `jobs` |
-| 저장 공고 | A posting saved by the user and managed in the basket. | A starred recommendation saved to the basket | `JOB-001`, `basket_jobs` |
-| 공고 장바구니 | The user's preparation queue for saved postings. It shows company, role, deadline, status, and workspace entry. | Basket row for company A/backend role | `DASH-001`, `JOB-001` |
-| 지원 워크스페이스 | Posting-specific workspace automatically created when a posting is saved. | Workspace for company A/backend role | `JOB-002`, `WS-001` |
-| 도화지 | Workspace writing area for essay drafts, notes, text/image content, character count, and auto-save state. | Essay draft canvas for a posting | `WS-002`, `essay_drafts` |
-| 자소서 버전 | Explicit essay version created by the user for comparison or history. | Version 1 and version 2 of the same answer | `WS-004` |
-| 참고자료 | Material used while writing, such as JD, news, DART, talent profile, memo, or custom board content. | JD note saved in a workspace | `REF-001` |
-| 사이드 패널 | Workspace panel that lets users read saved reference material while writing on the canvas. | Reference panel beside the canvas | `REF-002`, `UC-10` |
-| 서류 입력 정보 | User-level reusable application form data. Includes basic info, education, career, projects, certificates/language, awards/activities, and custom fields. | Education and project data reused for application forms | `PROFILE-001` |
-| 온보딩 정보 | Initial preference data used for recommendations and personalization. | Preferred role, company type, region, tech stack, SSAFY status | `ONB-001`, `ONB-002` |
-| 대시보드 | Main-page summary area that routes users to basket filters or sorting. | Total applications, urgent deadlines, in progress, not applied | `DASH-001` |
+| EZ One | 채용 공고 저장과 지원 준비를 돕는 지원 워크스페이스 서비스 | 문서와 UI에 표시되는 서비스명 | `docs/02_project_plan.md` |
+| 공고 | EZ One에서 관리하는 채용 공고. 외부 페이지, 추천, 직접 입력에서 들어올 수 있다. | Jasoseol.com의 백엔드 개발자 공고 | `JOB-001`, `jobs` |
+| 저장 공고 | 사용자가 저장해 장바구니에서 관리하는 공고 | 추천 공고에서 별표로 저장한 공고 | `JOB-001`, `basket_jobs` |
+| 공고 장바구니 | 저장 공고를 준비하기 위한 사용자별 작업 목록. 회사, 직무, 마감일, 상태, 워크스페이스 진입점을 보여준다. | A기업 백엔드 직무 장바구니 행 | `DASH-001`, `JOB-001` |
+| 지원 워크스페이스 | 공고를 저장할 때 자동 생성되는 공고별 지원 준비 공간 | A기업 백엔드 직무 워크스페이스 | `JOB-002`, `WS-001` |
+| 도화지 | 워크스페이스 안에서 자소서 초안, 메모, 텍스트/이미지, 글자 수, 자동 저장 상태를 다루는 작성 영역 | 특정 공고의 자소서 초안 작성 화면 | `WS-002`, `essay_drafts` |
+| 자소서 버전 | 비교나 이력 관리를 위해 사용자가 명시적으로 생성하는 자소서 버전 | 같은 답변의 1번 버전과 2번 버전 | `WS-004` |
+| 참고자료 | JD, 뉴스, DART, 인재상, 메모, 커스텀 보드 등 작성 중 참고하는 자료 | 워크스페이스에 저장한 JD 메모 | `REF-001` |
+| 사이드 패널 | 도화지에서 작성하면서 저장된 참고자료를 함께 읽는 워크스페이스 패널 | 도화지 옆 참고자료 패널 | `REF-002`, `UC-10` |
+| 서류 입력 정보 | 지원서 입력에 재사용하는 사용자 단위 데이터. 기본정보, 학력, 경력, 프로젝트, 자격/어학, 수상/활동, 커스텀 항목을 포함한다. | 지원서 입력에 재사용하는 학력과 프로젝트 정보 | `PROFILE-001` |
+| 온보딩 정보 | 추천과 개인화에 사용하는 초기 선호 데이터 | 희망 직무, 기업 유형, 지역, 기술스택, SSAFY 여부 | `ONB-001`, `ONB-002` |
+| 대시보드 | 메인 페이지에서 지원 현황을 요약하고 장바구니 필터/정렬로 연결하는 영역 | 총 지원, 마감 임박, 진행 중, 지원 전 카드 | `DASH-001` |
 
-## Status Terms
+## 상태 용어
 
-| Term | Definition | Allowed values or rule |
+| 용어 | 정의 | 허용 값 또는 규칙 |
 | --- | --- | --- |
-| 지원 상태 | Preparation/application state of a saved posting. | `READY`, `IN_PROGRESS`, `COMPLETED`, `NOT_APPLIED` |
-| 지원 전 | User has saved the posting but has not started preparation. | Maps to `READY` |
-| 진행 중 | User has started workspace or preparation work. | Maps to `IN_PROGRESS` |
-| 제출 완료 | User marked the application as submitted/completed. | Maps to `COMPLETED` |
-| 미지원 | Posting was not applied to, or an incomplete posting passed its deadline. | Maps to `NOT_APPLIED` |
-| 마감 임박 | Basket/dashboard sorting condition for postings near deadline. | Sort by deadline ascending |
+| 지원 상태 | 저장 공고의 준비/지원 상태 | `READY`, `IN_PROGRESS`, `COMPLETED`, `NOT_APPLIED` |
+| 지원 전 | 공고를 저장했지만 아직 준비를 시작하지 않은 상태 | `READY`에 매핑 |
+| 진행 중 | 워크스페이스를 열었거나 지원 준비를 시작한 상태 | `IN_PROGRESS`에 매핑 |
+| 제출 완료 | 사용자가 지원을 제출/완료로 표시한 상태 | `COMPLETED`에 매핑 |
+| 미지원 | 지원하지 않았거나 마감이 지난 미완료 공고 상태 | `NOT_APPLIED`에 매핑 |
+| 마감 임박 | 장바구니/대시보드에서 마감일이 가까운 공고를 정렬하는 조건 | 마감일 오름차순 정렬 |
 
-## Integration Terms
+## 연동 용어
 
-| Term | Definition | MVP boundary |
+| 용어 | 정의 | MVP 경계 |
 | --- | --- | --- |
-| Chrome Extension | Browser extension used to extract and save posting data from supported job pages. | P1 starts with Jasoseol.com posting save |
-| Jasoseol.com | First supported source for extension posting save and recommendation save flow. | P1 source |
-| 추천 공고 | Posting recommended from onboarding/profile criteria or later collection sources. | P1 supports Jasoseol.com-based star-to-basket |
-| Mattermost 추천 | SSAFY/community recommendation path based on Mattermost data. | P2 collection/candidate flow |
-| Notion 동기화 | External sync from EZ One to the user's Notion workspace. | P1 is `JOB_ONLY` |
-| `JOB_ONLY` | Notion sync scope that sends saved posting data only. | MVP default |
-| 확장 동기화 | Notion sync including job, essay, and canvas data. | P2, not P1 |
+| Chrome Extension | 지원하는 채용 페이지에서 공고 데이터를 추출하고 저장하는 브라우저 확장 프로그램 | P1은 Jasoseol.com 공고 저장부터 시작 |
+| Jasoseol.com | 확장 공고 저장과 추천 저장 흐름의 첫 지원 소스 | P1 소스 |
+| 추천 공고 | 온보딩/프로필 기준 또는 이후 수집 소스에서 추천되는 공고 | P1은 Jasoseol.com 기반 star-to-basket 지원 |
+| Mattermost 추천 | SSAFY/커뮤니티 데이터 기반 추천 경로 | P2 수집/후보화 흐름 |
+| Notion 동기화 | EZ One에서 사용자 Notion 워크스페이스로 보내는 외부 동기화 | P1은 `JOB_ONLY` |
+| `JOB_ONLY` | 저장 공고 데이터만 전송하는 Notion 동기화 범위 | MVP 기본값 |
+| 확장 동기화 | 공고, 자소서, 도화지 데이터를 포함하는 Notion 동기화 | P2, P1 아님 |
 
-## Data Ownership Terms
+## 데이터 소유권 용어
 
-| Term | Definition | Implementation rule |
+| 용어 | 정의 | 구현 규칙 |
 | --- | --- | --- |
-| 사용자 소유 데이터 | Data that belongs to one authenticated user. | Every read, update, and delete must validate ownership. |
-| Ownership 검증 | Authorization check that the current user owns the target record. | Required for basket, workspace, document profile, reference, and Notion settings. |
-| 외부 연동 실패 | Failure from Google OAuth, Notion API, extension extraction, or external page changes. | Must not corrupt or silently roll back unrelated core DB data. |
+| 사용자 소유 데이터 | 인증된 한 사용자에게 속한 데이터 | 모든 조회, 수정, 삭제에서 ownership을 검증한다. |
+| Ownership 검증 | 현재 사용자가 대상 레코드를 소유하는지 확인하는 인가 검사 | 장바구니, 워크스페이스, 서류 입력 정보, 참고자료, Notion 설정에 필수 |
+| 외부 연동 실패 | Google OAuth, Notion API, 확장 프로그램 추출, 외부 페이지 변경에서 발생하는 실패 | 관련 없는 핵심 DB 데이터를 훼손하거나 조용히 롤백하면 안 된다. |
 
-## Naming Rules
+## 명명 규칙
 
-- Use `공고` for the business object and `job` for API/database naming.
-- Use `공고 장바구니` in Korean docs and `basket` or `basket_job` in implementation naming.
-- Use `지원 워크스페이스` in Korean docs and `workspace` in implementation naming.
-- Use `서류 입력 정보` in Korean docs and `document profile` in implementation naming.
-- Do not use `경험` or `역량` as standalone P1 domain names unless they are part of document profile fields or onboarding criteria.
+- 비즈니스 객체는 한국어 문서에서 `공고`, API/DB 명명에서는 `job`을 사용한다.
+- 한국어 문서에서는 `공고 장바구니`, 구현 명명에서는 `basket` 또는 `basket_job`을 사용한다.
+- 한국어 문서에서는 `지원 워크스페이스`, 구현 명명에서는 `workspace`를 사용한다.
+- 한국어 문서에서는 `서류 입력 정보`, 구현 명명에서는 `document profile`을 사용한다.
+- `경험`이나 `역량`은 서류 입력 정보 필드나 온보딩 기준의 일부가 아닌 한 P1 단독 도메인명으로 사용하지 않는다.

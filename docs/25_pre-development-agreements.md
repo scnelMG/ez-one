@@ -1,6 +1,6 @@
 # 25. 개발 전 합의사항
 
-Source of truth: Notion `25. 개발 전 합의사항`
+기준 원본: Notion `25. 개발 전 합의사항`
 
 구현 전에 고정한 결정만 관리한다. 이 문서와 `docs/04_requirements.md`가 충돌하면 요구사항 정의서를 우선한다.
 
@@ -23,7 +23,7 @@ Source of truth: Notion `25. 개발 전 합의사항`
 
 ## 서류 입력 정보 P1 섹션
 
-| Section | Fields |
+| 섹션 | 필드 |
 | --- | --- |
 | Basic | 이름, 이메일, 전화번호, 주소, 생년월일, 포트폴리오/GitHub/블로그 URL |
 | Education | 학교, 전공, 기간, 졸업 상태, GPA |

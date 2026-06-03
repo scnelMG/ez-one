@@ -1,6 +1,6 @@
 # 26. 개발 전 문서 보강 TODO
 
-Source of truth: Notion `26. 개발 전 문서 보강 TODO`
+기준 원본: Notion `26. 개발 전 문서 보강 TODO`
 
 남은 문서 작업만 관리한다. 완료된 정리 이력은 git history와 Notion 변경 기록으로 확인한다.
 

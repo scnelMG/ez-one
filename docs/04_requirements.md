@@ -1,52 +1,52 @@
-﻿# 04. Requirements DB Export
+# 04. 요구사항 DB 내보내기
 
-Source of truth: Notion `04. 요구사항 정의서` 하위 `요구사항 DB`
+기준 원본: Notion `04. 요구사항 정의서` 하위 `요구사항 DB`
 
 이 문서는 Notion 요구사항 DB를 CSV로 내보낸 뒤 GitHub Markdown으로 변환한 구현용 사본이다. 요구사항은 요약하지 않고 CSV 행 단위 기준을 유지한다.
 
-## Export Status
+## 내보내기 상태
 
-| Item | Value |
+| 항목 | 값 |
 | --- | --- |
 | Notion DB | [요구사항 DB](https://www.notion.so/ed47f120758f8343bafe8173daef3fd9?v=b257f120758f83319c4f08a7d8df350c) |
-| CSV source | `C:\Users\user\Downloads\ExportBlock-a7770741-1205-4c9d-84b0-d1d805ea09fc-Part-1\요구사항 DB ed47f120758f8343bafe8173daef3fd9.csv` |
-| Exported rows | 249 |
-| Export method | Notion CSV export -> local correction -> Markdown table |
-| Note | Notion MCP `query_data_sources` still fails in this session, so this file uses the user-provided CSV export plus explicit data-quality corrections. |
+| CSV 원본 | `C:\Users\user\Downloads\ExportBlock-a7770741-1205-4c9d-84b0-d1d805ea09fc-Part-1\요구사항 DB ed47f120758f8343bafe8173daef3fd9.csv` |
+| 내보낸 행 수 | 249 |
+| 내보내기 방식 | Notion CSV export -> local correction -> Markdown table |
+| 참고 | Notion MCP `query_data_sources` still fails in this session, so this file uses the user-provided CSV export plus explicit data-quality corrections. |
 
-## Applied Corrections
+## 적용한 보정
 
-| Issue | Resolution |
+| 이슈 | 해결 |
 | --- | --- |
 | Duplicate ID `REF-007` | `사이드패널` row changed to `REF-009`; `참고자료 작성 가이드 제공` keeps `REF-007`. |
 | Blank `분류` values | `ONBOARD-*` rows set to `인증/계정`; `PROFILE-*` rows set to `서류 입력 정보`. |
 
-## Validation Summary
+## 검증 요약
 
-| Check | Result |
+| 확인 항목 | 결과 |
 | --- | --- |
-| Blank ID rows | 0 |
-| Duplicate IDs | 없음 |
+| 빈 ID 행 | 0 |
+| 중복 ID | 없음 |
 | Blank category rows | 0 |
 
-### Priority Counts
+### 우선순위별 개수
 
-| Priority | Count |
+| 우선순위 | 개수 |
 | --- | --- |
 | P1 | 140 |
 | P2 | 60 |
 | P3 | 49 |
 
-### Status Counts
+### 상태별 개수
 
-| Status | Count |
+| 상태 | 개수 |
 | --- | --- |
 | 시작 전 | 225 |
 | 완료 | 24 |
 
-### Category Counts
+### 분류별 개수
 
-| Category | Count |
+| 분류 | 개수 |
 | --- | --- |
 | AI | 7 |
 | mm 연동 | 10 |
@@ -64,7 +64,7 @@ Source of truth: Notion `04. 요구사항 정의서` 하위 `요구사항 DB`
 | 화면 | 32 |
 | 확장 프로그램 | 25 |
 
-## Scope Rules
+## 범위 규칙
 
 - P1/P2/P3 범위 판단은 이 문서의 `우선순위` 값을 기준으로 한다.
 - 구현 착수 순서는 상세 요구사항 249개를 그대로 나열하지 않고 `docs/23_traceability.md`, `docs/18_wbs.md`를 함께 본다.
@@ -73,7 +73,7 @@ Source of truth: Notion `04. 요구사항 정의서` 하위 `요구사항 DB`
 - 사용자 소유 데이터는 모든 조회, 수정, 삭제에서 ownership을 검증한다.
 - 화면, API, DB, 테스트 연결 검증은 `docs/23_traceability.md`에서 관리한다.
 
-## Requirement Rows
+## 요구사항 행
 
 | 요구사항 | ID | 설명 | 분류 | 우선순위 | 유형 | 상태 | 관련 데이터 | 관련 화면 | 비고 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |

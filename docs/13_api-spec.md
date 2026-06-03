@@ -1,6 +1,6 @@
 # 13. API 명세서
 
-Source of truth: Notion `13. API 명세서`
+기준 원본: Notion `13. API 명세서`
 
 모든 API는 공통 응답 형식을 사용한다. Controller는 DB row/entity를 직접 반환하지 않고 DTO를 반환한다.
 
@@ -28,9 +28,9 @@ Source of truth: Notion `13. API 명세서`
 }
 ```
 
-## Auth / Profile
+## 인증 / 프로필
 
-| Method | Path | 목적 |
+| 메서드 | 경로 | 목적 |
 | --- | --- | --- |
 | POST | `/api/auth/google` | Google OAuth 로그인 |
 | POST | `/api/auth/refresh` | refresh token으로 access token 재발급 |
@@ -39,9 +39,9 @@ Source of truth: Notion `13. API 명세서`
 | GET | `/api/me/profile` | 온보딩/마이페이지 프로필 조회 |
 | PUT | `/api/me/profile` | 온보딩/마이페이지 프로필 저장 |
 
-## Dashboard / Basket
+## 대시보드 / 장바구니
 
-| Method | Path | 목적 |
+| 메서드 | 경로 | 목적 |
 | --- | --- | --- |
 | GET | `/api/dashboard/summary` | 지원 상태 수와 마감 요약 |
 | GET | `/api/basket/jobs?status=&sort=` | 장바구니 목록, 상태 필터, 마감 정렬 |
@@ -52,17 +52,17 @@ Source of truth: Notion `13. API 명세서`
 
 장바구니와 대시보드 조회는 마감 경과 normalization을 적용한다. 마감된 미완료 공고는 `NOT_APPLIED`로 처리한다.
 
-## Recommendation
+## 추천
 
-| Method | Path | 목적 |
+| 메서드 | 경로 | 목적 |
 | --- | --- | --- |
 | GET | `/api/recommendations/jobs` | Jasoseol.com 기반 추천 공고 목록 |
 | POST | `/api/recommendations/jobs/{recommendationId}/save` | 추천 공고 장바구니 저장 |
 | GET | `/api/recommendations/jobs/{recommendationId}/summary` | P2 추천 hover 기업 요약 |
 
-## Document Profile
+## 서류 입력 정보
 
-| Method | Path | 목적 |
+| 메서드 | 경로 | 목적 |
 | --- | --- | --- |
 | GET | `/api/document-profile` | 전체 서류 입력 정보 조회 |
 | PUT | `/api/document-profile/sections/{sectionType}` | 표준 섹션 저장 |
@@ -70,9 +70,9 @@ Source of truth: Notion `13. API 명세서`
 | PATCH | `/api/document-profile/custom-fields/{fieldId}` | 커스텀 항목 수정 |
 | DELETE | `/api/document-profile/custom-fields/{fieldId}` | 커스텀 항목 삭제 |
 
-## Workspace
+## 워크스페이스
 
-| Method | Path | 목적 |
+| 메서드 | 경로 | 목적 |
 | --- | --- | --- |
 | GET | `/api/workspaces/{workspaceId}` | 워크스페이스 상세 |
 | GET | `/api/workspaces/{workspaceId}/defaults` | 서류 입력 정보 기반 기본값 |
@@ -82,9 +82,9 @@ Source of truth: Notion `13. API 명세서`
 | GET | `/api/workspaces/{workspaceId}/versions` | 버전 목록 |
 | POST | `/api/workspaces/{workspaceId}/versions/compare` | 두 버전 비교 |
 
-## References
+## 참고자료
 
-| Method | Path | 목적 |
+| 메서드 | 경로 | 목적 |
 | --- | --- | --- |
 | GET | `/api/workspaces/{workspaceId}/references` | 참고자료 목록 |
 | POST | `/api/workspaces/{workspaceId}/references` | 참고자료 생성 |
@@ -97,7 +97,7 @@ Source of truth: Notion `13. API 명세서`
 
 ## Notion
 
-| Method | Path | 목적 |
+| 메서드 | 경로 | 목적 |
 | --- | --- | --- |
 | GET | `/api/integrations/notion` | 연결 상태와 계정 정보 조회 |
 | POST | `/api/integrations/notion/connect` | Notion OAuth 연결 시작/완료 |
@@ -107,16 +107,16 @@ Source of truth: Notion `13. API 명세서`
 
 ## Chrome Extension
 
-| Method | Path | 목적 |
+| 메서드 | 경로 | 목적 |
 | --- | --- | --- |
 | POST | `/api/extension/jobs/preview` | 현재 페이지 공고 추출 미리보기 |
 | POST | `/api/extension/jobs/save` | 추출 공고 장바구니 저장 |
 
-## P2 / Reserved APIs
+## P2 / 예약 API
 
 아래 API는 IA에는 남기지만 P1 구현 계약이 아니다. 구현 시 요구사항, 권한, 테스트를 다시 확정한다.
 
-| Method | Path | 목적 |
+| 메서드 | 경로 | 목적 |
 | --- | --- | --- |
 | GET | `/api/extension/document-profile` | 확장 프로그램 서류 자동 입력 보조용 서류 입력 정보 조회 |
 | GET | `/api/basket/calendar` | 장바구니 마감 캘린더/주간 일정 |

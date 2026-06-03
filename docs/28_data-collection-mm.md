@@ -1,6 +1,6 @@
 # 28. Mattermost 데이터 수집
 
-Source of truth: Notion `28. Mattermost 데이터 수집`
+기준 원본: Notion `28. Mattermost 데이터 수집`
 
 Mattermost 수집은 P1 필수 구현 범위가 아니다. SSAFY 추천 고도화를 위한 Should/P2 데이터 소스로만 관리한다.
 
@@ -20,7 +20,7 @@ mm 채널에는 채용공고, 채용 관련 공지, 합격 후기, 일반 공지
 
 ## 메시지 유형
 
-| Type | 의미 | 후보 생성 |
+| 유형 | 의미 | 후보 생성 |
 | --- | --- | --- |
 | `JOB_POSTING` | 명확한 채용공고 | Yes |
 | `JOB_RELATED_NOTICE` | 검토가 필요한 채용 관련 공지 | Maybe |
@@ -29,7 +29,7 @@ mm 채널에는 채용공고, 채용 관련 공지, 합격 후기, 일반 공지
 | `ANNOUNCEMENT` | 일반 공지 | No |
 | `UNKNOWN` | 분류 실패 | Admin review |
 
-## Parse Status
+## 파싱 상태
 
 | Status | 의미 |
 | --- | --- |
@@ -44,7 +44,7 @@ mm 채널에는 채용공고, 채용 관련 공지, 합격 후기, 일반 공지
 
 예시 메시지 제목: `[SSAFY 취업성공후기] 5기 4주차 - 프론트엔드 개발자`
 
-| Field | Value |
+| 필드 | 값 |
 | --- | --- |
 | `message_type` | `SUCCESS_STORY` |
 | `parse_status` | `IGNORED` |

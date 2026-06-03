@@ -1,6 +1,6 @@
 # 12. ERD
 
-Source of truth: Notion `12. ERD`
+기준 원본: Notion `12. ERD`
 
 이 문서는 P1 데이터 모델 기준이다. 실제 SQL 파일명과 세부 타입은 구현 중 확정하며, 변경 시 이 문서와 `docs/13_api-spec.md`를 함께 갱신한다. DB migration 도구는 현재 보류 상태다.
 
@@ -27,7 +27,7 @@ erDiagram
 
 ## P1 테이블
 
-| Table | Key Columns | Notes |
+| 테이블 | 주요 컬럼 | 비고 |
 | --- | --- | --- |
 | `users` | id, email, provider, provider_id, created_at | 서비스 로그인 계정 |
 | `user_sessions` | id, user_id, refresh_token_hash, expires_at, revoked_at, created_at | refresh token hash 저장. 원문 token 저장 금지 |
@@ -48,7 +48,7 @@ erDiagram
 
 ## P2 예약 테이블
 
-| Table | Key Columns | Notes |
+| 테이블 | 주요 컬럼 | 비고 |
 | --- | --- | --- |
 | `company_info_sources` | id, company_id, source_name, source_url, collected_at, status | 자동 기업 정보 수집용 |
 | `mm_messages` | id, channel_id, message_id, raw_payload_json, received_at, parse_status | Mattermost raw-first 저장 |
@@ -56,7 +56,7 @@ erDiagram
 
 ## Enum 기준
 
-| Enum | Values |
+| Enum | 값 |
 | --- | --- |
 | `application_status` | `READY`, `IN_PROGRESS`, `COMPLETED`, `NOT_APPLIED` |
 | `status_reason` | `USER_SET`, `WORK_STARTED`, `DEADLINE_PASSED` |

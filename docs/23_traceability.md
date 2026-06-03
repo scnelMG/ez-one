@@ -1,10 +1,10 @@
 # 23. 요구사항 추적표
 
-Source of truth: Notion `23. 요구사항 추적표`
+기준 원본: Notion `23. 요구사항 추적표`
 
 이 문서는 P1 요구사항이 유즈케이스, 화면, API, DB, 테스트와 연결되는지 확인하는 기준이다. User Flow는 전체 제품 흐름을 설명하고, P1 구현 판단은 이 추적표와 `docs/04_requirements.md`를 우선한다.
 
-Use case source: `docs/07_use-case-specifications.md`
+유즈케이스 기준 문서: `docs/07_use-case-specifications.md`
 
 ## P1 추적표
 

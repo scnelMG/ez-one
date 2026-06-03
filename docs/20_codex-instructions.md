@@ -1,6 +1,6 @@
 # 20. Codex 작업 지시서
 
-Source of truth: Notion `20. Codex 작업 지시서`
+기준 원본: Notion `20. Codex 작업 지시서`
 
 ## 작업 전 확인
 

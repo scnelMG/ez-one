@@ -1,6 +1,6 @@
 # 09. 화면설계서
 
-Source of truth: Notion `09. 화면설계서`
+기준 원본: Notion `09. 화면설계서`
 
 이 문서는 프론트엔드 라우트, 페이지, 주요 컴포넌트, 상태, API 연결을 잡기 위한 화면 기준이다. P1 구현 범위는 `docs/04_requirements.md`, 요구사항 연결은 `docs/23_traceability.md`를 우선한다.
 

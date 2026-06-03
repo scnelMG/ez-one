@@ -1,6 +1,6 @@
 # 10. 기능 명세서
 
-Source of truth: Notion `10. 기능 명세서`
+기준 원본: Notion `10. 기능 명세서`
 
 이 문서는 P1 기능의 입력, 처리, 출력, 실패 처리를 정의한다. 화면 설명은 `docs/09_screen-design.md`, API 계약은 `docs/13_api-spec.md`를 우선한다.
 

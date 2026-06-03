@@ -1,8 +1,8 @@
-﻿# EZ-ONE MVP Use Case Specifications
+# EZ-ONE MVP 유즈케이스 명세서
 
 이 문서는 유즈케이스 다이어그램과 상세 유즈케이스 명세를 함께 관리한다. 다이어그램은 액터와 기능 범위를 빠르게 확인하기 위한 요약이고, UC-01~UC-17 표는 구현과 테스트에 필요한 상세 흐름이다.
 
-## Use Case Diagram
+## 유즈케이스 다이어그램
 
 ```mermaid
 flowchart LR
@@ -71,7 +71,7 @@ flowchart LR
     UC17 -. "<<extend>>" .-> UC15
 ```
 
-## Diagram Notes
+## 다이어그램 참고사항
 
 - GitHub/Notion Mermaid 호환을 위해 `flowchart` 문법으로 UML 유즈케이스 다이어그램 형태를 표현한다.
 - 사각형은 액터/외부 시스템, 큰 박스는 EZ One 시스템 경계, 타원은 유즈케이스를 뜻한다.
@@ -79,7 +79,7 @@ flowchart LR
 - UC-13, UC-14, UC-16은 IA에는 유지하지만 P1 완료 기준이 아니다.
 - 아래 UC 상세 명세는 API, 화면, 테스트 설계 시 흐름 기준으로 사용한다.
 
-## Detailed Specifications
+## 상세 명세
 
 ## UC-01. Google 로그인
 

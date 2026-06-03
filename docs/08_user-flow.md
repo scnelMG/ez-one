@@ -1,10 +1,10 @@
-﻿# User Flow
+# 08. 사용자 흐름
 
-Source of truth: Notion `08. User Flow`
+기준 원본: Notion `08. User Flow`
 
-Status: 완료. 이 문서는 전체 제품 흐름과 IA 연결을 설명한다. P1 구현 범위와 완료 기준은 `docs/04_requirements.md`와 `docs/23_traceability.md`를 우선한다.
+상태: 완료. 이 문서는 전체 제품 흐름과 IA 연결을 설명한다. P1 구현 범위와 완료 기준은 `docs/04_requirements.md`와 `docs/23_traceability.md`를 우선한다.
 
-## IA Sitemap
+## IA 사이트맵
 
 아래 IA는 사용자가 제공한 정보구조 이미지를 기준으로 정리한 전체 제품 구조다. P2/IA-only 항목은 화면 구조에는 남기되 P1 완료 기준으로 구현하지 않는다.
 
@@ -70,7 +70,7 @@ flowchart LR
     ExtensionInput --> FailedItemHandling[실패 항목 처리]
 ```
 
-## IA Scope Table
+## IA 범위 표
 
 | IA 영역 | 하위 항목 | P1 여부 | 구현 기준 |
 | --- | --- | --- | --- |
@@ -91,7 +91,7 @@ flowchart LR
 | 확장 프로그램 | 공고 저장하기 | P1 | 감지, 직무 선택, 장바구니 저장 |
 | 확장 프로그램 | 서류 정보 입력하기 | P2/IA | 자동 입력과 실패 항목 처리 |
 
-## Connected Flow Chart
+## 연결 흐름도
 
 ```mermaid
 flowchart TD
@@ -190,7 +190,7 @@ flowchart TD
     Alert --> AlertAutosave[자소서 자동 저장]
 ```
 
-## P1 Implementation Path
+## P1 구현 경로
 
 P1은 아래 흐름을 구현 기준으로 삼는다.
 
@@ -209,9 +209,9 @@ flowchart LR
     SaveJob --> Notion[Notion JOB_ONLY 동기화]
 ```
 
-## Flow Rules
+## 흐름 규칙
 
-| Area | Rule |
+| 영역 | 규칙 |
 | --- | --- |
 | 로그인/온보딩 | 최초 로그인 사용자는 온보딩을 입력하거나 건너뛴다. 저장한 온보딩 정보는 마이페이지에서 수정한다. |
 | 메인 페이지 | 대시보드, 장바구니, 서류 입력 정보, 추천 공고로 진입한다. |
@@ -224,11 +224,11 @@ flowchart LR
 | 서류 입력 정보 | 기본 정보와 커스텀 항목을 저장하고, 워크스페이스 기본값으로 재사용한다. |
 | Notion | P1은 공고 저장 시 `JOB_ONLY` 자동 동기화만 검증한다. |
 
-## P2 / IA-only Flows
+## P2 / IA-only 흐름
 
 아래 흐름은 전체 IA에는 포함하지만 P1 완료 기준이 아니다.
 
-| Flow | Status |
+| 흐름 | 상태 |
 | --- | --- |
 | Mattermost 추천 | P2. SSAFY 추천 고도화 소스 |
 | 서류 자동 입력 보조 | P2. 현재 페이지 기준 자동 입력, 실패 항목 처리 |

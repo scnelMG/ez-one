@@ -1,6 +1,6 @@
 # 05. 기능 우선순위 선정 문서
 
-Source of truth: Notion `05. 기능 우선순위 선정 문서`
+기준 원본: Notion `05. 기능 우선순위 선정 문서`
 
 이 문서는 구현 순서를 정하기 위한 기준이다. 기능 범위가 충돌하면 `docs/04_requirements.md`를 우선한다.
 
@@ -13,7 +13,7 @@ Source of truth: Notion `05. 기능 우선순위 선정 문서`
 | Could | 데이터 축적 또는 외부 연동 안정화 후 구현한다. |
 | Won't for MVP | 초기 구현 범위에서 제외한다. |
 
-## Must
+## Must 항목
 
 | 기능 | 요구사항 | 이유 |
 | --- | --- | --- |
@@ -30,7 +30,7 @@ Source of truth: Notion `05. 기능 우선순위 선정 문서`
 | 추천 공고 저장 | `REC-001` | Jasoseol.com 기반 추천과 star-to-basket |
 | Notion job-only sync | `NOTION-001` | 저장 공고만 자동 동기화 |
 
-## Should
+## Should 항목
 
 | 기능 | 이유 |
 | --- | --- |
@@ -40,7 +40,7 @@ Source of truth: Notion `05. 기능 우선순위 선정 문서`
 | Mattermost 수집/후보화 | SSAFY 추천 고도화 소스 |
 | Notion 계정/schema 경고 | job-only 동기화 안정화 이후 필요 |
 
-## Could
+## Could 항목
 
 | 기능 | 이유 |
 | --- | --- |
@@ -51,7 +51,7 @@ Source of truth: Notion `05. 기능 우선순위 선정 문서`
 | 기업 정보 자동 수집 | 외부 사이트 정책 검토 후 |
 | AI 요약/평가 | MVP 이후 별도 검토 |
 
-## Won't for MVP
+## MVP 제외 항목
 
 - 관리자 운영 화면
 - 별도 AI 서버
