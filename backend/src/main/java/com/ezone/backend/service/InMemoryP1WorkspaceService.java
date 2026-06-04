@@ -75,6 +75,15 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
 
     @Override
     public BasketJobResponse createBasketJob(Long userId, CreateBasketJobRequest request) {
+        return createBasketJobWithQuestions(userId, request, List.of());
+    }
+
+    @Override
+    public BasketJobResponse createBasketJobWithQuestions(
+        Long userId,
+        CreateBasketJobRequest request,
+        List<CreateEssayQuestionRequest> questions
+    ) {
         BasketRecord duplicate = activeBasketJobs(userId).stream()
             .filter(job -> job.companyName().equals(request.companyName()))
             .filter(job -> job.positionTitle().equals(request.positionTitle()))
@@ -101,7 +110,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             false
         );
         basketJobs.put(basketJobId, basketJob);
-        createWorkspaceFor(basketJob);
+        createWorkspaceFor(basketJob, questions);
         return toBasketResponse(basketJob);
     }
 
@@ -359,17 +368,26 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             false
         );
         basketJobs.put(basketJobId, basketJob);
-        createWorkspaceFor(basketJob);
+        createWorkspaceFor(basketJob, List.of());
     }
 
-    private void createWorkspaceFor(BasketRecord basketJob) {
+    private void createWorkspaceFor(BasketRecord basketJob, List<CreateEssayQuestionRequest> extractedQuestions) {
         List<EssayQuestionRecord> questions = new ArrayList<>();
-        questions.add(new EssayQuestionRecord(
-            idGenerator.incrementAndGet(),
-            "문항 1. 지원 동기와 입사 후 기여 계획을 작성하세요.",
-            "서비스 사용 경험과 백엔드 개선 경험을 연결해 초안을 작성합니다.",
-            1000
-        ));
+        if (extractedQuestions.isEmpty()) {
+            questions.add(new EssayQuestionRecord(
+                idGenerator.incrementAndGet(),
+                "문항 1. 지원 동기와 입사 후 기여 계획을 작성하세요.",
+                "서비스 사용 경험과 백엔드 개선 경험을 연결해 초안을 작성합니다.",
+                1000
+            ));
+        } else {
+            extractedQuestions.forEach(question -> questions.add(new EssayQuestionRecord(
+                idGenerator.incrementAndGet(),
+                question.prompt(),
+                "",
+                question.maxLength()
+            )));
+        }
         WorkspaceRecord workspace = new WorkspaceRecord(
             basketJob.workspaceId(),
             basketJob.userId(),

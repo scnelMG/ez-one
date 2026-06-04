@@ -9,6 +9,7 @@ describe('router', () => {
     const routeNames = router.getRoutes().map((route) => route.name)
 
     expect(routeNames).toContain('login')
+    expect(routeNames).toContain('extension-connect')
     expect(routeNames).toContain('onboarding')
     expect(routeNames).toContain('main')
     expect(routeNames).toContain('basket')
@@ -84,6 +85,25 @@ describe('router', () => {
     await router.push('/')
 
     expect(router.currentRoute.value.name).toBe('onboarding')
+  })
+
+  it('sends authenticated users from extension login redirect to the extension connect page', async () => {
+    localStorage.setItem('ezone.accessToken', 'test-token')
+    localStorage.setItem(
+      'ezone.currentUser',
+      JSON.stringify({
+        id: 1,
+        email: 'user@example.com',
+        name: 'Hong Gil Dong',
+        nickname: 'Gil Dong',
+        profileCompleted: true
+      })
+    )
+
+    await router.push('/?redirect=/extension/connect?sourceUrl=https%3A%2F%2Fwww.jasoseol.com%2Frecruit%2F1')
+
+    expect(router.currentRoute.value.name).toBe('extension-connect')
+    expect(router.currentRoute.value.query.sourceUrl).toBe('https://www.jasoseol.com/recruit/1')
   })
 
   it('does not activate P2-only route shells', () => {

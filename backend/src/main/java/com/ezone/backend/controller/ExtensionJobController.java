@@ -5,11 +5,16 @@ import com.ezone.backend.dto.basket.BasketJobResponse;
 import com.ezone.backend.dto.basket.CreateBasketJobRequest;
 import com.ezone.backend.dto.extension.ExtensionJobPreviewRequest;
 import com.ezone.backend.dto.extension.ExtensionJobPreviewResponse;
+import com.ezone.backend.dto.extension.ExtensionJobSaveRequest;
+import com.ezone.backend.dto.workspace.CreateEssayQuestionRequest;
 import com.ezone.backend.service.P1WorkspaceService;
+import java.util.List;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/extension/jobs")
@@ -37,17 +42,45 @@ public class ExtensionJobController {
     }
 
     @PostMapping("/save")
-    public ApiResponse<BasketJobResponse> save(@RequestBody ExtensionJobPreviewRequest request) {
-        return ApiResponse.success(workspaceService.createBasketJob(
-            CurrentUserSupport.currentUserId(),
-            new CreateBasketJobRequest(
-                request.companyName(),
-                request.positionTitle(),
-                request.deadlineLabel(),
-                request.sourceUrl(),
-                "EXTENSION"
-            )
-        ));
+    public ApiResponse<List<BasketJobResponse>> save(@RequestBody ExtensionJobSaveRequest request) {
+        if (!hasText(request.companyName()) || !hasText(request.sourceUrl())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Company name and source URL are required.");
+        }
+
+        List<String> rawRoles = request.selectedRoles().isEmpty()
+            ? fallbackRole(request.positionTitle())
+            : request.selectedRoles();
+        List<String> roles = rawRoles.stream()
+            .filter(this::hasText)
+            .map(String::trim)
+            .distinct()
+            .toList();
+        if (roles.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "At least one role is required.");
+        }
+
+        List<CreateEssayQuestionRequest> questions = request.essayQuestions().stream()
+            .filter(question -> hasText(question.prompt()))
+            .map(question -> new CreateEssayQuestionRequest(question.prompt(), question.maxLengthOrDefault()))
+            .toList();
+
+        return ApiResponse.success(roles.stream()
+            .map(role -> workspaceService.createBasketJobWithQuestions(
+                CurrentUserSupport.currentUserId(),
+                new CreateBasketJobRequest(
+                    request.companyName(),
+                    role,
+                    request.deadlineLabel(),
+                    request.sourceUrl(),
+                    "EXTENSION"
+                ),
+                questions
+            ))
+            .toList());
+    }
+
+    private List<String> fallbackRole(String positionTitle) {
+        return hasText(positionTitle) ? List.of(positionTitle) : List.of();
     }
 
     private boolean hasText(String value) {

@@ -6,9 +6,81 @@
     <title>EZ One</title>
   </head>
   <body>
-    <main>
-      <h1>EZ One</h1>
-      <p>Job save preview scaffold</p>
+    <main class="popup-shell">
+      <header class="popup-header" aria-label="EZ One 확장프로그램">
+        <a id="home-link" class="brand-lockup" href="#" target="_blank" rel="noreferrer">
+          <span class="brand-mark" aria-hidden="true">EZ</span>
+          <strong>EZ One</strong>
+        </a>
+        <label class="mode-select-label">
+          <span>모드</span>
+          <select aria-label="확장프로그램 모드">
+            <option selected>공고 저장하기</option>
+            <option disabled>서류 정보 입력하기</option>
+          </select>
+        </label>
+      </header>
+
+      <section id="status-panel" class="status-panel" aria-live="polite">
+        <span class="state-dot" aria-hidden="true"></span>
+        <p id="status-message">확장프로그램을 준비하는 중입니다.</p>
+      </section>
+
+      <section id="login-panel" class="panel mode-panel" hidden>
+        <div class="mode-card active">
+          <span class="section-kicker">EXT-001</span>
+          <h1>공고 저장하기</h1>
+          <p>현재 채용공고를 읽고 저장 전 미리보기로 확인합니다.</p>
+        </div>
+        <div class="mode-card disabled" aria-disabled="true">
+          <span class="section-kicker">P2</span>
+          <h2>서류 정보 입력하기</h2>
+          <p>지원서 자동 입력은 이후 범위로 남겨둡니다.</p>
+        </div>
+        <button id="login-button" class="primary-button" type="button">Google로 로그인</button>
+        <a id="web-link" class="text-link" href="#" target="_blank" rel="noreferrer">EZ One 웹으로 이동</a>
+      </section>
+
+      <section id="preview-panel" class="panel preview-panel" hidden>
+        <div class="panel-heading">
+          <span class="section-kicker">EXT-001</span>
+          <h1 id="job-title">공고 저장하기</h1>
+          <p>저장 전에 회사, 공고, 마감일과 직무를 확인하세요.</p>
+        </div>
+
+        <dl class="preview-list" aria-label="채용공고 미리보기">
+          <div>
+            <dt>회사</dt>
+            <dd id="company-name">-</dd>
+          </div>
+          <div>
+            <dt>공고</dt>
+            <dd id="position-title">-</dd>
+          </div>
+          <div>
+            <dt>마감</dt>
+            <dd id="deadline-label">-</dd>
+          </div>
+        </dl>
+
+        <fieldset class="role-fieldset">
+          <legend>저장할 직무</legend>
+          <div id="role-options" class="role-options"></div>
+        </fieldset>
+
+        <button id="save-button" class="primary-button" type="button">선택한 공고 장바구니에 담기</button>
+      </section>
+
+      <section id="result-panel" class="panel result-panel" hidden>
+        <div class="success-mark" aria-hidden="true">✓</div>
+        <span class="section-kicker">SAVE COMPLETE</span>
+        <h1>장바구니에 담았습니다</h1>
+        <p id="result-message">선택한 공고의 워크스페이스가 생성되었습니다.</p>
+        <ul id="saved-job-list" class="saved-job-list" aria-label="저장된 공고"></ul>
+        <a id="basket-link" class="primary-button" href="#" target="_blank" rel="noreferrer">공고 장바구니 열기</a>
+        <a id="result-web-link" class="text-link" href="#" target="_blank" rel="noreferrer">EZ One 웹으로 이동</a>
+      </section>
     </main>
+    <script type="module" src="/src/popup/popup.ts"></script>
   </body>
 </html>

@@ -1,0 +1,85 @@
+<template>
+  <main class="auth-page">
+    <section class="auth-panel" aria-labelledby="extension-connect-title">
+      <img class="auth-logo" src="../assets/ez-one-logo.svg" alt="EZ One" />
+      <p class="section-kicker">EXT-003</p>
+      <h1 id="extension-connect-title">확장프로그램 연결</h1>
+      <p>{{ statusMessage }}</p>
+      <RouterLink v-if="hasError" class="primary-button" to="/">다시 로그인하기</RouterLink>
+      <RouterLink v-else class="primary-button" to="/main">EZ One 열기</RouterLink>
+    </section>
+  </main>
+</template>
+
+<script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
+import { getAccessToken, getCurrentUser, getRefreshToken } from '@/features/auth/session/authSession'
+
+const errorMessage = ref('')
+const completed = ref(false)
+const hasError = computed(() => Boolean(errorMessage.value))
+const statusMessage = computed(() => {
+  if (errorMessage.value) {
+    return errorMessage.value
+  }
+
+  return completed.value
+    ? '확장프로그램 연결이 완료되었습니다. 공고 페이지에서 팝업을 다시 열어 주세요.'
+    : '로그인 세션을 확장프로그램에 연결하고 있습니다.'
+})
+
+onMounted(async () => {
+  const extensionId = import.meta.env.VITE_EXTENSION_ID as string | undefined
+  const accessToken = getAccessToken()
+  const refreshToken = getRefreshToken()
+  const user = getCurrentUser()
+
+  if (!extensionId) {
+    errorMessage.value = '확장프로그램 ID가 설정되지 않았습니다. VITE_EXTENSION_ID를 설정해 주세요.'
+    return
+  }
+
+  if (!accessToken || !refreshToken || !user) {
+    errorMessage.value = '로그인 세션을 찾지 못했습니다. 다시 로그인해 주세요.'
+    return
+  }
+
+  try {
+    const response = await sendExtensionMessage(extensionId, {
+      type: 'EZONE_EXTENSION_AUTH_SESSION',
+      accessToken,
+      refreshToken,
+      user
+    })
+
+    if (!response?.accepted) {
+      throw new Error(response?.message ?? '확장프로그램이 로그인 세션을 받지 못했습니다.')
+    }
+
+    completed.value = true
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '확장프로그램 연결에 실패했습니다.'
+  }
+})
+
+function sendExtensionMessage(extensionId: string, message: unknown) {
+  return new Promise<{ accepted: boolean; message?: string } | undefined>((resolve, reject) => {
+    const runtime = window.chrome?.runtime
+
+    if (!runtime?.sendMessage) {
+      reject(new Error('Chrome 확장프로그램 환경에서 다시 시도해 주세요.'))
+      return
+    }
+
+    runtime.sendMessage(extensionId, message, (response) => {
+      const lastError = runtime.lastError
+      if (lastError) {
+        reject(new Error(lastError.message))
+        return
+      }
+
+      resolve(response)
+    })
+  })
+}
+</script>

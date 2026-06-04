@@ -4,6 +4,7 @@ import DocumentProfilePage from '@/pages/DocumentProfilePage.vue'
 import { getCurrentUser, isAuthenticated } from '@/features/auth/session/authSession'
 import LoginPage from '@/pages/LoginPage.vue'
 import LoginCallbackPage from '@/pages/LoginCallbackPage.vue'
+import ExtensionConnectPage from '@/pages/ExtensionConnectPage.vue'
 import MainPage from '@/pages/MainPage.vue'
 import MyPage from '@/pages/MyPage.vue'
 import NotionSettingsPage from '@/pages/NotionSettingsPage.vue'
@@ -27,6 +28,12 @@ export const router = createRouter({
       path: '/login/callback',
       name: 'login-callback',
       component: LoginCallbackPage
+    },
+    {
+      path: '/extension/connect',
+      name: 'extension-connect',
+      component: ExtensionConnectPage,
+      meta: { requiresAuth: true }
     },
     {
       path: '/onboarding',
@@ -81,7 +88,7 @@ export const router = createRouter({
 
 router.beforeEach((to) => {
   if (to.name === 'login' && isAuthenticated()) {
-    return getAuthenticatedHomePath()
+    return getAuthenticatedHomePath(to.query.redirect)
   }
 
   if (!to.meta.requiresAuth) {
@@ -108,6 +115,14 @@ function hasAccessToken() {
   return isAuthenticated()
 }
 
-function getAuthenticatedHomePath() {
-  return getCurrentUser()?.profileCompleted === false ? '/onboarding' : '/main'
+function getAuthenticatedHomePath(redirect: unknown = undefined) {
+  if (getCurrentUser()?.profileCompleted === false) {
+    return '/onboarding'
+  }
+
+  return typeof redirect === 'string' && isSafeRedirectPath(redirect) ? redirect : '/main'
+}
+
+function isSafeRedirectPath(path: string) {
+  return path.startsWith('/') && !path.startsWith('//') && !path.startsWith('/login')
 }

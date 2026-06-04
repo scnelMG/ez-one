@@ -14,16 +14,15 @@
 
   <rect width="1536" height="864" fill="#FFFFFF"/>
 
-  <g stroke="url(#brandPurple)" stroke-width="24" stroke-linecap="round" stroke-linejoin="round">
+  <g transform="translate(294 221) scale(0.43)" stroke="url(#brandPurple)" stroke-width="24" stroke-linecap="round" stroke-linejoin="round">
     <path d="M177 332C177 285.056 215.056 247 262 247H359L446 334V535C446 581.944 407.944 620 361 620H262C215.056 620 177 581.944 177 535V332Z"/>
     <path d="M359 248V315C359 331.569 372.431 345 389 345H445"/>
     <path d="M245 485L307 547L382 466"/>
   </g>
 
-  <text x="505" y="575" fill="url(#brandDark)" font-family="Arial Black, Arial, sans-serif" font-size="210" font-weight="900" letter-spacing="8">EZ-</text>
-  <text x="885" y="575" fill="url(#brandPurple)" font-family="Arial Black, Arial, sans-serif" font-size="210" font-weight="900" letter-spacing="8">ONE</text>
+  <text x="527" y="487" fill="url(#brandDark)" font-family="Inter, Pretendard, Helvetica Neue, Arial, sans-serif" font-size="220" font-weight="900" letter-spacing="2">EZ-<tspan fill="url(#brandPurple)">ONE</tspan></text>
 
-  <text x="768" y="720" text-anchor="middle" font-family="Pretendard, Noto Sans KR, Malgun Gothic, Arial, sans-serif" font-size="64" font-weight="800" fill="#111827">
-    쉽게 <tspan fill="#6D4DFF">지원(Z-ONE)</tspan>하자
+  <text x="527" y="632" font-family="Pretendard, Noto Sans KR, Malgun Gothic, Arial, sans-serif" font-size="64" font-weight="800" fill="#111827">
+    이제 쉽게 <tspan fill="#6D4DFF">지원(Z-ONE)</tspan>하자
   </text>
 </svg>
