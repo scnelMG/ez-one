@@ -2,21 +2,30 @@ spring:
   application:
     name: ez-one-backend
   datasource:
-    url: ${DB_URL:jdbc:mysql://localhost:3306/ez_one}
-    username: ${DB_USERNAME:ez_one}
+    url: ${DB_URL:jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:ez_one}}
+    username: ${DB_USERNAME:${DB_USER:ez_one}}
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
   sql:
     init:
       mode: ${SQL_INIT_MODE:never}
       schema-locations: classpath:schema-mysql.sql
+  flyway:
+    enabled: ${FLYWAY_ENABLED:true}
+    baseline-on-migrate: true
+    baseline-version: 1
+    locations: classpath:db/migration
 
 mybatis:
   mapper-locations: classpath:mapper/**/*.xml
 
 server:
   port: ${SERVER_PORT:8080}
-  address: ${SERVER_ADDRESS:127.0.0.1}
+  address: ${SERVER_ADDRESS:::1}
+
+app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}
 
 auth:
   google:

@@ -28,6 +28,7 @@ node_modules/
 frontend/dist/
 frontend/.vite/
 extension/dist/
+extension/*.zip
 
 # Test / Coverage
 coverage/

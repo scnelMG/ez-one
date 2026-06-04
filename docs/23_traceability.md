@@ -10,13 +10,13 @@
 
 | 요구사항 | Use Case | 화면 | API | DB | 테스트 |
 | --- | --- | --- | --- | --- | --- |
-| AUTH-001 | UC-01 | 로그인 | `POST /api/auth/google`, `POST /api/auth/refresh`, `POST /api/auth/logout`, `GET /api/me` | `users`, `user_sessions` | TC-AUTH-001~005 |
+| AUTH-001 | UC-01 | 로그인 | `POST /api/auth/google`, `POST /api/auth/refresh`, `POST /api/auth/logout`, `GET /api/me`, `PATCH /api/me` | `users`, `user_sessions` | TC-AUTH-001~006 |
 | ONB-001 | UC-02, UC-15 | 온보딩, 마이페이지 | `GET/PUT /api/me/profile` | `user_profiles` | TC-ONB-001, TC-ONB-002 |
 | ONB-002 | UC-02, UC-05 | 온보딩, 추천 | `GET/PUT /api/me/profile`, `GET /api/recommendations/jobs` | `user_profiles` | TC-ONB-001, TC-REC-001 |
 | DASH-001 | UC-03, UC-04 | 메인 대시보드, 장바구니 | `GET /api/dashboard/summary`, `GET /api/basket/jobs` | `basket_jobs`, `jobs` | TC-DASH-001 |
 | JOB-001 | UC-06, UC-07 | 공고 장바구니 | `POST /api/basket/jobs`, `GET /api/basket/jobs` | `jobs`, `basket_jobs` | TC-JOB-001, TC-JOB-002 |
 | JOB-002 | UC-06, UC-08 | 공고 장바구니, 워크스페이스 | `POST /api/basket/jobs`, `GET /api/workspaces/{id}` | `workspaces` | TC-JOB-001, TC-WS-001 |
-| EXT-001 | UC-06 | Chrome Extension | `/api/extension/jobs/*` | `jobs`, `basket_jobs`, `workspaces` | TC-EXT-001, TC-EXT-002 |
+| EXT-001 | UC-06 | Chrome Extension | `/api/extension/jobs/*` | `jobs`, `basket_jobs`, `workspaces` | TC-EXT-001, TC-EXT-002, TC-EXT-003, TC-EXT-004 |
 | REC-001 | UC-05 | 추천 공고 | `GET /api/recommendations/jobs`, `POST /api/recommendations/jobs/{id}/save` | `basket_jobs`, `workspaces` | TC-REC-001 |
 | PROFILE-001 | UC-12, UC-13 | 서류 입력 정보 | `/api/document-profile/*` | `document_profile_sections`, `document_custom_fields` | TC-PROFILE-001, TC-PROFILE-CUSTOM-001 |
 | WS-001 | UC-08 | 지원 워크스페이스 | `GET /api/workspaces/{id}` | `workspaces`, `basket_jobs`, `companies` | TC-WS-001 |

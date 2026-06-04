@@ -10,6 +10,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 @Component
 @Primary
@@ -69,20 +71,32 @@ public class GoogleOAuthRestClient implements GoogleOAuthClient {
         form.add("redirect_uri", request.redirectUri());
         form.add("grant_type", "authorization_code");
 
-        return restClient.post()
-            .uri(tokenUri)
-            .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-            .body(form)
-            .retrieve()
-            .body(GoogleTokenResponse.class);
+        try {
+            return restClient.post()
+                .uri(tokenUri)
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .body(form)
+                .retrieve()
+                .body(GoogleTokenResponse.class);
+        } catch (RestClientResponseException exception) {
+            throw new GoogleOAuthException("Google 인증 코드 교환에 실패했습니다. 다시 로그인해 주세요.", exception);
+        } catch (RestClientException exception) {
+            throw new GoogleOAuthException("Google 인증 서버와 통신하지 못했습니다. 잠시 후 다시 로그인해 주세요.", exception);
+        }
     }
 
     private GoogleUserInfoResponse loadUserInfo(String accessToken) {
-        return restClient.get()
-            .uri(userInfoUri)
-            .headers(headers -> headers.setBearerAuth(accessToken))
-            .retrieve()
-            .body(GoogleUserInfoResponse.class);
+        try {
+            return restClient.get()
+                .uri(userInfoUri)
+                .headers(headers -> headers.setBearerAuth(accessToken))
+                .retrieve()
+                .body(GoogleUserInfoResponse.class);
+        } catch (RestClientResponseException exception) {
+            throw new GoogleOAuthException("Google 계정 정보를 불러오지 못했습니다. 다시 로그인해 주세요.", exception);
+        } catch (RestClientException exception) {
+            throw new GoogleOAuthException("Google 계정 정보 서버와 통신하지 못했습니다. 잠시 후 다시 로그인해 주세요.", exception);
+        }
     }
 
     record GoogleTokenResponse(

@@ -7,10 +7,29 @@
     "default_popup": "popup.html"
   },
   "permissions": ["activeTab", "storage"],
-  "host_permissions": ["https://www.jasoseol.com/*"],
+  "host_permissions": [
+    "https://www.jasoseol.com/*",
+    "https://jasoseol.com/*",
+    "http://www.jasoseol.com/*",
+    "http://jasoseol.com/*",
+    "http://localhost:8080/*",
+    "http://127.0.0.1:8080/*"
+  ],
+  "background": {
+    "service_worker": "assets/background.js",
+    "type": "module"
+  },
+  "externally_connectable": {
+    "matches": ["http://localhost/*", "http://127.0.0.1/*"]
+  },
   "content_scripts": [
     {
-      "matches": ["https://www.jasoseol.com/*"],
+      "matches": [
+        "https://www.jasoseol.com/*",
+        "https://jasoseol.com/*",
+        "http://www.jasoseol.com/*",
+        "http://jasoseol.com/*"
+      ],
       "js": ["assets/jobExtractor.js"]
     }
   ]

@@ -70,6 +70,16 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
     @Override
     @Transactional
     public BasketJobResponse createBasketJob(Long userId, CreateBasketJobRequest request) {
+        return createBasketJobWithQuestions(userId, request, List.of());
+    }
+
+    @Override
+    @Transactional
+    public BasketJobResponse createBasketJobWithQuestions(
+        Long userId,
+        CreateBasketJobRequest request,
+        List<CreateEssayQuestionRequest> questions
+    ) {
         BasketJobRow duplicate = mapper.findDuplicateBasketJob(
                 userId,
                 request.companyName(),
@@ -107,13 +117,15 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         mapper.insertWorkspace(workspace);
         basketJob.setWorkspaceId(workspace.getId());
 
-        EssayQuestionRow question = new EssayQuestionRow();
-        question.setWorkspaceId(workspace.getId());
-        question.setPrompt("문항 1. 지원 동기와 입사 후 기여 계획을 작성하세요.");
-        question.setDraft("서비스 사용 경험과 백엔드 개선 경험을 연결해 초안을 작성합니다.");
-        question.setMaxLength(1000);
-        mapper.insertEssayQuestion(question);
-        mapper.insertEssayDraft(question);
+        if (questions.isEmpty()) {
+            insertInitialQuestion(workspace.getId(), "문항 1. 지원 동기와 입사 후 기여 계획을 작성하세요.", 1000);
+        } else {
+            questions.forEach(question -> insertInitialQuestion(
+                workspace.getId(),
+                question.prompt(),
+                question.maxLength()
+            ));
+        }
 
         ReferenceMaterialRow reference = new ReferenceMaterialRow();
         reference.setUserId(userId);
@@ -126,6 +138,16 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         mapper.insertReferenceMaterial(reference);
 
         return toBasketResponse(basketJob);
+    }
+
+    private void insertInitialQuestion(Long workspaceId, String prompt, int maxLength) {
+        EssayQuestionRow question = new EssayQuestionRow();
+        question.setWorkspaceId(workspaceId);
+        question.setPrompt(prompt);
+        question.setDraft("");
+        question.setMaxLength(maxLength);
+        mapper.insertEssayQuestion(question);
+        mapper.insertEssayDraft(question);
     }
 
     @Override

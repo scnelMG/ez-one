@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
-import { vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import MainPage from './MainPage.vue'
 
 vi.mock('@/features/dashboard/api/dashboardApi', () => ({
@@ -29,10 +29,10 @@ const makeRouter = () =>
   createRouter({
     history: createMemoryHistory(),
     routes: [
-      { path: '/', component: MainPage },
+      { path: '/main', component: MainPage },
       { path: '/login', component: { template: '<div>로그인</div>' } },
-      { path: '/basket', component: { template: '<div>공고함</div>' } },
-      { path: '/mypage', component: { template: '<div>내 정보</div>' } },
+      { path: '/basket', component: { template: '<div>공고 장바구니</div>' } },
+      { path: '/mypage', component: { template: '<div>마이페이지</div>' } },
       { path: '/workspaces/:workspaceId', component: { template: '<div>워크스페이스</div>' } },
       { path: '/recommendations', component: { template: '<div>추천 공고</div>' } },
       { path: '/document-profile', component: { template: '<div>서류 정보</div>' } },
@@ -41,9 +41,24 @@ const makeRouter = () =>
   })
 
 describe('MainPage', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
   it('DASH-001: renders the Korean P1 dashboard route shell with core flow links', async () => {
+    localStorage.setItem(
+      'ezone.currentUser',
+      JSON.stringify({
+        id: 1,
+        email: 'user@example.com',
+        name: '홍길동',
+        nickname: '길동',
+        profileCompleted: true
+      })
+    )
+
     const router = makeRouter()
-    router.push('/')
+    router.push('/main')
     await router.isReady()
 
     const wrapper = mount(MainPage, {
@@ -56,7 +71,7 @@ describe('MainPage', () => {
 
     expect(wrapper.text()).toContain('메인 대시보드')
     expect(wrapper.text()).toContain('오늘 마감')
-    expect(wrapper.text()).toContain('공고함 열기')
+    expect(wrapper.text()).toContain('공고 장바구니')
     expect(wrapper.text()).toContain('DASH-001')
     expect(wrapper.text()).toContain('JOB-001')
     expect(wrapper.text()).toContain('REC-001')
@@ -64,5 +79,58 @@ describe('MainPage', () => {
     const links = wrapper.findAll('a').map((link) => link.attributes('href'))
     expect(links).toContain('/basket')
     expect(links).toContain('/workspaces/102')
+  })
+
+  it('AUTH-013: shows the signed-in member chip with nickname before name', async () => {
+    localStorage.setItem(
+      'ezone.currentUser',
+      JSON.stringify({
+        id: 1,
+        email: 'user@example.com',
+        name: '홍길동',
+        nickname: '길동',
+        profileCompleted: true
+      })
+    )
+
+    const router = makeRouter()
+    router.push('/main')
+    await router.isReady()
+
+    const wrapper = mount(MainPage, {
+      global: {
+        plugins: [createPinia(), router]
+      }
+    })
+
+    expect(wrapper.get('[data-testid="member-chip"]').text()).toContain('길동')
+    expect(wrapper.get('[data-testid="member-avatar"]').text()).toBe('길')
+    expect(wrapper.get('[data-testid="member-chip"]').attributes('href')).toBe('/mypage')
+  })
+
+  it('AUTH-013: falls back to the Google account name when nickname is empty', async () => {
+    localStorage.setItem(
+      'ezone.currentUser',
+      JSON.stringify({
+        id: 1,
+        email: 'user@example.com',
+        name: 'Hong Gil Dong',
+        nickname: '',
+        profileCompleted: true
+      })
+    )
+
+    const router = makeRouter()
+    router.push('/main')
+    await router.isReady()
+
+    const wrapper = mount(MainPage, {
+      global: {
+        plugins: [createPinia(), router]
+      }
+    })
+
+    expect(wrapper.get('[data-testid="member-chip"]').text()).toContain('Hong Gil Dong')
+    expect(wrapper.get('[data-testid="member-avatar"]').text()).toBe('H')
   })
 })

@@ -1,4 +1,5 @@
-import axios, { type AxiosInstance } from 'axios'
+import { defaultHttpClient, type ApiEnvelope, type HttpClient } from '@/shared/apiClient'
+import { isAxiosError } from 'axios'
 
 export interface GoogleLoginRequest {
   authorizationCode: string
@@ -21,29 +22,34 @@ export interface AuthTokenResponse {
   user: CurrentUserResponse
 }
 
-interface ApiEnvelope<T> {
-  success: boolean
-  data: T
-  error: null | {
-    code: string
-    message: string
-    details?: Record<string, unknown>
-  }
+export interface UpdateCurrentUserRequest {
+  nickname: string
 }
-
-interface HttpClient {
-  post<T>(url: string, body?: unknown): Promise<{ data: T }>
-}
-
-const defaultHttpClient: AxiosInstance = axios.create()
 
 export function createAuthApi(httpClient: HttpClient = defaultHttpClient) {
   return {
     async loginWithGoogle(request: GoogleLoginRequest): Promise<AuthTokenResponse> {
-      const response = await httpClient.post<ApiEnvelope<AuthTokenResponse>>(
-        '/api/auth/google',
-        request
-      )
+      const response = await postAuthRequest<AuthTokenResponse>('/api/auth/google', request, httpClient)
+
+      return response.data.data
+    },
+    async refresh(refreshToken: string): Promise<AuthTokenResponse> {
+      const response = await httpClient.post<ApiEnvelope<AuthTokenResponse>>('/api/auth/refresh', {
+        refreshToken
+      })
+
+      return response.data.data
+    },
+    async logout(refreshToken: string): Promise<void> {
+      await httpClient.post<ApiEnvelope<null>>('/api/auth/logout', { refreshToken })
+    },
+    async getCurrentUser(): Promise<CurrentUserResponse> {
+      const response = await httpClient.get<ApiEnvelope<CurrentUserResponse>>('/api/me')
+
+      return response.data.data
+    },
+    async updateCurrentUser(request: UpdateCurrentUserRequest): Promise<CurrentUserResponse> {
+      const response = await httpClient.patch<ApiEnvelope<CurrentUserResponse>>('/api/me', request)
 
       return response.data.data
     }
@@ -51,3 +57,19 @@ export function createAuthApi(httpClient: HttpClient = defaultHttpClient) {
 }
 
 export const authApi = createAuthApi()
+
+async function postAuthRequest<T>(url: string, body: unknown, httpClient: HttpClient) {
+  try {
+    return await httpClient.post<ApiEnvelope<T>>(url, body)
+  } catch (error) {
+    if (isAxiosError<ApiEnvelope<unknown>>(error)) {
+      const message = error.response?.data?.error?.message
+
+      if (message) {
+        throw new Error(message)
+      }
+    }
+
+    throw error
+  }
+}

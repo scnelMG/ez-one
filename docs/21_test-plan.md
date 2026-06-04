@@ -13,14 +13,17 @@
 | TC-AUTH-003 | Auth | 다른 사용자 데이터 접근 | 403 공통 오류 |
 | TC-AUTH-004 | Auth | refresh token 재발급 | 새 access token 발급 |
 | TC-AUTH-005 | Auth | logout 후 refresh 재사용 | token revoke로 재발급 거부 |
+| TC-AUTH-006 | Auth | 닉네임 수정 | 현재 사용자 DTO와 프론트 세션 갱신 |
 | TC-ONB-001 | Onboarding | 온보딩 저장 | 프로필 저장 |
 | TC-ONB-002 | Onboarding | 온보딩 건너뛰기 | 빈 editable profile 상태 유지 |
 | TC-DASH-001 | Dashboard | 상태 카드 클릭 | 장바구니가 예상 filter/sort로 열린다. |
 | TC-JOB-001 | Basket | 공고 저장 | basket job과 workspace 생성 |
 | TC-JOB-002 | Basket | 중복 URL 저장 | 기존 공고 경로 반환 |
 | TC-JOB-003 | Basket | 마감 경과 미완료 공고 | `NOT_APPLIED`로 전환 |
-| TC-EXT-001 | Extension | 지원 사이트 공고 저장 | 공고 저장과 workspace 생성 |
-| TC-EXT-002 | Extension | 추출 실패 | 오류/수동 보완 안내, 잘못된 저장 없음 |
+| TC-EXT-001 | Extension | 지원 사이트 공고 저장 | 자소설닷컴 공고에서 로그인 후 기능 선택, 미리보기, 직무 다중 선택, 저장 완료와 workspace 생성 |
+| TC-EXT-002 | Extension | 추출 실패 | 미지원 페이지 또는 추출 실패 시 오류 안내, 잘못된 저장 없음 |
+| TC-EXT-003 | Extension | 저장 전 수집 데이터 수정 | 회사명, 공고명, 마감일 수정값이 저장 API payload에 반영됨 |
+| TC-EXT-004 | Extension | 확장 설치 안내 | 웹 랜딩에서 Chrome 확장프로그램 로컬 설치 안내와 `dist` 경로 제공 |
 | TC-REC-001 | Recommendation | 추천 공고 별표 저장 | 장바구니 저장, 중복 처리 |
 | TC-PROFILE-001 | Document Profile | 표준 섹션 저장 | 사용자별 데이터 저장 |
 | TC-PROFILE-CUSTOM-001 | Document Profile | 커스텀 항목 추가 | 재사용 가능한 항목 생성 |

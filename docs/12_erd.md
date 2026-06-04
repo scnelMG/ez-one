@@ -29,7 +29,7 @@ erDiagram
 
 | 테이블 | 주요 컬럼 | 비고 |
 | --- | --- | --- |
-| `users` | id, email, provider, provider_id, created_at | 서비스 로그인 계정 |
+| `users` | id, email, name, nickname, provider, provider_id, profile_completed, created_at | 서비스 로그인 계정 |
 | `user_sessions` | id, user_id, refresh_token_hash, expires_at, revoked_at, created_at | refresh token hash 저장. 원문 token 저장 금지 |
 | `user_profiles` | user_id, desired_roles, company_types, industries, regions, skills, is_ssafy | 온보딩/추천 기준 |
 | `companies` | id, name, domain, company_type, size, rating, starting_salary | 기업 정보. P1은 nullable 허용 |

@@ -36,6 +36,7 @@
 | POST | `/api/auth/refresh` | refresh token으로 access token 재발급 |
 | POST | `/api/auth/logout` | refresh token revoke |
 | GET | `/api/me` | 현재 사용자 조회 |
+| PATCH | `/api/me` | 현재 사용자 닉네임 수정 |
 | GET | `/api/me/profile` | 온보딩/마이페이지 프로필 조회 |
 | PUT | `/api/me/profile` | 온보딩/마이페이지 프로필 저장 |
 

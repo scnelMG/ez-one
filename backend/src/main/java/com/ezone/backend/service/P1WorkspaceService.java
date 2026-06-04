@@ -27,6 +27,14 @@ public interface P1WorkspaceService {
 
     BasketJobResponse createBasketJob(Long userId, CreateBasketJobRequest request);
 
+    default BasketJobResponse createBasketJobWithQuestions(
+        Long userId,
+        CreateBasketJobRequest request,
+        List<CreateEssayQuestionRequest> questions
+    ) {
+        return createBasketJob(userId, request);
+    }
+
     BasketJobResponse getBasketJob(Long userId, Long basketJobId);
 
     BasketJobResponse updateBasketJobStatus(Long userId, Long basketJobId, ApplicationStatus status);

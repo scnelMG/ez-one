@@ -4,6 +4,7 @@ import {
   type ApiEnvelope,
   type HttpClient
 } from '@/shared/apiClient'
+import { mockBasketJobs } from './mockBasketData'
 
 export type BasketJobStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'SUBMITTED'
 type BackendApplicationStatus = 'READY' | 'NOT_APPLIED' | 'IN_PROGRESS' | 'COMPLETED'
@@ -15,6 +16,7 @@ export interface BasketJob {
   status: BasketJobStatus
   statusLabel: string
   deadlineLabel: string
+  deadlineDate?: string
   deadlineSoon: boolean
   workspaceId: string
   sourceUrl: string
@@ -28,6 +30,7 @@ interface BasketJobDto {
   applicationStatus: BackendApplicationStatus
   statusLabel: string
   deadlineLabel: string
+  deadlineDate?: string
   deadlineSoon: boolean
   sourceUrl: string
 }
@@ -37,11 +40,15 @@ type BasketHttpClient = Pick<HttpClient, 'get'>
 export function createBasketApi(httpClient: BasketHttpClient = defaultHttpClient) {
   return {
     async listJobs(status?: BasketJobStatus): Promise<BasketJob[]> {
-      const response = await httpClient.get<ApiEnvelope<BasketJobDto[]>>('/api/basket/jobs', {
-        params: status ? { status: toBackendStatus(status) } : undefined
-      })
+      try {
+        const response = await httpClient.get<ApiEnvelope<BasketJobDto[]>>('/api/basket/jobs', {
+          params: status ? { status: toBackendStatus(status) } : undefined
+        })
 
-      return unwrapApiData(response.data).map(toBasketJob)
+        return unwrapApiData(response.data).map(toBasketJob)
+      } catch {
+        return status ? mockBasketJobs.filter((job) => job.status === status) : mockBasketJobs
+      }
     }
   }
 }
@@ -54,6 +61,7 @@ function toBasketJob(dto: BasketJobDto): BasketJob {
     status: toFrontendStatus(dto.applicationStatus),
     statusLabel: dto.statusLabel,
     deadlineLabel: dto.deadlineLabel,
+    deadlineDate: dto.deadlineDate,
     deadlineSoon: dto.deadlineSoon,
     workspaceId: String(dto.workspaceId),
     sourceUrl: dto.sourceUrl

@@ -1,15 +1,18 @@
 <template>
   <main class="landing-page">
     <header class="landing-nav">
-      <RouterLink class="landing-brand" to="/login" aria-label="EZ One">
+      <RouterLink class="landing-brand" to="/" aria-label="EZ One">
         <img src="../assets/ez-one-logo.svg" alt="" />
-        <strong>EZ-one</strong>
+        <strong>EZ One</strong>
       </RouterLink>
 
       <nav class="landing-nav-links" aria-label="서비스 소개">
         <a href="#features">기능</a>
+        <a href="#extension-install">확장 설치</a>
         <a href="#workflow">흐름</a>
-        <button type="button" class="landing-login-button">로그인</button>
+        <button type="button" class="landing-login-button" @click="startGoogleLogin">
+          로그인
+        </button>
       </nav>
     </header>
 
@@ -23,14 +26,17 @@
         </p>
 
         <div class="landing-hero-actions">
-          <button class="landing-primary" type="button">Google로 시작하기</button>
+          <button class="landing-primary" data-testid="google-login" type="button" @click="startGoogleLogin">
+            Google로 시작하기
+          </button>
         </div>
-        <small>로그인과 회원가입은 Google 계정으로 진행됩니다.</small>
+        <p v-if="errorMessage" class="auth-note error" role="alert">{{ errorMessage }}</p>
+        <small>로그인과 회원가입은 Google 계정으로 진행합니다.</small>
       </div>
 
-      <aside class="landing-preview" aria-label="EZ One 제품 미리보기">
+      <aside class="landing-preview" aria-label="EZ One 미리보기">
         <div class="preview-topbar">
-          <span>EZ-one</span>
+          <span>EZ One</span>
           <strong>지원 현황</strong>
         </div>
         <div class="preview-metrics">
@@ -97,10 +103,35 @@
       </div>
     </section>
 
+    <section id="extension-install" class="landing-section extension-install" aria-label="Chrome 확장프로그램 설치">
+      <div class="landing-section-heading">
+        <p class="landing-eyebrow">Chrome Extension</p>
+        <h2>Chrome 확장프로그램 설치</h2>
+      </div>
+
+      <div class="landing-feature-grid">
+        <article>
+          <span>01</span>
+          <h3>빌드 생성</h3>
+          <p>터미널에서 <code>cd C:\ez-one\extension</code> 후 <code>npm run build</code>를 실행합니다.</p>
+        </article>
+        <article>
+          <span>02</span>
+          <h3>Chrome에 로드</h3>
+          <p><code>chrome://extensions</code>에서 개발자 모드를 켠 뒤 <code>C:\ez-one\extension\dist</code> 폴더를 로드합니다.</p>
+        </article>
+        <article>
+          <span>03</span>
+          <h3>자소설닷컴에서 실행</h3>
+          <p>자소설닷컴 공고 페이지에서 EZ One 확장 아이콘을 눌러 공고 저장 흐름을 시작합니다.</p>
+        </article>
+      </div>
+    </section>
+
     <section id="workflow" class="landing-workflow" aria-label="사용 흐름">
       <div>
         <p class="landing-eyebrow">지원 준비 흐름</p>
-        <h2>공고를 저장하면 바로 작성 공간이 만들어집니다</h2>
+        <h2>공고를 저장하면 바로 작성 공간을 만들 수 있습니다</h2>
       </div>
       <ol>
         <li>
@@ -131,3 +162,36 @@
     </section>
   </main>
 </template>
+
+<script setup lang="ts">
+import { ref } from 'vue'
+import { useRoute } from 'vue-router'
+import {
+  buildGoogleOAuthUrl,
+  createOAuthState,
+  getGoogleClientId,
+  getGoogleRedirectUri
+} from '@/features/auth/oauth/googleOAuth'
+
+const route = useRoute()
+const errorMessage = ref('')
+
+function startGoogleLogin() {
+  const clientId = getGoogleClientId()
+
+  if (!clientId) {
+    errorMessage.value = 'Google OAuth 클라이언트 ID가 설정되지 않았습니다. VITE_GOOGLE_CLIENT_ID를 설정해 주세요.'
+    return
+  }
+
+  const redirectTarget = typeof route.query.redirect === 'string' ? route.query.redirect : '/main'
+  const state = createOAuthState(redirectTarget)
+  const url = buildGoogleOAuthUrl({
+    clientId,
+    redirectUri: getGoogleRedirectUri(),
+    state
+  })
+
+  window.location.assign(url.toString())
+}
+</script>
