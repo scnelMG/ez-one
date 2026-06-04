@@ -1,0 +1,400 @@
+package com.ezone.backend.service;
+
+import com.ezone.backend.domain.ApplicationStatus;
+import com.ezone.backend.domain.ReferenceType;
+import com.ezone.backend.domain.persistence.BasketJobRow;
+import com.ezone.backend.domain.persistence.EssayQuestionRow;
+import com.ezone.backend.domain.persistence.EssayVersionRow;
+import com.ezone.backend.domain.persistence.JobRow;
+import com.ezone.backend.domain.persistence.ReferenceMaterialRow;
+import com.ezone.backend.domain.persistence.WorkspaceRow;
+import com.ezone.backend.dto.basket.BasketJobResponse;
+import com.ezone.backend.dto.basket.CreateBasketJobRequest;
+import com.ezone.backend.dto.dashboard.DashboardJobResponse;
+import com.ezone.backend.dto.dashboard.DashboardSummaryResponse;
+import com.ezone.backend.dto.workspace.CompareEssayVersionsRequest;
+import com.ezone.backend.dto.workspace.CompareEssayVersionsResponse;
+import com.ezone.backend.dto.workspace.CreateEssayQuestionRequest;
+import com.ezone.backend.dto.workspace.CreateEssayVersionRequest;
+import com.ezone.backend.dto.workspace.CreateReferenceRequest;
+import com.ezone.backend.dto.workspace.EssayQuestionResponse;
+import com.ezone.backend.dto.workspace.EssayVersionResponse;
+import com.ezone.backend.dto.workspace.ReferenceResponse;
+import com.ezone.backend.dto.workspace.UpdateDraftRequest;
+import com.ezone.backend.dto.workspace.WorkspaceDefaultsResponse;
+import com.ezone.backend.dto.workspace.WorkspaceResponse;
+import com.ezone.backend.mapper.P1WorkspaceMapper;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@Profile("mysql")
+public class MyBatisP1WorkspaceService implements P1WorkspaceService {
+
+    private final P1WorkspaceMapper mapper;
+
+    public MyBatisP1WorkspaceService(P1WorkspaceMapper mapper) {
+        this.mapper = mapper;
+    }
+
+    @Override
+    public DashboardSummaryResponse getDashboardSummary(Long userId) {
+        List<BasketJobRow> jobs = mapper.listBasketJobs(userId, null, null);
+        long inProgress = jobs.stream()
+            .filter(job -> job.getApplicationStatus() == ApplicationStatus.IN_PROGRESS)
+            .count();
+        long notStarted = jobs.stream()
+            .filter(job -> job.getApplicationStatus() == ApplicationStatus.NOT_APPLIED
+                || job.getApplicationStatus() == ApplicationStatus.READY)
+            .count();
+        long deadlineSoon = jobs.stream().filter(BasketJobRow::isDeadlineSoon).count();
+        return new DashboardSummaryResponse(
+            jobs.size(),
+            inProgress,
+            notStarted,
+            deadlineSoon,
+            jobs.stream().limit(3).map(this::toDashboardJob).toList()
+        );
+    }
+
+    @Override
+    public List<BasketJobResponse> listBasketJobs(Long userId, ApplicationStatus status, String sort) {
+        return mapper.listBasketJobs(userId, status, sort).stream().map(this::toBasketResponse).toList();
+    }
+
+    @Override
+    @Transactional
+    public BasketJobResponse createBasketJob(Long userId, CreateBasketJobRequest request) {
+        BasketJobRow duplicate = mapper.findDuplicateBasketJob(
+                userId,
+                request.companyName(),
+                request.positionTitle(),
+                request.sourceUrl()
+            )
+            .orElse(null);
+
+        if (duplicate != null) {
+            return toBasketResponse(duplicate);
+        }
+
+        JobRow job = new JobRow();
+        job.setCompanyName(request.companyName());
+        job.setPositionTitle(request.positionTitle());
+        job.setDeadlineLabel(normalizeDeadline(request.deadlineLabel()));
+        job.setSourceUrl(request.sourceUrl());
+        mapper.upsertCompany(job);
+        mapper.insertJob(job);
+
+        BasketJobRow basketJob = new BasketJobRow();
+        basketJob.setUserId(userId);
+        basketJob.setJobId(job.getId());
+        basketJob.setCompanyName(request.companyName());
+        basketJob.setPositionTitle(request.positionTitle());
+        basketJob.setApplicationStatus(ApplicationStatus.NOT_APPLIED);
+        basketJob.setDeadlineLabel(job.getDeadlineLabel());
+        basketJob.setDeadlineSoon(isDeadlineSoon(job.getDeadlineLabel()));
+        basketJob.setSourceUrl(request.sourceUrl());
+        mapper.insertBasketJob(basketJob);
+
+        WorkspaceRow workspace = new WorkspaceRow();
+        workspace.setUserId(userId);
+        workspace.setBasketJobId(basketJob.getId());
+        mapper.insertWorkspace(workspace);
+        basketJob.setWorkspaceId(workspace.getId());
+
+        EssayQuestionRow question = new EssayQuestionRow();
+        question.setWorkspaceId(workspace.getId());
+        question.setPrompt("문항 1. 지원 동기와 입사 후 기여 계획을 작성하세요.");
+        question.setDraft("서비스 사용 경험과 백엔드 개선 경험을 연결해 초안을 작성합니다.");
+        question.setMaxLength(1000);
+        mapper.insertEssayQuestion(question);
+        mapper.insertEssayDraft(question);
+
+        ReferenceMaterialRow reference = new ReferenceMaterialRow();
+        reference.setUserId(userId);
+        reference.setWorkspaceId(workspace.getId());
+        reference.setBoardName("JD");
+        reference.setReferenceType(ReferenceType.JD);
+        reference.setTitle("JD 핵심 역량");
+        reference.setBody("사용자가 직접 정리한 직무 요구사항입니다.");
+        reference.setUrl(request.sourceUrl());
+        mapper.insertReferenceMaterial(reference);
+
+        return toBasketResponse(basketJob);
+    }
+
+    @Override
+    public BasketJobResponse getBasketJob(Long userId, Long basketJobId) {
+        return toBasketResponse(requireBasketJob(userId, basketJobId));
+    }
+
+    @Override
+    public BasketJobResponse updateBasketJobStatus(Long userId, Long basketJobId, ApplicationStatus status) {
+        if (mapper.updateBasketJobStatus(userId, basketJobId, status) == 0) {
+            throw new IllegalArgumentException("Basket job not found");
+        }
+        return getBasketJob(userId, basketJobId);
+    }
+
+    @Override
+    public void archiveBasketJob(Long userId, Long basketJobId) {
+        if (mapper.archiveBasketJob(userId, basketJobId) == 0) {
+            throw new IllegalArgumentException("Basket job not found");
+        }
+    }
+
+    @Override
+    public WorkspaceResponse getWorkspace(Long userId, Long workspaceId) {
+        return toWorkspaceResponse(requireWorkspace(userId, workspaceId));
+    }
+
+    @Override
+    public WorkspaceDefaultsResponse getWorkspaceDefaults(Long userId, Long workspaceId) {
+        requireWorkspace(userId, workspaceId);
+        Map<String, Object> sections = new LinkedHashMap<>();
+        sections.put("basicInfo", Map.of("nameKo", "", "email", ""));
+        sections.put("projects", List.of());
+        sections.put("awards", List.of());
+        return new WorkspaceDefaultsResponse(workspaceId, sections);
+    }
+
+    @Override
+    @Transactional
+    public EssayQuestionResponse createQuestion(Long userId, Long workspaceId, CreateEssayQuestionRequest request) {
+        requireWorkspace(userId, workspaceId);
+        EssayQuestionRow question = new EssayQuestionRow();
+        question.setWorkspaceId(workspaceId);
+        question.setPrompt(request.prompt());
+        question.setDraft("");
+        question.setMaxLength(request.maxLength());
+        mapper.insertEssayQuestion(question);
+        mapper.insertEssayDraft(question);
+        return toQuestionResponse(question);
+    }
+
+    @Override
+    public EssayQuestionResponse updateDraft(Long userId, Long workspaceId, Long draftId, UpdateDraftRequest request) {
+        requireWorkspace(userId, workspaceId);
+        EssayQuestionRow question = mapper.findQuestion(workspaceId, draftId)
+            .orElseThrow(() -> new IllegalArgumentException("Draft not found"));
+        mapper.updateDraft(draftId, request.body());
+        question.setDraft(request.body());
+        return toQuestionResponse(question);
+    }
+
+    @Override
+    public EssayVersionResponse createVersion(Long userId, Long workspaceId, CreateEssayVersionRequest request) {
+        requireWorkspace(userId, workspaceId);
+        EssayQuestionRow question = mapper.findQuestion(workspaceId, request.questionId())
+            .orElseThrow(() -> new IllegalArgumentException("Question not found"));
+        EssayVersionRow version = new EssayVersionRow();
+        version.setUserId(userId);
+        version.setWorkspaceId(workspaceId);
+        version.setQuestionId(question.getId());
+        version.setVersionName(request.versionName());
+        version.setBody(question.getDraft());
+        mapper.insertEssayVersion(version);
+        return toVersionResponse(version);
+    }
+
+    @Override
+    public List<EssayVersionResponse> listVersions(Long userId, Long workspaceId) {
+        requireWorkspace(userId, workspaceId);
+        return mapper.listVersions(userId, workspaceId).stream().map(this::toVersionResponse).toList();
+    }
+
+    @Override
+    public CompareEssayVersionsResponse compareVersions(
+        Long userId,
+        Long workspaceId,
+        CompareEssayVersionsRequest request
+    ) {
+        requireWorkspace(userId, workspaceId);
+        EssayVersionRow left = mapper.findVersion(userId, workspaceId, request.leftVersionId())
+            .orElseThrow(() -> new IllegalArgumentException("Version not found"));
+        EssayVersionRow right = mapper.findVersion(userId, workspaceId, request.rightVersionId())
+            .orElseThrow(() -> new IllegalArgumentException("Version not found"));
+        return new CompareEssayVersionsResponse(
+            left.getId(),
+            right.getId(),
+            left.getBody(),
+            right.getBody(),
+            !Objects.equals(left.getBody(), right.getBody())
+        );
+    }
+
+    @Override
+    public List<ReferenceResponse> listReferences(Long userId, Long workspaceId) {
+        requireWorkspace(userId, workspaceId);
+        return mapper.listReferences(workspaceId).stream().map(this::toReferenceResponse).toList();
+    }
+
+    @Override
+    public ReferenceResponse createReference(Long userId, Long workspaceId, CreateReferenceRequest request) {
+        requireWorkspace(userId, workspaceId);
+        ReferenceMaterialRow reference = new ReferenceMaterialRow();
+        reference.setUserId(userId);
+        reference.setWorkspaceId(workspaceId);
+        reference.setBoardName(request.boardName());
+        reference.setReferenceType(request.referenceType());
+        reference.setTitle(request.title());
+        reference.setBody(request.body());
+        reference.setUrl(request.url());
+        mapper.insertReferenceMaterial(reference);
+        return toReferenceResponse(reference);
+    }
+
+    @Override
+    public ReferenceResponse getReference(Long userId, Long referenceId) {
+        return toReferenceResponse(requireReference(userId, referenceId));
+    }
+
+    @Override
+    public ReferenceResponse updateReference(Long userId, Long referenceId, CreateReferenceRequest request) {
+        ReferenceMaterialRow current = requireReference(userId, referenceId);
+        current.setBoardName(request.boardName());
+        current.setReferenceType(request.referenceType());
+        current.setTitle(request.title());
+        current.setBody(request.body());
+        current.setUrl(request.url());
+        if (mapper.updateReference(current) == 0) {
+            throw new IllegalArgumentException("Reference not found");
+        }
+        return toReferenceResponse(current);
+    }
+
+    @Override
+    public void deleteReference(Long userId, Long referenceId) {
+        if (mapper.deleteReference(userId, referenceId) == 0) {
+            throw new IllegalArgumentException("Reference not found");
+        }
+    }
+
+    @Override
+    public List<DashboardJobResponse> listRecommendationJobs(Long userId) {
+        return List.of(
+            new DashboardJobResponse(9001L, null, "라인", "Server Platform Engineer", "D-7"),
+            new DashboardJobResponse(9002L, null, "오늘의집", "Commerce Backend Developer", "D-10")
+        );
+    }
+
+    @Override
+    public BasketJobResponse saveRecommendation(Long userId, Long recommendationId) {
+        if (recommendationId == 9002L) {
+            return createBasketJob(userId, new CreateBasketJobRequest(
+                "오늘의집",
+                "Commerce Backend Developer",
+                "D-10",
+                "https://www.jasoseol.com/",
+                "RECOMMENDATION"
+            ));
+        }
+
+        return createBasketJob(userId, new CreateBasketJobRequest(
+            "라인",
+            "Server Platform Engineer",
+            "D-7",
+            "https://www.jasoseol.com/",
+            "RECOMMENDATION"
+        ));
+    }
+
+    private BasketJobRow requireBasketJob(Long userId, Long basketJobId) {
+        return mapper.findBasketJob(userId, basketJobId)
+            .orElseThrow(() -> new IllegalArgumentException("Basket job not found"));
+    }
+
+    private WorkspaceRow requireWorkspace(Long userId, Long workspaceId) {
+        return mapper.findWorkspace(userId, workspaceId)
+            .orElseThrow(() -> new IllegalArgumentException("Workspace not found"));
+    }
+
+    private ReferenceMaterialRow requireReference(Long userId, Long referenceId) {
+        return mapper.findReference(userId, referenceId)
+            .orElseThrow(() -> new IllegalArgumentException("Reference not found"));
+    }
+
+    private BasketJobResponse toBasketResponse(BasketJobRow row) {
+        return new BasketJobResponse(
+            row.getId(),
+            row.getWorkspaceId(),
+            row.getCompanyName(),
+            row.getPositionTitle(),
+            row.getApplicationStatus(),
+            statusLabel(row.getApplicationStatus()),
+            row.getDeadlineLabel(),
+            row.isDeadlineSoon(),
+            row.getSourceUrl()
+        );
+    }
+
+    private DashboardJobResponse toDashboardJob(BasketJobRow row) {
+        return new DashboardJobResponse(
+            row.getId(),
+            row.getWorkspaceId(),
+            row.getCompanyName(),
+            row.getPositionTitle(),
+            row.getDeadlineLabel()
+        );
+    }
+
+    private WorkspaceResponse toWorkspaceResponse(WorkspaceRow row) {
+        return new WorkspaceResponse(
+            row.getId(),
+            row.getBasketJobId(),
+            row.getCompanyName(),
+            row.getPositionTitle(),
+            row.getDeadlineLabel(),
+            statusLabel(row.getApplicationStatus()),
+            row.getSourceUrl(),
+            mapper.listQuestions(row.getId()).stream().map(this::toQuestionResponse).toList(),
+            mapper.listReferences(row.getId()).stream().map(this::toReferenceResponse).toList()
+        );
+    }
+
+    private EssayQuestionResponse toQuestionResponse(EssayQuestionRow row) {
+        return new EssayQuestionResponse(
+            row.getId(),
+            row.getPrompt(),
+            row.getDraft(),
+            row.getMaxLength(),
+            row.getDraft().length()
+        );
+    }
+
+    private ReferenceResponse toReferenceResponse(ReferenceMaterialRow row) {
+        return new ReferenceResponse(
+            row.getId(),
+            row.getBoardName(),
+            row.getReferenceType(),
+            row.getTitle(),
+            row.getBody(),
+            row.getUrl()
+        );
+    }
+
+    private EssayVersionResponse toVersionResponse(EssayVersionRow row) {
+        return new EssayVersionResponse(row.getId(), row.getQuestionId(), row.getVersionName(), row.getBody());
+    }
+
+    private String normalizeDeadline(String deadlineLabel) {
+        return deadlineLabel == null || deadlineLabel.isBlank() ? "미정" : deadlineLabel;
+    }
+
+    private boolean isDeadlineSoon(String deadlineLabel) {
+        return deadlineLabel != null && (deadlineLabel.contains("오늘") || deadlineLabel.contains("D-"));
+    }
+
+    private String statusLabel(ApplicationStatus status) {
+        return switch (status) {
+            case READY, NOT_APPLIED -> "지원 전";
+            case IN_PROGRESS -> "진행 중";
+            case COMPLETED -> "지원 완료";
+        };
+    }
+}

@@ -7,6 +7,8 @@
 ## 현재 기준
 
 - 최종 PDF: `docs/assets/wireframes/ez_one_wireframe_final.pdf`
+- 최종 반영본: 사용자가 전달한 `EZ-ONE 와이어프레임 (8).pdf`를 `2026-06-04`에 위 경로로 교체했다.
+- 최종 PDF SHA-256: `BA4FF007D1078C0CF8969DFE1E0D6566FBBA5626D4CAD9D7D09FF2AA508FF43D`
 - 구현 화면 기준: `docs/09_screen-design.md`
 - 전체 이미지 경로: `docs/assets/wireframes/ez_one_wireframe_final.png`
 - Figma 원본: [EZ One](https://www.figma.com/design/gmDOGDBDih2eqBJ6LzZDL5/EZ-One?node-id=0-1&p=f&m=draw)
@@ -51,5 +53,7 @@
 - User Flow는 전체 제품 흐름을 설명한다. 화면 기준은 `docs/09_screen-design.md`를 우선한다.
 - 유즈케이스 명세서는 `docs/07_use-case-specifications.md`를 기준으로 사용한다.
 - 와이어프레임 이미지는 최종 PDF 렌더링 결과 또는 사용자가 제공한 Figma export 결과만 사용한다.
+- 프론트 구현은 임의의 대시보드/카드 UI로 재해석하지 않고 최종 와이어프레임에 보이는 요소, 순서, 밀도를 우선한다.
+- 포인트 색상은 EZ One 로고의 `#6D4DFF`, `#7A5CFF` 계열을 사용한다.
 - 전체 이미지는 구조 파악용이고, 개발 문서에서는 세부 이미지를 우선 참조한다.
 - IA 전체 범위는 유지하되, 실제 MVP 구현 범위는 요구사항 정의서의 P1/P2 기준을 따른다.

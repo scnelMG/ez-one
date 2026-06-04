@@ -9,6 +9,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.ezone.backend.config.SecurityConfig;
 import com.ezone.backend.dto.auth.AuthTokenResponse;
 import com.ezone.backend.dto.auth.CurrentUserResponse;
+import com.ezone.backend.security.JwtAccessTokenVerifier;
+import com.ezone.backend.security.JwtAuthenticationFilter;
 import com.ezone.backend.service.AuthService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,7 +21,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(AuthController.class)
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtAccessTokenVerifier.class})
 class AuthControllerTest {
 
     @Autowired
@@ -63,5 +65,26 @@ class AuthControllerTest {
             .andExpect(jsonPath("$.data.user.email").value("user@example.com"))
             .andExpect(jsonPath("$.data.user.profileCompleted").value(false))
             .andExpect(jsonPath("$.error").doesNotExist());
+    }
+
+    @Test
+    void refreshAndLogoutReturnApiEnvelope() throws Exception {
+        mockMvc.perform(post("/api/auth/refresh")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    { "refreshToken": "refresh-token" }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.accessToken").value("dev-access-token"))
+            .andExpect(jsonPath("$.data.tokenType").value("Bearer"));
+
+        mockMvc.perform(post("/api/auth/logout")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    { "refreshToken": "refresh-token" }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true));
     }
 }

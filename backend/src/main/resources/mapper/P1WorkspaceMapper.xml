@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ezone.backend.mapper.P1WorkspaceMapper">
+  <resultMap id="basketJobRowMap" type="com.ezone.backend.domain.persistence.BasketJobRow">
+    <id property="id" column="id"/>
+    <result property="userId" column="user_id"/>
+    <result property="jobId" column="job_id"/>
+    <result property="workspaceId" column="workspace_id"/>
+    <result property="companyName" column="company_name"/>
+    <result property="positionTitle" column="position_title"/>
+    <result property="applicationStatus" column="application_status"/>
+    <result property="deadlineLabel" column="deadline_label"/>
+    <result property="deadlineSoon" column="deadline_soon"/>
+    <result property="sourceUrl" column="source_url"/>
+  </resultMap>
+
+  <resultMap id="workspaceRowMap" type="com.ezone.backend.domain.persistence.WorkspaceRow">
+    <id property="id" column="id"/>
+    <result property="userId" column="user_id"/>
+    <result property="basketJobId" column="basket_job_id"/>
+    <result property="companyName" column="company_name"/>
+    <result property="positionTitle" column="position_title"/>
+    <result property="deadlineLabel" column="deadline_label"/>
+    <result property="applicationStatus" column="application_status"/>
+    <result property="sourceUrl" column="source_url"/>
+  </resultMap>
+
+  <resultMap id="questionRowMap" type="com.ezone.backend.domain.persistence.EssayQuestionRow">
+    <id property="id" column="id"/>
+    <result property="workspaceId" column="workspace_id"/>
+    <result property="prompt" column="prompt"/>
+    <result property="draft" column="draft"/>
+    <result property="maxLength" column="max_length"/>
+  </resultMap>
+
+  <resultMap id="referenceRowMap" type="com.ezone.backend.domain.persistence.ReferenceMaterialRow">
+    <id property="id" column="id"/>
+    <result property="userId" column="user_id"/>
+    <result property="workspaceId" column="workspace_id"/>
+    <result property="boardName" column="board_name"/>
+    <result property="referenceType" column="reference_type"/>
+    <result property="title" column="title"/>
+    <result property="body" column="body"/>
+    <result property="url" column="url"/>
+  </resultMap>
+
+  <resultMap id="versionRowMap" type="com.ezone.backend.domain.persistence.EssayVersionRow">
+    <id property="id" column="id"/>
+    <result property="userId" column="user_id"/>
+    <result property="workspaceId" column="workspace_id"/>
+    <result property="questionId" column="question_id"/>
+    <result property="versionName" column="version_name"/>
+    <result property="body" column="body"/>
+  </resultMap>
+
+  <insert id="upsertCompany" useGeneratedKeys="true" keyProperty="companyId">
+    INSERT INTO companies (name, created_at)
+    VALUES (#{companyName}, CURRENT_TIMESTAMP)
+    ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)
+  </insert>
+
+  <insert id="insertJob" useGeneratedKeys="true" keyProperty="id">
+    INSERT INTO jobs (company_id, title, role, deadline_label, source, url, created_at)
+    VALUES (#{companyId}, #{positionTitle}, #{positionTitle}, #{deadlineLabel}, 'DIRECT', #{sourceUrl}, CURRENT_TIMESTAMP)
+  </insert>
+
+  <select id="findDuplicateBasketJob" resultMap="basketJobRowMap">
+    SELECT bj.id, bj.user_id, bj.job_id, w.id AS workspace_id, c.name AS company_name,
+           j.title AS position_title, bj.application_status, j.deadline_label,
+           CASE WHEN j.deadline_label LIKE '오늘%' OR j.deadline_label LIKE 'D-%' THEN TRUE ELSE FALSE END AS deadline_soon,
+           j.url AS source_url
+    FROM basket_jobs bj
+    JOIN jobs j ON j.id = bj.job_id
+    JOIN companies c ON c.id = j.company_id
+    LEFT JOIN workspaces w ON w.basket_job_id = bj.id
+    WHERE bj.user_id = #{userId}
+      AND bj.deleted_at IS NULL
+      AND c.name = #{companyName}
+      AND j.title = #{positionTitle}
+      AND j.url = #{sourceUrl}
+    LIMIT 1
+  </select>
+
+  <insert id="insertBasketJob" useGeneratedKeys="true" keyProperty="id">
+    INSERT INTO basket_jobs (user_id, job_id, application_status, status_updated_at, status_reason, saved_source, created_at)
+    VALUES (#{userId}, #{jobId}, #{applicationStatus}, CURRENT_TIMESTAMP, 'USER_SET', 'DIRECT', CURRENT_TIMESTAMP)
+  </insert>
+
+  <insert id="insertWorkspace" useGeneratedKeys="true" keyProperty="id">
+    INSERT INTO workspaces (user_id, basket_job_id, created_at, updated_at)
+    VALUES (#{userId}, #{basketJobId}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+  </insert>
+
+  <insert id="insertEssayQuestion" useGeneratedKeys="true" keyProperty="id">
+    INSERT INTO essay_questions (workspace_id, question_text, max_length, sort_order, created_at)
+    VALUES (#{workspaceId}, #{prompt}, #{maxLength}, 1, CURRENT_TIMESTAMP)
+  </insert>
+
+  <insert id="insertEssayDraft" useGeneratedKeys="true">
+    INSERT INTO essay_drafts (workspace_id, question_id, body, save_revision, client_updated_at, auto_saved_at)
+    VALUES (#{workspaceId}, #{id}, #{draft}, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+  </insert>
+
+  <insert id="insertReferenceMaterial" useGeneratedKeys="true" keyProperty="id">
+    INSERT INTO reference_materials (workspace_id, board_name, reference_type, title, body, url, display_mode, created_at)
+    VALUES (#{workspaceId}, #{boardName}, #{referenceType}, #{title}, #{body}, #{url}, 'BOTH', CURRENT_TIMESTAMP)
+  </insert>
+
+  <select id="listBasketJobs" resultMap="basketJobRowMap">
+    SELECT bj.id, bj.user_id, bj.job_id, w.id AS workspace_id, c.name AS company_name,
+           j.title AS position_title, bj.application_status, j.deadline_label,
+           CASE WHEN j.deadline_label LIKE '오늘%' OR j.deadline_label LIKE 'D-%' THEN TRUE ELSE FALSE END AS deadline_soon,
+           j.url AS source_url
+    FROM basket_jobs bj
+    JOIN jobs j ON j.id = bj.job_id
+    JOIN companies c ON c.id = j.company_id
+    LEFT JOIN workspaces w ON w.basket_job_id = bj.id
+    WHERE bj.user_id = #{userId}
+      AND bj.deleted_at IS NULL
+      <if test="status != null">AND bj.application_status = #{status}</if>
+    ORDER BY
+      <choose>
+        <when test="sort != null and sort.equalsIgnoreCase('deadline')">deadline_soon DESC, bj.id ASC</when>
+        <otherwise>bj.id ASC</otherwise>
+      </choose>
+  </select>
+
+  <select id="findBasketJob" resultMap="basketJobRowMap">
+    SELECT bj.id, bj.user_id, bj.job_id, w.id AS workspace_id, c.name AS company_name,
+           j.title AS position_title, bj.application_status, j.deadline_label,
+           CASE WHEN j.deadline_label LIKE '오늘%' OR j.deadline_label LIKE 'D-%' THEN TRUE ELSE FALSE END AS deadline_soon,
+           j.url AS source_url
+    FROM basket_jobs bj
+    JOIN jobs j ON j.id = bj.job_id
+    JOIN companies c ON c.id = j.company_id
+    LEFT JOIN workspaces w ON w.basket_job_id = bj.id
+    WHERE bj.user_id = #{userId}
+      AND bj.id = #{basketJobId}
+      AND bj.deleted_at IS NULL
+  </select>
+
+  <update id="updateBasketJobStatus">
+    UPDATE basket_jobs
+    SET application_status = #{status}, status_updated_at = CURRENT_TIMESTAMP, status_reason = 'USER_SET'
+    WHERE id = #{basketJobId} AND user_id = #{userId} AND deleted_at IS NULL
+  </update>
+
+  <update id="archiveBasketJob">
+    UPDATE basket_jobs
+    SET deleted_at = CURRENT_TIMESTAMP
+    WHERE id = #{basketJobId} AND user_id = #{userId} AND deleted_at IS NULL
+  </update>
+
+  <select id="findWorkspace" resultMap="workspaceRowMap">
+    SELECT w.id, w.user_id, w.basket_job_id, c.name AS company_name, j.title AS position_title,
+           j.deadline_label, bj.application_status, j.url AS source_url
+    FROM workspaces w
+    JOIN basket_jobs bj ON bj.id = w.basket_job_id
+    JOIN jobs j ON j.id = bj.job_id
+    JOIN companies c ON c.id = j.company_id
+    WHERE w.user_id = #{userId}
+      AND w.id = #{workspaceId}
+      AND bj.deleted_at IS NULL
+  </select>
+
+  <select id="listQuestions" resultMap="questionRowMap">
+    SELECT q.id, q.workspace_id, q.question_text AS prompt,
+           COALESCE(d.body, '') AS draft, q.max_length
+    FROM essay_questions q
+    LEFT JOIN essay_drafts d ON d.question_id = q.id
+    WHERE q.workspace_id = #{workspaceId}
+    ORDER BY q.sort_order ASC, q.id ASC
+  </select>
+
+  <select id="findQuestion" resultMap="questionRowMap">
+    SELECT q.id, q.workspace_id, q.question_text AS prompt,
+           COALESCE(d.body, '') AS draft, q.max_length
+    FROM essay_questions q
+    LEFT JOIN essay_drafts d ON d.question_id = q.id
+    WHERE q.workspace_id = #{workspaceId} AND q.id = #{questionId}
+  </select>
+
+  <update id="updateDraft">
+    UPDATE essay_drafts
+    SET body = #{body}, save_revision = save_revision + 1, client_updated_at = CURRENT_TIMESTAMP, auto_saved_at = CURRENT_TIMESTAMP
+    WHERE question_id = #{questionId}
+  </update>
+
+  <insert id="insertEssayVersion" useGeneratedKeys="true" keyProperty="id">
+    INSERT INTO essay_versions (workspace_id, question_id, version_name, body, created_at)
+    VALUES (#{workspaceId}, #{questionId}, #{versionName}, #{body}, CURRENT_TIMESTAMP)
+  </insert>
+
+  <select id="listVersions" resultMap="versionRowMap">
+    SELECT v.id, w.user_id, v.workspace_id, v.question_id, v.version_name, v.body
+    FROM essay_versions v
+    JOIN workspaces w ON w.id = v.workspace_id
+    WHERE w.user_id = #{userId} AND v.workspace_id = #{workspaceId}
+    ORDER BY v.id ASC
+  </select>
+
+  <select id="findVersion" resultMap="versionRowMap">
+    SELECT v.id, w.user_id, v.workspace_id, v.question_id, v.version_name, v.body
+    FROM essay_versions v
+    JOIN workspaces w ON w.id = v.workspace_id
+    WHERE w.user_id = #{userId} AND v.workspace_id = #{workspaceId} AND v.id = #{versionId}
+  </select>
+
+  <select id="listReferences" resultMap="referenceRowMap">
+    SELECT r.id, w.user_id, r.workspace_id, r.board_name, r.reference_type, r.title, r.body, r.url
+    FROM reference_materials r
+    JOIN workspaces w ON w.id = r.workspace_id
+    WHERE r.workspace_id = #{workspaceId} AND r.deleted_at IS NULL
+    ORDER BY r.id ASC
+  </select>
+
+  <select id="findReference" resultMap="referenceRowMap">
+    SELECT r.id, w.user_id, r.workspace_id, r.board_name, r.reference_type, r.title, r.body, r.url
+    FROM reference_materials r
+    JOIN workspaces w ON w.id = r.workspace_id
+    WHERE w.user_id = #{userId} AND r.id = #{referenceId} AND r.deleted_at IS NULL
+  </select>
+
+  <update id="updateReference">
+    UPDATE reference_materials r
+    JOIN workspaces w ON w.id = r.workspace_id
+    SET r.board_name = #{boardName}, r.reference_type = #{referenceType}, r.title = #{title},
+        r.body = #{body}, r.url = #{url}
+    WHERE r.id = #{id} AND w.user_id = #{userId} AND r.deleted_at IS NULL
+  </update>
+
+  <update id="deleteReference">
+    UPDATE reference_materials r
+    JOIN workspaces w ON w.id = r.workspace_id
+    SET r.deleted_at = CURRENT_TIMESTAMP
+    WHERE r.id = #{referenceId} AND w.user_id = #{userId} AND r.deleted_at IS NULL
+  </update>
+</mapper>

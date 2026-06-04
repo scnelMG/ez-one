@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
+    "dev": "vite --host localhost",
     "build": "vue-tsc --noEmit -p tsconfig.app.json && vite build",
     "test": "vitest run --config vitest.config.ts"
   },

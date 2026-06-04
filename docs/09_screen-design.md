@@ -7,7 +7,10 @@
 ## 화면 기준
 
 - 최종 와이어프레임 PDF: `docs/assets/wireframes/ez_one_wireframe_final.pdf`
+- 최종 반영본: 사용자가 전달한 `EZ-ONE 와이어프레임 (8).pdf`를 `2026-06-04`에 위 경로로 교체했다.
+- 최종 PDF SHA-256: `BA4FF007D1078C0CF8969DFE1E0D6566FBBA5626D4CAD9D7D09FF2AA508FF43D`
 - Figma: [EZ One](https://www.figma.com/design/gmDOGDBDih2eqBJ6LzZDL5/EZ-One?node-id=0-1&p=f&m=draw)
+- UI 포인트 색상은 로고의 보라 계열 `#6D4DFF`, `#7A5CFF`를 기준으로 한다. 와이어프레임의 정보구조와 요소 수를 우선하고, 색상은 CTA, 포커스, 선택 상태에만 제한적으로 적용한다.
 - P1 핵심 흐름: `공고 저장 -> 장바구니 -> 지원 워크스페이스 -> 참고자료/자소서 작성 -> 서류 입력 정보 재사용`
 - 전체 IA 원본은 `docs/08_information-architecture.md`를 기준으로 한다.
 - IA에는 P2 화면도 보일 수 있으나 P1 완료 기준으로 구현하지 않는다.
@@ -22,15 +25,15 @@
 
 | IA 대분류 | IA 중분류 | Route / Entry | Page / Component | P1 | 기준 |
 | --- | --- | --- | --- | --- | --- |
-| 비로그인 영역 | 로그인 Google | `/login` | `LoginPage` | Yes | Google OAuth 로그인 |
-| 비로그인 영역 | 회원가입 | `/login` | `GoogleLoginButton` | Yes | 별도 회원가입 form 없이 Google 로그인으로 진입 |
+| 비로그인 영역 | 서비스 소개 / 로그인 Google | `/login` | `LoginPage` | Yes | 공개 랜딩에서 서비스 소개 후 Google OAuth 로그인 |
+| 비로그인 영역 | 회원가입 | `/login` | `GoogleLoginButton` | Yes | 별도 회원가입 form 없이 `Google로 시작하기`로 진입 |
 | 웹 서비스 | 온보딩 모달 | `/onboarding` 또는 modal | `OnboardingPage`, `PreferenceForm` | Yes | 최초 로그인 시 표시, 마이페이지에서 수정 |
 | 웹 서비스 | 메인 페이지 | `/` | `MainPage` | Yes | 대시보드/장바구니/추천/서류 입력 정보 진입 |
 | 메인 페이지 | 지원 현황 대시보드 | `/` | `DashboardSummaryCards` | Yes | 지원완료, 마감임박, 진행중, 지원 전, 유저 대비 상위% |
 | 메인 페이지 | 공고 장바구니 미리보기 | `/` | `BasketPreview` | Yes | 마감순, D-7 강조 |
 | 메인 페이지 | 추천 공고 미리보기 | `/` | `RecommendationPreview` | Yes | 온보딩 기반 맞춤 추천 카드 |
 | 공고 장바구니 | 공고 목록 | `/basket` | `BasketPage`, `BasketJobTable` | Yes | 회사, 직무, 상태, 마감, 링크 |
-| 공고 장바구니 | 캘린더 / 주간 일정 | `/basket/calendar` 또는 basket section | `BasketCalendarPanel` | No | P2. 마감 일정 표시 |
+| 공고 장바구니 | 캘린더 / 주간 일정 | `/basket` 상단 section | `BasketCalendarPanel` | Yes | 최종 와이어프레임 기준으로 장바구니 화면에 노출. 별도 알림/외부 캘린더 연동은 P2 |
 | 공고 장바구니 | 노션 자동 동기화 | `/mypage/notion` 또는 save side effect | `NotionSettingsPage`, `SyncLogList` | Yes | P1은 공고 저장 `JOB_ONLY` |
 | 지원 워크스페이스 | 도화지 | `/workspaces/:workspaceId?tab=canvas` | `CanvasTab` | Yes | 마크다운, 문항별 작성, 글자 수 |
 | 지원 워크스페이스 | 자소서 버전관리 | `/workspaces/:workspaceId?tab=versions` | `VersionsTab` | Yes | V1/V2 비교, 변경 이력 |
@@ -273,6 +276,7 @@ frontend/src/features/document-profile/
 | 주요 컴포넌트 | `GoogleLoginButton`, `AuthErrorMessage` |
 | 성공 흐름 | 최초 사용자는 `/onboarding`, 기존 사용자는 `/` |
 | 실패 상태 | OAuth 취소/실패 메시지 표시 |
+| 공개 진입 | 서비스 소개, P1 핵심 기능, Google 시작/로그인 CTA를 같은 화면에서 제공한다. |
 
 ### OnboardingPage
 
@@ -298,8 +302,9 @@ frontend/src/features/document-profile/
 | 항목 | 기준 |
 | --- | --- |
 | 목적 | 저장 공고 목록과 지원 상태 관리 |
-| 주요 컴포넌트 | `BasketFilterBar`, `BasketJobTable`, `ApplicationStatusBadge`, `DeadlineBadge` |
-| 필터 | 전체, 진행중, 지원 전, 마감 임박 |
+| 최종 와이어프레임 순서 | 페이지 제목, 앱 내비게이션, 캘린더, 주간 일정, 공고 장바구니 도구, 공고 테이블 |
+| 주요 컴포넌트 | `BasketCalendarPanel`, `WeeklySchedulePanel`, `BasketJobTable`, `BasketToolbar` |
+| 도구 | 필터링, 정렬, 검색 아이콘만 노출 |
 | row 클릭 | 해당 공고의 `/workspaces/:workspaceId`로 이동 |
 | 중복 저장 | 새 row를 만들지 않고 기존 row/워크스페이스 경로를 안내한다. |
 

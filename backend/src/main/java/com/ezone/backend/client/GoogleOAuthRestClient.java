@@ -2,6 +2,7 @@ package com.ezone.backend.client;
 
 import com.ezone.backend.dto.auth.GoogleLoginRequest;
 import com.ezone.backend.dto.auth.GoogleUserProfile;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
@@ -20,6 +21,7 @@ public class GoogleOAuthRestClient implements GoogleOAuthClient {
     private final String tokenUri;
     private final String userInfoUri;
 
+    @Autowired
     public GoogleOAuthRestClient(
         RestClient.Builder restClientBuilder,
         @Value("${auth.google.client-id}") String clientId,

@@ -1,0 +1,86 @@
+package com.ezone.backend.mapper;
+
+import com.ezone.backend.domain.ApplicationStatus;
+import com.ezone.backend.domain.persistence.BasketJobRow;
+import com.ezone.backend.domain.persistence.EssayQuestionRow;
+import com.ezone.backend.domain.persistence.EssayVersionRow;
+import com.ezone.backend.domain.persistence.JobRow;
+import com.ezone.backend.domain.persistence.ReferenceMaterialRow;
+import com.ezone.backend.domain.persistence.WorkspaceRow;
+import java.util.List;
+import java.util.Optional;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+@Mapper
+public interface P1WorkspaceMapper {
+
+    void upsertCompany(JobRow row);
+
+    void insertJob(JobRow row);
+
+    Optional<BasketJobRow> findDuplicateBasketJob(
+        @Param("userId") Long userId,
+        @Param("companyName") String companyName,
+        @Param("positionTitle") String positionTitle,
+        @Param("sourceUrl") String sourceUrl
+    );
+
+    void insertBasketJob(BasketJobRow row);
+
+    void insertWorkspace(WorkspaceRow row);
+
+    void insertEssayQuestion(EssayQuestionRow row);
+
+    void insertEssayDraft(EssayQuestionRow row);
+
+    void insertReferenceMaterial(ReferenceMaterialRow row);
+
+    List<BasketJobRow> listBasketJobs(
+        @Param("userId") Long userId,
+        @Param("status") ApplicationStatus status,
+        @Param("sort") String sort
+    );
+
+    Optional<BasketJobRow> findBasketJob(@Param("userId") Long userId, @Param("basketJobId") Long basketJobId);
+
+    int updateBasketJobStatus(
+        @Param("userId") Long userId,
+        @Param("basketJobId") Long basketJobId,
+        @Param("status") ApplicationStatus status
+    );
+
+    int archiveBasketJob(@Param("userId") Long userId, @Param("basketJobId") Long basketJobId);
+
+    Optional<WorkspaceRow> findWorkspace(@Param("userId") Long userId, @Param("workspaceId") Long workspaceId);
+
+    List<EssayQuestionRow> listQuestions(@Param("workspaceId") Long workspaceId);
+
+    Optional<EssayQuestionRow> findQuestion(
+        @Param("workspaceId") Long workspaceId,
+        @Param("questionId") Long questionId
+    );
+
+    int updateDraft(@Param("questionId") Long questionId, @Param("body") String body);
+
+    void insertEssayVersion(EssayVersionRow row);
+
+    List<EssayVersionRow> listVersions(@Param("userId") Long userId, @Param("workspaceId") Long workspaceId);
+
+    Optional<EssayVersionRow> findVersion(
+        @Param("userId") Long userId,
+        @Param("workspaceId") Long workspaceId,
+        @Param("versionId") Long versionId
+    );
+
+    List<ReferenceMaterialRow> listReferences(@Param("workspaceId") Long workspaceId);
+
+    Optional<ReferenceMaterialRow> findReference(
+        @Param("userId") Long userId,
+        @Param("referenceId") Long referenceId
+    );
+
+    int updateReference(ReferenceMaterialRow row);
+
+    int deleteReference(@Param("userId") Long userId, @Param("referenceId") Long referenceId);
+}

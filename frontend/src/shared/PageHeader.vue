@@ -1,8 +1,8 @@
 <template>
   <section class="page-header">
-    <p class="eyebrow">{{ eyebrow }}</p>
     <div class="page-header-row">
       <div>
+        <p class="eyebrow">{{ eyebrow }}</p>
         <h1>{{ title }}</h1>
         <p>{{ description }}</p>
       </div>

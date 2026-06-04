@@ -6,12 +6,17 @@ spring:
     username: ${DB_USERNAME:ez_one}
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
+  sql:
+    init:
+      mode: ${SQL_INIT_MODE:never}
+      schema-locations: classpath:schema-mysql.sql
 
 mybatis:
   mapper-locations: classpath:mapper/**/*.xml
 
 server:
   port: ${SERVER_PORT:8080}
+  address: ${SERVER_ADDRESS:127.0.0.1}
 
 auth:
   google:
@@ -20,7 +25,7 @@ auth:
     token-uri: ${GOOGLE_TOKEN_URI:https://oauth2.googleapis.com/token}
     user-info-uri: ${GOOGLE_USER_INFO_URI:https://www.googleapis.com/oauth2/v3/userinfo}
   jwt:
-    access-secret: ${JWT_ACCESS_SECRET}
-    refresh-secret: ${JWT_REFRESH_SECRET}
+    access-secret: ${JWT_ACCESS_SECRET:dev-access-secret-change-me-dev-access-secret-change-me}
+    refresh-secret: ${JWT_REFRESH_SECRET:dev-refresh-secret-change-me-dev-refresh-secret-change-me}
     access-ttl-minutes: ${JWT_ACCESS_TTL_MINUTES:30}
     refresh-ttl-days: ${JWT_REFRESH_TTL_DAYS:14}
