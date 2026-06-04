@@ -18,6 +18,7 @@ P1에서 활성화할 동작:
 - refresh token으로 access token을 재발급한다.
 - logout 시 refresh token을 폐기한다.
 - `GET /api/me`로 현재 로그인 사용자를 조회한다.
+- `PATCH /api/me`로 서비스 표시용 닉네임을 수정한다.
 
 P1에서 활성화하지 않는 동작:
 
@@ -224,6 +225,54 @@ Authorization: Bearer <access-token>
 | --- | --- | --- |
 | 401 | `UNAUTHORIZED` | access token 없음, 만료, 위조 |
 
+## `PATCH /api/me`
+
+현재 로그인 사용자의 서비스 닉네임을 수정한다. Google 계정 원본 이름은 `name`으로 유지하고, 화면 표시용 이름은 `nickname`을 우선 사용한다.
+
+### 인증
+
+```text
+Authorization: Bearer <access-token>
+```
+
+### 요청
+
+```json
+{
+  "nickname": "길동"
+}
+```
+
+### 요청 DTO
+
+```text
+UpdateCurrentUserRequest
+- nickname: string, required, max 50
+```
+
+### 성공 응답
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "email": "user@example.com",
+    "name": "Hong Gil Dong",
+    "nickname": "길동",
+    "profileCompleted": true
+  },
+  "error": null
+}
+```
+
+### 오류
+
+| HTTP | code | 조건 |
+| --- | --- | --- |
+| 400 | `INVALID_REQUEST` | nickname 누락, 공백, 길이 초과 |
+| 401 | `UNAUTHORIZED` | access token 없음, 만료, 위조 |
+
 ## 프론트엔드 상태 계약
 
 프론트엔드는 다음 상태를 구분한다.
@@ -245,3 +294,4 @@ Authorization: Bearer <access-token>
 | `TC-AUTH-003` | 다른 사용자 데이터 접근은 `403 FORBIDDEN` |
 | `TC-AUTH-004` | refresh token으로 새 access token 발급 |
 | `TC-AUTH-005` | logout 후 같은 refresh token 재사용 거부 |
+| `TC-AUTH-006` | 마이페이지 닉네임 수정 후 현재 사용자 DTO와 프론트 세션 갱신 |

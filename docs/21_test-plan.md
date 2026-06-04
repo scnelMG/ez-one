@@ -13,6 +13,7 @@
 | TC-AUTH-003 | Auth | 다른 사용자 데이터 접근 | 403 공통 오류 |
 | TC-AUTH-004 | Auth | refresh token 재발급 | 새 access token 발급 |
 | TC-AUTH-005 | Auth | logout 후 refresh 재사용 | token revoke로 재발급 거부 |
+| TC-AUTH-006 | Auth | 닉네임 수정 | 현재 사용자 DTO와 프론트 세션 갱신 |
 | TC-ONB-001 | Onboarding | 온보딩 저장 | 프로필 저장 |
 | TC-ONB-002 | Onboarding | 온보딩 건너뛰기 | 빈 editable profile 상태 유지 |
 | TC-DASH-001 | Dashboard | 상태 카드 클릭 | 장바구니가 예상 filter/sort로 열린다. |

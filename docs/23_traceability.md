@@ -10,7 +10,7 @@
 
 | 요구사항 | Use Case | 화면 | API | DB | 테스트 |
 | --- | --- | --- | --- | --- | --- |
-| AUTH-001 | UC-01 | 로그인 | `POST /api/auth/google`, `POST /api/auth/refresh`, `POST /api/auth/logout`, `GET /api/me` | `users`, `user_sessions` | TC-AUTH-001~005 |
+| AUTH-001 | UC-01 | 로그인 | `POST /api/auth/google`, `POST /api/auth/refresh`, `POST /api/auth/logout`, `GET /api/me`, `PATCH /api/me` | `users`, `user_sessions` | TC-AUTH-001~006 |
 | ONB-001 | UC-02, UC-15 | 온보딩, 마이페이지 | `GET/PUT /api/me/profile` | `user_profiles` | TC-ONB-001, TC-ONB-002 |
 | ONB-002 | UC-02, UC-05 | 온보딩, 추천 | `GET/PUT /api/me/profile`, `GET /api/recommendations/jobs` | `user_profiles` | TC-ONB-001, TC-REC-001 |
 | DASH-001 | UC-03, UC-04 | 메인 대시보드, 장바구니 | `GET /api/dashboard/summary`, `GET /api/basket/jobs` | `basket_jobs`, `jobs` | TC-DASH-001 |

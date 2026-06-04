@@ -2,6 +2,8 @@ package com.ezone.backend.controller;
 
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -9,16 +11,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.ezone.backend.config.SecurityConfig;
+import com.ezone.backend.domain.UserAccount;
+import com.ezone.backend.mapper.UserAccountMapper;
 import com.ezone.backend.security.JwtAccessTokenVerifier;
 import com.ezone.backend.security.JwtAuthenticationFilter;
 import com.ezone.backend.service.InMemoryP1WorkspaceService;
 import com.ezone.backend.service.InMemoryProfileService;
+import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest({
@@ -44,6 +51,21 @@ class P1ApiContractTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockitoBean
+    private UserAccountMapper userAccountMapper;
+
+    @BeforeEach
+    void setUp() {
+        when(userAccountMapper.findById(1L)).thenReturn(Optional.of(new UserAccount(
+            1L,
+            "google-subject",
+            "user@example.com",
+            "Hong Gil Dong",
+            "Gil Dong",
+            true
+        )));
+    }
 
     @Test
     void dashboardBasketAndWorkspaceContractsAreConnected() throws Exception {
@@ -128,6 +150,30 @@ class P1ApiContractTest {
     }
 
     @Test
+    void currentUserNicknameCanBeUpdated() throws Exception {
+        when(userAccountMapper.findById(1L)).thenReturn(Optional.of(new UserAccount(
+            1L,
+            "google-subject",
+            "user@example.com",
+            "Hong Gil Dong",
+            "길동",
+            true
+        )));
+
+        mockMvc.perform(patch("/api/me")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    { "nickname": "길동" }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.nickname").value("길동"))
+            .andExpect(jsonPath("$.data.name").value("Hong Gil Dong"));
+
+        verify(userAccountMapper).updateNickname(1L, "길동");
+    }
+
+    @Test
     void extensionPreviewAndSaveContractsRespond() throws Exception {
         mockMvc.perform(post("/api/extension/jobs/preview")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -149,10 +195,17 @@ class P1ApiContractTest {
                       "companyName": "당근",
                       "positionTitle": "Server Engineer",
                       "deadlineLabel": "D-6",
-                      "sourceUrl": "https://www.jasoseol.com/"
+                      "sourceUrl": "https://www.jasoseol.com/",
+                      "selectedRoles": ["Backend", "Platform"],
+                      "essayQuestions": [
+                        { "prompt": "지원동기를 작성해 주세요.", "maxLength": 1000 }
+                      ]
                     }
                     """))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.workspaceId", notNullValue()));
+            .andExpect(jsonPath("$.data[0].workspaceId", notNullValue()))
+            .andExpect(jsonPath("$.data[0].positionTitle").value("Backend"))
+            .andExpect(jsonPath("$.data[1].workspaceId", notNullValue()))
+            .andExpect(jsonPath("$.data[1].positionTitle").value("Platform"));
     }
 }

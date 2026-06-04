@@ -2,10 +2,13 @@ package com.ezone.backend.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import com.ezone.backend.domain.UserAccount;
+import com.ezone.backend.mapper.UserAccountMapper;
 import com.ezone.backend.mapper.UserSessionMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -23,6 +26,8 @@ class JwtAuthTokenIssuerTest {
     @Test
     void issueForCreatesJwtAndStoresOnlyRefreshTokenHash() {
         JwtAuthTokenIssuer issuer = new JwtAuthTokenIssuer(
+            new ObjectMapper(),
+            mock(UserAccountMapper.class),
             userSessionMapper,
             "access-secret-for-test-access-secret-for-test",
             "refresh-secret-for-test-refresh-secret-for-test",
@@ -49,6 +54,7 @@ class JwtAuthTokenIssuerTest {
                 && !session.refreshTokenHash().equals(tokens.refreshToken())
                 && session.refreshTokenHash().length() >= 64
                 && session.expiresAt().equals(Instant.parse("2026-06-18T00:00:00Z"))
+                && session.revokedAt() == null
         ));
     }
 }

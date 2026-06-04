@@ -1,11 +1,15 @@
 package com.ezone.backend.security;
 
+import com.ezone.backend.dto.ApiError;
+import com.ezone.backend.dto.ApiResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -16,9 +20,11 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtAccessTokenVerifier tokenVerifier;
+    private final ObjectMapper objectMapper;
 
-    public JwtAuthenticationFilter(JwtAccessTokenVerifier tokenVerifier) {
+    public JwtAuthenticationFilter(JwtAccessTokenVerifier tokenVerifier, ObjectMapper objectMapper) {
         this.tokenVerifier = tokenVerifier;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -40,11 +46,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             } catch (IllegalArgumentException exception) {
                 SecurityContextHolder.clearContext();
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid access token");
+                writeUnauthorized(response, "Invalid access token.");
                 return;
             }
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private void writeUnauthorized(HttpServletResponse response, String message) throws IOException {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        objectMapper.writeValue(
+            response.getWriter(),
+            new ApiResponse<>(false, null, new ApiError("UNAUTHORIZED", message, Map.of()))
+        );
     }
 }
