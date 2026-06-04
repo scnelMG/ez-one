@@ -3,7 +3,7 @@
     <section class="wire-page document-wire">
       <header class="wire-toolbar">
         <div>
-          <p class="section-kicker">PROFILE-001 / WS-003</p>
+          <p class="section-kicker">반복 입력 정보</p>
           <h1>서류 입력 정보</h1>
           <p>반복해서 쓰는 지원서 정보를 섹션별로 저장하고 워크스페이스 기본값으로 재사용합니다.</p>
         </div>
@@ -61,7 +61,7 @@
         </main>
 
         <aside class="wire-side-panel">
-          <p class="section-kicker">WS-003</p>
+          <p class="section-kicker">워크스페이스 기본값</p>
           <h2>워크스페이스 기본값</h2>
           <p>입력한 값은 공고별 워크스페이스에서 기본값으로 불러옵니다.</p>
           <div class="summary-stack">

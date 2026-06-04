@@ -2499,6 +2499,104 @@ li {
   padding: 20px;
 }
 
+.app-main {
+  width: min(1240px, calc(100% - 40px));
+  padding-top: 24px;
+}
+
+.wire-page {
+  min-height: auto;
+  border-color: #e6eaf2;
+  background: #ffffff;
+  box-shadow: 0 18px 48px rgba(17, 24, 39, 0.07);
+  padding: 22px;
+}
+
+.wire-toolbar {
+  align-items: center;
+  border-bottom-color: #edf0f5;
+  margin-bottom: 18px;
+  padding-bottom: 18px;
+}
+
+.wire-toolbar h1,
+.page-header h1 {
+  font-size: 1.55rem;
+}
+
+.section-kicker,
+.eyebrow,
+.shell-card-kicker {
+  letter-spacing: 0;
+}
+
+.filter-bar {
+  border-color: #e5e9f1;
+  background: #f8f9fc;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.workspace-canvas {
+  grid-template-columns: 176px minmax(0, 1fr) 320px;
+  gap: 16px;
+}
+
+.question-rail,
+.essay-panel,
+.reference-side-panel,
+.wire-panel,
+.wire-side-panel,
+.document-form-panel,
+.wire-side-rail,
+.notion-shell,
+.notion-preview,
+.recommendation-card,
+.shell-card,
+.state-panel {
+  border-radius: 8px;
+}
+
+.draft-surface {
+  min-height: 280px;
+  border-color: #e5e9f1;
+  background:
+    linear-gradient(#ffffff, #ffffff) padding-box,
+    linear-gradient(180deg, #f7f8fb, #ffffff) border-box;
+  color: #303747;
+  line-height: 1.75;
+}
+
+.reference-board-grid article,
+.recommendation-card,
+.shell-card {
+  box-shadow: 0 10px 28px rgba(17, 24, 39, 0.04);
+}
+
+.recommendation-card {
+  min-height: 152px;
+}
+
+.document-editor-grid {
+  grid-template-columns: 170px minmax(0, 1fr) 310px;
+  gap: 16px;
+}
+
+.form-shell input {
+  border-color: #e0e6ef;
+  background: #ffffff;
+}
+
+.form-shell input:focus {
+  outline: 2px solid rgba(109, 77, 255, 0.18);
+  border-color: var(--blue-line);
+}
+
 .form-actions {
   display: flex;
   align-items: center;

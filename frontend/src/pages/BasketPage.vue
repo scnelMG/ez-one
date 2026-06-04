@@ -3,7 +3,7 @@
     <section class="basket-page">
       <header class="basket-hero">
         <div>
-          <p class="section-kicker">JOB-001 / MAIN-015</p>
+          <p class="section-kicker">공고 관리</p>
           <h1>공고 장바구니</h1>
           <p>저장한 공고의 상태와 마감일을 한 번에 확인하고, 바로 지원 워크스페이스로 이동합니다.</p>
         </div>
@@ -33,7 +33,7 @@
         <section class="basket-list-panel" aria-label="저장한 공고 목록">
           <div class="basket-title-row">
             <div>
-              <p class="section-kicker">JOB-010 / JOB-014</p>
+              <p class="section-kicker">저장한 공고</p>
               <h2>지원 관리</h2>
             </div>
             <div class="basket-tools" aria-label="장바구니 도구">
@@ -50,10 +50,16 @@
           </div>
 
           <div class="filter-bar compact" aria-label="지원 상태 필터">
-            <button class="filter-chip active" type="button">전체</button>
-            <button class="filter-chip" type="button">지원 전</button>
-            <button class="filter-chip" type="button">진행 중</button>
-            <button class="filter-chip" type="button">지원 완료</button>
+            <RouterLink
+              v-for="filter in statusFilters"
+              :key="filter.label"
+              :data-testid="`basket-filter-${filter.value ?? 'ALL'}`"
+              class="filter-chip"
+              :class="{ active: selectedStatus === filter.value }"
+              :to="filter.to"
+            >
+              {{ filter.label }}
+            </RouterLink>
             <div class="search-field">회사명 또는 직무명 검색</div>
           </div>
 
@@ -94,7 +100,7 @@
         <aside class="deadline-panel" aria-label="마감일 스냅샷">
           <div class="section-heading">
             <div>
-              <p class="section-kicker">MAIN-014</p>
+              <p class="section-kicker">마감 일정</p>
               <h2>마감일 스냅샷</h2>
             </div>
             <span>2026년 6월</span>
@@ -122,19 +128,41 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import AppLayout from '@/shared/AppLayout.vue'
 import StatePanel from '@/shared/StatePanel.vue'
 import { useBasketStore } from '@/stores/basketStore'
 import type { BasketJob, BasketJobStatus } from '@/features/basket/api/basketApi'
 
+const route = useRoute()
 const basketStore = useBasketStore()
 const weekdays = ['일', '월', '화', '수', '목', '금', '토']
 const monthDays = Array.from({ length: 30 }, (_, index) => index + 1)
 const firstDayOffset = 1
+const statusFilters: Array<{ label: string; value?: BasketJobStatus; to: string }> = [
+  { label: '전체', value: undefined, to: '/basket' },
+  { label: '지원 전', value: 'NOT_STARTED', to: '/basket?status=NOT_STARTED' },
+  { label: '진행 중', value: 'IN_PROGRESS', to: '/basket?status=IN_PROGRESS' },
+  { label: '지원 완료', value: 'SUBMITTED', to: '/basket?status=SUBMITTED' }
+]
+
+const selectedStatus = computed<BasketJobStatus | undefined>(() => {
+  const status = route.query.status
+
+  return status === 'NOT_STARTED' || status === 'IN_PROGRESS' || status === 'SUBMITTED'
+    ? status
+    : undefined
+})
 
 const sortedJobs = computed(() =>
-  [...basketStore.jobs].sort((left, right) => deadlineDay(left) - deadlineDay(right))
+  [...basketStore.jobs].sort((left, right) => {
+    if (route.query.sort === 'deadline') {
+      return deadlineDay(left) - deadlineDay(right)
+    }
+
+    return Number(left.id) - Number(right.id)
+  })
 )
 
 const statusCounts = computed<Record<BasketJobStatus, number>>(() => ({
@@ -172,6 +200,10 @@ function statusClass(status: BasketJobStatus) {
 }
 
 onMounted(() => {
-  void basketStore.loadJobs()
+  void basketStore.loadJobs(selectedStatus.value)
+})
+
+watch(selectedStatus, (nextStatus) => {
+  void basketStore.loadJobs(nextStatus)
 })
 </script>

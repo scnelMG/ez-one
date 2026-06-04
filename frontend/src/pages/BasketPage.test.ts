@@ -4,32 +4,38 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import { describe, expect, it, vi } from 'vitest'
 import BasketPage from './BasketPage.vue'
 
+const mocks = vi.hoisted(() => ({
+  listJobs: vi.fn().mockResolvedValue([
+    {
+      id: '101',
+      companyName: '네이버',
+      positionTitle: 'Backend Engineer',
+      status: 'IN_PROGRESS',
+      statusLabel: '진행 중',
+      deadlineLabel: '2026.06.11',
+      deadlineDate: '2026-06-11',
+      deadlineSoon: true,
+      workspaceId: '102',
+      sourceUrl: 'https://www.jasoseol.com/'
+    },
+    {
+      id: '104',
+      companyName: '카카오페이',
+      positionTitle: 'Server Developer',
+      status: 'NOT_STARTED',
+      statusLabel: '지원 전',
+      deadlineLabel: '2026.06.20',
+      deadlineDate: '2026-06-20',
+      deadlineSoon: true,
+      workspaceId: '105',
+      sourceUrl: 'https://www.jasoseol.com/'
+    }
+  ])
+}))
+
 vi.mock('@/features/basket/api/basketApi', () => ({
   basketApi: {
-    listJobs: vi.fn().mockResolvedValue([
-      {
-        id: '101',
-        companyName: '네이버',
-        positionTitle: 'Backend Engineer',
-        status: 'IN_PROGRESS',
-        statusLabel: '진행 중',
-        deadlineLabel: '2026.06.11',
-        deadlineSoon: true,
-        workspaceId: '102',
-        sourceUrl: 'https://www.jasoseol.com/'
-      },
-      {
-        id: '104',
-        companyName: '카카오페이',
-        positionTitle: 'Server Developer',
-        status: 'NOT_STARTED',
-        statusLabel: '지원 전',
-        deadlineLabel: '2026.06.20',
-        deadlineSoon: true,
-        workspaceId: '105',
-        sourceUrl: 'https://www.jasoseol.com/'
-      }
-    ])
+    listJobs: mocks.listJobs
   }
 }))
 
@@ -48,6 +54,10 @@ const makeRouter = () =>
   })
 
 describe('BasketPage', () => {
+  beforeEach(() => {
+    mocks.listJobs.mockClear()
+  })
+
   it('JOB-001/MAIN-015: renders a service-style basket page with logo and workspace links', async () => {
     const router = makeRouter()
     router.push('/basket')
@@ -63,6 +73,7 @@ describe('BasketPage', () => {
 
     expect(wrapper.find('img[alt="EZ One"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('장바구니')
+    expect(wrapper.text()).not.toMatch(/JOB-|MAIN-/)
     expect(wrapper.text()).toContain('네이버')
     expect(wrapper.text()).toContain('카카오페이')
     expect(wrapper.find('.week-grid').exists()).toBe(false)
@@ -70,5 +81,22 @@ describe('BasketPage', () => {
     const hrefs = wrapper.findAll('a').map((link) => link.attributes('href'))
     expect(hrefs).toContain('/workspaces/102')
     expect(hrefs).toContain('/workspaces/105')
+  })
+
+  it('TC-DASH-001: loads the basket with the status query selected', async () => {
+    const router = makeRouter()
+    router.push('/basket?status=IN_PROGRESS')
+    await router.isReady()
+
+    const wrapper = mount(BasketPage, {
+      global: {
+        plugins: [createPinia(), router]
+      }
+    })
+
+    await new Promise((resolve) => setTimeout(resolve))
+
+    expect(mocks.listJobs).toHaveBeenCalledWith('IN_PROGRESS')
+    expect(wrapper.get('[data-testid="basket-filter-IN_PROGRESS"]').classes()).toContain('active')
   })
 })

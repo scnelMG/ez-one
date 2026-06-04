@@ -65,5 +65,6 @@ describe('MyPage', () => {
     expect(updateCurrentUser).toHaveBeenCalledWith({ nickname: '길동' })
     expect(JSON.parse(localStorage.getItem('ezone.currentUser') ?? '{}').nickname).toBe('길동')
     expect(wrapper.text()).toContain('저장되었습니다')
+    expect(wrapper.text()).not.toMatch(/AUTH-/)
   })
 })

@@ -2,7 +2,7 @@
   <AppLayout>
     <section class="wire-page narrow">
       <PageHeader
-        eyebrow="AUTH-014"
+        eyebrow="계정 설정"
         title="마이페이지"
         description="Google 계정으로 만든 기본 회원 정보를 확인하고 서비스에서 사용할 닉네임을 수정합니다."
       />

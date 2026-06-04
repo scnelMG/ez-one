@@ -5,7 +5,7 @@
         <section class="onboarding-dialog" aria-label="온보딩 입력 모달">
           <div class="dialog-header">
             <div>
-              <p class="section-kicker">ONB-001 / ONB-002</p>
+              <p class="section-kicker">맞춤 추천 준비</p>
               <h1>선호 조건을 알려주세요</h1>
               <p>추천 공고와 마이페이지 설정에 함께 쓰일 기본 정보를 정리합니다.</p>
             </div>
@@ -57,8 +57,8 @@
           </section>
 
           <div class="dialog-actions">
-            <button class="ghost-button" type="button">건너뛰기</button>
-            <button class="primary-button" type="button">저장하고 시작</button>
+            <button class="ghost-button" type="button" @click="goToMain">건너뛰기</button>
+            <button class="primary-button" type="button" @click="goToMain">저장하고 시작</button>
           </div>
         </section>
       </div>
@@ -67,5 +67,12 @@
 </template>
 
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
 import AppLayout from '@/shared/AppLayout.vue'
+
+const router = useRouter()
+
+function goToMain() {
+  void router.push('/main')
+}
 </script>

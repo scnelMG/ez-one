@@ -10,12 +10,12 @@ export const useBasketStore = defineStore('basket', () => {
   const hasJobs = computed(() => jobs.value.length > 0)
   const deadlineSoonCount = computed(() => jobs.value.filter((job) => job.deadlineSoon).length)
 
-  async function loadJobs() {
+  async function loadJobs(filterStatus?: BasketJob['status']) {
     status.value = 'loading'
     errorMessage.value = ''
 
     try {
-      jobs.value = await basketApi.listJobs()
+      jobs.value = await basketApi.listJobs(filterStatus)
       status.value = 'ready'
     } catch {
       status.value = 'error'

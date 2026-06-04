@@ -3,8 +3,8 @@
     <section class="dashboard-page">
       <header class="dashboard-header">
         <div class="dashboard-title">
-          <p class="section-kicker">DASH-001</p>
-          <h1>메인 대시보드</h1>
+          <p class="section-kicker">오늘의 지원 흐름</p>
+          <h1>지원 준비를 한 화면에서 정리하세요</h1>
           <p>저장한 공고, 오늘 마감 일정, 추천 공고를 한 화면에서 훑고 다음 작업으로 이동합니다.</p>
         </div>
 
@@ -67,7 +67,7 @@
           <section class="dashboard-panel" aria-label="오늘 챙겨볼 공고">
             <div class="section-heading">
               <div>
-                <p class="section-kicker">JOB-001 / WS-001</p>
+                <p class="section-kicker">마감 임박</p>
                 <h2>오늘 챙겨볼 공고</h2>
               </div>
               <RouterLink class="text-button" to="/basket">전체 보기</RouterLink>
@@ -102,7 +102,7 @@
           <section class="dashboard-panel" aria-label="추천 공고 미리보기">
             <div class="section-heading">
               <div>
-                <p class="section-kicker">REC-001</p>
+                <p class="section-kicker">맞춤 추천</p>
                 <h2>추천 공고</h2>
               </div>
               <RouterLink class="text-button" to="/recommendations">추천 더보기</RouterLink>

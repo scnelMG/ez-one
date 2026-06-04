@@ -2,7 +2,7 @@
   <AppLayout>
     <section class="wire-page">
       <PageHeader
-        eyebrow="REC-001"
+        eyebrow="맞춤 추천"
         title="추천 공고"
         description="온보딩 프로필과 저장 이력을 기준으로 지금 확인할 만한 공고 후보를 보여줍니다."
       />
@@ -21,7 +21,9 @@
             <span class="shell-card-kicker">{{ item.match }}</span>
             <h3>{{ item.company }}</h3>
             <p>{{ item.role }}</p>
-            <RouterLink class="text-button" to="/basket">공고함에 담기</RouterLink>
+            <RouterLink class="text-button" :to="`/basket?from=recommendation&company=${encodeURIComponent(item.company)}`">
+              공고함에 담기
+            </RouterLink>
           </article>
         </div>
       </section>
@@ -29,8 +31,8 @@
       <StatePanel
         id="recommendation-p2"
         tone="navy"
-        title="Mattermost 추천은 P2 예약"
-        body="현재 화면은 프로필 기반 추천만 보여주며 외부 채널 수집 후보는 활성화하지 않습니다."
+        title="프로필 기반 추천만 제공 중"
+        body="지금은 사용자가 입력한 선호 조건과 저장 이력을 기준으로 추천 공고를 보여줍니다."
       />
     </section>
   </AppLayout>

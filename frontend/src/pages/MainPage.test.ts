@@ -69,15 +69,15 @@ describe('MainPage', () => {
 
     await new Promise((resolve) => setTimeout(resolve))
 
-    expect(wrapper.text()).toContain('메인 대시보드')
+    expect(wrapper.text()).toContain('오늘의 지원 흐름')
     expect(wrapper.text()).toContain('오늘 마감')
     expect(wrapper.text()).toContain('공고 장바구니')
-    expect(wrapper.text()).toContain('DASH-001')
-    expect(wrapper.text()).toContain('JOB-001')
-    expect(wrapper.text()).toContain('REC-001')
+    expect(wrapper.text()).not.toMatch(/DASH-|JOB-|REC-/)
 
     const links = wrapper.findAll('a').map((link) => link.attributes('href'))
     expect(links).toContain('/basket')
+    expect(links).toContain('/basket?status=IN_PROGRESS')
+    expect(links).toContain('/basket?sort=deadline')
     expect(links).toContain('/workspaces/102')
   })
 

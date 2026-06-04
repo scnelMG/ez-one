@@ -2,7 +2,7 @@
   <main class="auth-page">
     <section class="auth-panel" aria-labelledby="extension-connect-title">
       <img class="auth-logo" src="../assets/ez-one-logo.svg" alt="EZ One" />
-      <p class="section-kicker">EXT-003</p>
+      <p class="section-kicker">Chrome 확장 연결</p>
       <h1 id="extension-connect-title">확장프로그램 연결</h1>
       <p>{{ statusMessage }}</p>
       <RouterLink v-if="hasError" class="primary-button" to="/">다시 로그인하기</RouterLink>

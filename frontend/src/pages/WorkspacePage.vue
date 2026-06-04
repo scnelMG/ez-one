@@ -3,7 +3,7 @@
     <section class="wire-page workspace-wire">
       <header class="wire-toolbar">
         <div>
-          <p class="section-kicker">WS-001 / WS-002 / REF-001</p>
+          <p class="section-kicker">지원 워크스페이스</p>
           <h1>지원 워크스페이스</h1>
           <p>{{ headerDescription }}</p>
         </div>
@@ -62,8 +62,8 @@
           />
           <template v-else-if="workspaceStore.workspace">
             <div class="editor-toolbar">
-              <div>
-                <p class="section-kicker">WS-002</p>
+            <div>
+                <p class="section-kicker">초안 작성</p>
                 <h2>{{ workspaceStore.workspace.questions[0]?.prompt }}</h2>
               </div>
               <span class="status-chip">자동 저장 대기</span>
@@ -81,7 +81,7 @@
         <aside class="reference-side-panel">
           <div class="section-heading">
             <div>
-              <p class="section-kicker">REF-002</p>
+              <p class="section-kicker">작성 옆 참고자료</p>
               <h2>참고자료</h2>
             </div>
             <button class="ghost-button" type="button">추가</button>
@@ -99,7 +99,7 @@
       <section class="wire-panel" aria-label="참고자료 보드 미리보기">
         <div class="section-heading">
           <div>
-            <p class="section-kicker">REF-001 / WS-024</p>
+            <p class="section-kicker">자료 보드</p>
             <h2>참고자료 보드</h2>
           </div>
         </div>
