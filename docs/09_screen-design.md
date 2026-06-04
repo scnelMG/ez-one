@@ -9,6 +9,7 @@
 - 최종 와이어프레임 PDF: `docs/assets/wireframes/ez_one_wireframe_final.pdf`
 - Figma: [EZ One](https://www.figma.com/design/gmDOGDBDih2eqBJ6LzZDL5/EZ-One?node-id=0-1&p=f&m=draw)
 - P1 핵심 흐름: `공고 저장 -> 장바구니 -> 지원 워크스페이스 -> 참고자료/자소서 작성 -> 서류 입력 정보 재사용`
+- 전체 IA 원본은 `docs/08_information-architecture.md`를 기준으로 한다.
 - IA에는 P2 화면도 보일 수 있으나 P1 완료 기준으로 구현하지 않는다.
 
 ## 최종 와이어프레임
