@@ -8,6 +8,7 @@
 
       <nav class="landing-nav-links" aria-label="서비스 소개">
         <a href="#features">기능</a>
+        <a href="#extension-install">확장 설치</a>
         <a href="#workflow">흐름</a>
         <button type="button" class="landing-login-button" @click="startGoogleLogin">
           로그인
@@ -98,6 +99,31 @@
           <span>03</span>
           <h3>서류 입력 정보</h3>
           <p>반복 입력하는 기본 정보와 경력 항목을 저장해 지원서 작성 시간을 줄입니다.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="extension-install" class="landing-section extension-install" aria-label="Chrome 확장프로그램 설치">
+      <div class="landing-section-heading">
+        <p class="landing-eyebrow">Chrome Extension</p>
+        <h2>Chrome 확장프로그램 설치</h2>
+      </div>
+
+      <div class="landing-feature-grid">
+        <article>
+          <span>01</span>
+          <h3>빌드 생성</h3>
+          <p>터미널에서 <code>cd C:\ez-one\extension</code> 후 <code>npm run build</code>를 실행합니다.</p>
+        </article>
+        <article>
+          <span>02</span>
+          <h3>Chrome에 로드</h3>
+          <p><code>chrome://extensions</code>에서 개발자 모드를 켠 뒤 <code>C:\ez-one\extension\dist</code> 폴더를 로드합니다.</p>
+        </article>
+        <article>
+          <span>03</span>
+          <h3>자소설닷컴에서 실행</h3>
+          <p>자소설닷컴 공고 페이지에서 EZ One 확장 아이콘을 눌러 공고 저장 흐름을 시작합니다.</p>
         </article>
       </div>
     </section>

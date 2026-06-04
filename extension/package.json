@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc --noEmit -p tsconfig.app.json && vite build",
+    "package": "npm run build && powershell -NoProfile -ExecutionPolicy Bypass -Command \"Compress-Archive -Path dist\\* -DestinationPath ez-one-extension.zip -Force\"",
     "test": "vitest run --config vitest.config.ts"
   },
   "devDependencies": {

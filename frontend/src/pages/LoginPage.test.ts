@@ -38,4 +38,20 @@ describe('LoginPage', () => {
 
     expect(location.assign).toHaveBeenCalledWith('https://accounts.google.com/o/oauth2/v2/auth?state=state-123')
   })
+
+  it('EXT-024: exposes local Chrome extension install guidance from the public entry page', async () => {
+    const router = makeRouter()
+    router.push('/')
+    await router.isReady()
+
+    const wrapper = mount(LoginPage, {
+      global: {
+        plugins: [router]
+      }
+    })
+
+    expect(wrapper.text()).toContain('Chrome 확장프로그램 설치')
+    expect(wrapper.text()).toContain('C:\\ez-one\\extension\\dist')
+    expect(wrapper.find('a[href="#extension-install"]').exists()).toBe(true)
+  })
 })

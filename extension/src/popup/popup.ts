@@ -15,11 +15,16 @@ const webAppUrl = import.meta.env.VITE_EXTENSION_WEB_APP_URL ?? 'http://localhos
 
 const statusPanel = requireElement('status-panel')
 const loginPanel = requireElement('login-panel')
+const featurePanel = requireElement('feature-panel')
 const previewPanel = requireElement('preview-panel')
 const resultPanel = requireElement('result-panel')
 const statusMessage = requireElement('status-message')
 const loginButton = requireElement('login-button') as HTMLButtonElement
+const jobSaveModeButton = requireElement('job-save-mode-button') as HTMLButtonElement
 const saveButton = requireElement('save-button') as HTMLButtonElement
+const companyNameInput = requireElement('company-name-input') as HTMLInputElement
+const positionTitleInput = requireElement('position-title-input') as HTMLInputElement
+const deadlineLabelInput = requireElement('deadline-label-input') as HTMLInputElement
 const roleOptions = requireElement('role-options')
 const basketLink = requireElement('basket-link') as HTMLAnchorElement
 const savedJobList = requireElement('saved-job-list')
@@ -47,6 +52,10 @@ loginButton.addEventListener('click', async () => {
   setStatus('웹 로그인 완료 후 이 팝업을 다시 열어 주세요.')
 })
 
+jobSaveModeButton.addEventListener('click', () => {
+  void loadPreview()
+})
+
 saveButton.addEventListener('click', async () => {
   if (!currentPosting) {
     return
@@ -65,6 +74,9 @@ saveButton.addEventListener('click', async () => {
     saveButton.textContent = '저장 중'
     const savedJobs = await jobApi.save({
       ...currentPosting,
+      companyName: normalizeInput(companyNameInput.value),
+      positionTitle: normalizeInput(positionTitleInput.value),
+      deadlineLabel: normalizeInput(deadlineLabelInput.value),
       selectedRoles
     }) as SavedBasketJob[]
     const firstWorkspaceId = savedJobs[0]?.workspaceId
@@ -92,7 +104,7 @@ async function init() {
     return
   }
 
-  await loadPreview()
+  showPanel(featurePanel)
 }
 
 async function loadPreview() {
@@ -118,9 +130,9 @@ async function loadPreview() {
 }
 
 function renderPosting(posting: ExtractedJobPosting) {
-  requireElement('company-name').textContent = posting.companyName ?? '확인 필요'
-  requireElement('position-title').textContent = posting.positionTitle ?? '확인 필요'
-  requireElement('deadline-label').textContent = posting.deadlineLabel ?? '미정'
+  companyNameInput.value = posting.companyName ?? ''
+  positionTitleInput.value = posting.positionTitle ?? ''
+  deadlineLabelInput.value = posting.deadlineLabel ?? ''
 
   const roles = posting.roleOptions.length > 0
     ? posting.roleOptions
@@ -138,6 +150,11 @@ function renderPosting(posting: ExtractedJobPosting) {
     label.append(input, labelText)
     return label
   }))
+}
+
+function normalizeInput(value: string) {
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : null
 }
 
 function renderSavedJobs(savedJobs: SavedBasketJob[], posting: ExtractedJobPosting) {
@@ -167,7 +184,7 @@ async function getActiveTab() {
 }
 
 function showPanel(panel: HTMLElement) {
-  for (const item of [statusPanel, loginPanel, previewPanel, resultPanel]) {
+  for (const item of [statusPanel, loginPanel, featurePanel, previewPanel, resultPanel]) {
     item.hidden = item !== panel
   }
 }

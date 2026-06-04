@@ -186,7 +186,8 @@ class P1ApiContractTest {
                     }
                     """))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.saveable").value(true));
+            .andExpect(jsonPath("$.data.saveable").value(true))
+            .andExpect(jsonPath("$.data.message").value("저장 가능한 공고입니다."));
 
         mockMvc.perform(post("/api/extension/jobs/save")
                 .contentType(MediaType.APPLICATION_JSON)
