@@ -12,6 +12,7 @@ import java.util.Base64;
 import java.util.UUID;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
@@ -27,6 +28,7 @@ public class JwtAuthTokenIssuer implements AuthTokenIssuer {
     private final long refreshTtlDays;
     private final Clock clock;
 
+    @Autowired
     public JwtAuthTokenIssuer(
         UserSessionMapper userSessionMapper,
         @Value("${auth.jwt.access-secret}") String accessSecret,

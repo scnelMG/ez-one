@@ -2,7 +2,11 @@
 
 기준 원본: Notion `08. User Flow`
 
-상태: 완료. 이 문서는 전체 제품 흐름과 IA 연결을 설명한다. P1 구현 범위와 완료 기준은 `docs/04_requirements.md`와 `docs/23_traceability.md`를 우선한다.
+상태: 완료. 이 문서는 전체 제품 흐름과 IA 연결을 설명한다. 전체 IA 원본은 `docs/08_information-architecture.md`를 기준으로 하며, P1 구현 범위와 완료 기준은 `docs/04_requirements.md`와 `docs/23_traceability.md`를 우선한다.
+
+## 기준 이미지
+
+![EZ One MVP Connected Flow Chart](assets/flows/mvp-connected-flow-chart.svg)
 
 ## IA 사이트맵
 

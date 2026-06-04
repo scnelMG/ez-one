@@ -72,7 +72,7 @@ Approval is required before introducing JPA, React, Next.js, Django, FastAPI, No
 
 ## TDD Workflow
 
-Use TDD by default for non-trivial features, bug fixes, and refactors.
+Use TDD by default for non-trivial features, bug fixes, and refactors, but apply it in proportion to risk. The goal is requirement-linked confidence, not ritual or blanket coverage.
 
 1. Identify the requirement ID before writing tests.
 2. Write or update the smallest meaningful test for the intended behavior.
@@ -83,6 +83,10 @@ Use TDD by default for non-trivial features, bug fixes, and refactors.
 7. Run the narrowest meaningful verification before reporting completion.
 
 Prefer confirming a valid RED state before editing production behavior. If the test harness is not ready, the change is scaffolding/exploratory, or the task is a mechanical rename/format change, keep the production change small and state why RED was not practical.
+
+Use lightweight verification instead of full RED/GREEN when the change is low-risk, such as copy changes, static layout polish, reserved route shells, mechanical renames, formatting, or docs-only edits. In those cases, implement narrowly and run the smallest useful check, such as build, typecheck, lint, or an `rg` consistency check.
+
+Keep strict RED/GREEN for behavior that carries product or security risk: business rules, bug fixes with a reproducible failure, API contracts, ownership and authorization checks, validation, duplicate handling, persistence rules, and external integration failure isolation.
 
 Recommended first tests by layer:
 
@@ -95,7 +99,7 @@ Recommended first tests by layer:
 | Frontend page behavior | Component test for a representative success state and the highest-risk failure or permission state |
 | Extension extraction | DOM fixture extraction test before popup or save behavior |
 
-Do not chase 80% coverage by adding low-value tests. Prefer requirement-linked tests that cover ownership, validation, duplicate handling, external failure handling, and P1/P2 boundaries.
+Do not chase 80% coverage by adding low-value tests. Prefer requirement-linked tests that cover ownership, validation, duplicate handling, external failure handling, and P1/P2 boundaries. A single high-signal test for the riskiest behavior is better than broad low-value coverage.
 
 ## Development Practices
 

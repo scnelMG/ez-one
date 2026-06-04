@@ -78,6 +78,7 @@ EZ One은 이 흐름을 공고 중심으로 묶어 “어떤 공고를 저장했
 | 목적 | 문서 |
 | --- | --- |
 | 요구사항 | [docs/04_requirements.md](./docs/04_requirements.md) |
+| 전체 IA | [docs/08_information-architecture.md](./docs/08_information-architecture.md) |
 | 화면 설계 | [docs/09_screen-design.md](./docs/09_screen-design.md) |
 | 기능 명세 | [docs/10_feature-spec.md](./docs/10_feature-spec.md) |
 | API 명세 | [docs/13_api-spec.md](./docs/13_api-spec.md) |

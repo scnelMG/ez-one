@@ -1,0 +1,424 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1900" height="3700" viewBox="0 0 1900 3700">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&amp;display=swap');
+      text { font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; }
+      .title { font-size: 36px; font-weight: 700; fill: #111827; }
+      .sub { font-size: 16px; font-weight: 500; fill: #64748b; }
+      .label { font-size: 17px; font-weight: 700; fill: #111827; text-anchor: middle; }
+      .small { font-size: 13px; font-weight: 500; fill: #475569; text-anchor: middle; }
+      .mini { font-size: 12px; font-weight: 500; fill: #64748b; text-anchor: middle; }
+      .start { fill: #111827; stroke: #111827; stroke-width: 2; }
+      .startText { font-size: 17px; font-weight: 700; fill: #ffffff; text-anchor: middle; }
+      .web { fill: #e0f2fe; stroke: #38bdf8; stroke-width: 2; }
+      .action { fill: #f8fafc; stroke: #cbd5e1; stroke-width: 1.7; }
+      .decision { fill: #fff7ed; stroke: #fb923c; stroke-width: 2; }
+      .data { fill: #f0fdf4; stroke: #86efac; stroke-width: 1.7; }
+      .ext { fill: #f5f3ff; stroke: #a78bfa; stroke-width: 1.9; }
+      .outside { fill: #fefce8; stroke: #facc15; stroke-width: 1.8; }
+      .history { fill: #fff1f2; stroke: #fda4af; stroke-width: 1.7; }
+      .board { fill: #f8fafc; stroke: #94a3b8; stroke-width: 1.5; }
+      .homeBox { fill: #ffffff; stroke: #38bdf8; stroke-width: 2.6; }
+      .workspaceBox { fill: #ffffff; stroke: #0ea5e9; stroke-width: 2.3; }
+      .sideBox { fill: #ffffff; stroke: #94a3b8; stroke-width: 2; stroke-dasharray: 8 5; }
+      .arrow { fill: none; stroke: #475569; stroke-width: 2.1; marker-end: url(#arrow); }
+      .soft { fill: none; stroke: #94a3b8; stroke-width: 1.8; marker-end: url(#soft); }
+      .dash { fill: none; stroke: #94a3b8; stroke-width: 1.8; stroke-dasharray: 7 5; marker-end: url(#soft); }
+      .noSync { fill: none; stroke: #ef4444; stroke-width: 1.8; stroke-dasharray: 6 5; marker-end: url(#redArrow); }
+      .note { fill: #fff7ed; stroke: #fdba74; stroke-width: 1.5; }
+      .noteText { font-size: 12px; font-weight: 500; fill: #9a3412; text-anchor: middle; }
+    </style>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#475569"/>
+    </marker>
+    <marker id="soft" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#94a3b8"/>
+    </marker>
+    <marker id="redArrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#ef4444"/>
+    </marker>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <rect width="1900" height="3700" fill="#ffffff"/>
+  <text x="80" y="72" class="title">EZ-ONE MVP Connected Flow Chart</text>
+  <text x="80" y="104" class="sub">메인 페이지 4영역, 지원 워크스페이스, 참고자료 사이드패널, 확장 프로그램 자동화가 이어지는 단일 사용자 흐름</text>
+
+  <!-- Login and onboarding -->
+  <rect x="90" y="180" width="150" height="58" rx="28" class="start"/>
+  <text x="165" y="215" class="startText">서비스 진입</text>
+
+  <rect x="330" y="180" width="160" height="58" rx="10" class="web"/>
+  <text x="410" y="204" class="label">Google</text>
+  <text x="410" y="225" class="label">로그인</text>
+
+  <polygon points="650,160 750,209 650,258 550,209" class="decision"/>
+  <text x="650" y="203" class="label">최초</text>
+  <text x="650" y="225" class="label">로그인?</text>
+
+  <rect x="835" y="155" width="210" height="88" rx="12" class="data"/>
+  <text x="940" y="184" class="label">온보딩 모달</text>
+  <text x="940" y="207" class="small">희망 직무 · 기업 · 지역</text>
+  <text x="940" y="227" class="small">스킬 · SSAFY 여부</text>
+
+  <polygon points="1210,160 1310,209 1210,258 1110,209" class="decision"/>
+  <text x="1210" y="203" class="label">온보딩</text>
+  <text x="1210" y="225" class="label">진행?</text>
+
+  <rect x="1445" y="170" width="190" height="66" rx="12" class="data"/>
+  <text x="1540" y="197" class="label">마이페이지 저장</text>
+  <text x="1540" y="219" class="small">이후 수정 가능</text>
+
+  <path d="M240,209 H330" class="arrow"/>
+  <path d="M490,209 H550" class="arrow"/>
+  <path d="M750,209 H835" class="arrow"/>
+  <text x="792" y="196" class="mini">예</text>
+  <path d="M1045,209 H1110" class="arrow"/>
+  <path d="M1310,209 H1445" class="arrow"/>
+  <text x="1380" y="196" class="mini">시작하기</text>
+
+  <!-- Home page -->
+  <rect x="425" y="360" width="1050" height="270" rx="20" class="homeBox" filter="url(#shadow)"/>
+  <text x="950" y="405" class="label">메인 페이지</text>
+  <rect x="500" y="462" width="190" height="78" rx="12" class="web"/>
+  <text x="595" y="492" class="label">대시보드</text>
+  <text x="595" y="516" class="small">지원 현황</text>
+  <rect x="725" y="462" width="210" height="78" rx="12" class="web"/>
+  <text x="830" y="492" class="label">공고 장바구니</text>
+  <text x="830" y="516" class="small">목록/미리보기</text>
+  <rect x="970" y="462" width="210" height="78" rx="12" class="web"/>
+  <text x="1075" y="492" class="label">서류 입력 정보</text>
+  <text x="1075" y="516" class="small">기본/첨부 정보</text>
+  <rect x="1215" y="462" width="190" height="78" rx="12" class="web"/>
+  <text x="1310" y="492" class="label">추천 공고</text>
+  <text x="1310" y="516" class="small">맞춤 추천 카드</text>
+
+  <path d="M1540,236 V310 H950 V360" class="arrow"/>
+  <path d="M1210,258 V310 H950 V360" class="soft"/>
+  <text x="1284" y="302" class="mini">건너뛰기</text>
+  <path d="M650,258 V320 H950 V360" class="soft"/>
+  <text x="715" y="307" class="mini">기존 사용자</text>
+
+  <!-- Dashboard to cart -->
+  <rect x="95" y="740" width="170" height="54" rx="10" class="action"/>
+  <text x="180" y="773" class="label">총 지원</text>
+  <rect x="95" y="825" width="170" height="54" rx="10" class="action"/>
+  <text x="180" y="858" class="label">마감 임박</text>
+  <rect x="95" y="910" width="170" height="54" rx="10" class="action"/>
+  <text x="180" y="943" class="label">진행중</text>
+  <rect x="95" y="995" width="170" height="54" rx="10" class="action"/>
+  <text x="180" y="1028" class="label">지원 전</text>
+
+  <rect x="385" y="740" width="250" height="54" rx="10" class="outside"/>
+  <text x="510" y="773" class="label">전체 공고 목록</text>
+  <rect x="385" y="825" width="250" height="54" rx="10" class="outside"/>
+  <text x="510" y="858" class="label">마감 임박순 정렬</text>
+  <rect x="385" y="910" width="250" height="54" rx="10" class="outside"/>
+  <text x="510" y="943" class="label">진행중 상태 필터</text>
+  <rect x="385" y="995" width="250" height="54" rx="10" class="outside"/>
+  <text x="510" y="1028" class="label">지원 전 상태 필터</text>
+
+  <rect x="780" y="825" width="245" height="84" rx="13" class="web"/>
+  <text x="902.5" y="855" class="label">공고 장바구니</text>
+  <text x="902.5" y="879" class="small">조건별 목록</text>
+  <text x="902.5" y="899" class="small">필터링/정렬</text>
+
+  <path d="M595,540 V655 H180 V740" class="arrow"/>
+  <path d="M265,767 H385" class="arrow"/>
+  <path d="M265,852 H385" class="arrow"/>
+  <path d="M265,937 H385" class="arrow"/>
+  <path d="M265,1022 H385" class="arrow"/>
+  <path d="M635,767 H720 V867 H780" class="arrow"/>
+  <path d="M635,852 H780" class="arrow"/>
+  <path d="M635,937 H720 V867 H780" class="arrow"/>
+  <path d="M635,1022 H720 V867 H780" class="arrow"/>
+  <path d="M830,540 V825" class="soft"/>
+  <text x="872" y="710" class="mini">장바구니 영역 클릭</text>
+
+  <!-- Recommendation -->
+  <rect x="1215" y="740" width="220" height="70" rx="12" class="data"/>
+  <text x="1325" y="768" class="label">추천 공고 페이지</text>
+  <text x="1325" y="791" class="small">온보딩 정보 기반</text>
+
+  <polygon points="1325,870 1418,917 1325,964 1232,917" class="decision"/>
+  <text x="1325" y="911" class="label">SSAFY</text>
+  <text x="1325" y="933" class="label">교육생?</text>
+
+  <rect x="1500" y="815" width="205" height="62" rx="12" class="data"/>
+  <text x="1602.5" y="840" class="label">Mattermost 추천</text>
+  <text x="1602.5" y="862" class="small">교육생만 추가 노출</text>
+
+  <rect x="1210" y="1035" width="255" height="64" rx="12" class="action"/>
+  <text x="1337.5" y="1061" class="label">추천 카드 별표 클릭</text>
+  <text x="1337.5" y="1083" class="small">공고 장바구니 저장</text>
+
+  <path d="M1310,540 V650 H1325 V740" class="arrow"/>
+  <path d="M1325,810 V870" class="arrow"/>
+  <path d="M1418,917 H1480 V846 H1500" class="arrow"/>
+  <text x="1460" y="900" class="mini">예</text>
+  <path d="M1325,964 V1035" class="arrow"/>
+  <path d="M1602,877 V1067 H1465" class="soft"/>
+  <path d="M1210,1067 H1065 V909 H1025" class="dash"/>
+
+  <!-- Extension save job -->
+  <rect x="90" y="1225" width="210" height="74" rx="12" class="outside"/>
+  <text x="195" y="1255" class="label">외부 채용</text>
+  <text x="195" y="1278" class="label">공고 페이지</text>
+
+  <rect x="390" y="1225" width="220" height="74" rx="12" class="ext"/>
+  <text x="500" y="1255" class="label">확장 프로그램</text>
+  <text x="500" y="1278" class="label">공고 저장하기</text>
+
+  <rect x="710" y="1225" width="210" height="74" rx="12" class="ext"/>
+  <text x="815" y="1255" class="label">현재 페이지</text>
+  <text x="815" y="1278" class="label">공고 정보 읽기</text>
+
+  <polygon points="1055,1207 1155,1262 1055,1317 955,1262" class="decision"/>
+  <text x="1055" y="1256" class="label">직무가</text>
+  <text x="1055" y="1278" class="label">여러 개?</text>
+
+  <rect x="1250" y="1185" width="235" height="76" rx="12" class="ext"/>
+  <text x="1367.5" y="1215" class="label">복수 직무 선택</text>
+  <text x="1367.5" y="1239" class="small">체크박스 · 복수 선택 가능</text>
+
+  <rect x="1250" y="1340" width="235" height="68" rx="12" class="ext"/>
+  <text x="1367.5" y="1368" class="label">선택 직무별</text>
+  <text x="1367.5" y="1391" class="label">공고 장바구니 담기</text>
+
+  <path d="M300,1262 H390" class="arrow"/>
+  <path d="M610,1262 H710" class="arrow"/>
+  <path d="M920,1262 H955" class="arrow"/>
+  <path d="M1155,1262 H1205 V1223 H1250" class="arrow"/>
+  <text x="1185" y="1248" class="mini">예</text>
+  <path d="M1367.5,1261 V1340" class="soft"/>
+  <path d="M1055,1317 V1374 H1250" class="soft"/>
+  <text x="1150" y="1361" class="mini">아니오</text>
+  <path d="M1250,1374 H1010 V909" class="dash"/>
+
+  <!-- Home document info -->
+  <rect x="1210" y="1225" width="0" height="0" fill="none"/>
+  <rect x="1120" y="1500" width="275" height="92" rx="12" class="web"/>
+  <text x="1257.5" y="1529" class="label">서류 입력 정보</text>
+  <text x="1257.5" y="1553" class="small">기본 정보 · 커스텀 항목</text>
+  <text x="1257.5" y="1573" class="small">수상/프로젝트 · 첨부파일</text>
+  <path d="M1075,540 V1500 H1120" class="arrow"/>
+
+  <!-- Cart to workspace -->
+  <rect x="752" y="1508" width="300" height="70" rx="12" class="action"/>
+  <text x="902" y="1536" class="label">개별 회사/직무 행 클릭</text>
+  <text x="902" y="1559" class="small">공고 목록에서 선택</text>
+
+  <rect x="665" y="1685" width="475" height="190" rx="18" class="workspaceBox" filter="url(#shadow)"/>
+  <text x="902.5" y="1725" class="label">개별 지원 워크스페이스</text>
+  <rect x="720" y="1757" width="170" height="60" rx="10" class="data"/>
+  <text x="805" y="1781" class="label">지원 정보</text>
+  <text x="805" y="1802" class="small">항상 게시</text>
+  <rect x="915" y="1757" width="170" height="60" rx="10" class="data"/>
+  <text x="1000" y="1781" class="label">기업 정보</text>
+  <text x="1000" y="1802" class="small">항상 게시</text>
+  <text x="902.5" y="1850" class="small">하단 영역은 선택 탭에 따라 내용 전환</text>
+
+  <polygon points="902,1965 1017,2022 902,2079 787,2022" class="decision"/>
+  <text x="902" y="2016" class="label">하단 탭</text>
+  <text x="902" y="2038" class="label">선택</text>
+
+  <rect x="300" y="2180" width="290" height="88" rx="12" class="action"/>
+  <text x="445" y="2209" class="label">도화지 선택</text>
+  <text x="445" y="2233" class="small">마크다운 형식</text>
+  <text x="445" y="2253" class="small">문항별 작성 · 글자수 확인</text>
+
+  <rect x="1210" y="2180" width="300" height="88" rx="12" class="action"/>
+  <text x="1360" y="2209" class="label">자소서 버전관리 선택</text>
+  <text x="1360" y="2233" class="small">버전 목록 · 비교</text>
+  <text x="1360" y="2253" class="small">참고자료 사이드패널 미노출</text>
+
+  <rect x="665" y="2180" width="430" height="375" rx="18" class="sideBox"/>
+  <text x="880" y="2220" class="label">도화지 사이드패널</text>
+  <text x="880" y="2244" class="small">각 게시판 클릭 → 사용자가 정보 작성/저장</text>
+
+  <rect x="700" y="2285" width="110" height="50" rx="10" class="board"/>
+  <text x="755" y="2316" class="label">JD</text>
+  <rect x="830" y="2285" width="110" height="50" rx="10" class="board"/>
+  <text x="885" y="2316" class="label">DART</text>
+  <rect x="960" y="2285" width="110" height="50" rx="10" class="board"/>
+  <text x="1015" y="2316" class="label">인재상</text>
+
+  <rect x="700" y="2355" width="110" height="50" rx="10" class="board"/>
+  <text x="755" y="2386" class="label">뉴스기사</text>
+  <rect x="830" y="2355" width="110" height="50" rx="10" class="board"/>
+  <text x="885" y="2386" class="label">프롬프트</text>
+  <rect x="960" y="2355" width="110" height="50" rx="10" class="board"/>
+  <text x="1015" y="2386" class="label">메모</text>
+
+  <rect x="745" y="2428" width="270" height="58" rx="10" class="board"/>
+  <text x="880" y="2452" class="label">수상/프로젝트</text>
+  <text x="880" y="2473" class="small">서류 입력 정보가 있으면 자동 가져옴</text>
+
+  <rect x="730" y="2512" width="300" height="34" rx="8" class="note"/>
+  <text x="880" y="2534" class="noteText">사이드패널 수정/추가는 메인 서류 입력 정보와 동기화되지 않음</text>
+
+  <path d="M902.5,909 V1508" class="arrow"/>
+  <path d="M902,1578 V1685" class="arrow"/>
+  <path d="M902,1875 V1965" class="arrow"/>
+  <path d="M787,2022 H445 V2180" class="arrow"/>
+  <path d="M590,2224 H665" class="soft"/>
+  <path d="M1017,2022 H1360 V2180" class="arrow"/>
+  <path d="M1257.5,1592 V1660 H880 V2428" class="dash"/>
+  <path d="M1015,2457 H1130 V1585 H1395" class="noSync"/>
+  <text x="1155" y="1648" class="mini">초기값 단방향 반영</text>
+
+  <!-- Board saved info to side panel -->
+  <rect x="300" y="2410" width="260" height="70" rx="12" class="data"/>
+  <text x="430" y="2438" class="label">게시판 저장 정보</text>
+  <text x="430" y="2461" class="small">도화지 클릭 시 사이드패널에서 열람</text>
+  <path d="M700,2310 H620 V2445 H560" class="soft"/>
+  <path d="M700,2380 H620 V2445 H560" class="soft"/>
+  <path d="M745,2457 H620 V2445 H560" class="soft"/>
+  <path d="M430,2410 V2268" class="soft"/>
+
+  <!-- Document autofill -->
+  <rect x="90" y="2675" width="245" height="88" rx="12" class="outside"/>
+  <text x="212.5" y="2703" class="label">기업 서류</text>
+  <text x="212.5" y="2727" class="label">지원 홈페이지</text>
+
+  <rect x="450" y="2675" width="260" height="88" rx="12" class="ext"/>
+  <text x="580" y="2703" class="label">확장 프로그램</text>
+  <text x="580" y="2727" class="label">서류 정보 입력하기</text>
+
+  <rect x="820" y="2675" width="245" height="88" rx="12" class="ext"/>
+  <text x="942.5" y="2704" class="label">현재 페이지 기준</text>
+  <text x="942.5" y="2728" class="label">자동 입력</text>
+  <text x="942.5" y="2748" class="small">성공/실패 개수 표시</text>
+
+  <polygon points="1250,2662 1345,2719 1250,2776 1155,2719" class="decision"/>
+  <text x="1250" y="2713" class="label">입력</text>
+  <text x="1250" y="2735" class="label">성공?</text>
+
+  <rect x="1460" y="2635" width="240" height="78" rx="12" class="data"/>
+  <text x="1580" y="2665" class="label">다음 페이지 이동</text>
+  <text x="1580" y="2688" class="small">마지막 페이지까지 반복</text>
+
+  <rect x="1450" y="2785" width="265" height="88" rx="12" class="ext"/>
+  <text x="1582.5" y="2813" class="label">실패 항목 처리</text>
+  <text x="1582.5" y="2837" class="small">텍스트: 복붙 제공</text>
+  <text x="1582.5" y="2857" class="small">파일: 다운로드 후 수동 업로드</text>
+
+  <path d="M1075,540 V2625 H580 V2675" class="dash"/>
+  <text x="795" y="2620" class="mini">메인 서류 입력 정보/첨부파일을 확장 프로그램이 불러옴</text>
+  <path d="M335,2719 H450" class="arrow"/>
+  <path d="M710,2719 H820" class="arrow"/>
+  <path d="M1065,2719 H1155" class="arrow"/>
+  <path d="M1345,2719 H1410 V2674 H1460" class="arrow"/>
+  <text x="1404" y="2663" class="mini">성공</text>
+  <path d="M1250,2776 V2829 H1450" class="arrow"/>
+  <text x="1363" y="2817" class="mini">실패</text>
+  <path d="M1580,2713 V2760 H942.5 V2763" class="dash"/>
+  <text x="1270" y="2760" class="mini">반복</text>
+
+  <!-- Past history -->
+  <rect x="90" y="2985" width="215" height="66" rx="12" class="history"/>
+  <text x="197.5" y="3012" class="label">과거 지원 내역</text>
+  <text x="197.5" y="3035" class="small">연도 · 반기 선택</text>
+
+  <rect x="400" y="2985" width="220" height="66" rx="12" class="history"/>
+  <text x="510" y="3012" class="label">과거 결과</text>
+  <text x="510" y="3035" class="label">대시보드</text>
+
+  <rect x="715" y="2925" width="160" height="52" rx="10" class="history"/>
+  <text x="795" y="2957" class="label">총 지원</text>
+  <rect x="715" y="2990" width="160" height="52" rx="10" class="history"/>
+  <text x="795" y="3022" class="label">서류 합격</text>
+  <rect x="715" y="3055" width="160" height="52" rx="10" class="history"/>
+  <text x="795" y="3087" class="label">필기 합격</text>
+  <rect x="715" y="3120" width="160" height="52" rx="10" class="history"/>
+  <text x="795" y="3152" class="label">면접 합격</text>
+  <rect x="715" y="3185" width="160" height="52" rx="10" class="history"/>
+  <text x="795" y="3217" class="label">미지원</text>
+
+  <rect x="1005" y="2925" width="260" height="52" rx="10" class="outside"/>
+  <text x="1135" y="2957" class="label">전체 과거 공고 목록</text>
+  <rect x="1005" y="2990" width="260" height="52" rx="10" class="outside"/>
+  <text x="1135" y="3022" class="label">서류 합격 공고 필터</text>
+  <rect x="1005" y="3055" width="260" height="52" rx="10" class="outside"/>
+  <text x="1135" y="3087" class="label">필기 합격 공고 필터</text>
+  <rect x="1005" y="3120" width="260" height="52" rx="10" class="outside"/>
+  <text x="1135" y="3152" class="label">면접 합격 공고 필터</text>
+  <rect x="1005" y="3185" width="260" height="52" rx="10" class="outside"/>
+  <text x="1135" y="3217" class="label">미지원 공고 필터</text>
+
+  <rect x="1410" y="2990" width="235" height="68" rx="12" class="web"/>
+  <text x="1527.5" y="3018" class="label">과거 공고 장바구니</text>
+  <text x="1527.5" y="3041" class="small">클릭 조건별 목록 표시</text>
+
+  <rect x="1410" y="3120" width="235" height="68" rx="12" class="data"/>
+  <text x="1527.5" y="3148" class="label">지원 기업유형 그래프</text>
+  <text x="1527.5" y="3171" class="small">필터링과 무관하게 표시</text>
+
+  <rect x="1005" y="3285" width="260" height="58" rx="12" class="data"/>
+  <text x="1135" y="3320" class="label">각 항목 하단: 유저 대비 나의 위치</text>
+
+  <path d="M425,360 H45 V3018 H90" class="dash"/>
+  <path d="M305,3018 H400" class="arrow"/>
+  <path d="M620,3018 H670 V2951 H715" class="arrow"/>
+  <path d="M620,3018 H715" class="soft"/>
+  <path d="M620,3018 H670 V3081 H715" class="soft"/>
+  <path d="M620,3018 H670 V3146 H715" class="soft"/>
+  <path d="M620,3018 H670 V3211 H715" class="soft"/>
+  <path d="M875,2951 H1005" class="arrow"/>
+  <path d="M875,3016 H1005" class="arrow"/>
+  <path d="M875,3081 H1005" class="arrow"/>
+  <path d="M875,3146 H1005" class="arrow"/>
+  <path d="M875,3211 H1005" class="arrow"/>
+  <path d="M1265,2951 H1355 V3024 H1410" class="arrow"/>
+  <path d="M1265,3016 H1410" class="soft"/>
+  <path d="M1265,3081 H1355 V3024 H1410" class="soft"/>
+  <path d="M1265,3146 H1355 V3024 H1410" class="soft"/>
+  <path d="M1265,3211 H1355 V3024 H1410" class="soft"/>
+  <path d="M510,3051 V3154 H1410" class="soft"/>
+  <path d="M795,3237 V3285 H1135" class="soft"/>
+
+  <!-- My page and notifications -->
+  <rect x="90" y="3420" width="190" height="62" rx="12" class="web"/>
+  <text x="185" y="3457" class="label">마이페이지</text>
+  <rect x="350" y="3375" width="155" height="58" rx="12" class="action"/>
+  <text x="427.5" y="3410" class="label">내 계정</text>
+  <rect x="535" y="3375" width="175" height="58" rx="12" class="action"/>
+  <text x="622.5" y="3410" class="label">노션 연동 관리</text>
+  <rect x="740" y="3375" width="165" height="58" rx="12" class="action"/>
+  <text x="822.5" y="3410" class="label">온보딩 정보</text>
+  <rect x="935" y="3375" width="125" height="58" rx="12" class="action"/>
+  <text x="997.5" y="3410" class="label">QnA</text>
+  <rect x="1090" y="3375" width="145" height="58" rx="12" class="action"/>
+  <text x="1162.5" y="3410" class="label">1:1 문의</text>
+  <rect x="1265" y="3375" width="145" height="58" rx="12" class="action"/>
+  <text x="1337.5" y="3410" class="label">제휴 문의</text>
+  <rect x="1440" y="3375" width="145" height="58" rx="12" class="action"/>
+  <text x="1512.5" y="3410" class="label">이용약관</text>
+
+  <rect x="90" y="3525" width="190" height="62" rx="12" class="web"/>
+  <text x="185" y="3562" class="label">알림</text>
+  <rect x="350" y="3505" width="170" height="58" rx="12" class="action"/>
+  <text x="435" y="3540" class="label">공고 마감</text>
+  <rect x="550" y="3505" width="185" height="58" rx="12" class="action"/>
+  <text x="642.5" y="3540" class="label">지원상태 변경</text>
+  <rect x="765" y="3505" width="170" height="58" rx="12" class="action"/>
+  <text x="850" y="3540" class="label">새 추천 공고</text>
+  <rect x="965" y="3505" width="185" height="58" rx="12" class="action"/>
+  <text x="1057.5" y="3540" class="label">자소서 자동 저장</text>
+
+  <path d="M425,360 H35 V3451 H90" class="dash"/>
+  <path d="M280,3451 H320 V3404 H350" class="soft"/>
+  <path d="M280,3451 H320 V3404 H535" class="soft"/>
+  <path d="M280,3451 H320 V3404 H740" class="soft"/>
+  <path d="M280,3451 H320 V3404 H935" class="soft"/>
+  <path d="M280,3451 H320 V3404 H1090" class="soft"/>
+  <path d="M280,3451 H320 V3404 H1265" class="soft"/>
+  <path d="M280,3451 H320 V3404 H1440" class="soft"/>
+  <path d="M425,360 H25 V3556 H90" class="dash"/>
+  <path d="M280,3556 H350" class="soft"/>
+  <path d="M280,3556 H320 V3534 H550" class="soft"/>
+  <path d="M280,3556 H320 V3534 H765" class="soft"/>
+  <path d="M280,3556 H320 V3534 H965" class="soft"/>
+</svg>
