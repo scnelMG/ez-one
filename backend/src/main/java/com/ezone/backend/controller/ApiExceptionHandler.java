@@ -24,7 +24,7 @@ public class ApiExceptionHandler {
             null,
             new ApiError(
                 "VALIDATION_ERROR",
-                "요청값을 확인해 주세요.",
+                "입력값을 확인해 주세요.",
                 Map.<String, Object>of("fieldErrors", exception.getBindingResult().getFieldErrorCount())
             )
         );

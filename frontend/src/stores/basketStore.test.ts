@@ -162,4 +162,20 @@ describe('basketStore', () => {
       positionTitle: 'Platform Engineer'
     })
   })
+
+  it('COMMON-007: preserves API failure reasons when creating a job fails', async () => {
+    const store = useBasketStore()
+    mocks.createJob.mockRejectedValue(new Error('채용공고 URL 형식을 확인해 주세요.'))
+
+    await store.createJob({
+      companyName: 'Invalid URL Company',
+      positionTitle: 'Backend Engineer',
+      deadlineLabel: 'D-3',
+      sourceUrl: 'not-a-url',
+      savedSource: 'MANUAL'
+    })
+
+    expect(store.status).toBe('error')
+    expect(store.errorMessage).toBe('채용공고 URL 형식을 확인해 주세요.')
+  })
 })

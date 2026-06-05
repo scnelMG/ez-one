@@ -208,7 +208,8 @@ class P1ApiContractTest {
                     """))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.success").value(false))
-            .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+            .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"))
+            .andExpect(jsonPath("$.error.message").value("입력값을 확인해 주세요."));
 
         mockMvc.perform(patch("/api/basket/jobs/101")
                 .contentType(MediaType.APPLICATION_JSON)
