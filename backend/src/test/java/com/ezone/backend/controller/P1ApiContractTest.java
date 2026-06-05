@@ -156,6 +156,43 @@ class P1ApiContractTest {
     }
 
     @Test
+    void duplicateBasketJobUsesCompanyAndPositionRegardlessOfUrl() throws Exception {
+        String firstBody = mockMvc.perform(post("/api/basket/jobs")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "companyName": "Duplicate Company",
+                      "positionTitle": "Backend Developer",
+                      "deadlineLabel": "D-6",
+                      "sourceUrl": "https://example.com/jobs/first",
+                      "savedSource": "DIRECT"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+        long firstBasketJobId = objectMapper.readTree(firstBody).at("/data/id").asLong();
+        long firstWorkspaceId = objectMapper.readTree(firstBody).at("/data/workspaceId").asLong();
+
+        mockMvc.perform(post("/api/basket/jobs")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "companyName": "Duplicate Company",
+                      "positionTitle": "Backend Developer",
+                      "deadlineLabel": "D-3",
+                      "sourceUrl": "https://example.com/jobs/second",
+                      "savedSource": "DIRECT"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.id").value(firstBasketJobId))
+            .andExpect(jsonPath("$.data.workspaceId").value(firstWorkspaceId))
+            .andExpect(jsonPath("$.data.sourceUrl").value("https://example.com/jobs/first"));
+    }
+
+    @Test
     void basketJobCanBeUpdated() throws Exception {
         mockMvc.perform(patch("/api/basket/jobs/101")
                 .contentType(MediaType.APPLICATION_JSON)

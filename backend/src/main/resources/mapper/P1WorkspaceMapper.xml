@@ -96,7 +96,6 @@
       AND bj.deleted_at IS NULL
       AND c.name = #{companyName}
       AND j.title = #{positionTitle}
-      AND j.url = #{sourceUrl}
     LIMIT 1
   </select>
 
