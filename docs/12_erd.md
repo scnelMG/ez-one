@@ -50,7 +50,7 @@ erDiagram
 
 | 테이블 | 주요 컬럼 | 비고 |
 | --- | --- | --- |
-| `company_info_sources` | id, company_id, source_name, source_url, collected_at, status | 자동 기업 정보 수집용 |
+| `company_info_sources` | id, company_id, source_name, source_url, collected_at, status, created_at, updated_at | P1은 저장 공고 URL을 `UNVERIFIED` 출처로 기록하고 자동 외부 수집은 수행하지 않음 |
 | `mm_messages` | id, channel_id, message_id, raw_payload_json, received_at, parse_status | Mattermost raw-first 저장 |
 | `mm_parsed_job_posts` | id, mm_message_id, company_name, title, url, deadline_at, review_status | 관리자 검토용 후보 공고 |
 

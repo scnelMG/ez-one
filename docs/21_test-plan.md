@@ -19,6 +19,7 @@
 | TC-ONB-001 | Onboarding | 온보딩 저장 | 프로필 저장 |
 | TC-ONB-002 | Onboarding | 온보딩 건너뛰기 | 빈 editable profile 상태 유지 |
 | TC-DASH-001 | Dashboard | 상태 카드 클릭 | 장바구니가 예상 filter/sort로 열린다. |
+| TC-DATA-COMPANY-001 | Company | Saved job URL company info source | Company source stored as `SAVED_JOB_URL` with `UNVERIFIED` status; no automatic external scraping in P1 |
 | TC-JOB-001 | Basket | 공고 저장 | basket job과 workspace 생성 |
 | TC-JOB-002 | Basket | 중복 URL 저장 | 기존 공고 경로 반환 |
 | TC-JOB-003 | Basket | 마감 경과 미완료 공고 | `NOT_APPLIED`로 전환 |
