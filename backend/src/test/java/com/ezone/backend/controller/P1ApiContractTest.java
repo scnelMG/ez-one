@@ -221,6 +221,37 @@ class P1ApiContractTest {
     }
 
     @Test
+    void basketStatusLabelsFollowStandardFourStatusMeanings() throws Exception {
+        String createdBody = mockMvc.perform(post("/api/basket/jobs")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "companyName": "Status Company",
+                      "positionTitle": "Backend Developer",
+                      "deadlineLabel": "2026.06.30",
+                      "sourceUrl": "https://example.com/jobs/status",
+                      "savedSource": "DIRECT"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.applicationStatus").value("READY"))
+            .andExpect(jsonPath("$.data.statusLabel").value("지원 전"))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+        long basketJobId = objectMapper.readTree(createdBody).at("/data/id").asLong();
+
+        mockMvc.perform(patch("/api/basket/jobs/%d/status".formatted(basketJobId))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    { "applicationStatus": "NOT_APPLIED" }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.applicationStatus").value("NOT_APPLIED"))
+            .andExpect(jsonPath("$.data.statusLabel").value("미지원"));
+    }
+
+    @Test
     void basketJobCanBeUpdated() throws Exception {
         mockMvc.perform(patch("/api/basket/jobs/101")
                 .contentType(MediaType.APPLICATION_JSON)
