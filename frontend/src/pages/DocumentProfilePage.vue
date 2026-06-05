@@ -237,7 +237,8 @@ import type { DocumentCustomField } from '@/features/document-profile/api/docume
 import {
   useDocumentProfileStore,
   type BasicInfoSection,
-  type ReusableProfileItem
+  type ReusableProfileItem,
+  type ReusableProfileSectionType
 } from '@/stores/documentProfileStore'
 import AppLayout from '@/shared/AppLayout.vue'
 import ShellCard from '@/shared/ShellCard.vue'
@@ -289,7 +290,8 @@ const activeSectionTitle = computed(() => {
 
   return '지원서 공통 입력값'
 })
-const isReusableSection = computed(() => activeSection.value === 'projects' || activeSection.value === 'awards')
+const reusableSectionTypes: ReusableProfileSectionType[] = ['education', 'career', 'projects', 'certificates', 'awards']
+const isReusableSection = computed(() => reusableSectionTypes.includes(activeSection.value as ReusableProfileSectionType))
 const statusLabel = computed(() => {
   if (documentProfileStore.status === 'saving') {
     return '저장 중'
@@ -307,7 +309,14 @@ watch(
 )
 
 watch(
-  [activeSection, () => documentProfileStore.projects, () => documentProfileStore.awards],
+  [
+    activeSection,
+    () => documentProfileStore.education,
+    () => documentProfileStore.career,
+    () => documentProfileStore.projects,
+    () => documentProfileStore.certificates,
+    () => documentProfileStore.awards
+  ],
   syncReusableSectionForm,
   { immediate: true }
 )
@@ -324,7 +333,7 @@ function saveReusableSection() {
   if (!isReusableSection.value) {
     return
   }
-  const sectionType = activeSection.value === 'awards' ? 'awards' : 'projects'
+  const sectionType = activeReusableSectionType()
 
   if (hasReusableFormContent() || reusableSectionItems.value[editingReusableItemIndex.value]) {
     saveReusableItem()
@@ -377,9 +386,7 @@ function deleteReusableItem(index: number) {
 }
 
 function syncReusableSectionForm() {
-  const source = activeSection.value === 'awards'
-    ? documentProfileStore.awards
-    : documentProfileStore.projects
+  const source = reusableSectionItemsFor(activeReusableSectionType())
   reusableSectionItems.value = source.map(copyReusableItem)
   editingReusableItemIndex.value = 0
   const firstItem = reusableSectionItems.value[0]
@@ -393,6 +400,14 @@ function copyReusableItem(item: ReusableProfileItem): ReusableProfileItem {
     title: item.title,
     summary: item.summary
   }
+}
+
+function activeReusableSectionType(): ReusableProfileSectionType {
+  return isReusableSection.value ? activeSection.value as ReusableProfileSectionType : 'projects'
+}
+
+function reusableSectionItemsFor(sectionType: ReusableProfileSectionType): ReusableProfileItem[] {
+  return documentProfileStore[sectionType]
 }
 
 function hasReusableFormContent() {

@@ -49,7 +49,10 @@ describe('DocumentProfilePage', () => {
           phone: '010-1234-5678',
           address: 'Seoul'
         },
+        education: [{ title: 'Korea University', summary: 'Computer Science' }],
+        career: [{ title: 'Naver Cloud', summary: 'Backend Engineer' }],
         projects: [{ title: 'EZ One', summary: 'Job workspace MVP' }],
+        certificates: [{ title: 'TOEIC', summary: '900' }],
         awards: [{ title: 'Hackathon Grand Prize', summary: 'P1 service award' }]
       },
       customFields: [
@@ -69,7 +72,10 @@ describe('DocumentProfilePage', () => {
           phone: '010-1234-5678',
           address: 'Seoul'
         },
+        education: [{ title: 'Korea University', summary: 'Computer Science' }],
+        career: [{ title: 'Naver Cloud Platform', summary: 'Platform backend' }],
         projects: [{ title: 'EZ One Renewal', summary: 'Workspace and profile integration' }],
+        certificates: [{ title: 'TOEIC', summary: '900' }],
         awards: [{ title: 'Hackathon Grand Prize', summary: 'P1 service award' }]
       },
       customFields: []
@@ -154,6 +160,29 @@ describe('DocumentProfilePage', () => {
         summary: 'Second project summary'
       }
     ])
+  })
+
+  it('PROFILE-012/PROFILE-014/PROFILE-015: edits education, career, and certificate sections', async () => {
+    const wrapper = await mountPage()
+
+    await wrapper.get('[data-testid="section-education"]').trigger('click')
+    expect((wrapper.get('[data-testid="section-title"]').element as HTMLInputElement).value).toBe('Korea University')
+
+    await wrapper.get('[data-testid="section-career"]').trigger('click')
+    expect((wrapper.get('[data-testid="section-title"]').element as HTMLInputElement).value).toBe('Naver Cloud')
+    await wrapper.get('[data-testid="section-title"]').setValue('Naver Cloud Platform')
+    await wrapper.get('[data-testid="section-summary"]').setValue('Platform backend')
+    await wrapper.get('[data-testid="save-section"]').trigger('click')
+
+    expect(mocks.saveSection).toHaveBeenLastCalledWith('career', [
+      {
+        title: 'Naver Cloud Platform',
+        summary: 'Platform backend'
+      }
+    ])
+
+    await wrapper.get('[data-testid="section-certificates"]').trigger('click')
+    expect((wrapper.get('[data-testid="section-title"]').element as HTMLInputElement).value).toBe('TOEIC')
   })
 
   it('PROFILE-001/PROFILE-006: creates, updates, and deletes custom fields', async () => {
