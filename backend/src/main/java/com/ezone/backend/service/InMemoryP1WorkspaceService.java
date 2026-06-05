@@ -95,7 +95,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
         List<CreateEssayQuestionRequest> questions
     ) {
         BasketRecord duplicate = activeBasketJobs(userId).stream()
-            .filter(job -> job.companyName().equals(request.companyName()))
+            .filter(job -> job.sourceUrl().equals(request.sourceUrl()))
             .filter(job -> job.positionTitle().equals(request.positionTitle()))
             .findFirst()
             .orElse(null);

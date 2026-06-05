@@ -227,7 +227,7 @@ class P1ApiContractTest {
     }
 
     @Test
-    void duplicateBasketJobUsesCompanyAndPositionRegardlessOfUrl() throws Exception {
+    void duplicateBasketJobUsesSourceUrlAndPositionRegardlessOfCompanyName() throws Exception {
         String firstBody = mockMvc.perform(post("/api/basket/jobs")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -235,7 +235,7 @@ class P1ApiContractTest {
                       "companyName": "Duplicate Company",
                       "positionTitle": "Backend Developer",
                       "deadlineLabel": "D-6",
-                      "sourceUrl": "https://example.com/jobs/first",
+                      "sourceUrl": "https://example.com/jobs/duplicate-url",
                       "savedSource": "DIRECT"
                     }
                     """))
@@ -250,17 +250,19 @@ class P1ApiContractTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {
-                      "companyName": "Duplicate Company",
+                      "companyName": "Renamed Duplicate Company",
                       "positionTitle": "Backend Developer",
                       "deadlineLabel": "D-3",
-                      "sourceUrl": "https://example.com/jobs/second",
+                      "sourceUrl": "https://example.com/jobs/duplicate-url",
                       "savedSource": "DIRECT"
                     }
                     """))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.id").value(firstBasketJobId))
             .andExpect(jsonPath("$.data.workspaceId").value(firstWorkspaceId))
-            .andExpect(jsonPath("$.data.sourceUrl").value("https://example.com/jobs/first"));
+            .andExpect(jsonPath("$.data.companyName").value("Duplicate Company"))
+            .andExpect(jsonPath("$.data.positionTitle").value("Backend Developer"))
+            .andExpect(jsonPath("$.data.sourceUrl").value("https://example.com/jobs/duplicate-url"));
     }
 
     @Test
