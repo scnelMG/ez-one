@@ -296,6 +296,36 @@ describe('WorkspacePage', () => {
     expect(wrapper.text()).toContain('JD 본문')
   })
 
+  it('WS-024/WS-025: shows reference type labels and creates a selected template', async () => {
+    const router = makeRouter()
+    router.push('/workspaces/102')
+    await router.isReady()
+
+    const wrapper = mount(WorkspacePage, {
+      global: {
+        plugins: [createPinia(), router]
+      }
+    })
+
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('합격 자소서')
+    expect(wrapper.text()).toContain('인재상')
+    expect(wrapper.text()).toContain('작성 팁')
+
+    await wrapper.get('[data-testid="new-reference-type"]').setValue('TALENT_PROFILE')
+    await wrapper.get('[data-testid="create-reference"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.createReference).toHaveBeenCalledWith('102', {
+      boardName: 'TALENT_PROFILE',
+      referenceType: 'TALENT_PROFILE',
+      title: '인재상 참고자료',
+      body: '공고와 회사에 맞는 인재상 키워드를 직접 정리하세요.',
+      url: ''
+    })
+  })
+
   it('REF-004/REF-005: edits and deletes the active reference', async () => {
     const router = makeRouter()
     router.push('/workspaces/102')

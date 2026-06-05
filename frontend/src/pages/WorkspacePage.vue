@@ -199,19 +199,24 @@
               <p class="section-kicker">작성 중 참고자료</p>
               <h2>참고자료</h2>
             </div>
-            <button
-              class="ghost-button"
-              type="button"
-              :disabled="workspaceStore.status === 'saving'"
-              data-testid="create-reference"
-              @click="createReference"
-            >
-              추가
-            </button>
+            <div class="reference-create-tools">
+              <select v-model="newReferenceType" data-testid="new-reference-type" aria-label="새 참고자료 유형">
+                <option v-for="type in referenceTypes" :key="type" :value="type">{{ referenceTypeLabel(type) }}</option>
+              </select>
+              <button
+                class="ghost-button"
+                type="button"
+                :disabled="workspaceStore.status === 'saving'"
+                data-testid="create-reference"
+                @click="createReference"
+              >
+                추가
+              </button>
+            </div>
           </div>
           <ul v-if="workspaceStore.workspace">
             <li v-for="reference in workspaceStore.workspace.references" :key="reference.id">
-              <span class="status-chip">{{ reference.type }}</span>
+              <span class="status-chip">{{ referenceTypeLabel(reference.type) }}</span>
               <strong>{{ reference.title }}</strong>
               <p>작성 중인 문항 옆에서 바로 열어볼 수 있습니다.</p>
               <button
@@ -230,7 +235,7 @@
       <section v-if="workspaceStore.activeReference" class="wire-panel" aria-label="참고자료 상세">
         <div class="section-heading">
           <div>
-            <p class="section-kicker">{{ workspaceStore.activeReference.type }}</p>
+            <p class="section-kicker">{{ referenceTypeLabel(workspaceStore.activeReference.type) }}</p>
             <h2>{{ workspaceStore.activeReference.title }}</h2>
           </div>
           <button
@@ -246,7 +251,7 @@
           <label>
             유형
             <select v-model="referenceForm.referenceType" data-testid="reference-type">
-              <option v-for="type in referenceTypes" :key="type" :value="type">{{ type }}</option>
+              <option v-for="type in referenceTypes" :key="type" :value="type">{{ referenceTypeLabel(type) }}</option>
             </select>
           </label>
           <label>
@@ -317,6 +322,7 @@ const autoSaveStatus = ref<'idle' | 'waiting' | 'saving' | 'saved' | 'failed'>('
 let autoSaveTimer: ReturnType<typeof setTimeout> | null = null
 let suppressNextDraftWatch = false
 const referenceTypes: ReferenceType[] = ['FREE_MEMO', 'JD', 'NEWS', 'DART', 'TALENT_PROFILE', 'PROMPT', 'CUSTOM']
+const newReferenceType = ref<ReferenceType>('FREE_MEMO')
 const referenceForm = reactive({
   referenceType: 'FREE_MEMO' as ReferenceType,
   title: '',
@@ -512,11 +518,12 @@ function compareVersions() {
 }
 
 function createReference() {
+  const template = referenceTemplate(newReferenceType.value)
   void workspaceStore.createReference(workspaceId.value, {
-    boardName: 'MEMO',
-    referenceType: 'FREE_MEMO',
-    title: '새 참고 메모',
-    body: '직접 입력한 참고자료입니다.',
+    boardName: referenceBoardName(newReferenceType.value),
+    referenceType: newReferenceType.value,
+    title: template.title,
+    body: template.body,
     url: ''
   })
 }
@@ -554,4 +561,53 @@ function deleteReference() {
 onMounted(loadCurrentWorkspace)
 watch(workspaceId, loadCurrentWorkspace)
 onBeforeUnmount(clearAutoSaveTimer)
+
+function referenceTypeLabel(type: ReferenceType) {
+  return {
+    FREE_MEMO: '자유 메모',
+    JD: 'JD',
+    NEWS: '기사',
+    DART: 'DART',
+    TALENT_PROFILE: '인재상',
+    PROMPT: '합격 자소서',
+    CUSTOM: '작성 팁'
+  }[type]
+}
+
+function referenceTemplate(type: ReferenceType) {
+  return {
+    FREE_MEMO: {
+      title: '새 참고 메모',
+      body: '직접 입력한 참고자료입니다.'
+    },
+    JD: {
+      title: 'JD 참고자료',
+      body: '공고의 주요 업무, 자격요건, 우대사항을 직접 정리하세요.'
+    },
+    NEWS: {
+      title: '기사 참고자료',
+      body: '회사 또는 산업 관련 기사에서 자기소개서에 활용할 근거를 정리하세요.'
+    },
+    DART: {
+      title: 'DART 참고자료',
+      body: '사업보고서, 재무, 리스크, 성장 전략 등 DART에서 확인한 내용을 정리하세요.'
+    },
+    TALENT_PROFILE: {
+      title: '인재상 참고자료',
+      body: '공고와 회사에 맞는 인재상 키워드를 직접 정리하세요.'
+    },
+    PROMPT: {
+      title: '합격 자소서 참고자료',
+      body: '합격 자소서에서 참고할 구조, 표현, 근거 전개 방식을 정리하세요.'
+    },
+    CUSTOM: {
+      title: '작성 팁 참고자료',
+      body: '문항별 작성 팁, 강조할 경험, 피해야 할 표현을 정리하세요.'
+    }
+  }[type]
+}
+
+function referenceBoardName(type: ReferenceType) {
+  return type === 'FREE_MEMO' ? 'MEMO' : type
+}
 </script>
