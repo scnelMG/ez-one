@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import WorkspacePage from './WorkspacePage.vue'
 
 const mocks = vi.hoisted(() => ({
@@ -52,6 +52,10 @@ const makeRouter = () =>
   })
 
 describe('WorkspacePage', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   beforeEach(() => {
     mocks.getWorkspace.mockReset()
     mocks.getDefaults.mockReset()
@@ -228,6 +232,37 @@ describe('WorkspacePage', () => {
     expect(wrapper.text()).toContain('5000')
     expect(wrapper.text()).toContain('EZ One')
     expect(wrapper.text()).toContain('Hackathon Grand Prize')
+  })
+
+  it('WS-009/WS-011/WS-012: shows character count and auto-saves after 2 idle seconds', async () => {
+    const router = makeRouter()
+    router.push('/workspaces/102')
+    await router.isReady()
+
+    const wrapper = mount(WorkspacePage, {
+      global: {
+        plugins: [createPinia(), router]
+      }
+    })
+
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="draft-character-count"]').text()).toContain('5 / 1000')
+
+    vi.useFakeTimers()
+    await wrapper.get('[data-testid="draft-editor"]').setValue('auto saved body')
+
+    expect(wrapper.get('[data-testid="auto-save-status"]').attributes('data-save-state')).toBe('waiting')
+    expect(mocks.saveDraft).not.toHaveBeenCalledWith('102', '103', 'auto saved body')
+
+    await vi.advanceTimersByTimeAsync(1999)
+    expect(mocks.saveDraft).not.toHaveBeenCalledWith('102', '103', 'auto saved body')
+
+    await vi.advanceTimersByTimeAsync(1)
+    expect(mocks.saveDraft).toHaveBeenCalledWith('102', '103', 'auto saved body')
+    await Promise.resolve()
+
+    expect(wrapper.get('[data-testid="auto-save-status"]').attributes('data-save-state')).toBe('saved')
   })
 
   it('REF-001/REF-002: creates a reference and opens reference detail', async () => {

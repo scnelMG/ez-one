@@ -165,7 +165,13 @@
                 <p class="section-kicker">초안 작성</p>
                 <h2>{{ currentQuestion.prompt }}</h2>
               </div>
-              <span class="status-chip">{{ editorStatusLabel }}</span>
+              <span
+                class="status-chip"
+                data-testid="auto-save-status"
+                :data-save-state="autoSaveStatus"
+              >
+                {{ editorStatusLabel }}
+              </span>
             </div>
             <textarea
               v-model="draftBody"
@@ -174,7 +180,7 @@
               aria-label="자기소개서 초안"
             />
             <div class="editor-meta">
-              <span>{{ draftBody.length }} / {{ currentQuestion.maxLength }}자</span>
+              <span data-testid="draft-character-count">{{ draftBody.length }} / {{ currentQuestion.maxLength }}자</span>
               <button
                 class="ghost-button"
                 type="button"
@@ -296,7 +302,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppLayout from '@/shared/AppLayout.vue'
 import StatePanel from '@/shared/StatePanel.vue'
@@ -307,6 +313,9 @@ const route = useRoute()
 const workspaceStore = useWorkspaceStore()
 const workspaceId = computed(() => String(route.params.workspaceId ?? '102'))
 const draftBody = ref('')
+const autoSaveStatus = ref<'idle' | 'waiting' | 'saving' | 'saved' | 'failed'>('idle')
+let autoSaveTimer: ReturnType<typeof setTimeout> | null = null
+let suppressNextDraftWatch = false
 const referenceTypes: ReferenceType[] = ['FREE_MEMO', 'JD', 'NEWS', 'DART', 'TALENT_PROFILE', 'PROMPT', 'CUSTOM']
 const referenceForm = reactive({
   referenceType: 'FREE_MEMO' as ReferenceType,
@@ -339,19 +348,46 @@ const headerDescription = computed(() => {
 const draftButtonLabel = computed(() => (
   workspaceStore.status === 'saving' ? '저장 중' : '초안 저장'
 ))
-const editorStatusLabel = computed(() => (
-  workspaceStore.status === 'saving' ? '저장 중' : '편집 가능'
-))
+const editorStatusLabel = computed(() => {
+  if (autoSaveStatus.value === 'waiting') {
+    return '자동 저장 대기'
+  }
+
+  if (autoSaveStatus.value === 'saving' || workspaceStore.status === 'saving') {
+    return '저장중'
+  }
+
+  if (autoSaveStatus.value === 'saved') {
+    return '저장완료'
+  }
+
+  if (autoSaveStatus.value === 'failed') {
+    return '저장실패'
+  }
+
+  return '편집 가능'
+})
 
 watch(
   currentQuestion,
   (question) => {
+    suppressNextDraftWatch = true
     draftBody.value = question?.draft ?? ''
+    autoSaveStatus.value = 'idle'
     editQuestion.prompt = question?.prompt ?? ''
     editQuestion.maxLength = question?.maxLength ?? 1000
   },
   { immediate: true }
 )
+
+watch(draftBody, () => {
+  if (suppressNextDraftWatch) {
+    suppressNextDraftWatch = false
+    return
+  }
+
+  scheduleAutoSave()
+})
 
 watch(
   () => workspaceStore.activeReference,
@@ -389,12 +425,36 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
-function saveDraft() {
+async function saveDraft() {
   if (!currentQuestion.value) {
     return
   }
 
-  void workspaceStore.saveDraft(workspaceId.value, currentQuestion.value.id, draftBody.value)
+  clearAutoSaveTimer()
+  autoSaveStatus.value = 'saving'
+  await workspaceStore.saveDraft(workspaceId.value, currentQuestion.value.id, draftBody.value)
+  autoSaveStatus.value = workspaceStore.status === 'error' ? 'failed' : 'saved'
+}
+
+function scheduleAutoSave() {
+  if (!currentQuestion.value) {
+    return
+  }
+
+  clearAutoSaveTimer()
+  autoSaveStatus.value = 'waiting'
+  autoSaveTimer = setTimeout(() => {
+    void saveDraft()
+  }, 2000)
+}
+
+function clearAutoSaveTimer() {
+  if (!autoSaveTimer) {
+    return
+  }
+
+  clearTimeout(autoSaveTimer)
+  autoSaveTimer = null
 }
 
 function createQuestion() {
@@ -493,4 +553,5 @@ function deleteReference() {
 
 onMounted(loadCurrentWorkspace)
 watch(workspaceId, loadCurrentWorkspace)
+onBeforeUnmount(clearAutoSaveTimer)
 </script>
