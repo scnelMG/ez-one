@@ -7,7 +7,13 @@
           <h1>Notion 동기화</h1>
           <p>저장한 공고 정보만 Notion으로 보내고 자기소개서 작성 내용은 동기화하지 않습니다.</p>
         </div>
-        <button class="primary-button" type="button" disabled>
+        <button
+          class="primary-button"
+          type="button"
+          :disabled="notionStore.status === 'saving' || notionStore.connection?.connected"
+          data-testid="connect-notion"
+          @click="connectNotion"
+        >
           {{ connectionLabel }}
         </button>
       </header>
@@ -98,11 +104,15 @@ import StatePanel from '@/shared/StatePanel.vue'
 const notionStore = useNotionStore()
 
 const connectionLabel = computed(() => {
+  if (notionStore.status === 'saving') {
+    return '연결 중'
+  }
+
   if (notionStore.connection?.connected) {
     return '연결됨'
   }
 
-  return '연결 대기'
+  return '연결하기'
 })
 const syncScopeLabel = computed(() => notionStore.connection?.syncScope ?? 'JOB_ONLY')
 const syncToggleLabel = computed(() => {
@@ -119,5 +129,9 @@ onMounted(() => {
 
 function toggleSync() {
   void notionStore.updateJobOnlySync(!notionStore.connection?.syncEnabled)
+}
+
+function connectNotion() {
+  void notionStore.connectNotion()
 }
 </script>

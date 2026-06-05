@@ -17,7 +17,7 @@ describe('notionApi', () => {
       }
     })
 
-    const api = createNotionApi({ get, put: vi.fn() })
+    const api = createNotionApi({ get, post: vi.fn(), put: vi.fn() })
     const connection = await api.getConnection()
 
     expect(get).toHaveBeenCalledWith('/api/integrations/notion')
@@ -43,13 +43,37 @@ describe('notionApi', () => {
       }
     })
 
-    const api = createNotionApi({ get: vi.fn(), put })
+    const api = createNotionApi({ get: vi.fn(), post: vi.fn(), put })
     const connection = await api.updateSyncSettings(true)
 
     expect(put).toHaveBeenCalledWith('/api/integrations/notion/sync-settings', {
       syncEnabled: true,
       syncScope: 'JOB_ONLY'
     })
+    expect(connection.syncScope).toBe('JOB_ONLY')
+  })
+
+  it('NOTION-001: connects the current user Notion account', async () => {
+    const post = vi.fn().mockResolvedValue({
+      data: {
+        success: true,
+        data: {
+          connected: true,
+          notionAccountEmail: 'notion@example.com',
+          syncEnabled: true,
+          syncScope: 'JOB_ONLY'
+        },
+        error: null
+      }
+    })
+
+    const api = createNotionApi({ get: vi.fn(), post, put: vi.fn() })
+    const connection = await api.connect()
+
+    expect(post).toHaveBeenCalledWith('/api/integrations/notion/connect', {
+      code: 'local-mvp-connect'
+    })
+    expect(connection.connected).toBe(true)
     expect(connection.syncScope).toBe('JOB_ONLY')
   })
 
@@ -69,7 +93,7 @@ describe('notionApi', () => {
       }
     })
 
-    const api = createNotionApi({ get, put: vi.fn() })
+    const api = createNotionApi({ get, post: vi.fn(), put: vi.fn() })
     const logs = await api.listSyncLogs()
 
     expect(get).toHaveBeenCalledWith('/api/integrations/notion/sync-logs')
