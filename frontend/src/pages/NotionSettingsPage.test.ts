@@ -6,6 +6,7 @@ import NotionSettingsPage from './NotionSettingsPage.vue'
 
 const mocks = vi.hoisted(() => ({
   getConnection: vi.fn(),
+  connect: vi.fn(),
   updateSyncSettings: vi.fn(),
   listSyncLogs: vi.fn()
 }))
@@ -13,6 +14,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/features/notion/api/notionApi', () => ({
   notionApi: {
     getConnection: mocks.getConnection,
+    connect: mocks.connect,
     updateSyncSettings: mocks.updateSyncSettings,
     listSyncLogs: mocks.listSyncLogs
   }
@@ -34,6 +36,7 @@ const makeRouter = () =>
 describe('NotionSettingsPage', () => {
   beforeEach(() => {
     mocks.getConnection.mockReset()
+    mocks.connect.mockReset()
     mocks.updateSyncSettings.mockReset()
     mocks.listSyncLogs.mockReset()
     mocks.getConnection.mockResolvedValue({
@@ -51,6 +54,12 @@ describe('NotionSettingsPage', () => {
       }
     ])
     mocks.updateSyncSettings.mockResolvedValue({
+      connected: true,
+      notionAccountEmail: 'notion@example.com',
+      syncEnabled: true,
+      syncScope: 'JOB_ONLY'
+    })
+    mocks.connect.mockResolvedValue({
       connected: true,
       notionAccountEmail: 'notion@example.com',
       syncEnabled: true,
@@ -82,6 +91,36 @@ describe('NotionSettingsPage', () => {
 
     expect(mocks.updateSyncSettings).toHaveBeenCalledWith(true)
     expect(wrapper.text()).toContain('동기화 끄기')
+  })
+
+  it('NOTION-001: connects a disconnected Notion account from the settings page', async () => {
+    mocks.getConnection.mockResolvedValue({
+      connected: false,
+      notionAccountEmail: null,
+      syncEnabled: false,
+      syncScope: 'JOB_ONLY'
+    })
+    mocks.listSyncLogs.mockResolvedValue([])
+
+    const router = makeRouter()
+    router.push('/mypage/notion')
+    await router.isReady()
+
+    const wrapper = mount(NotionSettingsPage, {
+      global: {
+        plugins: [createPinia(), router]
+      }
+    })
+
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('연결된 계정 없음')
+
+    await wrapper.get('[data-testid="connect-notion"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.connect).toHaveBeenCalled()
+    expect(wrapper.text()).toContain('notion@example.com')
   })
 })
 

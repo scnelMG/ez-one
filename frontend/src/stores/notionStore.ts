@@ -45,5 +45,19 @@ export const useNotionStore = defineStore('notion', () => {
     }
   }
 
-  return { status, connection, syncLogs, errorMessage, loadNotionSettings, updateJobOnlySync }
+  async function connectNotion() {
+    status.value = 'saving'
+    errorMessage.value = ''
+
+    try {
+      connection.value = await notionApi.connect()
+      syncLogs.value = await notionApi.listSyncLogs()
+      status.value = 'ready'
+    } catch {
+      status.value = 'error'
+      errorMessage.value = 'Notion 계정을 연결하지 못했습니다.'
+    }
+  }
+
+  return { status, connection, syncLogs, errorMessage, loadNotionSettings, connectNotion, updateJobOnlySync }
 })

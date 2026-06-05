@@ -35,12 +35,22 @@ interface NotionSyncLogDto {
   message: string
 }
 
-type NotionHttpClient = Pick<HttpClient, 'get' | 'put'>
+type NotionHttpClient = Pick<HttpClient, 'get' | 'post' | 'put'>
 
 export function createNotionApi(httpClient: NotionHttpClient = defaultHttpClient) {
   return {
     async getConnection(): Promise<NotionConnection> {
       const response = await httpClient.get<ApiEnvelope<NotionConnectionDto>>('/api/integrations/notion')
+      return unwrapApiData(response.data)
+    },
+
+    async connect(): Promise<NotionConnection> {
+      const response = await httpClient.post<ApiEnvelope<NotionConnectionDto>>(
+        '/api/integrations/notion/connect',
+        {
+          code: 'local-mvp-connect'
+        }
+      )
       return unwrapApiData(response.data)
     },
 
