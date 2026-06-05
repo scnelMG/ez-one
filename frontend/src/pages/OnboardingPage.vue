@@ -5,60 +5,98 @@
         <section class="onboarding-dialog" aria-label="온보딩 입력 모달">
           <div class="dialog-header">
             <div>
-              <p class="section-kicker">맞춤 추천 준비</p>
+              <p class="section-kicker">ONB-001</p>
               <h1>선호 조건을 알려주세요</h1>
-              <p>추천 공고와 마이페이지 설정에 함께 쓰일 기본 정보를 정리합니다.</p>
+              <p>추천 공고와 메인 대시보드에서 사용할 기본 선호 정보를 저장합니다.</p>
             </div>
-            <span class="status-chip">최초 로그인</span>
+            <span class="status-chip">{{ statusLabel }}</span>
           </div>
+
+          <StatePanel
+            v-if="profileStore.status === 'error'"
+            id="onboarding-error"
+            tone="navy"
+            title="온보딩 오류"
+            :body="profileStore.errorMessage"
+          />
 
           <section class="tag-section" aria-label="선호 직무">
             <strong>선호 직무</strong>
             <div class="tag-list">
-              <button class="filter-chip active" type="button">백엔드 개발자</button>
-              <button class="filter-chip" type="button">서버 개발자</button>
-              <button class="filter-chip" type="button">플랫폼 엔지니어</button>
+              <button
+                v-for="role in roleOptions"
+                :key="role"
+                class="filter-chip"
+                :class="{ active: form.desiredRoles.includes(role) }"
+                type="button"
+                @click="toggleListValue(form.desiredRoles, role)"
+              >
+                {{ role }}
+              </button>
             </div>
           </section>
 
           <section class="tag-section" aria-label="선호 기업 유형">
             <strong>선호 기업 유형</strong>
             <div class="tag-list">
-              <button class="filter-chip active" type="button">대기업</button>
-              <button class="filter-chip active" type="button">스타트업</button>
-              <button class="filter-chip" type="button">공공기관</button>
-              <button class="filter-chip" type="button">중견기업</button>
+              <button
+                v-for="companyType in companyTypeOptions"
+                :key="companyType"
+                class="filter-chip"
+                :class="{ active: form.companyTypes.includes(companyType) }"
+                type="button"
+                @click="toggleListValue(form.companyTypes, companyType)"
+              >
+                {{ companyType }}
+              </button>
             </div>
           </section>
 
           <section class="tag-section" aria-label="기술 스택">
             <strong>기술 스택</strong>
             <div class="tag-list">
-              <button class="filter-chip active" type="button">Java</button>
-              <button class="filter-chip active" type="button">Spring Boot</button>
-              <button class="filter-chip active" type="button">MyBatis</button>
-              <button class="filter-chip" type="button">MySQL</button>
+              <button
+                v-for="skill in skillOptions"
+                :key="skill"
+                class="filter-chip"
+                :class="{ active: form.skills.includes(skill) }"
+                type="button"
+                @click="toggleListValue(form.skills, skill)"
+              >
+                {{ skill }}
+              </button>
             </div>
           </section>
 
           <section class="form-shell compact" aria-label="추가 선호 정보">
             <label>
               근무 지역
-              <input value="서울, 경기" readonly />
-            </label>
-            <label>
-              SSAFY 여부
-              <input value="아니오" readonly />
+              <input v-model="regionInput" data-testid="onboarding-region" />
             </label>
             <label>
               관심 산업
-              <input value="플랫폼, 생산성 도구" readonly />
+              <input v-model="industryInput" data-testid="onboarding-industry" />
+            </label>
+            <label>
+              SSAFY 여부
+              <select v-model="form.ssafy" data-testid="onboarding-ssafy">
+                <option :value="false">아니오</option>
+                <option :value="true">예</option>
+              </select>
             </label>
           </section>
 
           <div class="dialog-actions">
-            <button class="ghost-button" type="button" @click="goToMain">건너뛰기</button>
-            <button class="primary-button" type="button" @click="goToMain">저장하고 시작</button>
+            <button class="ghost-button" type="button" @click="skipOnboarding">건너뛰기</button>
+            <button
+              class="primary-button"
+              type="button"
+              :disabled="profileStore.status === 'saving'"
+              data-testid="save-onboarding"
+              @click="saveOnboarding"
+            >
+              {{ saveButtonLabel }}
+            </button>
           </div>
         </section>
       </div>
@@ -67,12 +105,72 @@
 </template>
 
 <script setup lang="ts">
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useProfileStore } from '@/stores/profileStore'
 import AppLayout from '@/shared/AppLayout.vue'
+import StatePanel from '@/shared/StatePanel.vue'
 
 const router = useRouter()
+const profileStore = useProfileStore()
+const form = reactive({
+  desiredRoles: ['Backend Developer'],
+  companyTypes: ['Startup'],
+  skills: ['Java', 'Spring Boot'],
+  ssafy: false
+})
+const regionInput = ref('Seoul')
+const industryInput = ref('Commerce')
+const roleOptions = ['Backend Developer', 'Server Developer', 'Platform Engineer']
+const companyTypeOptions = ['Large Enterprise', 'Startup', 'Public']
+const skillOptions = ['Java', 'Spring Boot', 'MyBatis', 'MySQL']
 
-function goToMain() {
+const statusLabel = computed(() => {
+  if (profileStore.status === 'saving') {
+    return '저장 중'
+  }
+
+  return profileStore.profile?.completed ? '저장됨' : '첫 로그인'
+})
+const saveButtonLabel = computed(() => (
+  profileStore.status === 'saving' ? '저장 중' : '저장하고 시작'
+))
+
+onMounted(() => {
+  void profileStore.loadProfile()
+})
+
+function toggleListValue(values: string[], value: string) {
+  const index = values.indexOf(value)
+
+  if (index >= 0) {
+    values.splice(index, 1)
+    return
+  }
+
+  values.push(value)
+}
+
+async function saveOnboarding() {
+  await profileStore.saveProfile({
+    desiredRoles: form.desiredRoles,
+    companyTypes: form.companyTypes,
+    industries: splitCsv(industryInput.value),
+    regions: splitCsv(regionInput.value),
+    skills: form.skills,
+    ssafy: form.ssafy
+  })
+
+  if (profileStore.status === 'ready') {
+    await router.push('/main')
+  }
+}
+
+function skipOnboarding() {
   void router.push('/main')
+}
+
+function splitCsv(value: string) {
+  return value.split(',').map((item) => item.trim()).filter(Boolean)
 }
 </script>
