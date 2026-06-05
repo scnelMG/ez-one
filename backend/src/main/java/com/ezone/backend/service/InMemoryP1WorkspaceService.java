@@ -110,6 +110,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             normalizeDeadline(request.deadlineLabel()),
             isDeadlineSoon(request.deadlineLabel()),
             request.sourceUrl(),
+            "",
             false
         );
         basketJobs.put(basketJobId, basketJob);
@@ -135,6 +136,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             normalizeDeadline(request.deadlineLabel()),
             isDeadlineSoon(request.deadlineLabel()),
             request.sourceUrl(),
+            normalizeMemo(request.applicationMemo()),
             current.deleted()
         );
         basketJobs.put(basketJobId, updated);
@@ -170,6 +172,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             current.deadlineLabel(),
             current.deadlineSoon(),
             current.sourceUrl(),
+            current.applicationMemo(),
             current.deleted()
         );
         basketJobs.put(basketJobId, updated);
@@ -189,6 +192,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             current.deadlineLabel(),
             current.deadlineSoon(),
             current.sourceUrl(),
+            current.applicationMemo(),
             true
         ));
     }
@@ -439,6 +443,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             deadlineLabel,
             deadlineSoon,
             "https://www.jasoseol.com/",
+            "",
             false
         );
         basketJobs.put(basketJobId, basketJob);
@@ -558,7 +563,8 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             statusLabel(record.applicationStatus()),
             record.deadlineLabel(),
             record.deadlineSoon(),
-            record.sourceUrl()
+            record.sourceUrl(),
+            record.applicationMemo()
         );
     }
 
@@ -627,6 +633,10 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
         return deadlineLabel != null && (deadlineLabel.contains("오늘") || deadlineLabel.contains("D-"));
     }
 
+    private String normalizeMemo(String applicationMemo) {
+        return applicationMemo == null ? "" : applicationMemo;
+    }
+
     private String statusLabel(ApplicationStatus status) {
         return switch (status) {
             case READY, NOT_APPLIED -> "지원 전";
@@ -645,6 +655,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
         String deadlineLabel,
         boolean deadlineSoon,
         String sourceUrl,
+        String applicationMemo,
         boolean deleted
     ) {
     }

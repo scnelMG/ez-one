@@ -58,7 +58,8 @@ describe('basketApi', () => {
           statusLabel: '지원완료',
           deadlineLabel: '2026.06.30',
           deadlineSoon: false,
-          sourceUrl: 'https://www.jasoseol.com/'
+          sourceUrl: 'https://www.jasoseol.com/',
+          applicationMemo: 'Phone screen scheduled.'
         },
         error: null
       }
@@ -85,7 +86,8 @@ describe('basketApi', () => {
       companyName: 'Naver Cloud',
       positionTitle: 'Platform Engineer',
       deadlineLabel: '2026.07.01',
-      sourceUrl: 'https://www.jasoseol.com/jobs/201'
+      sourceUrl: 'https://www.jasoseol.com/jobs/201',
+      applicationMemo: 'Ask about platform team.'
     })).resolves.toMatchObject({ id: '201' })
     await expect(api.updateStatus('201', 'SUBMITTED')).resolves.toMatchObject({ status: 'SUBMITTED' })
     await expect(api.updateStatus('201', 'NOT_APPLIED')).resolves.toMatchObject({ status: 'SUBMITTED' })
@@ -103,7 +105,8 @@ describe('basketApi', () => {
       companyName: 'Naver Cloud',
       positionTitle: 'Platform Engineer',
       deadlineLabel: '2026.07.01',
-      sourceUrl: 'https://www.jasoseol.com/jobs/201'
+      sourceUrl: 'https://www.jasoseol.com/jobs/201',
+      applicationMemo: 'Ask about platform team.'
     })
     expect(patch).toHaveBeenCalledWith('/api/basket/jobs/201/status', {
       applicationStatus: 'COMPLETED'

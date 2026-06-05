@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS basket_jobs (
   user_id BIGINT NOT NULL,
   job_id BIGINT NOT NULL,
   application_status VARCHAR(32) NOT NULL,
+  application_memo TEXT NULL,
   status_updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   status_reason VARCHAR(64) NOT NULL,
   saved_source VARCHAR(64) NOT NULL,
