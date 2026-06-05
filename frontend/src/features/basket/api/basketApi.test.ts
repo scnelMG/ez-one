@@ -25,7 +25,7 @@ describe('basketApi', () => {
             companyName: '카카오페이',
             positionTitle: 'Server Developer',
             applicationStatus: 'NOT_APPLIED',
-            statusLabel: '지원 전',
+            statusLabel: '미지원',
             deadlineLabel: 'D-2',
             deadlineSoon: true,
             sourceUrl: 'https://www.jasoseol.com/'

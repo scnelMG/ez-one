@@ -119,7 +119,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         basketJob.setJobId(job.getId());
         basketJob.setCompanyName(request.companyName());
         basketJob.setPositionTitle(request.positionTitle());
-        basketJob.setApplicationStatus(ApplicationStatus.NOT_APPLIED);
+        basketJob.setApplicationStatus(ApplicationStatus.READY);
         basketJob.setDeadlineLabel(job.getDeadlineLabel());
         basketJob.setDeadlineSoon(isDeadlineSoon(job.getDeadlineLabel()));
         basketJob.setSourceUrl(request.sourceUrl());
@@ -566,9 +566,10 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
 
     private String statusLabel(ApplicationStatus status) {
         return switch (status) {
-            case READY, NOT_APPLIED -> "지원 전";
+            case READY -> "지원 전";
+            case NOT_APPLIED -> "미지원";
             case IN_PROGRESS -> "진행 중";
-            case COMPLETED -> "지원 완료";
+            case COMPLETED -> "지원완료";
         };
     }
 }

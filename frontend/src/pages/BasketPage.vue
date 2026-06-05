@@ -206,7 +206,7 @@ const statusFilters: Array<{ label: string; value?: BasketJobStatus; to: string 
   { label: '지원 전', value: 'NOT_STARTED', to: '/basket?status=NOT_STARTED' },
   { label: '미지원', value: 'NOT_APPLIED', to: '/basket?status=NOT_APPLIED' },
   { label: '진행 중', value: 'IN_PROGRESS', to: '/basket?status=IN_PROGRESS' },
-  { label: '지원 완료', value: 'SUBMITTED', to: '/basket?status=SUBMITTED' }
+  { label: '지원완료', value: 'SUBMITTED', to: '/basket?status=SUBMITTED' }
 ]
 
 const selectedStatus = computed<BasketJobStatus | undefined>(() => {
