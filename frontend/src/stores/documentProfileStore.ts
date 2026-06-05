@@ -9,9 +9,14 @@ import {
 
 export interface BasicInfoSection {
   nameKo: string
+  nameEn: string
+  nameHanja: string
   email: string
   phone: string
+  gender: string
+  birthdate: string
   address: string
+  addressDetail: string
 }
 
 export interface ReusableProfileItem {
@@ -34,9 +39,14 @@ export type ReusableProfileSectionType =
 
 const emptyBasicInfo: BasicInfoSection = {
   nameKo: '',
+  nameEn: '',
+  nameHanja: '',
   email: '',
   phone: '',
-  address: ''
+  gender: '',
+  birthdate: '',
+  address: '',
+  addressDetail: ''
 }
 
 export const useDocumentProfileStore = defineStore('documentProfile', () => {
@@ -189,9 +199,14 @@ function normalizeBasicInfo(payload: DocumentSectionPayload | undefined): BasicI
 
   return {
     nameKo: stringValue(record.nameKo),
+    nameEn: stringValue(record.nameEn),
+    nameHanja: stringValue(record.nameHanja),
     email: stringValue(record.email),
     phone: stringValue(record.phone),
-    address: stringValue(record.address)
+    gender: stringValue(record.gender),
+    birthdate: stringValue(record.birthdate),
+    address: stringValue(record.address),
+    addressDetail: stringValue(record.addressDetail)
   }
 }
 

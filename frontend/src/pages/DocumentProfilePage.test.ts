@@ -45,9 +45,14 @@ describe('DocumentProfilePage', () => {
       sections: {
         basicInfo: {
           nameKo: 'Hong Gil Dong',
+          nameEn: 'Gil Dong Hong',
+          nameHanja: '洪吉東',
           email: 'user@example.com',
           phone: '010-1234-5678',
-          address: 'Seoul'
+          gender: '남성',
+          birthdate: '1999-01-01',
+          address: 'Seoul',
+          addressDetail: 'Gangnam-gu'
         },
         education: [{ title: 'Korea University', summary: 'Computer Science' }],
         career: [{ title: 'Naver Cloud', summary: 'Backend Engineer' }],
@@ -75,9 +80,14 @@ describe('DocumentProfilePage', () => {
       sections: {
         basicInfo: {
           nameKo: 'Kim Jiwon',
+          nameEn: 'Jiwon Kim',
+          nameHanja: '金智媛',
           email: 'jiwon@example.com',
           phone: '010-1234-5678',
-          address: 'Seoul'
+          gender: '여성',
+          birthdate: '1998-02-03',
+          address: 'Seoul',
+          addressDetail: 'Mapo-gu'
         },
         education: [{ title: 'Korea University', summary: 'Computer Science' }],
         career: [{ title: 'Naver Cloud Platform', summary: 'Platform backend' }],
@@ -113,20 +123,37 @@ describe('DocumentProfilePage', () => {
 
     expect(mocks.getDocumentProfile).toHaveBeenCalled()
     expect((wrapper.get('[data-testid="basic-info-name"]').element as HTMLInputElement).value).toBe('Hong Gil Dong')
+    expect((wrapper.get('[data-testid="basic-info-name-en"]').element as HTMLInputElement).value).toBe('Gil Dong Hong')
+    expect((wrapper.get('[data-testid="basic-info-name-hanja"]').element as HTMLInputElement).value).toBe('洪吉東')
     expect((wrapper.get('[data-testid="basic-info-email"]').element as HTMLInputElement).value).toBe(
       'user@example.com'
+    )
+    expect((wrapper.get('[data-testid="basic-info-gender"]').element as HTMLInputElement).value).toBe('남성')
+    expect((wrapper.get('[data-testid="basic-info-birthdate"]').element as HTMLInputElement).value).toBe('1999-01-01')
+    expect((wrapper.get('[data-testid="basic-info-address-detail"]').element as HTMLInputElement).value).toBe(
+      'Gangnam-gu'
     )
     expect(wrapper.text()).toContain('2026-06-05T12:00:00Z')
 
     await wrapper.get('[data-testid="basic-info-name"]').setValue('Kim Jiwon')
+    await wrapper.get('[data-testid="basic-info-name-en"]').setValue('Jiwon Kim')
+    await wrapper.get('[data-testid="basic-info-name-hanja"]').setValue('金智媛')
     await wrapper.get('[data-testid="basic-info-email"]').setValue('jiwon@example.com')
+    await wrapper.get('[data-testid="basic-info-gender"]').setValue('여성')
+    await wrapper.get('[data-testid="basic-info-birthdate"]').setValue('1998-02-03')
+    await wrapper.get('[data-testid="basic-info-address-detail"]').setValue('Mapo-gu')
     await wrapper.get('button.primary-button').trigger('click')
 
     expect(mocks.saveSection).toHaveBeenCalledWith('basicInfo', {
       nameKo: 'Kim Jiwon',
+      nameEn: 'Jiwon Kim',
+      nameHanja: '金智媛',
       email: 'jiwon@example.com',
       phone: '010-1234-5678',
-      address: 'Seoul'
+      gender: '여성',
+      birthdate: '1998-02-03',
+      address: 'Seoul',
+      addressDetail: 'Mapo-gu'
     })
   })
 
