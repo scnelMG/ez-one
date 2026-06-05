@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -472,6 +473,40 @@ class P1ApiContractTest {
             .andExpect(jsonPath("$.data[0].target").value("BASKET_JOB"))
             .andExpect(jsonPath("$.data[0].status").value("SUCCESS"))
             .andExpect(jsonPath("$.data[0].message").value("JOB_ONLY synced: Notion Sync Company / Backend Developer"));
+    }
+
+    @Test
+    void notionConnectionAndSyncLogsAreScopedToCurrentUser() throws Exception {
+        mockMvc.perform(post("/api/integrations/notion/connect")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    { "code": "user-one-oauth-code" }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.connected").value(true));
+
+        mockMvc.perform(post("/api/basket/jobs")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "companyName": "User One Notion Company",
+                      "positionTitle": "Backend Developer",
+                      "deadlineLabel": "D-4",
+                      "sourceUrl": "https://example.com/jobs/user-one-notion",
+                      "savedSource": "DIRECT"
+                    }
+                    """))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/integrations/notion").with(user("2")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.connected").value(false))
+            .andExpect(jsonPath("$.data.syncEnabled").value(false))
+            .andExpect(jsonPath("$.data.syncScope").value("JOB_ONLY"));
+
+        mockMvc.perform(get("/api/integrations/notion/sync-logs").with(user("2")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.length()").value(0));
     }
 
     @Test

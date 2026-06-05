@@ -44,8 +44,9 @@ public class BasketJobController {
 
     @PostMapping
     public ApiResponse<BasketJobResponse> createJob(@Valid @RequestBody CreateBasketJobRequest request) {
-        BasketJobResponse basketJob = workspaceService.createBasketJob(CurrentUserSupport.currentUserId(), request);
-        notionIntegrationService.recordJobOnlySync(basketJob);
+        Long userId = CurrentUserSupport.currentUserId();
+        BasketJobResponse basketJob = workspaceService.createBasketJob(userId, request);
+        notionIntegrationService.recordJobOnlySync(userId, basketJob);
         return ApiResponse.success(basketJob);
     }
 

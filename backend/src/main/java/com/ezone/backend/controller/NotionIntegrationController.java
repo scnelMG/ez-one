@@ -28,17 +28,17 @@ public class NotionIntegrationController {
 
     @GetMapping
     public ApiResponse<NotionConnectionResponse> getConnection() {
-        return ApiResponse.success(notionIntegrationService.getConnection());
+        return ApiResponse.success(notionIntegrationService.getConnection(CurrentUserSupport.currentUserId()));
     }
 
     @PostMapping("/connect")
     public ApiResponse<NotionConnectionResponse> connect(@RequestBody NotionConnectRequest request) {
-        return ApiResponse.success(notionIntegrationService.connect());
+        return ApiResponse.success(notionIntegrationService.connect(CurrentUserSupport.currentUserId()));
     }
 
     @DeleteMapping
     public ApiResponse<Void> disconnect() {
-        notionIntegrationService.disconnect();
+        notionIntegrationService.disconnect(CurrentUserSupport.currentUserId());
         return ApiResponse.success(null);
     }
 
@@ -46,11 +46,15 @@ public class NotionIntegrationController {
     public ApiResponse<NotionConnectionResponse> updateSettings(
         @Valid @RequestBody UpdateNotionSyncSettingsRequest request
     ) {
-        return ApiResponse.success(notionIntegrationService.updateSettings(request.syncEnabled(), request.syncScope()));
+        return ApiResponse.success(notionIntegrationService.updateSettings(
+            CurrentUserSupport.currentUserId(),
+            request.syncEnabled(),
+            request.syncScope()
+        ));
     }
 
     @GetMapping("/sync-logs")
     public ApiResponse<List<SyncLogResponse>> getSyncLogs() {
-        return ApiResponse.success(notionIntegrationService.listSyncLogs());
+        return ApiResponse.success(notionIntegrationService.listSyncLogs(CurrentUserSupport.currentUserId()));
     }
 }
