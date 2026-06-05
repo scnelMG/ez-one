@@ -58,8 +58,26 @@
       <section class="workspace-canvas" aria-label="자기소개서 작성 영역">
         <aside class="question-rail">
           <strong>문항</strong>
-          <button class="question-item active" type="button">{{ currentQuestion?.prompt ?? '문항 없음' }}</button>
-          <button class="question-item" type="button">문항 추가</button>
+          <button
+            v-for="question in workspaceStore.workspace?.questions ?? []"
+            :key="question.id"
+            class="question-item"
+            :class="{ active: question.id === currentQuestion?.id }"
+            type="button"
+          >
+            {{ question.prompt }}
+          </button>
+          <label>
+            새 문항
+            <input v-model="newQuestion.prompt" data-testid="new-question-prompt" />
+          </label>
+          <label>
+            글자수
+            <input v-model.number="newQuestion.maxLength" data-testid="new-question-max" type="number" min="1" />
+          </label>
+          <button class="question-item" type="button" data-testid="create-question" @click="createQuestion">
+            문항 추가
+          </button>
           <div class="mini-lines" aria-hidden="true">
             <span></span>
             <span></span>
@@ -193,6 +211,20 @@
           </li>
         </ul>
         <p v-else>아직 저장된 버전이 없습니다.</p>
+        <button
+          v-if="workspaceStore.versions.length >= 2"
+          class="ghost-button"
+          type="button"
+          data-testid="compare-versions"
+          @click="compareVersions"
+        >
+          버전 비교
+        </button>
+        <div v-if="workspaceStore.versionComparison" class="summary-stack" aria-label="버전 비교 결과">
+          <strong>{{ workspaceStore.versionComparison.changed ? '변경 있음' : '변경 없음' }}</strong>
+          <p>{{ workspaceStore.versionComparison.leftBody }}</p>
+          <p>{{ workspaceStore.versionComparison.rightBody }}</p>
+        </div>
       </section>
     </section>
   </AppLayout>
@@ -216,6 +248,10 @@ const referenceForm = reactive({
   title: '',
   body: '',
   url: ''
+})
+const newQuestion = reactive({
+  prompt: '',
+  maxLength: 1000
 })
 const currentQuestion = computed(() => workspaceStore.workspace?.questions[0] ?? null)
 const headerDescription = computed(() => {
@@ -265,6 +301,19 @@ function saveDraft() {
   void workspaceStore.saveDraft(workspaceId.value, currentQuestion.value.id, draftBody.value)
 }
 
+function createQuestion() {
+  if (!newQuestion.prompt.trim()) {
+    return
+  }
+
+  void workspaceStore.createQuestion(workspaceId.value, {
+    prompt: newQuestion.prompt,
+    maxLength: newQuestion.maxLength
+  })
+  newQuestion.prompt = ''
+  newQuestion.maxLength = 1000
+}
+
 function createVersion() {
   if (!currentQuestion.value) {
     return
@@ -275,6 +324,16 @@ function createVersion() {
     currentQuestion.value.id,
     `v${workspaceStore.versions.length + 1}`
   )
+}
+
+function compareVersions() {
+  const [left, right] = workspaceStore.versions
+
+  if (!left || !right) {
+    return
+  }
+
+  void workspaceStore.compareVersions(workspaceId.value, left.id, right.id)
 }
 
 function createReference() {

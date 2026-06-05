@@ -2,8 +2,10 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import {
   workspaceApi,
+  type CreateQuestionPayload,
   type CreateReferencePayload,
   type EssayVersion,
+  type VersionComparison,
   type WorkspaceDetail,
   type WorkspaceReference
 } from '@/features/workspace/api/workspaceApi'
@@ -12,6 +14,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   const status = ref<'idle' | 'loading' | 'ready' | 'saving' | 'error' | 'forbidden' | 'notFound'>('idle')
   const workspace = ref<WorkspaceDetail | null>(null)
   const versions = ref<EssayVersion[]>([])
+  const versionComparison = ref<VersionComparison | null>(null)
   const activeReference = ref<WorkspaceReference | null>(null)
   const errorMessage = ref('')
 
@@ -22,10 +25,12 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     try {
       workspace.value = await workspaceApi.getWorkspace(workspaceId)
       versions.value = await workspaceApi.listVersions(workspaceId)
+      versionComparison.value = null
       status.value = 'ready'
     } catch {
       workspace.value = null
       versions.value = []
+      versionComparison.value = null
       activeReference.value = null
       status.value = 'error'
       errorMessage.value = '워크스페이스를 불러오지 못했습니다.'
@@ -53,6 +58,25 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     }
   }
 
+  async function createQuestion(workspaceId: string, payload: CreateQuestionPayload) {
+    status.value = 'saving'
+    errorMessage.value = ''
+
+    try {
+      const question = await workspaceApi.createQuestion(workspaceId, payload)
+      if (workspace.value) {
+        workspace.value = {
+          ...workspace.value,
+          questions: [...workspace.value.questions, question]
+        }
+      }
+      status.value = 'ready'
+    } catch {
+      status.value = 'error'
+      errorMessage.value = '문항을 추가하지 못했습니다.'
+    }
+  }
+
   async function createVersion(workspaceId: string, questionId: string, versionName: string) {
     status.value = 'saving'
     errorMessage.value = ''
@@ -64,6 +88,19 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     } catch {
       status.value = 'error'
       errorMessage.value = '버전을 저장하지 못했습니다.'
+    }
+  }
+
+  async function compareVersions(workspaceId: string, leftVersionId: string, rightVersionId: string) {
+    status.value = 'loading'
+    errorMessage.value = ''
+
+    try {
+      versionComparison.value = await workspaceApi.compareVersions(workspaceId, leftVersionId, rightVersionId)
+      status.value = 'ready'
+    } catch {
+      status.value = 'error'
+      errorMessage.value = '버전을 비교하지 못했습니다.'
     }
   }
 
@@ -148,11 +185,14 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     status,
     workspace,
     versions,
+    versionComparison,
     activeReference,
     errorMessage,
     loadWorkspace,
     saveDraft,
+    createQuestion,
     createVersion,
+    compareVersions,
     createReference,
     openReference,
     updateReference,

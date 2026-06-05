@@ -20,6 +20,19 @@ export interface EssayVersion {
   body: string
 }
 
+export interface CreateQuestionPayload {
+  prompt: string
+  maxLength: number
+}
+
+export interface VersionComparison {
+  leftVersionId: string
+  rightVersionId: string
+  leftBody: string
+  rightBody: string
+  changed: boolean
+}
+
 export interface WorkspaceReference {
   id: string
   boardName?: string
@@ -99,6 +112,14 @@ interface EssayVersionDto {
   body: string
 }
 
+interface VersionComparisonDto {
+  leftVersionId: number
+  rightVersionId: number
+  leftBody: string
+  rightBody: string
+  changed: boolean
+}
+
 type WorkspaceHttpClient = Pick<HttpClient, 'get' | 'patch' | 'post'> & Partial<Pick<HttpClient, 'delete'>>
 
 export function createWorkspaceApi(httpClient: WorkspaceHttpClient = defaultHttpClient) {
@@ -137,6 +158,14 @@ export function createWorkspaceApi(httpClient: WorkspaceHttpClient = defaultHttp
       return toWorkspaceQuestion(unwrapApiData(response.data))
     },
 
+    async createQuestion(workspaceId: string, payload: CreateQuestionPayload): Promise<WorkspaceQuestion> {
+      const response = await httpClient.post<ApiEnvelope<EssayQuestionDto>>(
+        `/api/workspaces/${workspaceId}/questions`,
+        payload
+      )
+      return toWorkspaceQuestion(unwrapApiData(response.data))
+    },
+
     async createVersion(workspaceId: string, questionId: string, versionName: string): Promise<EssayVersion> {
       const response = await httpClient.post<ApiEnvelope<EssayVersionDto>>(
         `/api/workspaces/${workspaceId}/versions`,
@@ -153,6 +182,21 @@ export function createWorkspaceApi(httpClient: WorkspaceHttpClient = defaultHttp
         `/api/workspaces/${workspaceId}/versions`
       )
       return unwrapApiData(response.data).map(toEssayVersion)
+    },
+
+    async compareVersions(
+      workspaceId: string,
+      leftVersionId: string,
+      rightVersionId: string
+    ): Promise<VersionComparison> {
+      const response = await httpClient.post<ApiEnvelope<VersionComparisonDto>>(
+        `/api/workspaces/${workspaceId}/versions/compare`,
+        {
+          leftVersionId: Number(leftVersionId),
+          rightVersionId: Number(rightVersionId)
+        }
+      )
+      return toVersionComparison(unwrapApiData(response.data))
     },
 
     async createReference(
@@ -204,6 +248,16 @@ function toEssayVersion(version: EssayVersionDto): EssayVersion {
     questionId: String(version.questionId),
     versionName: version.versionName,
     body: version.body
+  }
+}
+
+function toVersionComparison(comparison: VersionComparisonDto): VersionComparison {
+  return {
+    leftVersionId: String(comparison.leftVersionId),
+    rightVersionId: String(comparison.rightVersionId),
+    leftBody: comparison.leftBody,
+    rightBody: comparison.rightBody,
+    changed: comparison.changed
   }
 }
 
