@@ -6,6 +6,7 @@ import com.ezone.backend.dto.basket.BasketJobResponse;
 import com.ezone.backend.dto.basket.CreateBasketJobRequest;
 import com.ezone.backend.dto.basket.UpdateBasketJobRequest;
 import com.ezone.backend.dto.basket.UpdateBasketJobStatusRequest;
+import com.ezone.backend.service.NotionIntegrationService;
 import com.ezone.backend.service.P1WorkspaceService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -24,9 +25,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class BasketJobController {
 
     private final P1WorkspaceService workspaceService;
+    private final NotionIntegrationService notionIntegrationService;
 
-    public BasketJobController(P1WorkspaceService workspaceService) {
+    public BasketJobController(P1WorkspaceService workspaceService, NotionIntegrationService notionIntegrationService) {
         this.workspaceService = workspaceService;
+        this.notionIntegrationService = notionIntegrationService;
     }
 
     @GetMapping
@@ -41,7 +44,9 @@ public class BasketJobController {
 
     @PostMapping
     public ApiResponse<BasketJobResponse> createJob(@Valid @RequestBody CreateBasketJobRequest request) {
-        return ApiResponse.success(workspaceService.createBasketJob(CurrentUserSupport.currentUserId(), request));
+        BasketJobResponse basketJob = workspaceService.createBasketJob(CurrentUserSupport.currentUserId(), request);
+        notionIntegrationService.recordJobOnlySync(basketJob);
+        return ApiResponse.success(basketJob);
     }
 
     @GetMapping("/{basketJobId}")

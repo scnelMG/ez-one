@@ -20,6 +20,7 @@ import com.ezone.backend.security.JwtAccessTokenVerifier;
 import com.ezone.backend.security.JwtAuthenticationFilter;
 import com.ezone.backend.service.InMemoryP1WorkspaceService;
 import com.ezone.backend.service.InMemoryProfileService;
+import com.ezone.backend.service.NotionIntegrationService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Optional;
@@ -49,7 +50,8 @@ import org.springframework.test.web.servlet.MockMvc;
     JwtAuthenticationFilter.class,
     JwtAccessTokenVerifier.class,
     InMemoryP1WorkspaceService.class,
-    InMemoryProfileService.class
+    InMemoryProfileService.class,
+    NotionIntegrationService.class
 })
 @WithMockUser(username = "1")
 class P1ApiContractTest {
@@ -301,6 +303,37 @@ class P1ApiContractTest {
         mockMvc.perform(get("/api/integrations/notion"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.syncScope").value("JOB_ONLY"));
+    }
+
+    @Test
+    void savingBasketJobRecordsJobOnlyNotionSyncLogWhenEnabled() throws Exception {
+        mockMvc.perform(post("/api/integrations/notion/connect")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    { "code": "oauth-code" }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.syncScope").value("JOB_ONLY"))
+            .andExpect(jsonPath("$.data.syncEnabled").value(true));
+
+        mockMvc.perform(post("/api/basket/jobs")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "companyName": "Notion Sync Company",
+                      "positionTitle": "Backend Developer",
+                      "deadlineLabel": "D-4",
+                      "sourceUrl": "https://example.com/jobs/notion-sync",
+                      "savedSource": "DIRECT"
+                    }
+                    """))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/integrations/notion/sync-logs"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data[0].target").value("BASKET_JOB"))
+            .andExpect(jsonPath("$.data[0].status").value("SUCCESS"))
+            .andExpect(jsonPath("$.data[0].message").value("JOB_ONLY synced: Notion Sync Company / Backend Developer"));
     }
 
     @Test

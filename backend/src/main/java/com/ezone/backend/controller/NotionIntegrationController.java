@@ -1,13 +1,12 @@
 package com.ezone.backend.controller;
 
-import com.ezone.backend.domain.SyncScope;
 import com.ezone.backend.dto.ApiResponse;
 import com.ezone.backend.dto.notion.NotionConnectRequest;
 import com.ezone.backend.dto.notion.NotionConnectionResponse;
 import com.ezone.backend.dto.notion.SyncLogResponse;
 import com.ezone.backend.dto.notion.UpdateNotionSyncSettingsRequest;
+import com.ezone.backend.service.NotionIntegrationService;
 import jakarta.validation.Valid;
-import java.util.ArrayList;
 import java.util.List;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,29 +20,25 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/integrations/notion")
 public class NotionIntegrationController {
 
-    private NotionConnectionResponse connection = new NotionConnectionResponse(
-        false,
-        null,
-        false,
-        SyncScope.JOB_ONLY
-    );
-    private final List<SyncLogResponse> syncLogs = new ArrayList<>();
+    private final NotionIntegrationService notionIntegrationService;
+
+    public NotionIntegrationController(NotionIntegrationService notionIntegrationService) {
+        this.notionIntegrationService = notionIntegrationService;
+    }
 
     @GetMapping
     public ApiResponse<NotionConnectionResponse> getConnection() {
-        return ApiResponse.success(connection);
+        return ApiResponse.success(notionIntegrationService.getConnection());
     }
 
     @PostMapping("/connect")
     public ApiResponse<NotionConnectionResponse> connect(@RequestBody NotionConnectRequest request) {
-        connection = new NotionConnectionResponse(true, "notion@example.com", true, SyncScope.JOB_ONLY);
-        syncLogs.add(new SyncLogResponse(1L, "NOTION_CONNECTION", "SUCCESS", "Notion connection saved."));
-        return ApiResponse.success(connection);
+        return ApiResponse.success(notionIntegrationService.connect());
     }
 
     @DeleteMapping
     public ApiResponse<Void> disconnect() {
-        connection = new NotionConnectionResponse(false, null, false, SyncScope.JOB_ONLY);
+        notionIntegrationService.disconnect();
         return ApiResponse.success(null);
     }
 
@@ -51,18 +46,11 @@ public class NotionIntegrationController {
     public ApiResponse<NotionConnectionResponse> updateSettings(
         @Valid @RequestBody UpdateNotionSyncSettingsRequest request
     ) {
-        SyncScope p1Scope = request.syncScope() == SyncScope.JOB_ONLY ? request.syncScope() : SyncScope.JOB_ONLY;
-        connection = new NotionConnectionResponse(
-            connection.connected(),
-            connection.notionAccountEmail(),
-            request.syncEnabled(),
-            p1Scope
-        );
-        return ApiResponse.success(connection);
+        return ApiResponse.success(notionIntegrationService.updateSettings(request.syncEnabled(), request.syncScope()));
     }
 
     @GetMapping("/sync-logs")
     public ApiResponse<List<SyncLogResponse>> getSyncLogs() {
-        return ApiResponse.success(syncLogs);
+        return ApiResponse.success(notionIntegrationService.listSyncLogs());
     }
 }
