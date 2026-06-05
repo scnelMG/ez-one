@@ -30,8 +30,70 @@
             Google로 시작하기
           </button>
         </div>
+
+        <form class="email-auth-form" data-testid="email-login-submit" @submit.prevent="submitEmailAuth">
+          <div class="email-auth-tabs" aria-label="이메일 인증 방식">
+            <button
+              type="button"
+              :class="{ active: authMode === 'login' }"
+              data-testid="login-mode"
+              @click="authMode = 'login'"
+            >
+              로그인
+            </button>
+            <button
+              type="button"
+              :class="{ active: authMode === 'signup' }"
+              data-testid="signup-mode"
+              @click="authMode = 'signup'"
+            >
+              회원가입
+            </button>
+          </div>
+
+          <label v-if="authMode === 'signup'">
+            <span>이름</span>
+            <input
+              v-model="emailForm.name"
+              data-testid="name-input"
+              name="name"
+              autocomplete="name"
+              required
+            />
+          </label>
+
+          <label>
+            <span>이메일</span>
+            <input
+              v-model="emailForm.email"
+              data-testid="email-input"
+              name="email"
+              type="email"
+              autocomplete="email"
+              required
+            />
+          </label>
+
+          <label>
+            <span>비밀번호</span>
+            <input
+              v-model="emailForm.password"
+              data-testid="password-input"
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              required
+              minlength="8"
+            />
+          </label>
+
+          <button class="landing-secondary" type="submit" :disabled="isSubmitting">
+            {{ authMode === 'signup' ? '이메일로 가입하기' : '이메일로 로그인' }}
+          </button>
+        </form>
+
         <p v-if="errorMessage" class="auth-note error" role="alert">{{ errorMessage }}</p>
-        <small>로그인과 회원가입은 Google 계정으로 진행합니다.</small>
+        <small>Google 계정 또는 이메일 계정으로 로그인할 수 있습니다.</small>
       </div>
 
       <aside class="landing-preview" aria-label="EZ One 미리보기">
@@ -136,7 +198,7 @@
       <ol>
         <li>
           <span>01</span>
-          <strong>Google 로그인</strong>
+          <strong>로그인</strong>
         </li>
         <li>
           <span>02</span>
@@ -163,24 +225,60 @@
   </main>
 </template>
 
-<script setup>import { ref } from 'vue';
-import { useRoute } from 'vue-router';
+<script setup>
+import { reactive, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { authApi } from '@/features/auth/api/authApi';
 import { buildGoogleOAuthUrl, createOAuthState, getGoogleClientId, getGoogleRedirectUri } from '@/features/auth/oauth/googleOAuth';
+import { saveAuthSession } from '@/features/auth/session/authSession';
+
 const route = useRoute();
+const router = useRouter();
 const errorMessage = ref('');
+const authMode = ref('login');
+const isSubmitting = ref(false);
+const emailForm = reactive({
+    name: '',
+    email: '',
+    password: ''
+});
+
 function startGoogleLogin() {
     const clientId = getGoogleClientId();
     if (!clientId) {
         errorMessage.value = 'Google OAuth 클라이언트 ID가 설정되지 않았습니다. VITE_GOOGLE_CLIENT_ID를 설정해 주세요.';
         return;
     }
-    const redirectTarget = typeof route.query.redirect === 'string' ? route.query.redirect : '/main';
-    const state = createOAuthState(redirectTarget);
+    const state = createOAuthState(getRedirectTarget());
     const url = buildGoogleOAuthUrl({
         clientId,
         redirectUri: getGoogleRedirectUri(),
         state
     });
     window.location.assign(url.toString());
+}
+
+async function submitEmailAuth() {
+    errorMessage.value = '';
+    isSubmitting.value = true;
+    try {
+        const request = {
+            email: emailForm.email.trim(),
+            password: emailForm.password
+        };
+        const response = authMode.value === 'signup'
+            ? await authApi.signup({ ...request, name: emailForm.name.trim() })
+            : await authApi.loginWithEmail(request);
+        saveAuthSession(response);
+        await router.push(getRedirectTarget());
+    } catch (error) {
+        errorMessage.value = error instanceof Error ? error.message : '이메일 인증에 실패했습니다.';
+    } finally {
+        isSubmitting.value = false;
+    }
+}
+
+function getRedirectTarget() {
+    return typeof route.query.redirect === 'string' ? route.query.redirect : '/main';
 }
 </script>

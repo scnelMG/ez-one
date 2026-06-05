@@ -2,6 +2,14 @@ import { defaultHttpClient } from '@/shared/apiClient';
 import { isAxiosError } from 'axios';
 export function createAuthApi(httpClient = defaultHttpClient) {
     return {
+        async signup(request) {
+            const response = await postAuthRequest('/api/auth/signup', request, httpClient);
+            return response.data.data;
+        },
+        async loginWithEmail(request) {
+            const response = await postAuthRequest('/api/auth/login', request, httpClient);
+            return response.data.data;
+        },
         async loginWithGoogle(request) {
             const response = await postAuthRequest('/api/auth/google', request, httpClient);
             return response.data.data;
