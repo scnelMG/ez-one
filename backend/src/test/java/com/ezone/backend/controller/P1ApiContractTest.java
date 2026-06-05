@@ -1,6 +1,7 @@
 package com.ezone.backend.controller;
 
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
@@ -96,6 +97,20 @@ class P1ApiContractTest {
             .andExpect(jsonPath("$.data.companyDetails.size", notNullValue()))
             .andExpect(jsonPath("$.data.questions[0].prompt", notNullValue()))
             .andExpect(jsonPath("$.data.references[0].title").value("JD 핵심 역량"));
+    }
+
+    @Test
+    void dashboardSummaryShowsFiveNearestDeadlineJobs() throws Exception {
+        createDashboardJob("D10 Company", "D-10");
+        createDashboardJob("D1 Company", "D-1");
+        createDashboardJob("D7 Company", "D-7");
+        createDashboardJob("D2 Company", "D-2");
+
+        mockMvc.perform(get("/api/dashboard/summary"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.todayJobs", hasSize(5)))
+            .andExpect(jsonPath("$.data.todayJobs[0].deadlineLabel").value("오늘 18:00"))
+            .andExpect(jsonPath("$.data.todayJobs[1].deadlineLabel").value("D-1"));
     }
 
     @Test
@@ -404,5 +419,20 @@ class P1ApiContractTest {
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.error.message").value("At least one role is required."));
+    }
+
+    private void createDashboardJob(String companyName, String deadlineLabel) throws Exception {
+        mockMvc.perform(post("/api/basket/jobs")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "companyName": "%s",
+                      "positionTitle": "Backend Developer",
+                      "deadlineLabel": "%s",
+                      "sourceUrl": "https://example.com/jobs/%s",
+                      "savedSource": "DIRECT"
+                    }
+                    """.formatted(companyName, deadlineLabel, companyName.replace(" ", "-").toLowerCase())))
+            .andExpect(status().isOk());
     }
 }
