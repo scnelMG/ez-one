@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
   provider_id VARCHAR(255) NOT NULL,
   profile_completed BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uk_users_provider_subject (provider, provider_id)
 );
 
@@ -29,6 +30,7 @@ CREATE TABLE IF NOT EXISTS companies (
   rating DECIMAL(4, 2) NULL,
   starting_salary INT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uk_companies_name (name)
 );
 
@@ -42,6 +44,7 @@ CREATE TABLE IF NOT EXISTS jobs (
   source VARCHAR(64) NOT NULL,
   url VARCHAR(1024) NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_jobs_company FOREIGN KEY (company_id) REFERENCES companies(id)
 );
 
@@ -56,6 +59,7 @@ CREATE TABLE IF NOT EXISTS basket_jobs (
   saved_source VARCHAR(64) NOT NULL,
   deleted_at TIMESTAMP NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_basket_jobs_user FOREIGN KEY (user_id) REFERENCES users(id),
   CONSTRAINT fk_basket_jobs_job FOREIGN KEY (job_id) REFERENCES jobs(id),
   KEY idx_basket_jobs_user_status (user_id, application_status, deleted_at)
@@ -79,6 +83,7 @@ CREATE TABLE IF NOT EXISTS essay_questions (
   max_length INT NOT NULL,
   sort_order INT NOT NULL DEFAULT 1,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_essay_questions_workspace FOREIGN KEY (workspace_id) REFERENCES workspaces(id)
 );
 
@@ -89,6 +94,8 @@ CREATE TABLE IF NOT EXISTS essay_drafts (
   body TEXT NOT NULL,
   image_payload_json JSON NULL,
   save_revision INT NOT NULL DEFAULT 1,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   client_updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   auto_saved_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_essay_drafts_workspace FOREIGN KEY (workspace_id) REFERENCES workspaces(id),
@@ -120,5 +127,30 @@ CREATE TABLE IF NOT EXISTS reference_materials (
   display_mode VARCHAR(32) NOT NULL,
   deleted_at TIMESTAMP NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_reference_materials_workspace FOREIGN KEY (workspace_id) REFERENCES workspaces(id)
+);
+
+CREATE TABLE IF NOT EXISTS document_profile_sections (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NOT NULL,
+  section_type VARCHAR(64) NOT NULL,
+  payload_json JSON NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_document_profile_sections_user FOREIGN KEY (user_id) REFERENCES users(id),
+  UNIQUE KEY uk_document_profile_sections_user_type (user_id, section_type)
+);
+
+CREATE TABLE IF NOT EXISTS document_custom_fields (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NOT NULL,
+  label VARCHAR(255) NOT NULL,
+  field_type VARCHAR(64) NOT NULL,
+  value TEXT NULL,
+  deleted_at TIMESTAMP NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_document_custom_fields_user FOREIGN KEY (user_id) REFERENCES users(id),
+  KEY idx_document_custom_fields_user_deleted (user_id, deleted_at)
 );
