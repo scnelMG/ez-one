@@ -6,13 +6,19 @@ import DocumentProfilePage from './DocumentProfilePage.vue'
 
 const mocks = vi.hoisted(() => ({
   getDocumentProfile: vi.fn(),
-  saveSection: vi.fn()
+  saveSection: vi.fn(),
+  createCustomField: vi.fn(),
+  updateCustomField: vi.fn(),
+  deleteCustomField: vi.fn()
 }))
 
 vi.mock('@/features/document-profile/api/documentProfileApi', () => ({
   documentProfileApi: {
     getDocumentProfile: mocks.getDocumentProfile,
-    saveSection: mocks.saveSection
+    saveSection: mocks.saveSection,
+    createCustomField: mocks.createCustomField,
+    updateCustomField: mocks.updateCustomField,
+    deleteCustomField: mocks.deleteCustomField
   }
 }))
 
@@ -32,6 +38,9 @@ describe('DocumentProfilePage', () => {
   beforeEach(() => {
     mocks.getDocumentProfile.mockReset()
     mocks.saveSection.mockReset()
+    mocks.createCustomField.mockReset()
+    mocks.updateCustomField.mockReset()
+    mocks.deleteCustomField.mockReset()
     mocks.getDocumentProfile.mockResolvedValue({
       sections: {
         basicInfo: {
@@ -43,7 +52,14 @@ describe('DocumentProfilePage', () => {
         projects: [{ title: 'EZ One', summary: 'Job workspace MVP' }],
         awards: [{ title: 'Hackathon Grand Prize', summary: 'P1 service award' }]
       },
-      customFields: []
+      customFields: [
+        {
+          id: '501',
+          label: 'Portfolio',
+          fieldType: 'URL',
+          value: 'https://example.com'
+        }
+      ]
     })
     mocks.saveSection.mockResolvedValue({
       sections: {
@@ -58,6 +74,19 @@ describe('DocumentProfilePage', () => {
       },
       customFields: []
     })
+    mocks.createCustomField.mockResolvedValue({
+      id: '601',
+      label: 'Blog',
+      fieldType: 'URL',
+      value: 'https://blog.example.com'
+    })
+    mocks.updateCustomField.mockResolvedValue({
+      id: '501',
+      label: 'Portfolio Updated',
+      fieldType: 'URL',
+      value: 'https://example.com/updated'
+    })
+    mocks.deleteCustomField.mockResolvedValue(undefined)
   })
 
   it('PROFILE-001: renders saved basic info and persists edits', async () => {
@@ -105,6 +134,38 @@ describe('DocumentProfilePage', () => {
     expect((wrapper.get('[data-testid="section-title"]').element as HTMLInputElement).value).toBe(
       'Hackathon Grand Prize'
     )
+  })
+
+  it('PROFILE-001/PROFILE-006: creates, updates, and deletes custom fields', async () => {
+    const wrapper = await mountPage()
+
+    await wrapper.get('[data-testid="section-custom"]').trigger('click')
+    expect(wrapper.text()).toContain('Portfolio')
+
+    await wrapper.get('[data-testid="custom-label"]').setValue('Blog')
+    await wrapper.get('[data-testid="custom-type"]').setValue('URL')
+    await wrapper.get('[data-testid="custom-value"]').setValue('https://blog.example.com')
+    await wrapper.get('[data-testid="create-custom-field"]').trigger('click')
+
+    expect(mocks.createCustomField).toHaveBeenCalledWith({
+      label: 'Blog',
+      fieldType: 'URL',
+      value: 'https://blog.example.com'
+    })
+
+    await wrapper.get('[data-testid="edit-custom-501"]').trigger('click')
+    await wrapper.get('[data-testid="custom-label"]').setValue('Portfolio Updated')
+    await wrapper.get('[data-testid="custom-value"]').setValue('https://example.com/updated')
+    await wrapper.get('[data-testid="update-custom-field"]').trigger('click')
+
+    expect(mocks.updateCustomField).toHaveBeenCalledWith('501', {
+      label: 'Portfolio Updated',
+      fieldType: 'URL',
+      value: 'https://example.com/updated'
+    })
+
+    await wrapper.get('[data-testid="delete-custom-501"]').trigger('click')
+    expect(mocks.deleteCustomField).toHaveBeenCalledWith('501')
   })
 })
 

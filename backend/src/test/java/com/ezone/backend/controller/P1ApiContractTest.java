@@ -176,6 +176,35 @@ class P1ApiContractTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.sections.basicInfo", notNullValue()));
 
+        mockMvc.perform(post("/api/document-profile/custom-fields")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "label": "Portfolio",
+                      "fieldType": "URL",
+                      "value": "https://example.com"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.label").value("Portfolio"))
+            .andExpect(jsonPath("$.data.fieldType").value("URL"));
+
+        mockMvc.perform(patch("/api/document-profile/custom-fields/301")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "label": "Portfolio Updated",
+                      "fieldType": "URL",
+                      "value": "https://example.com/updated"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.label").value("Portfolio Updated"));
+
+        mockMvc.perform(delete("/api/document-profile/custom-fields/301"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true));
+
         mockMvc.perform(get("/api/integrations/notion"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.syncScope").value("JOB_ONLY"));

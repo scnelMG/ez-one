@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import {
   documentProfileApi,
+  type DocumentCustomFieldPayload,
   type DocumentProfile,
   type DocumentSectionPayload
 } from '@/features/document-profile/api/documentProfileApi'
@@ -76,6 +77,63 @@ export const useDocumentProfileStore = defineStore('documentProfile', () => {
     }
   }
 
+  async function createCustomField(payload: DocumentCustomFieldPayload) {
+    status.value = 'saving'
+    errorMessage.value = ''
+
+    try {
+      const field = await documentProfileApi.createCustomField(payload)
+      if (profile.value) {
+        profile.value = {
+          ...profile.value,
+          customFields: [...profile.value.customFields, field]
+        }
+      }
+      status.value = 'ready'
+    } catch {
+      status.value = 'error'
+      errorMessage.value = '커스텀 항목을 추가하지 못했습니다.'
+    }
+  }
+
+  async function updateCustomField(fieldId: string, payload: DocumentCustomFieldPayload) {
+    status.value = 'saving'
+    errorMessage.value = ''
+
+    try {
+      const field = await documentProfileApi.updateCustomField(fieldId, payload)
+      if (profile.value) {
+        profile.value = {
+          ...profile.value,
+          customFields: profile.value.customFields.map((item) => (item.id === fieldId ? field : item))
+        }
+      }
+      status.value = 'ready'
+    } catch {
+      status.value = 'error'
+      errorMessage.value = '커스텀 항목을 수정하지 못했습니다.'
+    }
+  }
+
+  async function deleteCustomField(fieldId: string) {
+    status.value = 'saving'
+    errorMessage.value = ''
+
+    try {
+      await documentProfileApi.deleteCustomField(fieldId)
+      if (profile.value) {
+        profile.value = {
+          ...profile.value,
+          customFields: profile.value.customFields.filter((item) => item.id !== fieldId)
+        }
+      }
+      status.value = 'ready'
+    } catch {
+      status.value = 'error'
+      errorMessage.value = '커스텀 항목을 삭제하지 못했습니다.'
+    }
+  }
+
   return {
     status,
     profile,
@@ -85,7 +143,10 @@ export const useDocumentProfileStore = defineStore('documentProfile', () => {
     awards,
     loadDocumentProfile,
     saveBasicInfo,
-    saveReusableSection
+    saveReusableSection,
+    createCustomField,
+    updateCustomField,
+    deleteCustomField
   }
 })
 

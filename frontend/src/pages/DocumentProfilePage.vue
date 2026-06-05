@@ -106,6 +106,66 @@
               </button>
             </section>
 
+            <section v-else-if="activeSection === 'custom'" class="form-shell compact" aria-label="커스텀 항목 입력">
+              <ul class="summary-stack">
+                <li v-for="field in documentProfileStore.profile?.customFields ?? []" :key="field.id">
+                  <strong>{{ field.label }}</strong>
+                  <p>{{ field.value }}</p>
+                  <small>{{ field.fieldType }}</small>
+                  <button
+                    class="text-button"
+                    type="button"
+                    :data-testid="`edit-custom-${field.id}`"
+                    @click="editCustomField(field)"
+                  >
+                    수정
+                  </button>
+                  <button
+                    class="text-button danger"
+                    type="button"
+                    :data-testid="`delete-custom-${field.id}`"
+                    @click="deleteCustomField(field.id)"
+                  >
+                    삭제
+                  </button>
+                </li>
+              </ul>
+              <label>
+                라벨
+                <input v-model="customFieldForm.label" data-testid="custom-label" />
+              </label>
+              <label>
+                유형
+                <select v-model="customFieldForm.fieldType" data-testid="custom-type">
+                  <option value="TEXT">TEXT</option>
+                  <option value="URL">URL</option>
+                  <option value="NUMBER">NUMBER</option>
+                </select>
+              </label>
+              <label>
+                값
+                <input v-model="customFieldForm.value" data-testid="custom-value" />
+              </label>
+              <button
+                v-if="editingCustomFieldId"
+                class="primary-button"
+                type="button"
+                data-testid="update-custom-field"
+                @click="updateCustomField"
+              >
+                커스텀 수정
+              </button>
+              <button
+                v-else
+                class="primary-button"
+                type="button"
+                data-testid="create-custom-field"
+                @click="createCustomField"
+              >
+                커스텀 추가
+              </button>
+            </section>
+
             <section v-else class="form-shell compact" aria-label="서류 섹션 준비 중">
               <p>이 섹션은 다음 MVP 단계에서 입력 폼을 연결합니다.</p>
             </section>
@@ -135,6 +195,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { documentProfileCards } from '@/data/shellContent'
+import type { DocumentCustomField } from '@/features/document-profile/api/documentProfileApi'
 import {
   useDocumentProfileStore,
   type BasicInfoSection,
@@ -156,6 +217,12 @@ const reusableSectionForm = reactive<ReusableProfileItem>({
   title: '',
   summary: ''
 })
+const customFieldForm = reactive({
+  label: '',
+  fieldType: 'TEXT',
+  value: ''
+})
+const editingCustomFieldId = ref('')
 const sections = [
   { id: 'basicInfo', label: '기본 정보' },
   { id: 'education', label: '학력' },
@@ -235,5 +302,40 @@ function syncReusableSectionForm() {
 
   reusableSectionForm.title = firstItem?.title ?? ''
   reusableSectionForm.summary = firstItem?.summary ?? ''
+}
+
+function editCustomField(field: DocumentCustomField) {
+  editingCustomFieldId.value = field.id
+  customFieldForm.label = field.label
+  customFieldForm.fieldType = field.fieldType
+  customFieldForm.value = field.value
+}
+
+function createCustomField() {
+  void documentProfileStore.createCustomField({ ...customFieldForm })
+  resetCustomFieldForm()
+}
+
+function updateCustomField() {
+  if (!editingCustomFieldId.value) {
+    return
+  }
+
+  void documentProfileStore.updateCustomField(editingCustomFieldId.value, { ...customFieldForm })
+  resetCustomFieldForm()
+}
+
+function deleteCustomField(fieldId: string) {
+  void documentProfileStore.deleteCustomField(fieldId)
+  if (editingCustomFieldId.value === fieldId) {
+    resetCustomFieldForm()
+  }
+}
+
+function resetCustomFieldForm() {
+  editingCustomFieldId.value = ''
+  customFieldForm.label = ''
+  customFieldForm.fieldType = 'TEXT'
+  customFieldForm.value = ''
 }
 </script>
