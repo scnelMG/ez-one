@@ -64,6 +64,34 @@
             </RouterLink>
           </section>
 
+          <section
+            class="dashboard-panel"
+            data-testid="main-weekly-calendar"
+            aria-label="이번 주 마감 캘린더"
+          >
+            <div class="section-heading">
+              <div>
+                <p class="section-kicker">주간 일정</p>
+                <h2>이번 주 마감 공고</h2>
+              </div>
+              <RouterLink class="text-button" to="/basket?sort=deadline">마감순 보기</RouterLink>
+            </div>
+            <div class="weekly-deadline-calendar">
+              <div v-for="day in weeklyDeadlineDays" :key="day.key" class="weekly-deadline-day">
+                <span>{{ day.label }}</span>
+                <RouterLink
+                  v-for="job in day.jobs"
+                  :key="job.workspaceId"
+                  class="deadline-job-chip"
+                  :data-testid="`weekly-calendar-job-${job.workspaceId}`"
+                  :to="`/workspaces/${job.workspaceId}`"
+                >
+                  {{ job.companyName }}
+                </RouterLink>
+              </div>
+            </div>
+          </section>
+
           <section class="dashboard-panel" aria-label="오늘 챙겨볼 공고">
             <div class="section-heading">
               <div>
@@ -125,6 +153,7 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { dashboardCards } from '@/data/shellContent'
+import type { DashboardJob } from '@/features/dashboard/api/dashboardApi'
 import { getCurrentUser } from '@/features/auth/session/authSession'
 import AppLayout from '@/shared/AppLayout.vue'
 import StatePanel from '@/shared/StatePanel.vue'
@@ -137,8 +166,65 @@ const memberDisplayName = computed(() => {
   return user?.nickname?.trim() || user?.name?.trim() || user?.email || 'EZ One 사용자'
 })
 const memberInitial = computed(() => memberDisplayName.value.trim().charAt(0).toUpperCase())
+const weeklyDeadlineDays = computed(() => {
+  const today = startOfDay(new Date())
+
+  return Array.from({ length: 7 }, (_, offset) => {
+    const date = addDays(today, offset)
+    const key = toDateKey(date)
+
+    return {
+      key,
+      label: `${date.getMonth() + 1}/${date.getDate()}`,
+      jobs: dashboardStore.todayJobs.filter((job) => toDateKey(parseDeadlineDate(job, today)) === key)
+    }
+  })
+})
 
 onMounted(() => {
   void dashboardStore.loadSummary()
 })
+
+function parseDeadlineDate(job: DashboardJob, today: Date) {
+  const label = job.deadlineLabel
+  const explicit = label.match(/(20\d{2})[-.](\d{1,2})[-.](\d{1,2})/)
+
+  if (explicit) {
+    return startOfDay(new Date(Number(explicit[1]), Number(explicit[2]) - 1, Number(explicit[3])))
+  }
+
+  const dayOnly = label.match(/(?:^|\D)(\d{1,2})일/)
+  if (dayOnly) {
+    return startOfDay(new Date(today.getFullYear(), today.getMonth(), Number(dayOnly[1])))
+  }
+
+  const dDay = label.match(/D-(\d+)/i)
+  if (dDay) {
+    return addDays(today, Number(dDay[1]))
+  }
+
+  if (label.includes('오늘')) {
+    return today
+  }
+
+  return addDays(today, 99)
+}
+
+function startOfDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate())
+}
+
+function addDays(date: Date, days: number) {
+  const next = new Date(date)
+  next.setDate(next.getDate() + days)
+  return next
+}
+
+function toDateKey(date: Date) {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0')
+  ].join('-')
+}
 </script>
