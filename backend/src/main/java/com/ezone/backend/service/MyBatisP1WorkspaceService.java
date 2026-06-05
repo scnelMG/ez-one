@@ -74,8 +74,9 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
 
     @Override
     public List<BasketJobResponse> listBasketJobs(Long userId, ApplicationStatus status, String sort) {
-        return mapper.listBasketJobs(userId, null, sort).stream()
+        return mapper.listBasketJobs(userId, null, null).stream()
             .filter(job -> status == null || effectiveStatus(job) == status)
+            .sorted(resolveBasketSort(sort))
             .map(this::toBasketResponse)
             .toList();
     }
@@ -437,6 +438,13 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
     private Comparator<BasketJobRow> dashboardDeadlineComparator() {
         return Comparator.comparingInt((BasketJobRow row) -> DeadlineLabelRanker.rank(row.getDeadlineLabel()))
             .thenComparing(BasketJobRow::getId);
+    }
+
+    private Comparator<BasketJobRow> resolveBasketSort(String sort) {
+        if ("deadline".equalsIgnoreCase(sort)) {
+            return dashboardDeadlineComparator();
+        }
+        return Comparator.comparing(BasketJobRow::getId);
     }
 
     private DashboardJobResponse toDashboardJob(BasketJobRow row) {

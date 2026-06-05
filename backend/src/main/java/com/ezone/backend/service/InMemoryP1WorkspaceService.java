@@ -520,7 +520,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
 
     private Comparator<BasketRecord> resolveBasketSort(String sort) {
         if ("deadline".equalsIgnoreCase(sort)) {
-            return Comparator.comparing(BasketRecord::deadlineSoon).reversed()
+            return Comparator.comparingInt((BasketRecord record) -> DeadlineLabelRanker.rank(record.deadlineLabel()))
                 .thenComparing(BasketRecord::id);
         }
         return Comparator.comparing(BasketRecord::id);
