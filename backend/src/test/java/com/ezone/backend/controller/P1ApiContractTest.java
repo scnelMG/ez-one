@@ -19,6 +19,8 @@ import com.ezone.backend.security.JwtAccessTokenVerifier;
 import com.ezone.backend.security.JwtAuthenticationFilter;
 import com.ezone.backend.service.InMemoryP1WorkspaceService;
 import com.ezone.backend.service.InMemoryProfileService;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -53,6 +55,9 @@ class P1ApiContractTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @MockitoBean
     private UserAccountMapper userAccountMapper;
@@ -157,6 +162,35 @@ class P1ApiContractTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data.applicationStatus").value("IN_PROGRESS"));
+    }
+
+    @Test
+    void overdueIncompleteBasketJobIsDisplayedAsNotApplied() throws Exception {
+        String createdBody = mockMvc.perform(post("/api/basket/jobs")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "companyName": "Overdue Company",
+                      "positionTitle": "Backend Developer",
+                      "deadlineLabel": "2026.06.01",
+                      "sourceUrl": "https://example.com/jobs/overdue",
+                      "savedSource": "DIRECT"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+        JsonNode created = objectMapper.readTree(createdBody);
+        long basketJobId = created.at("/data/id").asLong();
+
+        mockMvc.perform(patch("/api/basket/jobs/%d/status".formatted(basketJobId))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    { "applicationStatus": "IN_PROGRESS" }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.applicationStatus").value("NOT_APPLIED"));
     }
 
     @Test
