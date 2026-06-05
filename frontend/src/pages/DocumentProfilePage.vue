@@ -87,6 +87,36 @@
             </section>
 
             <section v-else-if="isReusableSection" class="form-shell compact" aria-label="서류 재사용 섹션 입력">
+              <ul class="summary-stack">
+                <li v-for="(item, index) in reusableSectionItems" :key="`${activeSection}-${index}`">
+                  <strong>{{ item.title || '제목 없음' }}</strong>
+                  <p>{{ item.summary }}</p>
+                  <button
+                    class="text-button"
+                    type="button"
+                    :data-testid="`edit-reusable-${index}`"
+                    @click="editReusableItem(index)"
+                  >
+                    수정
+                  </button>
+                  <button
+                    class="text-button danger"
+                    type="button"
+                    :data-testid="`delete-reusable-${index}`"
+                    @click="deleteReusableItem(index)"
+                  >
+                    삭제
+                  </button>
+                </li>
+              </ul>
+              <button
+                class="text-button"
+                type="button"
+                data-testid="add-reusable-item"
+                @click="addReusableItem"
+              >
+                항목 추가
+              </button>
               <label>
                 제목
                 <input v-model="reusableSectionForm.title" data-testid="section-title" />
@@ -95,6 +125,14 @@
                 요약
                 <textarea v-model="reusableSectionForm.summary" data-testid="section-summary" />
               </label>
+              <button
+                class="text-button"
+                type="button"
+                data-testid="save-reusable-item"
+                @click="saveReusableItem"
+              >
+                항목 반영
+              </button>
               <button
                 class="primary-button"
                 type="button"
@@ -217,6 +255,8 @@ const reusableSectionForm = reactive<ReusableProfileItem>({
   title: '',
   summary: ''
 })
+const reusableSectionItems = ref<ReusableProfileItem[]>([])
+const editingReusableItemIndex = ref(0)
 const customFieldForm = reactive({
   label: '',
   fieldType: 'TEXT',
@@ -286,22 +326,77 @@ function saveReusableSection() {
   }
   const sectionType = activeSection.value === 'awards' ? 'awards' : 'projects'
 
-  void documentProfileStore.saveReusableSection(sectionType, [
-    {
-      title: reusableSectionForm.title,
-      summary: reusableSectionForm.summary
-    }
-  ])
+  if (hasReusableFormContent() || reusableSectionItems.value[editingReusableItemIndex.value]) {
+    saveReusableItem()
+  }
+  void documentProfileStore.saveReusableSection(sectionType, reusableSectionItems.value.map(copyReusableItem))
+}
+
+function addReusableItem() {
+  editingReusableItemIndex.value = reusableSectionItems.value.length
+  reusableSectionForm.title = ''
+  reusableSectionForm.summary = ''
+}
+
+function editReusableItem(index: number) {
+  const item = reusableSectionItems.value[index]
+  if (!item) {
+    return
+  }
+
+  editingReusableItemIndex.value = index
+  reusableSectionForm.title = item.title
+  reusableSectionForm.summary = item.summary
+}
+
+function saveReusableItem() {
+  if (!hasReusableFormContent() && !reusableSectionItems.value[editingReusableItemIndex.value]) {
+    return
+  }
+
+  const item = {
+    title: reusableSectionForm.title,
+    summary: reusableSectionForm.summary
+  }
+  const nextItems = reusableSectionItems.value.map(copyReusableItem)
+  nextItems[editingReusableItemIndex.value] = item
+  reusableSectionItems.value = nextItems
+}
+
+function deleteReusableItem(index: number) {
+  reusableSectionItems.value = reusableSectionItems.value.filter((_, itemIndex) => itemIndex !== index)
+  const nextIndex = Math.min(index, reusableSectionItems.value.length - 1)
+  if (nextIndex >= 0) {
+    editReusableItem(nextIndex)
+    return
+  }
+
+  editingReusableItemIndex.value = 0
+  reusableSectionForm.title = ''
+  reusableSectionForm.summary = ''
 }
 
 function syncReusableSectionForm() {
   const source = activeSection.value === 'awards'
     ? documentProfileStore.awards
     : documentProfileStore.projects
-  const firstItem = source[0]
+  reusableSectionItems.value = source.map(copyReusableItem)
+  editingReusableItemIndex.value = 0
+  const firstItem = reusableSectionItems.value[0]
 
   reusableSectionForm.title = firstItem?.title ?? ''
   reusableSectionForm.summary = firstItem?.summary ?? ''
+}
+
+function copyReusableItem(item: ReusableProfileItem): ReusableProfileItem {
+  return {
+    title: item.title,
+    summary: item.summary
+  }
+}
+
+function hasReusableFormContent() {
+  return reusableSectionForm.title.trim() !== '' || reusableSectionForm.summary.trim() !== ''
 }
 
 function editCustomField(field: DocumentCustomField) {
