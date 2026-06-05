@@ -63,9 +63,13 @@
   </resultMap>
 
   <insert id="upsertCompany" useGeneratedKeys="true" keyProperty="companyId">
-    INSERT INTO companies (name, created_at)
-    VALUES (#{companyName}, CURRENT_TIMESTAMP)
-    ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)
+    INSERT INTO companies (name, domain, company_type, size, created_at)
+    VALUES (#{companyName}, #{companyDomain}, #{companyType}, #{companySize}, CURRENT_TIMESTAMP)
+    ON DUPLICATE KEY UPDATE
+      id = LAST_INSERT_ID(id),
+      domain = COALESCE(domain, VALUES(domain)),
+      company_type = COALESCE(company_type, VALUES(company_type)),
+      size = COALESCE(size, VALUES(size))
   </insert>
 
   <insert id="insertJob" useGeneratedKeys="true" keyProperty="id">

@@ -137,6 +137,34 @@ class P1ApiContractTest {
     }
 
     @Test
+    void workspaceExposesCompanyDetailPlaceholdersDerivedFromSavedUrl() throws Exception {
+        String createdBody = mockMvc.perform(post("/api/basket/jobs")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "companyName": "Example Labs",
+                      "positionTitle": "Backend Developer",
+                      "deadlineLabel": "D-5",
+                      "sourceUrl": "https://careers.example.com/jobs/backend",
+                      "savedSource": "DIRECT"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+        long workspaceId = objectMapper.readTree(createdBody).at("/data/workspaceId").asLong();
+
+        mockMvc.perform(get("/api/workspaces/%d".formatted(workspaceId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.companyName").value("Example Labs"))
+            .andExpect(jsonPath("$.data.companyDetails.domain").value("careers.example.com"))
+            .andExpect(jsonPath("$.data.companyDetails.companyType").value("미확인"))
+            .andExpect(jsonPath("$.data.companyDetails.size").value("미확인"))
+            .andExpect(jsonPath("$.data.companyDetails.financialStatus").value("unverified"));
+    }
+
+    @Test
     void savingBasketJobCreatesWorkspace() throws Exception {
         mockMvc.perform(post("/api/basket/jobs")
                 .contentType(MediaType.APPLICATION_JSON)

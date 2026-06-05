@@ -107,6 +107,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
 
         JobRow job = new JobRow();
         job.setCompanyName(request.companyName());
+        applyCompanyDetailDefaults(job, request.sourceUrl());
         job.setPositionTitle(request.positionTitle());
         job.setDeadlineLabel(normalizeDeadline(request.deadlineLabel()));
         job.setSourceUrl(request.sourceUrl());
@@ -164,6 +165,12 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         mapper.insertEssayDraft(question);
     }
 
+    private void applyCompanyDetailDefaults(JobRow job, String sourceUrl) {
+        job.setCompanyDomain(CompanyDetailDefaults.domainFromUrl(sourceUrl));
+        job.setCompanyType(CompanyDetailDefaults.UNKNOWN_KO);
+        job.setCompanySize(CompanyDetailDefaults.UNKNOWN_KO);
+    }
+
     @Override
     public BasketJobResponse getBasketJob(Long userId, Long basketJobId) {
         return toBasketResponse(requireBasketJob(userId, basketJobId));
@@ -176,6 +183,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         JobRow job = new JobRow();
         job.setId(current.getJobId());
         job.setCompanyName(request.companyName());
+        applyCompanyDetailDefaults(job, request.sourceUrl());
         job.setPositionTitle(request.positionTitle());
         job.setDeadlineLabel(normalizeDeadline(request.deadlineLabel()));
         job.setSourceUrl(request.sourceUrl());

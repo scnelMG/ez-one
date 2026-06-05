@@ -610,12 +610,12 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             record.statusLabel(),
             record.sourceUrl(),
             new CompanyDetailsResponse(
-                "naver.com",
-                "대기업",
-                "1,000명 이상",
-                BigDecimal.valueOf(4.2),
-                5000,
-                "stable"
+                CompanyDetailDefaults.domainFromUrl(record.sourceUrl()),
+                CompanyDetailDefaults.UNKNOWN_KO,
+                CompanyDetailDefaults.UNKNOWN_KO,
+                null,
+                null,
+                CompanyDetailDefaults.UNVERIFIED
             ),
             record.questions().stream().map(this::toQuestionResponse).toList(),
             listReferences(record.userId(), record.id())
