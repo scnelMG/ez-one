@@ -158,6 +158,33 @@ describe('BasketPage', () => {
     expect(mocks.archiveJob).toHaveBeenCalledWith('101')
     expect(wrapper.text()).not.toContain('Naver')
   })
+
+  it('COMMON-002: filters basket jobs by company or position keyword', async () => {
+    const router = makeRouter()
+    router.push('/basket')
+    await router.isReady()
+
+    const wrapper = mount(BasketPage, {
+      global: {
+        plugins: [createPinia(), router]
+      }
+    })
+
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Naver')
+    expect(wrapper.text()).toContain('KakaoPay')
+
+    await wrapper.get('[data-testid="basket-search"]').setValue('server')
+
+    expect(wrapper.text()).not.toContain('Naver')
+    expect(wrapper.text()).toContain('KakaoPay')
+
+    await wrapper.get('[data-testid="basket-search"]').setValue('naver')
+
+    expect(wrapper.text()).toContain('Naver')
+    expect(wrapper.text()).not.toContain('KakaoPay')
+  })
 })
 
 function flushPromises() {
