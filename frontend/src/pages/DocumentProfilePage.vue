@@ -274,6 +274,10 @@ const sections = [
   { id: 'projects', label: '프로젝트' },
   { id: 'certificates', label: '자격/어학' },
   { id: 'awards', label: '수상/활동' },
+  { id: 'military', label: '병역/보훈' },
+  { id: 'internships', label: '인턴/알바' },
+  { id: 'trainings', label: '교육이수' },
+  { id: 'activities', label: '학내외 활동' },
   { id: 'custom', label: '커스텀' }
 ]
 
@@ -291,9 +295,35 @@ const activeSectionTitle = computed(() => {
     return '수상/활동'
   }
 
+  if (activeSection.value === 'military') {
+    return '병역/장애/보훈'
+  }
+
+  if (activeSection.value === 'internships') {
+    return '인턴/아르바이트/실습'
+  }
+
+  if (activeSection.value === 'trainings') {
+    return '교육이수사항'
+  }
+
+  if (activeSection.value === 'activities') {
+    return '학내외 활동'
+  }
+
   return '지원서 공통 입력값'
 })
-const reusableSectionTypes: ReusableProfileSectionType[] = ['education', 'career', 'projects', 'certificates', 'awards']
+const reusableSectionTypes: ReusableProfileSectionType[] = [
+  'education',
+  'career',
+  'projects',
+  'certificates',
+  'awards',
+  'military',
+  'internships',
+  'trainings',
+  'activities'
+]
 const isReusableSection = computed(() => reusableSectionTypes.includes(activeSection.value as ReusableProfileSectionType))
 const statusLabel = computed(() => {
   if (documentProfileStore.status === 'saving') {
@@ -318,7 +348,11 @@ watch(
     () => documentProfileStore.career,
     () => documentProfileStore.projects,
     () => documentProfileStore.certificates,
-    () => documentProfileStore.awards
+    () => documentProfileStore.awards,
+    () => documentProfileStore.military,
+    () => documentProfileStore.internships,
+    () => documentProfileStore.trainings,
+    () => documentProfileStore.activities
   ],
   syncReusableSectionForm,
   { immediate: true }

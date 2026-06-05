@@ -53,7 +53,11 @@ describe('DocumentProfilePage', () => {
         career: [{ title: 'Naver Cloud', summary: 'Backend Engineer' }],
         projects: [{ title: 'EZ One', summary: 'Job workspace MVP' }],
         certificates: [{ title: 'TOEIC', summary: '900' }],
-        awards: [{ title: 'Hackathon Grand Prize', summary: 'P1 service award' }]
+        awards: [{ title: 'Hackathon Grand Prize', summary: 'P1 service award' }],
+        military: [{ title: 'Completed', summary: 'Army / Sergeant / 2022.03-2023.09' }],
+        internships: [{ title: 'Startup Intern', summary: 'Backend internship' }],
+        trainings: [{ title: 'Cloud Course', summary: '120 hours' }],
+        activities: [{ title: 'Student Club', summary: 'Backend lead' }]
       },
       customFields: [
         {
@@ -77,7 +81,11 @@ describe('DocumentProfilePage', () => {
         career: [{ title: 'Naver Cloud Platform', summary: 'Platform backend' }],
         projects: [{ title: 'EZ One Renewal', summary: 'Workspace and profile integration' }],
         certificates: [{ title: 'TOEIC', summary: '900' }],
-        awards: [{ title: 'Hackathon Grand Prize', summary: 'P1 service award' }]
+        awards: [{ title: 'Hackathon Grand Prize', summary: 'P1 service award' }],
+        military: [{ title: 'Completed', summary: 'Army / Sergeant / 2022.03-2023.09' }],
+        internships: [{ title: 'Startup Intern', summary: 'Backend internship' }],
+        trainings: [{ title: 'Cloud Course', summary: '120 hours' }],
+        activities: [{ title: 'Student Club', summary: 'Backend lead' }]
       },
       customFields: []
     })
@@ -185,6 +193,32 @@ describe('DocumentProfilePage', () => {
 
     await wrapper.get('[data-testid="section-certificates"]').trigger('click')
     expect((wrapper.get('[data-testid="section-title"]').element as HTMLInputElement).value).toBe('TOEIC')
+  })
+
+  it('PROFILE-011/PROFILE-018/PROFILE-020/PROFILE-021: edits remaining P1 profile sections', async () => {
+    const wrapper = await mountPage()
+
+    await wrapper.get('[data-testid="section-military"]').trigger('click')
+    expect((wrapper.get('[data-testid="section-title"]').element as HTMLInputElement).value).toBe('Completed')
+
+    await wrapper.get('[data-testid="section-internships"]').trigger('click')
+    expect((wrapper.get('[data-testid="section-title"]').element as HTMLInputElement).value).toBe('Startup Intern')
+    await wrapper.get('[data-testid="section-title"]').setValue('Platform Intern')
+    await wrapper.get('[data-testid="section-summary"]').setValue('Platform operations internship')
+    await wrapper.get('[data-testid="save-section"]').trigger('click')
+
+    expect(mocks.saveSection).toHaveBeenLastCalledWith('internships', [
+      {
+        title: 'Platform Intern',
+        summary: 'Platform operations internship'
+      }
+    ])
+
+    await wrapper.get('[data-testid="section-trainings"]').trigger('click')
+    expect((wrapper.get('[data-testid="section-title"]').element as HTMLInputElement).value).toBe('Cloud Course')
+
+    await wrapper.get('[data-testid="section-activities"]').trigger('click')
+    expect((wrapper.get('[data-testid="section-title"]').element as HTMLInputElement).value).toBe('Student Club')
   })
 
   it('PROFILE-001/PROFILE-006: creates, updates, and deletes custom fields', async () => {

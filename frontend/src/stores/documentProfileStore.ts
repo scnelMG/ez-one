@@ -19,7 +19,16 @@ export interface ReusableProfileItem {
   summary: string
 }
 
-export type ReusableProfileSectionType = 'education' | 'career' | 'projects' | 'certificates' | 'awards'
+export type ReusableProfileSectionType =
+  | 'education'
+  | 'career'
+  | 'projects'
+  | 'certificates'
+  | 'awards'
+  | 'military'
+  | 'internships'
+  | 'trainings'
+  | 'activities'
 
 const emptyBasicInfo: BasicInfoSection = {
   nameKo: '',
@@ -41,6 +50,10 @@ export const useDocumentProfileStore = defineStore('documentProfile', () => {
   const projects = computed<ReusableProfileItem[]>(() => normalizeReusableItems(profile.value?.sections.projects))
   const certificates = computed<ReusableProfileItem[]>(() => normalizeReusableItems(profile.value?.sections.certificates))
   const awards = computed<ReusableProfileItem[]>(() => normalizeReusableItems(profile.value?.sections.awards))
+  const military = computed<ReusableProfileItem[]>(() => normalizeReusableItems(profile.value?.sections.military))
+  const internships = computed<ReusableProfileItem[]>(() => normalizeReusableItems(profile.value?.sections.internships))
+  const trainings = computed<ReusableProfileItem[]>(() => normalizeReusableItems(profile.value?.sections.trainings))
+  const activities = computed<ReusableProfileItem[]>(() => normalizeReusableItems(profile.value?.sections.activities))
 
   async function loadDocumentProfile() {
     status.value = 'loading'
@@ -149,6 +162,10 @@ export const useDocumentProfileStore = defineStore('documentProfile', () => {
     projects,
     certificates,
     awards,
+    military,
+    internships,
+    trainings,
+    activities,
     loadDocumentProfile,
     saveBasicInfo,
     saveReusableSection,
