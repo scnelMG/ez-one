@@ -113,6 +113,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         job.setDeadlineLabel(normalizeDeadline(request.deadlineLabel()));
         job.setSourceUrl(request.sourceUrl());
         mapper.upsertCompany(job);
+        recordUnverifiedCompanyInfoSource(job);
         mapper.insertJob(job);
 
         BasketJobRow basketJob = new BasketJobRow();
@@ -172,6 +173,15 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         job.setCompanySize(CompanyDetailDefaults.UNKNOWN_KO);
     }
 
+    private void recordUnverifiedCompanyInfoSource(JobRow job) {
+        mapper.recordCompanyInfoSource(
+            job.getCompanyId(),
+            "SAVED_JOB_URL",
+            job.getSourceUrl(),
+            "UNVERIFIED"
+        );
+    }
+
     @Override
     public BasketJobResponse getBasketJob(Long userId, Long basketJobId) {
         return toBasketResponse(requireBasketJob(userId, basketJobId));
@@ -189,6 +199,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         job.setDeadlineLabel(normalizeDeadline(request.deadlineLabel()));
         job.setSourceUrl(request.sourceUrl());
         mapper.upsertCompany(job);
+        recordUnverifiedCompanyInfoSource(job);
         if (mapper.updateJob(job) == 0) {
             throw new IllegalArgumentException("Basket job not found");
         }
