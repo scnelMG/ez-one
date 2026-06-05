@@ -6,7 +6,7 @@ import {
 } from '@/shared/apiClient'
 import { mockBasketJobs } from './mockBasketData'
 
-export type BasketJobStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'SUBMITTED'
+export type BasketJobStatus = 'NOT_STARTED' | 'NOT_APPLIED' | 'IN_PROGRESS' | 'SUBMITTED'
 type BackendApplicationStatus = 'READY' | 'NOT_APPLIED' | 'IN_PROGRESS' | 'COMPLETED'
 
 export interface BasketJob {
@@ -106,6 +106,14 @@ function toBasketJob(dto: BasketJobDto): BasketJob {
 }
 
 function toFrontendStatus(status: BackendApplicationStatus): BasketJobStatus {
+  if (status === 'READY') {
+    return 'NOT_STARTED'
+  }
+
+  if (status === 'NOT_APPLIED') {
+    return 'NOT_APPLIED'
+  }
+
   if (status === 'COMPLETED') {
     return 'SUBMITTED'
   }
@@ -118,6 +126,14 @@ function toFrontendStatus(status: BackendApplicationStatus): BasketJobStatus {
 }
 
 function toBackendStatus(status: BasketJobStatus): BackendApplicationStatus {
+  if (status === 'NOT_STARTED') {
+    return 'READY'
+  }
+
+  if (status === 'NOT_APPLIED') {
+    return 'NOT_APPLIED'
+  }
+
   if (status === 'SUBMITTED') {
     return 'COMPLETED'
   }

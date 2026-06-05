@@ -153,6 +153,11 @@ describe('BasketPage', () => {
     expect(mocks.updateStatus).toHaveBeenCalledWith('101', 'SUBMITTED')
     expect(wrapper.text()).toContain('지원완료')
 
+    await wrapper.get('[data-testid="status-104"]').setValue('NOT_APPLIED')
+    await flushPromises()
+
+    expect(mocks.updateStatus).toHaveBeenCalledWith('104', 'NOT_APPLIED')
+
     await wrapper.get('[data-testid="archive-101"]').trigger('click')
     await flushPromises()
 
