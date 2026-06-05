@@ -29,6 +29,7 @@ import com.ezone.backend.mapper.P1WorkspaceMapper;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -63,7 +64,11 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
             inProgress,
             notStarted,
             deadlineSoon,
-            jobs.stream().limit(3).map(this::toDashboardJob).toList()
+            jobs.stream()
+                .sorted(dashboardDeadlineComparator())
+                .limit(5)
+                .map(this::toDashboardJob)
+                .toList()
         );
     }
 
@@ -427,6 +432,11 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
             row.getSourceUrl(),
             normalizeMemo(row.getApplicationMemo())
         );
+    }
+
+    private Comparator<BasketJobRow> dashboardDeadlineComparator() {
+        return Comparator.comparingInt((BasketJobRow row) -> DeadlineLabelRanker.rank(row.getDeadlineLabel()))
+            .thenComparing(BasketJobRow::getId);
     }
 
     private DashboardJobResponse toDashboardJob(BasketJobRow row) {

@@ -66,7 +66,11 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             inProgress,
             notStarted,
             deadlineSoon,
-            activeJobs.stream().limit(3).map(this::toDashboardJob).toList()
+            activeJobs.stream()
+                .sorted(dashboardDeadlineComparator())
+                .limit(5)
+                .map(this::toDashboardJob)
+                .toList()
         );
     }
 
@@ -520,6 +524,11 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
                 .thenComparing(BasketRecord::id);
         }
         return Comparator.comparing(BasketRecord::id);
+    }
+
+    private Comparator<BasketRecord> dashboardDeadlineComparator() {
+        return Comparator.comparingInt((BasketRecord record) -> DeadlineLabelRanker.rank(record.deadlineLabel()))
+            .thenComparing(BasketRecord::id);
     }
 
     private BasketRecord requireBasketJob(Long userId, Long basketJobId) {

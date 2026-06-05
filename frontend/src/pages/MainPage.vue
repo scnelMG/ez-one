@@ -115,9 +115,11 @@
                 <span>마감</span>
               </div>
               <RouterLink
-                v-for="job in dashboardStore.todayJobs"
+                v-for="job in deadlineSummaryJobs"
                 :key="job.workspaceId"
                 class="wire-row"
+                :class="{ 'is-deadline-soon': isDeadlineSoon(job) }"
+                data-testid="deadline-summary-job"
                 :to="`/workspaces/${job.workspaceId}`"
               >
                 <strong>{{ job.companyName }}</strong>
@@ -160,12 +162,23 @@ import StatePanel from '@/shared/StatePanel.vue'
 import { useDashboardStore } from '@/stores/dashboardStore'
 
 const dashboardStore = useDashboardStore()
+const millisecondsPerDay = 24 * 60 * 60 * 1000
 const currentUser = computed(() => getCurrentUser())
 const memberDisplayName = computed(() => {
   const user = currentUser.value
   return user?.nickname?.trim() || user?.name?.trim() || user?.email || 'EZ One 사용자'
 })
 const memberInitial = computed(() => memberDisplayName.value.trim().charAt(0).toUpperCase())
+const deadlineSummaryJobs = computed(() => {
+  const today = startOfDay(new Date())
+
+  return [...dashboardStore.todayJobs]
+    .sort((left, right) => {
+      const deadlineDifference = deadlineOffsetDays(left, today) - deadlineOffsetDays(right, today)
+      return deadlineDifference === 0 ? left.workspaceId.localeCompare(right.workspaceId) : deadlineDifference
+    })
+    .slice(0, 5)
+})
 const weeklyDeadlineDays = computed(() => {
   const today = startOfDay(new Date())
 
@@ -208,6 +221,15 @@ function parseDeadlineDate(job: DashboardJob, today: Date) {
   }
 
   return addDays(today, 99)
+}
+
+function isDeadlineSoon(job: DashboardJob) {
+  const days = deadlineOffsetDays(job, startOfDay(new Date()))
+  return days >= 0 && days <= 7
+}
+
+function deadlineOffsetDays(job: DashboardJob, today: Date) {
+  return Math.round((parseDeadlineDate(job, today).getTime() - today.getTime()) / millisecondsPerDay)
 }
 
 function startOfDay(date: Date) {

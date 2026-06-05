@@ -364,6 +364,15 @@ input {
   color: var(--ink);
 }
 
+.wire-row.is-deadline-soon {
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+}
+
+.wire-row.is-deadline-soon .deadline-pill {
+  border-color: color-mix(in srgb, var(--accent) 36%, var(--line));
+  color: var(--accent-strong);
+}
+
 .table-head {
   min-height: 34px;
   color: var(--ink);
