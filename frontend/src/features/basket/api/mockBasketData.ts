@@ -11,7 +11,8 @@ export const mockBasketJobs: BasketJob[] = [
     deadlineDate: '2026-06-11',
     deadlineSoon: true,
     workspaceId: '102',
-    sourceUrl: 'https://www.jasoseol.com/'
+    sourceUrl: 'https://www.jasoseol.com/',
+    applicationMemo: ''
   },
   {
     id: '104',
@@ -23,7 +24,8 @@ export const mockBasketJobs: BasketJob[] = [
     deadlineDate: '2026-06-20',
     deadlineSoon: true,
     workspaceId: '105',
-    sourceUrl: 'https://www.jasoseol.com/'
+    sourceUrl: 'https://www.jasoseol.com/',
+    applicationMemo: ''
   },
   {
     id: '107',
@@ -35,7 +37,8 @@ export const mockBasketJobs: BasketJob[] = [
     deadlineDate: '2026-06-23',
     deadlineSoon: false,
     workspaceId: '108',
-    sourceUrl: 'https://www.jasoseol.com/'
+    sourceUrl: 'https://www.jasoseol.com/',
+    applicationMemo: ''
   },
   {
     id: '110',
@@ -47,7 +50,8 @@ export const mockBasketJobs: BasketJob[] = [
     deadlineDate: '2026-06-28',
     deadlineSoon: false,
     workspaceId: '111',
-    sourceUrl: 'https://www.jasoseol.com/'
+    sourceUrl: 'https://www.jasoseol.com/',
+    applicationMemo: ''
   },
   {
     id: '113',
@@ -59,6 +63,7 @@ export const mockBasketJobs: BasketJob[] = [
     deadlineDate: '2026-06-30',
     deadlineSoon: false,
     workspaceId: '114',
-    sourceUrl: 'https://www.jasoseol.com/'
+    sourceUrl: 'https://www.jasoseol.com/',
+    applicationMemo: ''
   }
 ]

@@ -48,7 +48,7 @@
 | GET | `/api/basket/jobs?status=&sort=` | 장바구니 목록, 상태 필터, 마감 정렬 |
 | POST | `/api/basket/jobs` | 공고 저장. 확장/추천/직접 입력 공통 |
 | GET | `/api/basket/jobs/{basketJobId}` | 저장 공고 상세 |
-| PATCH | `/api/basket/jobs/{basketJobId}` | 저장 공고 회사명/직무/마감/URL 수정 |
+| PATCH | `/api/basket/jobs/{basketJobId}` | 저장 공고 회사명/직무/마감/URL/지원 메모 수정 |
 | PATCH | `/api/basket/jobs/{basketJobId}/status` | 지원 상태 변경 |
 | DELETE | `/api/basket/jobs/{basketJobId}` | soft delete/archive |
 

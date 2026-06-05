@@ -14,6 +14,7 @@
     <result property="deadlineLabel" column="deadline_label"/>
     <result property="deadlineSoon" column="deadline_soon"/>
     <result property="sourceUrl" column="source_url"/>
+    <result property="applicationMemo" column="application_memo"/>
   </resultMap>
 
   <resultMap id="workspaceRowMap" type="com.ezone.backend.domain.persistence.WorkspaceRow">
@@ -86,7 +87,7 @@
     SELECT bj.id, bj.user_id, bj.job_id, w.id AS workspace_id, c.name AS company_name,
            j.title AS position_title, bj.application_status, j.deadline_label,
            CASE WHEN j.deadline_label LIKE '오늘%' OR j.deadline_label LIKE 'D-%' THEN TRUE ELSE FALSE END AS deadline_soon,
-           j.url AS source_url
+           j.url AS source_url, bj.application_memo
     FROM basket_jobs bj
     JOIN jobs j ON j.id = bj.job_id
     JOIN companies c ON c.id = j.company_id
@@ -100,8 +101,8 @@
   </select>
 
   <insert id="insertBasketJob" useGeneratedKeys="true" keyProperty="id">
-    INSERT INTO basket_jobs (user_id, job_id, application_status, status_updated_at, status_reason, saved_source, created_at)
-    VALUES (#{userId}, #{jobId}, #{applicationStatus}, CURRENT_TIMESTAMP, 'USER_SET', 'DIRECT', CURRENT_TIMESTAMP)
+    INSERT INTO basket_jobs (user_id, job_id, application_status, application_memo, status_updated_at, status_reason, saved_source, created_at)
+    VALUES (#{userId}, #{jobId}, #{applicationStatus}, COALESCE(#{applicationMemo}, ''), CURRENT_TIMESTAMP, 'USER_SET', 'DIRECT', CURRENT_TIMESTAMP)
   </insert>
 
   <insert id="insertWorkspace" useGeneratedKeys="true" keyProperty="id">
@@ -128,7 +129,7 @@
     SELECT bj.id, bj.user_id, bj.job_id, w.id AS workspace_id, c.name AS company_name,
            j.title AS position_title, bj.application_status, j.deadline_label,
            CASE WHEN j.deadline_label LIKE '오늘%' OR j.deadline_label LIKE 'D-%' THEN TRUE ELSE FALSE END AS deadline_soon,
-           j.url AS source_url
+           j.url AS source_url, bj.application_memo
     FROM basket_jobs bj
     JOIN jobs j ON j.id = bj.job_id
     JOIN companies c ON c.id = j.company_id
@@ -160,6 +161,12 @@
   <update id="updateBasketJobStatus">
     UPDATE basket_jobs
     SET application_status = #{status}, status_updated_at = CURRENT_TIMESTAMP, status_reason = 'USER_SET'
+    WHERE id = #{basketJobId} AND user_id = #{userId} AND deleted_at IS NULL
+  </update>
+
+  <update id="updateBasketJobMemo">
+    UPDATE basket_jobs
+    SET application_memo = COALESCE(#{applicationMemo}, '')
     WHERE id = #{basketJobId} AND user_id = #{userId} AND deleted_at IS NULL
   </update>
 

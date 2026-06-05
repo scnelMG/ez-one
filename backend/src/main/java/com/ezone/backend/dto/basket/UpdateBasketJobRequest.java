@@ -6,6 +6,7 @@ public record UpdateBasketJobRequest(
     @NotBlank String companyName,
     @NotBlank String positionTitle,
     String deadlineLabel,
-    @NotBlank String sourceUrl
+    @NotBlank String sourceUrl,
+    String applicationMemo
 ) {
 }

@@ -111,6 +111,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         basketJob.setDeadlineLabel(job.getDeadlineLabel());
         basketJob.setDeadlineSoon(isDeadlineSoon(job.getDeadlineLabel()));
         basketJob.setSourceUrl(request.sourceUrl());
+        basketJob.setApplicationMemo("");
         mapper.insertBasketJob(basketJob);
 
         WorkspaceRow workspace = new WorkspaceRow();
@@ -169,6 +170,9 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         job.setSourceUrl(request.sourceUrl());
         mapper.upsertCompany(job);
         if (mapper.updateJob(job) == 0) {
+            throw new IllegalArgumentException("Basket job not found");
+        }
+        if (mapper.updateBasketJobMemo(userId, basketJobId, normalizeMemo(request.applicationMemo())) == 0) {
             throw new IllegalArgumentException("Basket job not found");
         }
         return getBasketJob(userId, basketJobId);
@@ -402,7 +406,8 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
             statusLabel(row.getApplicationStatus()),
             row.getDeadlineLabel(),
             row.isDeadlineSoon(),
-            row.getSourceUrl()
+            row.getSourceUrl(),
+            normalizeMemo(row.getApplicationMemo())
         );
     }
 
@@ -469,6 +474,10 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
 
     private boolean isDeadlineSoon(String deadlineLabel) {
         return deadlineLabel != null && (deadlineLabel.contains("오늘") || deadlineLabel.contains("D-"));
+    }
+
+    private String normalizeMemo(String applicationMemo) {
+        return applicationMemo == null ? "" : applicationMemo;
     }
 
     private String statusLabel(ApplicationStatus status) {

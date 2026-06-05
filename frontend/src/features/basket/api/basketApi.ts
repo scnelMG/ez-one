@@ -20,6 +20,7 @@ export interface BasketJob {
   deadlineSoon: boolean
   workspaceId: string
   sourceUrl: string
+  applicationMemo: string
 }
 
 export interface CreateBasketJobPayload {
@@ -30,7 +31,9 @@ export interface CreateBasketJobPayload {
   savedSource: 'EXTENSION' | 'RECOMMENDATION' | 'MANUAL'
 }
 
-export type UpdateBasketJobPayload = Omit<CreateBasketJobPayload, 'savedSource'>
+export type UpdateBasketJobPayload = Omit<CreateBasketJobPayload, 'savedSource'> & {
+  applicationMemo?: string
+}
 
 interface BasketJobDto {
   id: number
@@ -43,6 +46,7 @@ interface BasketJobDto {
   deadlineDate?: string
   deadlineSoon: boolean
   sourceUrl: string
+  applicationMemo?: string
 }
 
 type BasketHttpClient = Pick<HttpClient, 'get' | 'post' | 'patch' | 'delete'>
@@ -101,7 +105,8 @@ function toBasketJob(dto: BasketJobDto): BasketJob {
     deadlineDate: dto.deadlineDate,
     deadlineSoon: dto.deadlineSoon,
     workspaceId: String(dto.workspaceId),
-    sourceUrl: dto.sourceUrl
+    sourceUrl: dto.sourceUrl,
+    applicationMemo: dto.applicationMemo ?? ''
   }
 }
 

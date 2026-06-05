@@ -13,6 +13,7 @@ public class BasketJobRow {
     private String deadlineLabel;
     private boolean deadlineSoon;
     private String sourceUrl;
+    private String applicationMemo;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -34,4 +35,6 @@ public class BasketJobRow {
     public void setDeadlineSoon(boolean deadlineSoon) { this.deadlineSoon = deadlineSoon; }
     public String getSourceUrl() { return sourceUrl; }
     public void setSourceUrl(String sourceUrl) { this.sourceUrl = sourceUrl; }
+    public String getApplicationMemo() { return applicationMemo; }
+    public void setApplicationMemo(String applicationMemo) { this.applicationMemo = applicationMemo; }
 }

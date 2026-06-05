@@ -52,6 +52,10 @@
             공고 URL
             <input v-model="form.sourceUrl" data-testid="detail-source" required />
           </label>
+          <label>
+            지원 메모
+            <textarea v-model="form.applicationMemo" data-testid="detail-memo" />
+          </label>
           <button class="primary-button" type="submit">공고 수정</button>
         </form>
       </section>
@@ -73,7 +77,8 @@ const form = reactive({
   companyName: '',
   positionTitle: '',
   deadlineLabel: '',
-  sourceUrl: ''
+  sourceUrl: '',
+  applicationMemo: ''
 })
 
 watch(
@@ -83,6 +88,7 @@ watch(
     form.positionTitle = job?.positionTitle ?? ''
     form.deadlineLabel = job?.deadlineLabel ?? ''
     form.sourceUrl = job?.sourceUrl ?? ''
+    form.applicationMemo = job?.applicationMemo ?? ''
   },
   { immediate: true }
 )
@@ -104,7 +110,8 @@ function saveJob() {
     companyName: form.companyName,
     positionTitle: form.positionTitle,
     deadlineLabel: form.deadlineLabel,
-    sourceUrl: form.sourceUrl
+    sourceUrl: form.sourceUrl,
+    applicationMemo: form.applicationMemo
   })
 }
 
