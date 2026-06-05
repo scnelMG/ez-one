@@ -10,7 +10,9 @@ const mocks = vi.hoisted(() => ({
   saveDraft: vi.fn(),
   createVersion: vi.fn(),
   createReference: vi.fn(),
-  getReference: vi.fn()
+  getReference: vi.fn(),
+  updateReference: vi.fn(),
+  deleteReference: vi.fn()
 }))
 
 vi.mock('@/features/workspace/api/workspaceApi', () => ({
@@ -20,7 +22,9 @@ vi.mock('@/features/workspace/api/workspaceApi', () => ({
     saveDraft: mocks.saveDraft,
     createVersion: mocks.createVersion,
     createReference: mocks.createReference,
-    getReference: mocks.getReference
+    getReference: mocks.getReference,
+    updateReference: mocks.updateReference,
+    deleteReference: mocks.deleteReference
   }
 }))
 
@@ -45,9 +49,11 @@ describe('WorkspacePage', () => {
     mocks.createVersion.mockReset()
     mocks.createReference.mockReset()
     mocks.getReference.mockReset()
+    mocks.updateReference.mockReset()
+    mocks.deleteReference.mockReset()
     mocks.getWorkspace.mockResolvedValue({
       id: '102',
-      companyName: '네이버',
+      companyName: 'Naver',
       positionTitle: 'Backend Engineer',
       deadlineLabel: 'D-3',
       statusLabel: '진행 중',
@@ -55,7 +61,7 @@ describe('WorkspacePage', () => {
       questions: [
         {
           id: '103',
-          prompt: '지원 동기를 작성하세요.',
+          prompt: '지원동기를 작성하세요.',
           draft: '기존 초안',
           maxLength: 1000
         }
@@ -63,6 +69,7 @@ describe('WorkspacePage', () => {
       references: [
         {
           id: '104',
+          boardName: 'JD',
           type: 'JD',
           title: 'JD 핵심 요약',
           body: 'JD 본문',
@@ -80,7 +87,7 @@ describe('WorkspacePage', () => {
     ])
     mocks.saveDraft.mockResolvedValue({
       id: '103',
-      prompt: '지원 동기를 작성하세요.',
+      prompt: '지원동기를 작성하세요.',
       draft: '새 초안',
       maxLength: 1000
     })
@@ -106,6 +113,15 @@ describe('WorkspacePage', () => {
       body: 'JD 본문',
       url: 'https://example.com/jd'
     })
+    mocks.updateReference.mockResolvedValue({
+      id: '104',
+      boardName: 'NEWS',
+      type: 'NEWS',
+      title: '산업 뉴스',
+      body: '수정한 참고자료 본문',
+      url: 'https://example.com/news'
+    })
+    mocks.deleteReference.mockResolvedValue(undefined)
   })
 
   it('WS-002/WS-004: saves a draft and creates an explicit version', async () => {
@@ -167,6 +183,43 @@ describe('WorkspacePage', () => {
 
     expect(mocks.getReference).toHaveBeenCalledWith('104')
     expect(wrapper.text()).toContain('JD 본문')
+  })
+
+  it('REF-004/REF-005: edits and deletes the active reference', async () => {
+    const router = makeRouter()
+    router.push('/workspaces/102')
+    await router.isReady()
+
+    const wrapper = mount(WorkspacePage, {
+      global: {
+        plugins: [createPinia(), router]
+      }
+    })
+
+    await flushPromises()
+    await wrapper.get('[data-testid="open-reference-104"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="reference-type"]').setValue('NEWS')
+    await wrapper.get('[data-testid="reference-title"]').setValue('산업 뉴스')
+    await wrapper.get('[data-testid="reference-body"]').setValue('수정한 참고자료 본문')
+    await wrapper.get('[data-testid="reference-url"]').setValue('https://example.com/news')
+    await wrapper.get('[data-testid="save-reference"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.updateReference).toHaveBeenCalledWith('104', {
+      boardName: 'NEWS',
+      referenceType: 'NEWS',
+      title: '산업 뉴스',
+      body: '수정한 참고자료 본문',
+      url: 'https://example.com/news'
+    })
+    expect(wrapper.text()).toContain('산업 뉴스')
+
+    await wrapper.get('[data-testid="delete-reference"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.deleteReference).toHaveBeenCalledWith('104')
+    expect(wrapper.text()).not.toContain('산업 뉴스')
   })
 })
 

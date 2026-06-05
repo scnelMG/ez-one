@@ -191,4 +191,51 @@ describe('workspaceApi', () => {
     })
     expect(opened).toEqual(created)
   })
+
+  it('REF-004/REF-005: updates and deletes a reference material', async () => {
+    const patch = vi.fn().mockResolvedValue({
+      data: {
+        success: true,
+        data: {
+          id: 701,
+          boardName: 'NEWS',
+          referenceType: 'NEWS',
+          title: '산업 뉴스',
+          body: '수정한 참고자료 본문',
+          url: 'https://example.com/news'
+        },
+        error: null
+      }
+    })
+    const deleteRequest = vi.fn().mockResolvedValue({
+      data: { success: true, data: null, error: null }
+    })
+
+    const api = createWorkspaceApi({ get: vi.fn(), patch, post: vi.fn(), delete: deleteRequest })
+    const updated = await api.updateReference('701', {
+      boardName: 'NEWS',
+      referenceType: 'NEWS',
+      title: '산업 뉴스',
+      body: '수정한 참고자료 본문',
+      url: 'https://example.com/news'
+    })
+    await expect(api.deleteReference('701')).resolves.toBeUndefined()
+
+    expect(patch).toHaveBeenCalledWith('/api/references/701', {
+      boardName: 'NEWS',
+      referenceType: 'NEWS',
+      title: '산업 뉴스',
+      body: '수정한 참고자료 본문',
+      url: 'https://example.com/news'
+    })
+    expect(deleteRequest).toHaveBeenCalledWith('/api/references/701')
+    expect(updated).toEqual({
+      id: '701',
+      boardName: 'NEWS',
+      type: 'NEWS',
+      title: '산업 뉴스',
+      body: '수정한 참고자료 본문',
+      url: 'https://example.com/news'
+    })
+  })
 })
