@@ -4,6 +4,7 @@ import com.ezone.backend.domain.ApplicationStatus;
 import com.ezone.backend.domain.ReferenceType;
 import com.ezone.backend.dto.basket.BasketJobResponse;
 import com.ezone.backend.dto.basket.CreateBasketJobRequest;
+import com.ezone.backend.dto.basket.UpdateBasketJobRequest;
 import com.ezone.backend.dto.dashboard.DashboardJobResponse;
 import com.ezone.backend.dto.dashboard.DashboardSummaryResponse;
 import com.ezone.backend.dto.workspace.CompareEssayVersionsRequest;
@@ -36,6 +37,8 @@ public interface P1WorkspaceService {
     }
 
     BasketJobResponse getBasketJob(Long userId, Long basketJobId);
+
+    BasketJobResponse updateBasketJob(Long userId, Long basketJobId, UpdateBasketJobRequest request);
 
     BasketJobResponse updateBasketJobStatus(Long userId, Long basketJobId, ApplicationStatus status);
 

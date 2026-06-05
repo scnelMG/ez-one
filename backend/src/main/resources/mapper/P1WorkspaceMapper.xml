@@ -72,6 +72,16 @@
     VALUES (#{companyId}, #{positionTitle}, #{positionTitle}, #{deadlineLabel}, 'DIRECT', #{sourceUrl}, CURRENT_TIMESTAMP)
   </insert>
 
+  <update id="updateJob">
+    UPDATE jobs
+    SET company_id = #{companyId},
+        title = #{positionTitle},
+        role = #{positionTitle},
+        deadline_label = #{deadlineLabel},
+        url = #{sourceUrl}
+    WHERE id = #{id}
+  </update>
+
   <select id="findDuplicateBasketJob" resultMap="basketJobRowMap">
     SELECT bj.id, bj.user_id, bj.job_id, w.id AS workspace_id, c.name AS company_name,
            j.title AS position_title, bj.application_status, j.deadline_label,

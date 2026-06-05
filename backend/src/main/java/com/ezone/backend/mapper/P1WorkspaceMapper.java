@@ -19,6 +19,8 @@ public interface P1WorkspaceMapper {
 
     void insertJob(JobRow row);
 
+    int updateJob(JobRow row);
+
     Optional<BasketJobRow> findDuplicateBasketJob(
         @Param("userId") Long userId,
         @Param("companyName") String companyName,

@@ -3,12 +3,14 @@ import { computed, ref } from 'vue'
 import {
   basketApi,
   type BasketJob,
-  type CreateBasketJobPayload
+  type CreateBasketJobPayload,
+  type UpdateBasketJobPayload
 } from '@/features/basket/api/basketApi'
 
 export const useBasketStore = defineStore('basket', () => {
   const status = ref<'idle' | 'loading' | 'ready' | 'error'>('idle')
   const jobs = ref<BasketJob[]>([])
+  const activeJob = ref<BasketJob | null>(null)
   const errorMessage = ref('')
 
   const hasJobs = computed(() => jobs.value.length > 0)
@@ -38,6 +40,35 @@ export const useBasketStore = defineStore('basket', () => {
     } catch {
       status.value = 'error'
       errorMessage.value = '공고를 저장하지 못했습니다.'
+    }
+  }
+
+  async function loadJob(jobId: string) {
+    status.value = 'loading'
+    errorMessage.value = ''
+
+    try {
+      activeJob.value = await basketApi.getJob(jobId)
+      status.value = 'ready'
+    } catch {
+      activeJob.value = null
+      status.value = 'error'
+      errorMessage.value = '공고 상세를 불러오지 못했습니다.'
+    }
+  }
+
+  async function updateJob(jobId: string, payload: UpdateBasketJobPayload) {
+    status.value = 'loading'
+    errorMessage.value = ''
+
+    try {
+      const updated = await basketApi.updateJob(jobId, payload)
+      activeJob.value = updated
+      jobs.value = jobs.value.map((job) => (job.id === jobId ? updated : job))
+      status.value = 'ready'
+    } catch {
+      status.value = 'error'
+      errorMessage.value = '공고 정보를 수정하지 못했습니다.'
     }
   }
 
@@ -72,11 +103,14 @@ export const useBasketStore = defineStore('basket', () => {
   return {
     status,
     jobs,
+    activeJob,
     errorMessage,
     hasJobs,
     deadlineSoonCount,
     loadJobs,
     createJob,
+    loadJob,
+    updateJob,
     updateStatus,
     archiveJob
   }

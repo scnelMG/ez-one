@@ -99,6 +99,7 @@
                 <span class="deadline-pill" :class="{ urgent: job.deadlineSoon }">{{ job.deadlineLabel }}</span>
               </RouterLink>
               <div class="row-actions">
+                <RouterLink class="text-button" :to="`/basket/${job.id}`">상세</RouterLink>
                 <a class="source-link" :href="job.sourceUrl" target="_blank" rel="noreferrer">원문</a>
                 <button
                   class="text-button danger"
