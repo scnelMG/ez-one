@@ -37,15 +37,7 @@
               <h2>지원 관리</h2>
             </div>
             <div class="basket-tools" aria-label="장바구니 도구">
-              <button type="button" aria-label="필터">
-                <span class="filter-icon" aria-hidden="true"></span>
-              </button>
-              <button type="button" aria-label="정렬">
-                <span class="sort-icon" aria-hidden="true">↕</span>
-              </button>
-              <button type="button" aria-label="검색">
-                <span class="search-icon" aria-hidden="true"></span>
-              </button>
+              <RouterLink class="ghost-button small" to="/basket?sort=deadline">마감일순</RouterLink>
             </div>
           </div>
 
@@ -68,7 +60,7 @@
             v-else-if="basketStore.status === 'error'"
             id="basket-error"
             tone="navy"
-            title="공고 목록 로딩 실패"
+            title="공고 목록 처리 실패"
             :body="basketStore.errorMessage"
           />
           <div v-else class="basket-data-table">
@@ -77,7 +69,7 @@
               <span>직무</span>
               <span>상태</span>
               <span>마감일</span>
-              <span>원문 링크</span>
+              <span>관리</span>
             </div>
             <article v-for="job in sortedJobs" :key="job.id" class="basket-data-row">
               <RouterLink class="job-main-link" :to="`/workspaces/${job.workspaceId}`">
@@ -86,16 +78,61 @@
               <RouterLink class="job-main-link" :to="`/workspaces/${job.workspaceId}`">
                 {{ job.positionTitle }}
               </RouterLink>
-              <RouterLink class="job-main-link" :to="`/workspaces/${job.workspaceId}`">
-                <span class="status-chip" :class="statusClass(job.status)">{{ job.statusLabel }}</span>
-              </RouterLink>
+              <select
+                class="status-select"
+                :value="job.status"
+                :data-testid="`status-${job.id}`"
+                @change="changeStatus(job.id, ($event.target as HTMLSelectElement).value as BasketJobStatus)"
+              >
+                <option value="NOT_STARTED">지원 전</option>
+                <option value="IN_PROGRESS">진행 중</option>
+                <option value="SUBMITTED">지원완료</option>
+              </select>
               <RouterLink class="job-main-link" :to="`/workspaces/${job.workspaceId}`">
                 <span class="deadline-pill" :class="{ urgent: job.deadlineSoon }">{{ job.deadlineLabel }}</span>
               </RouterLink>
-              <a class="source-link" :href="job.sourceUrl" target="_blank" rel="noreferrer">원문 보기</a>
+              <div class="row-actions">
+                <a class="source-link" :href="job.sourceUrl" target="_blank" rel="noreferrer">원문</a>
+                <button
+                  class="text-button danger"
+                  type="button"
+                  :data-testid="`archive-${job.id}`"
+                  @click="archiveJob(job.id)"
+                >
+                  보관
+                </button>
+              </div>
             </article>
           </div>
         </section>
+
+        <aside class="deadline-panel" aria-label="공고 직접 등록">
+          <div class="section-heading">
+            <div>
+              <p class="section-kicker">직접 입력</p>
+              <h2>공고 등록</h2>
+            </div>
+          </div>
+          <form class="manual-job-form" data-testid="manual-create" @submit.prevent="createManualJob">
+            <label>
+              회사명
+              <input v-model="manualForm.companyName" data-testid="manual-company" required />
+            </label>
+            <label>
+              직무명
+              <input v-model="manualForm.positionTitle" data-testid="manual-position" required />
+            </label>
+            <label>
+              마감일
+              <input v-model="manualForm.deadlineLabel" data-testid="manual-deadline" placeholder="2026.06.30" />
+            </label>
+            <label>
+              공고 URL
+              <input v-model="manualForm.sourceUrl" data-testid="manual-source" required />
+            </label>
+            <button class="primary-button" type="submit">공고 저장</button>
+          </form>
+        </aside>
 
         <aside class="deadline-panel" aria-label="마감일 스냅샷">
           <div class="section-heading">
@@ -128,7 +165,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, reactive, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppLayout from '@/shared/AppLayout.vue'
 import StatePanel from '@/shared/StatePanel.vue'
@@ -140,6 +177,12 @@ const basketStore = useBasketStore()
 const weekdays = ['일', '월', '화', '수', '목', '금', '토']
 const monthDays = Array.from({ length: 30 }, (_, index) => index + 1)
 const firstDayOffset = 1
+const manualForm = reactive({
+  companyName: '',
+  positionTitle: '',
+  deadlineLabel: '',
+  sourceUrl: ''
+})
 const statusFilters: Array<{ label: string; value?: BasketJobStatus; to: string }> = [
   { label: '전체', value: undefined, to: '/basket' },
   { label: '지원 전', value: 'NOT_STARTED', to: '/basket?status=NOT_STARTED' },
@@ -191,12 +234,27 @@ function deadlineDay(job: BasketJob) {
   return match ? Number(match[1]) : 99
 }
 
-function statusClass(status: BasketJobStatus) {
-  return {
-    'not-started': status === 'NOT_STARTED',
-    'in-progress': status === 'IN_PROGRESS',
-    submitted: status === 'SUBMITTED'
-  }
+async function createManualJob() {
+  await basketStore.createJob({
+    companyName: manualForm.companyName,
+    positionTitle: manualForm.positionTitle,
+    deadlineLabel: manualForm.deadlineLabel,
+    sourceUrl: manualForm.sourceUrl,
+    savedSource: 'MANUAL'
+  })
+
+  manualForm.companyName = ''
+  manualForm.positionTitle = ''
+  manualForm.deadlineLabel = ''
+  manualForm.sourceUrl = ''
+}
+
+function changeStatus(jobId: string, nextStatus: BasketJobStatus) {
+  void basketStore.updateStatus(jobId, nextStatus)
+}
+
+function archiveJob(jobId: string) {
+  void basketStore.archiveJob(jobId)
 }
 
 onMounted(() => {

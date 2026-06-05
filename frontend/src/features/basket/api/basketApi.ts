@@ -22,6 +22,14 @@ export interface BasketJob {
   sourceUrl: string
 }
 
+export interface CreateBasketJobPayload {
+  companyName: string
+  positionTitle: string
+  deadlineLabel: string
+  sourceUrl: string
+  savedSource: 'EXTENSION' | 'RECOMMENDATION' | 'MANUAL'
+}
+
 interface BasketJobDto {
   id: number
   workspaceId: number
@@ -35,7 +43,7 @@ interface BasketJobDto {
   sourceUrl: string
 }
 
-type BasketHttpClient = Pick<HttpClient, 'get'>
+type BasketHttpClient = Pick<HttpClient, 'get' | 'post' | 'patch' | 'delete'>
 
 export function createBasketApi(httpClient: BasketHttpClient = defaultHttpClient) {
   return {
@@ -49,6 +57,28 @@ export function createBasketApi(httpClient: BasketHttpClient = defaultHttpClient
       } catch {
         return status ? mockBasketJobs.filter((job) => job.status === status) : mockBasketJobs
       }
+    },
+
+    async createJob(payload: CreateBasketJobPayload): Promise<BasketJob> {
+      const response = await httpClient.post<ApiEnvelope<BasketJobDto>>('/api/basket/jobs', payload)
+      return toBasketJob(unwrapApiData(response.data))
+    },
+
+    async getJob(basketJobId: string): Promise<BasketJob> {
+      const response = await httpClient.get<ApiEnvelope<BasketJobDto>>(`/api/basket/jobs/${basketJobId}`)
+      return toBasketJob(unwrapApiData(response.data))
+    },
+
+    async updateStatus(basketJobId: string, status: BasketJobStatus): Promise<BasketJob> {
+      const response = await httpClient.patch<ApiEnvelope<BasketJobDto>>(
+        `/api/basket/jobs/${basketJobId}/status`,
+        { applicationStatus: toBackendStatus(status) }
+      )
+      return toBasketJob(unwrapApiData(response.data))
+    },
+
+    async archiveJob(basketJobId: string): Promise<void> {
+      await httpClient.delete<ApiEnvelope<null>>(`/api/basket/jobs/${basketJobId}`)
     }
   }
 }
