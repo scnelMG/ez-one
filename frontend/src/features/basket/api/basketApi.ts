@@ -30,6 +30,8 @@ export interface CreateBasketJobPayload {
   savedSource: 'EXTENSION' | 'RECOMMENDATION' | 'MANUAL'
 }
 
+export type UpdateBasketJobPayload = Omit<CreateBasketJobPayload, 'savedSource'>
+
 interface BasketJobDto {
   id: number
   workspaceId: number
@@ -66,6 +68,11 @@ export function createBasketApi(httpClient: BasketHttpClient = defaultHttpClient
 
     async getJob(basketJobId: string): Promise<BasketJob> {
       const response = await httpClient.get<ApiEnvelope<BasketJobDto>>(`/api/basket/jobs/${basketJobId}`)
+      return toBasketJob(unwrapApiData(response.data))
+    },
+
+    async updateJob(basketJobId: string, payload: UpdateBasketJobPayload): Promise<BasketJob> {
+      const response = await httpClient.patch<ApiEnvelope<BasketJobDto>>(`/api/basket/jobs/${basketJobId}`, payload)
       return toBasketJob(unwrapApiData(response.data))
     },
 

@@ -4,6 +4,7 @@ import com.ezone.backend.domain.ApplicationStatus;
 import com.ezone.backend.dto.ApiResponse;
 import com.ezone.backend.dto.basket.BasketJobResponse;
 import com.ezone.backend.dto.basket.CreateBasketJobRequest;
+import com.ezone.backend.dto.basket.UpdateBasketJobRequest;
 import com.ezone.backend.dto.basket.UpdateBasketJobStatusRequest;
 import com.ezone.backend.service.P1WorkspaceService;
 import jakarta.validation.Valid;
@@ -46,6 +47,18 @@ public class BasketJobController {
     @GetMapping("/{basketJobId}")
     public ApiResponse<BasketJobResponse> getJob(@PathVariable Long basketJobId) {
         return ApiResponse.success(workspaceService.getBasketJob(CurrentUserSupport.currentUserId(), basketJobId));
+    }
+
+    @PatchMapping("/{basketJobId}")
+    public ApiResponse<BasketJobResponse> updateJob(
+        @PathVariable Long basketJobId,
+        @Valid @RequestBody UpdateBasketJobRequest request
+    ) {
+        return ApiResponse.success(workspaceService.updateBasketJob(
+            CurrentUserSupport.currentUserId(),
+            basketJobId,
+            request
+        ));
     }
 
     @PatchMapping("/{basketJobId}/status")

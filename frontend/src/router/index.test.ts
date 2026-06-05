@@ -13,6 +13,7 @@ describe('router', () => {
     expect(routeNames).toContain('onboarding')
     expect(routeNames).toContain('main')
     expect(routeNames).toContain('basket')
+    expect(routeNames).toContain('basket-detail')
     expect(routeNames).toContain('workspace')
     expect(routeNames).toContain('document-profile')
     expect(routeNames).toContain('recommendations')
@@ -24,6 +25,7 @@ describe('router', () => {
 
     expect(routes.find((route) => route.path === '/')?.name).toBe('login')
     expect(routes.find((route) => route.path === '/main')?.name).toBe('main')
+    expect(routes.find((route) => route.path === '/basket/:basketJobId')?.name).toBe('basket-detail')
   })
 
   it('redirects protected P1 pages to login when the user is not authenticated', async () => {

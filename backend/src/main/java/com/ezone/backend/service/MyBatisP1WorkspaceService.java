@@ -10,6 +10,7 @@ import com.ezone.backend.domain.persistence.ReferenceMaterialRow;
 import com.ezone.backend.domain.persistence.WorkspaceRow;
 import com.ezone.backend.dto.basket.BasketJobResponse;
 import com.ezone.backend.dto.basket.CreateBasketJobRequest;
+import com.ezone.backend.dto.basket.UpdateBasketJobRequest;
 import com.ezone.backend.dto.dashboard.DashboardJobResponse;
 import com.ezone.backend.dto.dashboard.DashboardSummaryResponse;
 import com.ezone.backend.dto.workspace.CompareEssayVersionsRequest;
@@ -154,6 +155,23 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
     @Override
     public BasketJobResponse getBasketJob(Long userId, Long basketJobId) {
         return toBasketResponse(requireBasketJob(userId, basketJobId));
+    }
+
+    @Override
+    @Transactional
+    public BasketJobResponse updateBasketJob(Long userId, Long basketJobId, UpdateBasketJobRequest request) {
+        BasketJobRow current = requireBasketJob(userId, basketJobId);
+        JobRow job = new JobRow();
+        job.setId(current.getJobId());
+        job.setCompanyName(request.companyName());
+        job.setPositionTitle(request.positionTitle());
+        job.setDeadlineLabel(normalizeDeadline(request.deadlineLabel()));
+        job.setSourceUrl(request.sourceUrl());
+        mapper.upsertCompany(job);
+        if (mapper.updateJob(job) == 0) {
+            throw new IllegalArgumentException("Basket job not found");
+        }
+        return getBasketJob(userId, basketJobId);
     }
 
     @Override

@@ -25,6 +25,7 @@ const makeRouter = () =>
     history: createMemoryHistory(),
     routes: [
       { path: '/basket', component: BasketPage },
+      { path: '/basket/:basketJobId', component: { template: '<div>basket detail</div>' } },
       { path: '/', component: { template: '<div>main</div>' } },
       { path: '/main', component: { template: '<div>main</div>' } },
       { path: '/mypage', component: { template: '<div>my page</div>' } },

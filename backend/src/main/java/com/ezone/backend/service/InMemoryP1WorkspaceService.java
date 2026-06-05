@@ -4,6 +4,7 @@ import com.ezone.backend.domain.ApplicationStatus;
 import com.ezone.backend.domain.ReferenceType;
 import com.ezone.backend.dto.basket.BasketJobResponse;
 import com.ezone.backend.dto.basket.CreateBasketJobRequest;
+import com.ezone.backend.dto.basket.UpdateBasketJobRequest;
 import com.ezone.backend.dto.dashboard.DashboardJobResponse;
 import com.ezone.backend.dto.dashboard.DashboardSummaryResponse;
 import com.ezone.backend.dto.workspace.CompareEssayVersionsRequest;
@@ -119,6 +120,41 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
     @Override
     public BasketJobResponse getBasketJob(Long userId, Long basketJobId) {
         return toBasketResponse(requireBasketJob(userId, basketJobId));
+    }
+
+    @Override
+    public BasketJobResponse updateBasketJob(Long userId, Long basketJobId, UpdateBasketJobRequest request) {
+        BasketRecord current = requireBasketJob(userId, basketJobId);
+        BasketRecord updated = new BasketRecord(
+            current.id(),
+            current.userId(),
+            current.workspaceId(),
+            request.companyName(),
+            request.positionTitle(),
+            current.applicationStatus(),
+            normalizeDeadline(request.deadlineLabel()),
+            isDeadlineSoon(request.deadlineLabel()),
+            request.sourceUrl(),
+            current.deleted()
+        );
+        basketJobs.put(basketJobId, updated);
+
+        WorkspaceRecord workspace = workspaces.get(current.workspaceId());
+        if (workspace != null) {
+            workspaces.put(workspace.id(), new WorkspaceRecord(
+                workspace.id(),
+                workspace.userId(),
+                workspace.basketJobId(),
+                updated.companyName(),
+                updated.positionTitle(),
+                updated.deadlineLabel(),
+                statusLabel(updated.applicationStatus()),
+                updated.sourceUrl(),
+                workspace.questions()
+            ));
+        }
+
+        return toBasketResponse(updated);
     }
 
     @Override

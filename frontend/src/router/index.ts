@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import BasketPage from '@/pages/BasketPage.vue'
+import BasketDetailPage from '@/pages/BasketDetailPage.vue'
 import DocumentProfilePage from '@/pages/DocumentProfilePage.vue'
 import { getCurrentUser, isAuthenticated } from '@/features/auth/session/authSession'
 import LoginPage from '@/pages/LoginPage.vue'
@@ -51,6 +52,12 @@ export const router = createRouter({
       path: '/basket',
       name: 'basket',
       component: BasketPage,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/basket/:basketJobId',
+      name: 'basket-detail',
+      component: BasketDetailPage,
       meta: { requiresAuth: true }
     },
     {

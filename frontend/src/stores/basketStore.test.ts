@@ -5,6 +5,8 @@ import { useBasketStore } from './basketStore'
 const mocks = vi.hoisted(() => ({
   listJobs: vi.fn(),
   createJob: vi.fn(),
+  getJob: vi.fn(),
+  updateJob: vi.fn(),
   updateStatus: vi.fn(),
   archiveJob: vi.fn()
 }))
@@ -13,6 +15,8 @@ vi.mock('@/features/basket/api/basketApi', () => ({
   basketApi: {
     listJobs: mocks.listJobs,
     createJob: mocks.createJob,
+    getJob: mocks.getJob,
+    updateJob: mocks.updateJob,
     updateStatus: mocks.updateStatus,
     archiveJob: mocks.archiveJob
   }
@@ -23,6 +27,8 @@ describe('basketStore', () => {
     setActivePinia(createPinia())
     mocks.listJobs.mockReset()
     mocks.createJob.mockReset()
+    mocks.getJob.mockReset()
+    mocks.updateJob.mockReset()
     mocks.updateStatus.mockReset()
     mocks.archiveJob.mockReset()
     mocks.listJobs.mockResolvedValue([
@@ -115,5 +121,45 @@ describe('basketStore', () => {
     await store.archiveJob('201')
 
     expect(store.jobs.some((job) => job.id === '201')).toBe(false)
+  })
+
+  it('JOB-006/JOB-007: loads detail and updates editable job fields', async () => {
+    const store = useBasketStore()
+    mocks.getJob.mockResolvedValue({
+      id: '101',
+      companyName: 'Naver',
+      positionTitle: 'Backend Engineer',
+      status: 'IN_PROGRESS',
+      statusLabel: '진행 중',
+      deadlineLabel: '2026.06.11',
+      deadlineSoon: true,
+      workspaceId: '102',
+      sourceUrl: 'https://www.jasoseol.com/'
+    })
+    mocks.updateJob.mockResolvedValue({
+      id: '101',
+      companyName: 'Naver Cloud',
+      positionTitle: 'Platform Engineer',
+      status: 'IN_PROGRESS',
+      statusLabel: '진행 중',
+      deadlineLabel: '2026.07.01',
+      deadlineSoon: false,
+      workspaceId: '102',
+      sourceUrl: 'https://www.jasoseol.com/jobs/101'
+    })
+
+    await store.loadJob('101')
+    await store.updateJob('101', {
+      companyName: 'Naver Cloud',
+      positionTitle: 'Platform Engineer',
+      deadlineLabel: '2026.07.01',
+      sourceUrl: 'https://www.jasoseol.com/jobs/101'
+    })
+
+    expect(store.activeJob).toMatchObject({
+      id: '101',
+      companyName: 'Naver Cloud',
+      positionTitle: 'Platform Engineer'
+    })
   })
 })
