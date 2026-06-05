@@ -58,6 +58,10 @@ public interface P1WorkspaceMapper {
         @Param("applicationMemo") String applicationMemo
     );
 
+    int markBasketJobInProgress(@Param("userId") Long userId, @Param("basketJobId") Long basketJobId);
+
+    int markWorkspaceBasketJobInProgress(@Param("userId") Long userId, @Param("workspaceId") Long workspaceId);
+
     int archiveBasketJob(@Param("userId") Long userId, @Param("basketJobId") Long basketJobId);
 
     Optional<WorkspaceRow> findWorkspace(@Param("userId") Long userId, @Param("workspaceId") Long workspaceId);

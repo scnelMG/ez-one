@@ -148,7 +148,7 @@
     SELECT bj.id, bj.user_id, bj.job_id, w.id AS workspace_id, c.name AS company_name,
            j.title AS position_title, bj.application_status, j.deadline_label,
            CASE WHEN j.deadline_label LIKE '오늘%' OR j.deadline_label LIKE 'D-%' THEN TRUE ELSE FALSE END AS deadline_soon,
-           j.url AS source_url
+           j.url AS source_url, bj.application_memo
     FROM basket_jobs bj
     JOIN jobs j ON j.id = bj.job_id
     JOIN companies c ON c.id = j.company_id
@@ -168,6 +168,29 @@
     UPDATE basket_jobs
     SET application_memo = COALESCE(#{applicationMemo}, '')
     WHERE id = #{basketJobId} AND user_id = #{userId} AND deleted_at IS NULL
+  </update>
+
+  <update id="markBasketJobInProgress">
+    UPDATE basket_jobs
+    SET application_status = 'IN_PROGRESS',
+        status_updated_at = CURRENT_TIMESTAMP,
+        status_reason = 'USER_SET'
+    WHERE id = #{basketJobId}
+      AND user_id = #{userId}
+      AND deleted_at IS NULL
+      AND application_status NOT IN ('IN_PROGRESS', 'COMPLETED')
+  </update>
+
+  <update id="markWorkspaceBasketJobInProgress">
+    UPDATE basket_jobs bj
+    JOIN workspaces w ON w.basket_job_id = bj.id
+    SET bj.application_status = 'IN_PROGRESS',
+        bj.status_updated_at = CURRENT_TIMESTAMP,
+        bj.status_reason = 'USER_SET'
+    WHERE w.id = #{workspaceId}
+      AND w.user_id = #{userId}
+      AND bj.deleted_at IS NULL
+      AND bj.application_status NOT IN ('IN_PROGRESS', 'COMPLETED')
   </update>
 
   <update id="archiveBasketJob">

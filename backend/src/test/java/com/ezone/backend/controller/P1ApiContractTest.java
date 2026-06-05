@@ -144,6 +144,22 @@ class P1ApiContractTest {
     }
 
     @Test
+    void editingWorkspaceDraftMarksBasketJobInProgress() throws Exception {
+        mockMvc.perform(patch("/api/workspaces/106/drafts/107")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    { "body": "Draft started from the workspace." }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(get("/api/basket/jobs/105"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.applicationStatus").value("IN_PROGRESS"));
+    }
+
+    @Test
     void workspaceDraftReferenceProfileAndNotionContractsRespond() throws Exception {
         mockMvc.perform(patch("/api/workspaces/102/drafts/103")
                 .contentType(MediaType.APPLICATION_JSON)
