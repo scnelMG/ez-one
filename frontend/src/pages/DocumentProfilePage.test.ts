@@ -136,6 +136,26 @@ describe('DocumentProfilePage', () => {
     )
   })
 
+  it('PROFILE-024: adds and deletes repeatable project items before saving', async () => {
+    const wrapper = await mountPage()
+
+    await wrapper.get('[data-testid="section-projects"]').trigger('click')
+    await wrapper.get('[data-testid="add-reusable-item"]').trigger('click')
+    await wrapper.get('[data-testid="section-title"]').setValue('Second Project')
+    await wrapper.get('[data-testid="section-summary"]').setValue('Second project summary')
+    await wrapper.get('[data-testid="save-reusable-item"]').trigger('click')
+
+    await wrapper.get('[data-testid="delete-reusable-0"]').trigger('click')
+    await wrapper.get('[data-testid="save-section"]').trigger('click')
+
+    expect(mocks.saveSection).toHaveBeenLastCalledWith('projects', [
+      {
+        title: 'Second Project',
+        summary: 'Second project summary'
+      }
+    ])
+  })
+
   it('PROFILE-001/PROFILE-006: creates, updates, and deletes custom fields', async () => {
     const wrapper = await mountPage()
 
