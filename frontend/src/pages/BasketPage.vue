@@ -92,6 +92,7 @@
                 @change="changeStatus(job.id, ($event.target as HTMLSelectElement).value as BasketJobStatus)"
               >
                 <option value="NOT_STARTED">지원 전</option>
+                <option value="NOT_APPLIED">미지원</option>
                 <option value="IN_PROGRESS">진행 중</option>
                 <option value="SUBMITTED">지원완료</option>
               </select>
@@ -195,6 +196,7 @@ const manualForm = reactive({
 const statusFilters: Array<{ label: string; value?: BasketJobStatus; to: string }> = [
   { label: '전체', value: undefined, to: '/basket' },
   { label: '지원 전', value: 'NOT_STARTED', to: '/basket?status=NOT_STARTED' },
+  { label: '미지원', value: 'NOT_APPLIED', to: '/basket?status=NOT_APPLIED' },
   { label: '진행 중', value: 'IN_PROGRESS', to: '/basket?status=IN_PROGRESS' },
   { label: '지원 완료', value: 'SUBMITTED', to: '/basket?status=SUBMITTED' }
 ]
@@ -202,7 +204,7 @@ const statusFilters: Array<{ label: string; value?: BasketJobStatus; to: string 
 const selectedStatus = computed<BasketJobStatus | undefined>(() => {
   const status = route.query.status
 
-  return status === 'NOT_STARTED' || status === 'IN_PROGRESS' || status === 'SUBMITTED'
+  return status === 'NOT_STARTED' || status === 'NOT_APPLIED' || status === 'IN_PROGRESS' || status === 'SUBMITTED'
     ? status
     : undefined
 })
@@ -232,6 +234,7 @@ const sortedJobs = computed(() =>
 
 const statusCounts = computed<Record<BasketJobStatus, number>>(() => ({
   NOT_STARTED: basketStore.jobs.filter((job) => job.status === 'NOT_STARTED').length,
+  NOT_APPLIED: basketStore.jobs.filter((job) => job.status === 'NOT_APPLIED').length,
   IN_PROGRESS: basketStore.jobs.filter((job) => job.status === 'IN_PROGRESS').length,
   SUBMITTED: basketStore.jobs.filter((job) => job.status === 'SUBMITTED').length
 }))
