@@ -86,7 +86,7 @@
               <span>마감일</span>
               <span>관리</span>
             </div>
-            <article v-for="job in sortedJobs" :key="job.id" class="basket-data-row">
+            <article v-for="job in pagedJobs" :key="job.id" class="basket-data-row">
               <RouterLink class="job-main-link" :to="`/workspaces/${job.workspaceId}`">
                 <strong>{{ job.companyName }}</strong>
               </RouterLink>
@@ -120,6 +120,27 @@
                 </button>
               </div>
             </article>
+            <div v-if="totalPages > 1" class="pagination-row" aria-label="장바구니 페이지 이동">
+              <button
+                class="ghost-button small"
+                type="button"
+                data-testid="basket-page-prev"
+                :disabled="currentPage === 1"
+                @click="currentPage -= 1"
+              >
+                이전
+              </button>
+              <span data-testid="basket-page-status">{{ currentPage }} / {{ totalPages }}</span>
+              <button
+                class="ghost-button small"
+                type="button"
+                data-testid="basket-page-next"
+                :disabled="currentPage === totalPages"
+                @click="currentPage += 1"
+              >
+                다음
+              </button>
+            </div>
           </div>
         </section>
 
@@ -192,6 +213,8 @@ import type { BasketJob, BasketJobStatus } from '@/features/basket/api/basketApi
 const route = useRoute()
 const basketStore = useBasketStore()
 const searchQuery = ref(String(route.query.q ?? ''))
+const currentPage = ref(1)
+const pageSize = 10
 const weekdays = ['일', '월', '화', '수', '목', '금', '토']
 const monthDays = Array.from({ length: 30 }, (_, index) => index + 1)
 const firstDayOffset = 1
@@ -241,6 +264,11 @@ const sortedJobs = computed(() =>
     return Number(left.id) - Number(right.id)
   })
 )
+const totalPages = computed(() => Math.max(1, Math.ceil(sortedJobs.value.length / pageSize)))
+const pagedJobs = computed(() => {
+  const start = (currentPage.value - 1) * pageSize
+  return sortedJobs.value.slice(start, start + pageSize)
+})
 
 const statusCounts = computed<Record<BasketJobStatus, number>>(() => ({
   NOT_STARTED: basketStore.jobs.filter((job) => job.status === 'NOT_STARTED').length,
@@ -318,13 +346,25 @@ onMounted(() => {
 })
 
 watch(selectedStatus, (nextStatus) => {
+  currentPage.value = 1
   void basketStore.loadJobs(nextStatus)
 })
 
 watch(
   () => route.query.q,
   (nextQuery) => {
+    currentPage.value = 1
     searchQuery.value = String(nextQuery ?? '')
   }
 )
+
+watch([searchQuery, isOverdueFilter, sortedJobs], () => {
+  currentPage.value = 1
+})
+
+watch(totalPages, (nextTotalPages) => {
+  if (currentPage.value > nextTotalPages) {
+    currentPage.value = nextTotalPages
+  }
+})
 </script>
