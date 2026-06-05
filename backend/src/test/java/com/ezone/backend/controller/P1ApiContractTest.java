@@ -137,6 +137,15 @@ class P1ApiContractTest {
     }
 
     @Test
+    @WithMockUser(username = "2")
+    void otherUserOwnedWorkspaceReturnsForbiddenError() throws Exception {
+        mockMvc.perform(get("/api/workspaces/102"))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.error.code").value("FORBIDDEN"));
+    }
+
+    @Test
     void workspaceExposesCompanyDetailPlaceholdersDerivedFromSavedUrl() throws Exception {
         String createdBody = mockMvc.perform(post("/api/basket/jobs")
                 .contentType(MediaType.APPLICATION_JSON)

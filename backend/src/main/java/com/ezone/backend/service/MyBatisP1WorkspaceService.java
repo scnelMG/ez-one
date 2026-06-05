@@ -34,6 +34,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -202,6 +203,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
 
     @Override
     public BasketJobResponse updateBasketJobStatus(Long userId, Long basketJobId, ApplicationStatus status) {
+        requireBasketJob(userId, basketJobId);
         if (mapper.updateBasketJobStatus(userId, basketJobId, status) == 0) {
             throw new IllegalArgumentException("Basket job not found");
         }
@@ -210,6 +212,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
 
     @Override
     public void archiveBasketJob(Long userId, Long basketJobId) {
+        requireBasketJob(userId, basketJobId);
         if (mapper.archiveBasketJob(userId, basketJobId) == 0) {
             throw new IllegalArgumentException("Basket job not found");
         }
@@ -377,6 +380,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
 
     @Override
     public void deleteReference(Long userId, Long referenceId) {
+        requireReference(userId, referenceId);
         if (mapper.deleteReference(userId, referenceId) == 0) {
             throw new IllegalArgumentException("Reference not found");
         }
@@ -413,17 +417,53 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
 
     private BasketJobRow requireBasketJob(Long userId, Long basketJobId) {
         return mapper.findBasketJob(userId, basketJobId)
-            .orElseThrow(() -> new IllegalArgumentException("Basket job not found"));
+            .orElseGet(() -> {
+                verifyOwner(
+                    mapper.findBasketJobOwner(basketJobId),
+                    userId,
+                    "Basket job not found",
+                    "Basket job is not owned by current user"
+                );
+                throw new IllegalArgumentException("Basket job not found");
+            });
     }
 
     private WorkspaceRow requireWorkspace(Long userId, Long workspaceId) {
         return mapper.findWorkspace(userId, workspaceId)
-            .orElseThrow(() -> new IllegalArgumentException("Workspace not found"));
+            .orElseGet(() -> {
+                verifyOwner(
+                    mapper.findWorkspaceOwner(workspaceId),
+                    userId,
+                    "Workspace not found",
+                    "Workspace is not owned by current user"
+                );
+                throw new IllegalArgumentException("Workspace not found");
+            });
     }
 
     private ReferenceMaterialRow requireReference(Long userId, Long referenceId) {
         return mapper.findReference(userId, referenceId)
-            .orElseThrow(() -> new IllegalArgumentException("Reference not found"));
+            .orElseGet(() -> {
+                verifyOwner(
+                    mapper.findReferenceOwner(referenceId),
+                    userId,
+                    "Reference not found",
+                    "Reference is not owned by current user"
+                );
+                throw new IllegalArgumentException("Reference not found");
+            });
+    }
+
+    private void verifyOwner(
+        Optional<Long> ownerId,
+        Long currentUserId,
+        String notFoundMessage,
+        String forbiddenMessage
+    ) {
+        Long resourceOwnerId = ownerId.orElseThrow(() -> new IllegalArgumentException(notFoundMessage));
+        if (!resourceOwnerId.equals(currentUserId)) {
+            throw new ForbiddenResourceException(forbiddenMessage);
+        }
     }
 
     private BasketJobResponse toBasketResponse(BasketJobRow row) {

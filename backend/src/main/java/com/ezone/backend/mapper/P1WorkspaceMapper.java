@@ -45,6 +45,8 @@ public interface P1WorkspaceMapper {
 
     Optional<BasketJobRow> findBasketJob(@Param("userId") Long userId, @Param("basketJobId") Long basketJobId);
 
+    Optional<Long> findBasketJobOwner(@Param("basketJobId") Long basketJobId);
+
     int updateBasketJobStatus(
         @Param("userId") Long userId,
         @Param("basketJobId") Long basketJobId,
@@ -64,6 +66,8 @@ public interface P1WorkspaceMapper {
     int archiveBasketJob(@Param("userId") Long userId, @Param("basketJobId") Long basketJobId);
 
     Optional<WorkspaceRow> findWorkspace(@Param("userId") Long userId, @Param("workspaceId") Long workspaceId);
+
+    Optional<Long> findWorkspaceOwner(@Param("workspaceId") Long workspaceId);
 
     List<EssayQuestionRow> listQuestions(@Param("workspaceId") Long workspaceId);
 
@@ -98,6 +102,8 @@ public interface P1WorkspaceMapper {
         @Param("userId") Long userId,
         @Param("referenceId") Long referenceId
     );
+
+    Optional<Long> findReferenceOwner(@Param("referenceId") Long referenceId);
 
     int updateReference(ReferenceMaterialRow row);
 

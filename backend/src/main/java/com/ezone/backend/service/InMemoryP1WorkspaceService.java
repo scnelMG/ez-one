@@ -536,7 +536,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             throw new IllegalArgumentException("Basket job not found");
         }
         if (!record.userId().equals(userId)) {
-            throw new IllegalArgumentException("Basket job is not owned by current user");
+            throw new ForbiddenResourceException("Basket job is not owned by current user");
         }
         return record;
     }
@@ -547,7 +547,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             throw new IllegalArgumentException("Workspace not found");
         }
         if (!record.userId().equals(userId)) {
-            throw new IllegalArgumentException("Workspace is not owned by current user");
+            throw new ForbiddenResourceException("Workspace is not owned by current user");
         }
         return record;
     }
@@ -558,7 +558,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             throw new IllegalArgumentException("Reference not found");
         }
         if (!record.userId().equals(userId)) {
-            throw new IllegalArgumentException("Reference is not owned by current user");
+            throw new ForbiddenResourceException("Reference is not owned by current user");
         }
         return record;
     }
@@ -569,7 +569,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             throw new IllegalArgumentException("Version not found");
         }
         if (!record.userId().equals(userId) || !record.workspaceId().equals(workspaceId)) {
-            throw new IllegalArgumentException("Version is not owned by current user");
+            throw new ForbiddenResourceException("Version is not owned by current user");
         }
         return record;
     }
