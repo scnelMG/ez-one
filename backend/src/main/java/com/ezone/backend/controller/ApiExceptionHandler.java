@@ -4,6 +4,7 @@ import com.ezone.backend.client.GoogleOAuthException;
 import com.ezone.backend.dto.ApiError;
 import com.ezone.backend.dto.ApiResponse;
 import com.ezone.backend.security.InvalidRefreshTokenException;
+import com.ezone.backend.service.ForbiddenResourceException;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -36,6 +37,16 @@ public class ApiExceptionHandler {
             false,
             null,
             new ApiError("NOT_FOUND", exception.getMessage(), Map.of())
+        );
+    }
+
+    @ExceptionHandler(ForbiddenResourceException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ApiResponse<Void> handleForbidden(ForbiddenResourceException exception) {
+        return new ApiResponse<>(
+            false,
+            null,
+            new ApiError("FORBIDDEN", exception.getMessage(), Map.of())
         );
     }
 
