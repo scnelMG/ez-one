@@ -7,6 +7,7 @@ import com.ezone.backend.dto.extension.ExtensionJobPreviewRequest;
 import com.ezone.backend.dto.extension.ExtensionJobPreviewResponse;
 import com.ezone.backend.dto.extension.ExtensionJobSaveRequest;
 import com.ezone.backend.dto.workspace.CreateEssayQuestionRequest;
+import com.ezone.backend.service.NotionIntegrationService;
 import com.ezone.backend.service.P1WorkspaceService;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -21,9 +22,11 @@ import org.springframework.web.server.ResponseStatusException;
 public class ExtensionJobController {
 
     private final P1WorkspaceService workspaceService;
+    private final NotionIntegrationService notionIntegrationService;
 
-    public ExtensionJobController(P1WorkspaceService workspaceService) {
+    public ExtensionJobController(P1WorkspaceService workspaceService, NotionIntegrationService notionIntegrationService) {
         this.workspaceService = workspaceService;
+        this.notionIntegrationService = notionIntegrationService;
     }
 
     @PostMapping("/preview")
@@ -64,7 +67,7 @@ public class ExtensionJobController {
             .map(question -> new CreateEssayQuestionRequest(question.prompt(), question.maxLengthOrDefault()))
             .toList();
 
-        return ApiResponse.success(roles.stream()
+        List<BasketJobResponse> savedJobs = roles.stream()
             .map(role -> workspaceService.createBasketJobWithQuestions(
                 CurrentUserSupport.currentUserId(),
                 new CreateBasketJobRequest(
@@ -76,7 +79,9 @@ public class ExtensionJobController {
                 ),
                 questions
             ))
-            .toList());
+            .toList();
+        savedJobs.forEach(notionIntegrationService::recordJobOnlySync);
+        return ApiResponse.success(savedJobs);
     }
 
     private List<String> fallbackRole(String positionTitle) {
