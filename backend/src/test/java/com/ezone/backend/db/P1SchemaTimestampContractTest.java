@@ -13,6 +13,7 @@ class P1SchemaTimestampContractTest {
     private static final List<String> MUTABLE_P1_TABLES = List.of(
         "users",
         "companies",
+        "company_info_sources",
         "jobs",
         "basket_jobs",
         "workspaces",

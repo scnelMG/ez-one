@@ -17,6 +17,13 @@ public interface P1WorkspaceMapper {
 
     void upsertCompany(JobRow row);
 
+    void recordCompanyInfoSource(
+        @Param("companyId") Long companyId,
+        @Param("sourceName") String sourceName,
+        @Param("sourceUrl") String sourceUrl,
+        @Param("status") String status
+    );
+
     void insertJob(JobRow row);
 
     int updateJob(JobRow row);
