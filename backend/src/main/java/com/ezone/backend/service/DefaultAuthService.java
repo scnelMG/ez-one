@@ -4,13 +4,19 @@ import com.ezone.backend.client.GoogleOAuthClient;
 import com.ezone.backend.domain.UserAccount;
 import com.ezone.backend.dto.auth.AuthTokenResponse;
 import com.ezone.backend.dto.auth.CurrentUserResponse;
+import com.ezone.backend.dto.auth.EmailLoginRequest;
 import com.ezone.backend.dto.auth.GoogleLoginRequest;
 import com.ezone.backend.dto.auth.GoogleUserProfile;
 import com.ezone.backend.dto.auth.RefreshTokenRequest;
+import com.ezone.backend.dto.auth.SignupRequest;
 import com.ezone.backend.mapper.UserAccountMapper;
 import com.ezone.backend.security.AuthTokenIssuer;
 import com.ezone.backend.security.IssuedTokenPair;
+import java.util.Locale;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class DefaultAuthService implements AuthService {
@@ -18,15 +24,50 @@ public class DefaultAuthService implements AuthService {
     private final GoogleOAuthClient googleOAuthClient;
     private final UserAccountMapper userAccountMapper;
     private final AuthTokenIssuer authTokenIssuer;
+    private final PasswordEncoder passwordEncoder;
 
     public DefaultAuthService(
         GoogleOAuthClient googleOAuthClient,
         UserAccountMapper userAccountMapper,
-        AuthTokenIssuer authTokenIssuer
+        AuthTokenIssuer authTokenIssuer,
+        PasswordEncoder passwordEncoder
     ) {
         this.googleOAuthClient = googleOAuthClient;
         this.userAccountMapper = userAccountMapper;
         this.authTokenIssuer = authTokenIssuer;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    @Override
+    public AuthTokenResponse signup(SignupRequest request) {
+        String email = normalizeEmail(request.email());
+        if (userAccountMapper.findByEmail(email).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already registered.");
+        }
+
+        String displayName = request.name().trim();
+        UserAccount user = userAccountMapper.createLocalUser(
+            email,
+            displayName,
+            passwordEncoder.encode(request.password())
+        );
+
+        return toAuthTokenResponse(authTokenIssuer.issueFor(user), user);
+    }
+
+    @Override
+    public AuthTokenResponse loginWithEmail(EmailLoginRequest request) {
+        String email = normalizeEmail(request.email());
+        UserAccount user = userAccountMapper.findByEmail(email)
+            .orElseThrow(DefaultAuthService::invalidEmailLogin);
+        String passwordHash = userAccountMapper.findPasswordHashByEmail(email)
+            .orElseThrow(DefaultAuthService::invalidEmailLogin);
+
+        if (!passwordEncoder.matches(request.password(), passwordHash)) {
+            throw invalidEmailLogin();
+        }
+
+        return toAuthTokenResponse(authTokenIssuer.issueFor(user), user);
     }
 
     @Override
@@ -91,5 +132,13 @@ public class DefaultAuthService implements AuthService {
         } catch (Exception exception) {
             throw new IllegalStateException("Failed to read issued access token user id.", exception);
         }
+    }
+
+    private static String normalizeEmail(String email) {
+        return email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private static ResponseStatusException invalidEmailLogin() {
+        return new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Email or password is invalid.");
     }
 }

@@ -2,9 +2,11 @@ package com.ezone.backend.controller;
 
 import com.ezone.backend.dto.ApiResponse;
 import com.ezone.backend.dto.auth.AuthTokenResponse;
+import com.ezone.backend.dto.auth.EmailLoginRequest;
 import com.ezone.backend.dto.auth.GoogleLoginRequest;
 import com.ezone.backend.dto.auth.LogoutResponse;
 import com.ezone.backend.dto.auth.RefreshTokenRequest;
+import com.ezone.backend.dto.auth.SignupRequest;
 import com.ezone.backend.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,6 +22,16 @@ public class AuthController {
 
     public AuthController(AuthService authService) {
         this.authService = authService;
+    }
+
+    @PostMapping("/signup")
+    public ApiResponse<AuthTokenResponse> signup(@Valid @RequestBody SignupRequest request) {
+        return ApiResponse.success(authService.signup(request));
+    }
+
+    @PostMapping("/login")
+    public ApiResponse<AuthTokenResponse> loginWithEmail(@Valid @RequestBody EmailLoginRequest request) {
+        return ApiResponse.success(authService.loginWithEmail(request));
     }
 
     @PostMapping("/google")
