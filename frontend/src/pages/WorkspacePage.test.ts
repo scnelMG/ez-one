@@ -12,7 +12,9 @@ const mocks = vi.hoisted(() => ({
   createReference: vi.fn(),
   getReference: vi.fn(),
   updateReference: vi.fn(),
-  deleteReference: vi.fn()
+  deleteReference: vi.fn(),
+  createQuestion: vi.fn(),
+  compareVersions: vi.fn()
 }))
 
 vi.mock('@/features/workspace/api/workspaceApi', () => ({
@@ -24,7 +26,9 @@ vi.mock('@/features/workspace/api/workspaceApi', () => ({
     createReference: mocks.createReference,
     getReference: mocks.getReference,
     updateReference: mocks.updateReference,
-    deleteReference: mocks.deleteReference
+    deleteReference: mocks.deleteReference,
+    createQuestion: mocks.createQuestion,
+    compareVersions: mocks.compareVersions
   }
 }))
 
@@ -51,6 +55,8 @@ describe('WorkspacePage', () => {
     mocks.getReference.mockReset()
     mocks.updateReference.mockReset()
     mocks.deleteReference.mockReset()
+    mocks.createQuestion.mockReset()
+    mocks.compareVersions.mockReset()
     mocks.getWorkspace.mockResolvedValue({
       id: '102',
       companyName: 'Naver',
@@ -83,6 +89,12 @@ describe('WorkspacePage', () => {
         questionId: '103',
         versionName: 'v1',
         body: '초안 v1'
+      },
+      {
+        id: '502',
+        questionId: '103',
+        versionName: 'v2',
+        body: '초안 v2'
       }
     ])
     mocks.saveDraft.mockResolvedValue({
@@ -122,6 +134,19 @@ describe('WorkspacePage', () => {
       url: 'https://example.com/news'
     })
     mocks.deleteReference.mockResolvedValue(undefined)
+    mocks.createQuestion.mockResolvedValue({
+      id: '801',
+      prompt: '성장 과정을 작성하세요.',
+      draft: '',
+      maxLength: 700
+    })
+    mocks.compareVersions.mockResolvedValue({
+      leftVersionId: '501',
+      rightVersionId: '502',
+      leftBody: '초안 v1',
+      rightBody: '초안 v2',
+      changed: true
+    })
   })
 
   it('WS-002/WS-004: saves a draft and creates an explicit version', async () => {
@@ -150,7 +175,7 @@ describe('WorkspacePage', () => {
     await wrapper.get('[data-testid="create-version"]').trigger('click')
     await flushPromises()
 
-    expect(mocks.createVersion).toHaveBeenCalledWith('102', '103', 'v2')
+    expect(mocks.createVersion).toHaveBeenCalledWith('102', '103', 'v3')
     expect(wrapper.text()).toContain('v2')
   })
 
@@ -220,6 +245,37 @@ describe('WorkspacePage', () => {
 
     expect(mocks.deleteReference).toHaveBeenCalledWith('104')
     expect(wrapper.text()).not.toContain('산업 뉴스')
+  })
+
+  it('WS-005/WS-017/WS-018: adds a question and compares two versions', async () => {
+    const router = makeRouter()
+    router.push('/workspaces/102')
+    await router.isReady()
+
+    const wrapper = mount(WorkspacePage, {
+      global: {
+        plugins: [createPinia(), router]
+      }
+    })
+
+    await flushPromises()
+    await wrapper.get('[data-testid="new-question-prompt"]').setValue('성장 과정을 작성하세요.')
+    await wrapper.get('[data-testid="new-question-max"]').setValue(700)
+    await wrapper.get('[data-testid="create-question"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.createQuestion).toHaveBeenCalledWith('102', {
+      prompt: '성장 과정을 작성하세요.',
+      maxLength: 700
+    })
+    expect(wrapper.text()).toContain('성장 과정을 작성하세요.')
+
+    await wrapper.get('[data-testid="compare-versions"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.compareVersions).toHaveBeenCalledWith('102', '501', '502')
+    expect(wrapper.text()).toContain('초안 v1')
+    expect(wrapper.text()).toContain('초안 v2')
   })
 })
 

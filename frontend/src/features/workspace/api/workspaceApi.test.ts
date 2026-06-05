@@ -133,6 +133,65 @@ describe('workspaceApi', () => {
     ])
   })
 
+  it('WS-005/WS-017/WS-018: creates a question and compares versions', async () => {
+    const post = vi.fn()
+      .mockResolvedValueOnce({
+        data: {
+          success: true,
+          data: {
+            id: 801,
+            prompt: '성장 과정을 작성하세요.',
+            draft: '',
+            maxLength: 700,
+            currentLength: 0
+          },
+          error: null
+        }
+      })
+      .mockResolvedValueOnce({
+        data: {
+          success: true,
+          data: {
+            leftVersionId: 501,
+            rightVersionId: 502,
+            leftBody: '초안 v1',
+            rightBody: '초안 v2',
+            changed: true
+          },
+          error: null
+        }
+      })
+
+    const api = createWorkspaceApi({ get: vi.fn(), patch: vi.fn(), post })
+    const question = await api.createQuestion('102', {
+      prompt: '성장 과정을 작성하세요.',
+      maxLength: 700
+    })
+    const comparison = await api.compareVersions('102', '501', '502')
+
+    expect(post).toHaveBeenNthCalledWith(1, '/api/workspaces/102/questions', {
+      prompt: '성장 과정을 작성하세요.',
+      maxLength: 700
+    })
+    expect(post).toHaveBeenNthCalledWith(2, '/api/workspaces/102/versions/compare', {
+      leftVersionId: 501,
+      rightVersionId: 502
+    })
+    expect(question).toEqual({
+      id: '801',
+      prompt: '성장 과정을 작성하세요.',
+      draft: '',
+      maxLength: 700
+    })
+    expect(comparison).toEqual({
+      leftVersionId: '501',
+      rightVersionId: '502',
+      leftBody: '초안 v1',
+      rightBody: '초안 v2',
+      changed: true
+    })
+  })
+
   it('REF-001/REF-002: creates and opens a reference material', async () => {
     const get = vi.fn().mockResolvedValue({
       data: {
