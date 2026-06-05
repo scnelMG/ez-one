@@ -496,6 +496,22 @@ input {
   padding: 10px;
 }
 
+.reference-create-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reference-create-tools select {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--text);
+  font-weight: 800;
+  padding: 0 9px;
+}
+
 .modal-scrim {
   display: grid;
   min-height: 590px;
