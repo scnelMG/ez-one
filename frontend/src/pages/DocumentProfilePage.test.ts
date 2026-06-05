@@ -72,7 +72,10 @@ describe('DocumentProfilePage', () => {
           phone: '010-1234-5678',
           address: 'Seoul'
         },
+        education: [{ title: 'Korea University', summary: 'Computer Science' }],
+        career: [{ title: 'Naver Cloud Platform', summary: 'Platform backend' }],
         projects: [{ title: 'EZ One Renewal', summary: 'Workspace and profile integration' }],
+        certificates: [{ title: 'TOEIC', summary: '900' }],
         awards: [{ title: 'Hackathon Grand Prize', summary: 'P1 service award' }]
       },
       customFields: []
