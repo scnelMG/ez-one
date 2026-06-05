@@ -32,7 +32,7 @@ export const mockBasketJobs: BasketJob[] = [
     companyName: '토스',
     positionTitle: 'Platform Engineer',
     status: 'SUBMITTED',
-    statusLabel: '지원 완료',
+    statusLabel: '지원완료',
     deadlineLabel: '2026.06.23',
     deadlineDate: '2026-06-23',
     deadlineSoon: false,

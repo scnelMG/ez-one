@@ -46,7 +46,7 @@ export const mockWorkspaces: Record<string, WorkspaceDetail> = {
     companyName: '토스',
     positionTitle: 'Platform Engineer',
     deadlineLabel: '2026.06.23',
-    statusLabel: '지원 완료',
+    statusLabel: '지원완료',
     ...workspaceDefaults
   },
   '111': {

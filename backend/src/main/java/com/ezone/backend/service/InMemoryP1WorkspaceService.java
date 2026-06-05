@@ -112,7 +112,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             workspaceId,
             request.companyName(),
             request.positionTitle(),
-            ApplicationStatus.NOT_APPLIED,
+            ApplicationStatus.READY,
             normalizeDeadline(request.deadlineLabel()),
             isDeadlineSoon(request.deadlineLabel()),
             request.sourceUrl(),
@@ -740,9 +740,10 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
 
     private String statusLabel(ApplicationStatus status) {
         return switch (status) {
-            case READY, NOT_APPLIED -> "지원 전";
+            case READY -> "지원 전";
+            case NOT_APPLIED -> "미지원";
             case IN_PROGRESS -> "진행 중";
-            case COMPLETED -> "지원 완료";
+            case COMPLETED -> "지원완료";
         };
     }
 
