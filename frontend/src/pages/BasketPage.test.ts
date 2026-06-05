@@ -222,6 +222,49 @@ describe('BasketPage', () => {
     expect(wrapper.text()).not.toContain('Naver')
     expect(wrapper.text()).not.toContain('KakaoPay')
   })
+
+  it('COMMON-001: paginates basket jobs after filtering and sorting', async () => {
+    mocks.listJobs.mockResolvedValue(
+      Array.from({ length: 13 }, (_, index) => ({
+        id: String(300 + index),
+        companyName: `Company ${index + 1}`,
+        positionTitle: 'Backend Engineer',
+        status: 'NOT_STARTED',
+        statusLabel: '지원 전',
+        deadlineLabel: `D-${index + 1}`,
+        deadlineDate: '2026-06-20',
+        deadlineSoon: index < 3,
+        workspaceId: String(400 + index),
+        sourceUrl: 'https://www.jasoseol.com/'
+      }))
+    )
+    const router = makeRouter()
+    router.push('/basket')
+    await router.isReady()
+
+    const wrapper = mount(BasketPage, {
+      global: {
+        plugins: [createPinia(), router]
+      }
+    })
+
+    await flushPromises()
+
+    const firstPageRows = wrapper.findAll('.basket-data-row').map((row) => row.text())
+    expect(firstPageRows.join(' ')).toContain('Company 1')
+    expect(firstPageRows.join(' ')).toContain('Company 10')
+    expect(firstPageRows.join(' ')).not.toContain('Company 11')
+    expect(wrapper.get('[data-testid="basket-page-status"]').text()).toContain('1 / 2')
+
+    await wrapper.get('[data-testid="basket-page-next"]').trigger('click')
+    await flushPromises()
+
+    const secondPageRows = wrapper.findAll('.basket-data-row').map((row) => row.text())
+    expect(secondPageRows.join(' ')).not.toContain('Company 1')
+    expect(secondPageRows.join(' ')).toContain('Company 11')
+    expect(secondPageRows.join(' ')).toContain('Company 13')
+    expect(wrapper.get('[data-testid="basket-page-status"]').text()).toContain('2 / 2')
+  })
 })
 
 function flushPromises() {
