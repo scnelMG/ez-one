@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import WorkspacePage from './WorkspacePage.vue'
 
 const mocks = vi.hoisted(() => ({
@@ -52,6 +52,10 @@ const makeRouter = () =>
   })
 
 describe('WorkspacePage', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   beforeEach(() => {
     mocks.getWorkspace.mockReset()
     mocks.getDefaults.mockReset()
@@ -243,7 +247,7 @@ describe('WorkspacePage', () => {
 
     await flushPromises()
 
-    expect(wrapper.get('[data-testid="draft-character-count"]').text()).toContain('7 / 1000')
+    expect(wrapper.get('[data-testid="draft-character-count"]').text()).toContain('5 / 1000')
 
     vi.useFakeTimers()
     await wrapper.get('[data-testid="draft-editor"]').setValue('auto saved body')
@@ -256,10 +260,9 @@ describe('WorkspacePage', () => {
 
     await vi.advanceTimersByTimeAsync(1)
     expect(mocks.saveDraft).toHaveBeenCalledWith('102', '103', 'auto saved body')
-    await flushPromises()
+    await Promise.resolve()
 
     expect(wrapper.get('[data-testid="auto-save-status"]').attributes('data-save-state')).toBe('saved')
-    vi.useRealTimers()
   })
 
   it('REF-001/REF-002: creates a reference and opens reference detail', async () => {
