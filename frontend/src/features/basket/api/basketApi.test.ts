@@ -45,7 +45,7 @@ describe('basketApi', () => {
     ])
   })
 
-  it('JOB-004/JOB-010/JOB-008: creates, updates status, fetches detail, and archives basket jobs', async () => {
+  it('JOB-004/JOB-010/JOB-008/JOB-007: creates, updates, fetches detail, and archives basket jobs', async () => {
     const response = {
       data: {
         success: true,
@@ -81,6 +81,12 @@ describe('basketApi', () => {
       })
     ).resolves.toMatchObject({ id: '201', status: 'SUBMITTED' })
     await expect(api.getJob('201')).resolves.toMatchObject({ id: '201' })
+    await expect(api.updateJob('201', {
+      companyName: 'Naver Cloud',
+      positionTitle: 'Platform Engineer',
+      deadlineLabel: '2026.07.01',
+      sourceUrl: 'https://www.jasoseol.com/jobs/201'
+    })).resolves.toMatchObject({ id: '201' })
     await expect(api.updateStatus('201', 'SUBMITTED')).resolves.toMatchObject({ status: 'SUBMITTED' })
     await expect(api.archiveJob('201')).resolves.toBeUndefined()
 
@@ -92,6 +98,12 @@ describe('basketApi', () => {
       savedSource: 'MANUAL'
     })
     expect(get).toHaveBeenCalledWith('/api/basket/jobs/201')
+    expect(patch).toHaveBeenCalledWith('/api/basket/jobs/201', {
+      companyName: 'Naver Cloud',
+      positionTitle: 'Platform Engineer',
+      deadlineLabel: '2026.07.01',
+      sourceUrl: 'https://www.jasoseol.com/jobs/201'
+    })
     expect(patch).toHaveBeenCalledWith('/api/basket/jobs/201/status', {
       applicationStatus: 'COMPLETED'
     })

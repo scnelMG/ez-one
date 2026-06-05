@@ -121,6 +121,26 @@ class P1ApiContractTest {
     }
 
     @Test
+    void basketJobCanBeUpdated() throws Exception {
+        mockMvc.perform(patch("/api/basket/jobs/101")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "companyName": "Updated Company",
+                      "positionTitle": "Product Engineer",
+                      "deadlineLabel": "2026.06.30",
+                      "sourceUrl": "https://example.com/jobs/101"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.companyName").value("Updated Company"))
+            .andExpect(jsonPath("$.data.positionTitle").value("Product Engineer"))
+            .andExpect(jsonPath("$.data.deadlineLabel").value("2026.06.30"))
+            .andExpect(jsonPath("$.data.sourceUrl").value("https://example.com/jobs/101"));
+    }
+
+    @Test
     void workspaceDraftReferenceProfileAndNotionContractsRespond() throws Exception {
         mockMvc.perform(patch("/api/workspaces/102/drafts/103")
                 .contentType(MediaType.APPLICATION_JSON)
