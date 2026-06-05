@@ -52,6 +52,14 @@
             >
               {{ filter.label }}
             </RouterLink>
+            <RouterLink
+              class="filter-chip"
+              :class="{ active: isOverdueFilter }"
+              data-testid="basket-filter-overdue"
+              to="/basket?overdue=true"
+            >
+              기한 지남
+            </RouterLink>
             <input
               v-model="searchQuery"
               class="search-field"
@@ -208,15 +216,17 @@ const selectedStatus = computed<BasketJobStatus | undefined>(() => {
     ? status
     : undefined
 })
+const isOverdueFilter = computed(() => route.query.overdue === 'true')
 
 const searchedJobs = computed(() => {
   const keyword = searchQuery.value.trim().toLowerCase()
+  const sourceJobs = isOverdueFilter.value ? basketStore.jobs.filter(isOverdueJob) : basketStore.jobs
 
   if (!keyword) {
-    return basketStore.jobs
+    return sourceJobs
   }
 
-  return basketStore.jobs.filter((job) => (
+  return sourceJobs.filter((job) => (
     job.companyName.toLowerCase().includes(keyword) ||
     job.positionTitle.toLowerCase().includes(keyword)
   ))
@@ -257,6 +267,27 @@ function deadlineDay(job: BasketJob) {
   const match = source.match(/(?:2026[-.])?06[-.](\d{1,2})/)
 
   return match ? Number(match[1]) : 99
+}
+
+function isOverdueJob(job: BasketJob) {
+  const date = parseDeadlineDate(job)
+  return date !== null && date < startOfToday()
+}
+
+function parseDeadlineDate(job: BasketJob) {
+  const source = job.deadlineDate ?? job.deadlineLabel
+  const match = source.match(/(20\d{2})[-.](\d{1,2})[-.](\d{1,2})/)
+
+  if (!match) {
+    return null
+  }
+
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+}
+
+function startOfToday() {
+  const now = new Date()
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate())
 }
 
 async function createManualJob() {
