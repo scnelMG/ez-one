@@ -48,7 +48,7 @@ export function createNotionApi(httpClient: NotionHttpClient = defaultHttpClient
       const response = await httpClient.post<ApiEnvelope<NotionConnectionDto>>(
         '/api/integrations/notion/connect',
         {
-          code: 'local-mvp-connect'
+          authorizationCode: 'local-mvp-connect'
         }
       )
       return unwrapApiData(response.data)

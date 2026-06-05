@@ -451,7 +451,7 @@ class P1ApiContractTest {
         mockMvc.perform(post("/api/integrations/notion/connect")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                    { "code": "oauth-code" }
+                    { "authorizationCode": "oauth-code" }
                     """))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.syncScope").value("JOB_ONLY"))
@@ -478,11 +478,60 @@ class P1ApiContractTest {
     }
 
     @Test
+    void notionRejectsNonJobOnlyScope() throws Exception {
+        mockMvc.perform(put("/api/integrations/notion/sync-settings")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "syncEnabled": true,
+                      "syncScope": "JOB_WITH_ESSAY"
+                    }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void failedNotionConnectionLogsFailureAndDoesNotBlockCoreJobSave() throws Exception {
+        mockMvc.perform(post("/api/integrations/notion/connect")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    { "authorizationCode": "expired-oauth-code" }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+
+        mockMvc.perform(post("/api/basket/jobs")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "companyName": "Notion Failure Isolation Company",
+                      "positionTitle": "Backend Developer",
+                      "deadlineLabel": "D-4",
+                      "sourceUrl": "https://example.com/jobs/notion-failure-isolation",
+                      "savedSource": "DIRECT"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.companyName").value("Notion Failure Isolation Company"));
+
+        mockMvc.perform(get("/api/integrations/notion/sync-logs"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath(
+                "$.data[?(@.target == 'NOTION_CONNECTION' && @.status == 'FAILURE')]",
+                hasSize(greaterThanOrEqualTo(1))
+            ));
+    }
+
+    @Test
     void notionConnectionAndSyncLogsAreScopedToCurrentUser() throws Exception {
         mockMvc.perform(post("/api/integrations/notion/connect")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                    { "code": "user-one-oauth-code" }
+                    { "authorizationCode": "user-one-oauth-code" }
                     """))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.connected").value(true));
