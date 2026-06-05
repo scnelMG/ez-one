@@ -26,6 +26,9 @@ import com.ezone.backend.dto.workspace.UpdateDraftRequest;
 import com.ezone.backend.dto.workspace.WorkspaceDefaultsResponse;
 import com.ezone.backend.dto.workspace.WorkspaceResponse;
 import com.ezone.backend.mapper.P1WorkspaceMapper;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,11 +51,11 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
     public DashboardSummaryResponse getDashboardSummary(Long userId) {
         List<BasketJobRow> jobs = mapper.listBasketJobs(userId, null, null);
         long inProgress = jobs.stream()
-            .filter(job -> job.getApplicationStatus() == ApplicationStatus.IN_PROGRESS)
+            .filter(job -> effectiveStatus(job) == ApplicationStatus.IN_PROGRESS)
             .count();
         long notStarted = jobs.stream()
-            .filter(job -> job.getApplicationStatus() == ApplicationStatus.NOT_APPLIED
-                || job.getApplicationStatus() == ApplicationStatus.READY)
+            .filter(job -> effectiveStatus(job) == ApplicationStatus.NOT_APPLIED
+                || effectiveStatus(job) == ApplicationStatus.READY)
             .count();
         long deadlineSoon = jobs.stream().filter(BasketJobRow::isDeadlineSoon).count();
         return new DashboardSummaryResponse(
@@ -66,7 +69,10 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
 
     @Override
     public List<BasketJobResponse> listBasketJobs(Long userId, ApplicationStatus status, String sort) {
-        return mapper.listBasketJobs(userId, status, sort).stream().map(this::toBasketResponse).toList();
+        return mapper.listBasketJobs(userId, null, sort).stream()
+            .filter(job -> status == null || effectiveStatus(job) == status)
+            .map(this::toBasketResponse)
+            .toList();
     }
 
     @Override
@@ -408,13 +414,14 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
     }
 
     private BasketJobResponse toBasketResponse(BasketJobRow row) {
+        ApplicationStatus status = effectiveStatus(row);
         return new BasketJobResponse(
             row.getId(),
             row.getWorkspaceId(),
             row.getCompanyName(),
             row.getPositionTitle(),
-            row.getApplicationStatus(),
-            statusLabel(row.getApplicationStatus()),
+            status,
+            statusLabel(status),
             row.getDeadlineLabel(),
             row.isDeadlineSoon(),
             row.getSourceUrl(),
@@ -433,13 +440,14 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
     }
 
     private WorkspaceResponse toWorkspaceResponse(WorkspaceRow row) {
+        ApplicationStatus status = effectiveStatus(row.getApplicationStatus(), row.getDeadlineLabel());
         return new WorkspaceResponse(
             row.getId(),
             row.getBasketJobId(),
             row.getCompanyName(),
             row.getPositionTitle(),
             row.getDeadlineLabel(),
-            statusLabel(row.getApplicationStatus()),
+            statusLabel(status),
             row.getSourceUrl(),
             new CompanyDetailsResponse(
                 row.getCompanyDomain(),
@@ -485,6 +493,42 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
 
     private boolean isDeadlineSoon(String deadlineLabel) {
         return deadlineLabel != null && (deadlineLabel.contains("오늘") || deadlineLabel.contains("D-"));
+    }
+
+    private ApplicationStatus effectiveStatus(BasketJobRow row) {
+        return effectiveStatus(row.getApplicationStatus(), row.getDeadlineLabel());
+    }
+
+    private ApplicationStatus effectiveStatus(ApplicationStatus current, String deadlineLabel) {
+        if (current == ApplicationStatus.COMPLETED) {
+            return ApplicationStatus.COMPLETED;
+        }
+
+        LocalDate deadline = parseDeadlineDate(deadlineLabel);
+        if (deadline != null && deadline.isBefore(LocalDate.now())) {
+            return ApplicationStatus.NOT_APPLIED;
+        }
+
+        return current;
+    }
+
+    private LocalDate parseDeadlineDate(String deadlineLabel) {
+        if (deadlineLabel == null || deadlineLabel.isBlank()) {
+            return null;
+        }
+
+        for (DateTimeFormatter formatter : List.of(
+            DateTimeFormatter.ofPattern("yyyy.MM.dd"),
+            DateTimeFormatter.ISO_LOCAL_DATE
+        )) {
+            try {
+                return LocalDate.parse(deadlineLabel.trim(), formatter);
+            } catch (DateTimeParseException ignored) {
+                // Try the next supported deadline label format.
+            }
+        }
+
+        return null;
     }
 
     private String normalizeMemo(String applicationMemo) {
