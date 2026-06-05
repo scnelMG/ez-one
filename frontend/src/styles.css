@@ -2125,6 +2125,11 @@ li {
   font-weight: 900;
 }
 
+.header-icon-action.disabled {
+  color: #a8b0bd;
+  cursor: default;
+}
+
 .ghost-button.small {
   min-height: 32px;
   padding: 0 10px;

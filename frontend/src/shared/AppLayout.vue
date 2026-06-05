@@ -19,10 +19,15 @@
           <span class="user-icon" aria-hidden="true"></span>
           <small>마이페이지</small>
         </RouterLink>
-        <button type="button" class="header-icon-action" aria-label="알림">
+        <span
+          class="header-icon-action disabled"
+          aria-disabled="true"
+          aria-label="알림"
+          data-testid="reserved-alerts"
+        >
           <span class="bell-icon" aria-hidden="true"></span>
           <small>알림</small>
-        </button>
+        </span>
       </div>
     </header>
 
