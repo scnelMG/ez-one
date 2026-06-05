@@ -13,6 +13,13 @@ export interface WorkspaceQuestion {
   maxLength: number
 }
 
+export interface EssayVersion {
+  id: string
+  questionId: string
+  versionName: string
+  body: string
+}
+
 export interface WorkspaceReference {
   id: string
   type: 'JD' | 'NEWS' | 'DART' | 'TALENT_PROFILE' | 'PROMPT' | 'MEMO'
@@ -55,7 +62,22 @@ interface WorkspaceDto {
   }>
 }
 
-type WorkspaceHttpClient = Pick<HttpClient, 'get'>
+interface EssayQuestionDto {
+  id: number
+  prompt: string
+  draft: string
+  maxLength: number
+  currentLength: number
+}
+
+interface EssayVersionDto {
+  id: number
+  questionId: number
+  versionName: string
+  body: string
+}
+
+type WorkspaceHttpClient = Pick<HttpClient, 'get' | 'patch' | 'post'>
 
 export function createWorkspaceApi(httpClient: WorkspaceHttpClient = defaultHttpClient) {
   return {
@@ -71,12 +93,7 @@ export function createWorkspaceApi(httpClient: WorkspaceHttpClient = defaultHttp
           deadlineLabel: data.deadlineLabel,
           statusLabel: data.statusLabel,
           sourceUrl: data.sourceUrl,
-          questions: data.questions.map((question) => ({
-            id: String(question.id),
-            prompt: question.prompt,
-            draft: question.draft,
-            maxLength: question.maxLength
-          })),
+          questions: data.questions.map(toWorkspaceQuestion),
           references: data.references.map((reference) => ({
             id: String(reference.id),
             type: reference.referenceType,
@@ -92,7 +109,51 @@ export function createWorkspaceApi(httpClient: WorkspaceHttpClient = defaultHttp
 
         return mockWorkspace
       }
+    },
+
+    async saveDraft(workspaceId: string, draftId: string, body: string): Promise<WorkspaceQuestion> {
+      const response = await httpClient.patch<ApiEnvelope<EssayQuestionDto>>(
+        `/api/workspaces/${workspaceId}/drafts/${draftId}`,
+        { body }
+      )
+      return toWorkspaceQuestion(unwrapApiData(response.data))
+    },
+
+    async createVersion(workspaceId: string, questionId: string, versionName: string): Promise<EssayVersion> {
+      const response = await httpClient.post<ApiEnvelope<EssayVersionDto>>(
+        `/api/workspaces/${workspaceId}/versions`,
+        {
+          questionId: Number(questionId),
+          versionName
+        }
+      )
+      return toEssayVersion(unwrapApiData(response.data))
+    },
+
+    async listVersions(workspaceId: string): Promise<EssayVersion[]> {
+      const response = await httpClient.get<ApiEnvelope<EssayVersionDto[]>>(
+        `/api/workspaces/${workspaceId}/versions`
+      )
+      return unwrapApiData(response.data).map(toEssayVersion)
     }
+  }
+}
+
+function toWorkspaceQuestion(question: EssayQuestionDto): WorkspaceQuestion {
+  return {
+    id: String(question.id),
+    prompt: question.prompt,
+    draft: question.draft,
+    maxLength: question.maxLength
+  }
+}
+
+function toEssayVersion(version: EssayVersionDto): EssayVersion {
+  return {
+    id: String(version.id),
+    questionId: String(version.questionId),
+    versionName: version.versionName,
+    body: version.body
   }
 }
 

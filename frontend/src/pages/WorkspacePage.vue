@@ -3,13 +3,29 @@
     <section class="wire-page workspace-wire">
       <header class="wire-toolbar">
         <div>
-          <p class="section-kicker">지원 워크스페이스</p>
+          <p class="section-kicker">WS-002 · WS-004</p>
           <h1>지원 워크스페이스</h1>
           <p>{{ headerDescription }}</p>
         </div>
         <div class="toolbar-actions">
-          <button class="ghost-button" type="button">원문 보기</button>
-          <button class="primary-button" type="button">버전 저장</button>
+          <button
+            class="ghost-button"
+            type="button"
+            :disabled="!currentQuestion || workspaceStore.status === 'saving'"
+            data-testid="save-draft"
+            @click="saveDraft"
+          >
+            {{ draftButtonLabel }}
+          </button>
+          <button
+            class="primary-button"
+            type="button"
+            :disabled="!currentQuestion || workspaceStore.status === 'saving'"
+            data-testid="create-version"
+            @click="createVersion"
+          >
+            버전 저장
+          </button>
         </div>
       </header>
 
@@ -42,7 +58,7 @@
       <section class="workspace-canvas" aria-label="자기소개서 작성 영역">
         <aside class="question-rail">
           <strong>문항</strong>
-          <button class="question-item active" type="button">문항 1</button>
+          <button class="question-item active" type="button">{{ currentQuestion?.prompt ?? '문항 없음' }}</button>
           <button class="question-item" type="button">문항 추가</button>
           <div class="mini-lines" aria-hidden="true">
             <span></span>
@@ -57,23 +73,33 @@
             v-else-if="workspaceStore.status === 'error'"
             id="workspace-error"
             tone="navy"
-            title="워크스페이스 로딩 실패"
+            title="워크스페이스 오류"
             :body="workspaceStore.errorMessage"
           />
-          <template v-else-if="workspaceStore.workspace">
+          <template v-else-if="workspaceStore.workspace && currentQuestion">
             <div class="editor-toolbar">
-            <div>
+              <div>
                 <p class="section-kicker">초안 작성</p>
-                <h2>{{ workspaceStore.workspace.questions[0]?.prompt }}</h2>
+                <h2>{{ currentQuestion.prompt }}</h2>
               </div>
-              <span class="status-chip">자동 저장 대기</span>
+              <span class="status-chip">{{ editorStatusLabel }}</span>
             </div>
-            <div class="draft-surface">
-              {{ workspaceStore.workspace.questions[0]?.draft }}
-            </div>
+            <textarea
+              v-model="draftBody"
+              class="draft-surface"
+              data-testid="draft-editor"
+              aria-label="자기소개서 초안"
+            />
             <div class="editor-meta">
-              <span>{{ draftLength }} / {{ workspaceStore.workspace.questions[0]?.maxLength }}자</span>
-              <button class="ghost-button" type="button">저장</button>
+              <span>{{ draftBody.length }} / {{ currentQuestion.maxLength }}자</span>
+              <button
+                class="ghost-button"
+                type="button"
+                :disabled="workspaceStore.status === 'saving'"
+                @click="saveDraft"
+              >
+                저장
+              </button>
             </div>
           </template>
         </main>
@@ -81,7 +107,7 @@
         <aside class="reference-side-panel">
           <div class="section-heading">
             <div>
-              <p class="section-kicker">작성 옆 참고자료</p>
+              <p class="section-kicker">작성 중 참고자료</p>
               <h2>참고자료</h2>
             </div>
             <button class="ghost-button" type="button">추가</button>
@@ -96,30 +122,27 @@
         </aside>
       </section>
 
-      <section class="wire-panel" aria-label="참고자료 보드 미리보기">
+      <section class="wire-panel" aria-label="버전 목록">
         <div class="section-heading">
           <div>
-            <p class="section-kicker">자료 보드</p>
-            <h2>참고자료 보드</h2>
+            <p class="section-kicker">버전관리</p>
+            <h2>저장된 버전</h2>
           </div>
         </div>
-        <div class="reference-board-grid">
-          <article v-for="board in referenceBoards" :key="board">
-            <strong>{{ board }}</strong>
-            <div class="mini-lines" aria-hidden="true">
-              <span></span>
-              <span></span>
-              <span></span>
-            </div>
-          </article>
-        </div>
+        <ul v-if="workspaceStore.versions.length > 0" class="summary-stack">
+          <li v-for="version in workspaceStore.versions" :key="version.id">
+            <strong>{{ version.versionName }}</strong>
+            <p>{{ version.body }}</p>
+          </li>
+        </ul>
+        <p v-else>아직 저장된 버전이 없습니다.</p>
       </section>
     </section>
   </AppLayout>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppLayout from '@/shared/AppLayout.vue'
 import StatePanel from '@/shared/StatePanel.vue'
@@ -128,7 +151,8 @@ import { useWorkspaceStore } from '@/stores/workspaceStore'
 const route = useRoute()
 const workspaceStore = useWorkspaceStore()
 const workspaceId = computed(() => String(route.params.workspaceId ?? '102'))
-const referenceBoards = ['JD', '뉴스', 'DART', '인재상', '프로젝트', '메모']
+const draftBody = ref('')
+const currentQuestion = computed(() => workspaceStore.workspace?.questions[0] ?? null)
 const headerDescription = computed(() => {
   const workspace = workspaceStore.workspace
 
@@ -138,10 +162,43 @@ const headerDescription = computed(() => {
 
   return `${workspace.companyName} ${workspace.positionTitle} 지원을 위한 작성 공간입니다.`
 })
-const draftLength = computed(() => workspaceStore.workspace?.questions[0]?.draft.length ?? 0)
+const draftButtonLabel = computed(() => (
+  workspaceStore.status === 'saving' ? '저장 중' : '초안 저장'
+))
+const editorStatusLabel = computed(() => (
+  workspaceStore.status === 'saving' ? '저장 중' : '편집 가능'
+))
+
+watch(
+  currentQuestion,
+  (question) => {
+    draftBody.value = question?.draft ?? ''
+  },
+  { immediate: true }
+)
 
 function loadCurrentWorkspace() {
   void workspaceStore.loadWorkspace(workspaceId.value)
+}
+
+function saveDraft() {
+  if (!currentQuestion.value) {
+    return
+  }
+
+  void workspaceStore.saveDraft(workspaceId.value, currentQuestion.value.id, draftBody.value)
+}
+
+function createVersion() {
+  if (!currentQuestion.value) {
+    return
+  }
+
+  void workspaceStore.createVersion(
+    workspaceId.value,
+    currentQuestion.value.id,
+    `v${workspaceStore.versions.length + 1}`
+  )
 }
 
 onMounted(loadCurrentWorkspace)
