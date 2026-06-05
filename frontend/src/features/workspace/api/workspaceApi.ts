@@ -99,7 +99,7 @@ interface EssayVersionDto {
   body: string
 }
 
-type WorkspaceHttpClient = Pick<HttpClient, 'get' | 'patch' | 'post'>
+type WorkspaceHttpClient = Pick<HttpClient, 'get' | 'patch' | 'post'> & Partial<Pick<HttpClient, 'delete'>>
 
 export function createWorkspaceApi(httpClient: WorkspaceHttpClient = defaultHttpClient) {
   return {
@@ -169,6 +169,22 @@ export function createWorkspaceApi(httpClient: WorkspaceHttpClient = defaultHttp
     async getReference(referenceId: string): Promise<WorkspaceReference> {
       const response = await httpClient.get<ApiEnvelope<ReferenceDto>>(`/api/references/${referenceId}`)
       return toWorkspaceReference(unwrapApiData(response.data))
+    },
+
+    async updateReference(referenceId: string, payload: CreateReferencePayload): Promise<WorkspaceReference> {
+      const response = await httpClient.patch<ApiEnvelope<ReferenceDto>>(
+        `/api/references/${referenceId}`,
+        payload
+      )
+      return toWorkspaceReference(unwrapApiData(response.data))
+    },
+
+    async deleteReference(referenceId: string): Promise<void> {
+      if (!httpClient.delete) {
+        throw new Error('HTTP delete is not configured')
+      }
+
+      await httpClient.delete<ApiEnvelope<null>>(`/api/references/${referenceId}`)
     }
   }
 }

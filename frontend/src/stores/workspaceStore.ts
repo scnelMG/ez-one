@@ -100,6 +100,50 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     }
   }
 
+  async function updateReference(referenceId: string, payload: CreateReferencePayload) {
+    status.value = 'saving'
+    errorMessage.value = ''
+
+    try {
+      const reference = await workspaceApi.updateReference(referenceId, payload)
+      activeReference.value = reference
+      if (workspace.value) {
+        workspace.value = {
+          ...workspace.value,
+          references: workspace.value.references.map((item) => (
+            item.id === reference.id ? reference : item
+          ))
+        }
+      }
+      status.value = 'ready'
+    } catch {
+      status.value = 'error'
+      errorMessage.value = '참고자료를 수정하지 못했습니다.'
+    }
+  }
+
+  async function deleteReference(referenceId: string) {
+    status.value = 'saving'
+    errorMessage.value = ''
+
+    try {
+      await workspaceApi.deleteReference(referenceId)
+      if (workspace.value) {
+        workspace.value = {
+          ...workspace.value,
+          references: workspace.value.references.filter((item) => item.id !== referenceId)
+        }
+      }
+      if (activeReference.value?.id === referenceId) {
+        activeReference.value = null
+      }
+      status.value = 'ready'
+    } catch {
+      status.value = 'error'
+      errorMessage.value = '참고자료를 삭제하지 못했습니다.'
+    }
+  }
+
   return {
     status,
     workspace,
@@ -110,6 +154,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     saveDraft,
     createVersion,
     createReference,
-    openReference
+    openReference,
+    updateReference,
+    deleteReference
   }
 })

@@ -144,17 +144,39 @@
             <p class="section-kicker">{{ workspaceStore.activeReference.type }}</p>
             <h2>{{ workspaceStore.activeReference.title }}</h2>
           </div>
+          <button
+            class="text-button danger"
+            type="button"
+            data-testid="delete-reference"
+            @click="deleteReference"
+          >
+            삭제
+          </button>
         </div>
-        <p>{{ workspaceStore.activeReference.body }}</p>
-        <a
-          v-if="workspaceStore.activeReference.url"
-          class="text-button"
-          :href="workspaceStore.activeReference.url"
-          target="_blank"
-          rel="noreferrer"
-        >
-          원문 열기
-        </a>
+        <form class="reference-edit-form" @submit.prevent="saveReference">
+          <label>
+            유형
+            <select v-model="referenceForm.referenceType" data-testid="reference-type">
+              <option v-for="type in referenceTypes" :key="type" :value="type">{{ type }}</option>
+            </select>
+          </label>
+          <label>
+            제목
+            <input v-model="referenceForm.title" data-testid="reference-title" required />
+          </label>
+          <label>
+            본문
+            <textarea v-model="referenceForm.body" data-testid="reference-body" required />
+          </label>
+          <p class="reference-body-preview">{{ referenceForm.body }}</p>
+          <label>
+            URL
+            <input v-model="referenceForm.url" data-testid="reference-url" />
+          </label>
+          <button class="primary-button" type="button" data-testid="save-reference" @click="saveReference">
+            참고자료 저장
+          </button>
+        </form>
       </section>
 
       <section class="wire-panel" aria-label="버전 목록">
@@ -177,16 +199,24 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppLayout from '@/shared/AppLayout.vue'
 import StatePanel from '@/shared/StatePanel.vue'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import type { ReferenceType } from '@/features/workspace/api/workspaceApi'
 
 const route = useRoute()
 const workspaceStore = useWorkspaceStore()
 const workspaceId = computed(() => String(route.params.workspaceId ?? '102'))
 const draftBody = ref('')
+const referenceTypes: ReferenceType[] = ['FREE_MEMO', 'JD', 'NEWS', 'DART', 'TALENT_PROFILE', 'PROMPT', 'CUSTOM']
+const referenceForm = reactive({
+  referenceType: 'FREE_MEMO' as ReferenceType,
+  title: '',
+  body: '',
+  url: ''
+})
 const currentQuestion = computed(() => workspaceStore.workspace?.questions[0] ?? null)
 const headerDescription = computed(() => {
   const workspace = workspaceStore.workspace
@@ -208,6 +238,17 @@ watch(
   currentQuestion,
   (question) => {
     draftBody.value = question?.draft ?? ''
+  },
+  { immediate: true }
+)
+
+watch(
+  () => workspaceStore.activeReference,
+  (reference) => {
+    referenceForm.referenceType = reference?.type ?? 'FREE_MEMO'
+    referenceForm.title = reference?.title ?? ''
+    referenceForm.body = reference?.body ?? ''
+    referenceForm.url = reference?.url ?? ''
   },
   { immediate: true }
 )
@@ -248,6 +289,32 @@ function createReference() {
 
 function openReference(referenceId: string) {
   void workspaceStore.openReference(referenceId)
+}
+
+function saveReference() {
+  const reference = workspaceStore.activeReference
+
+  if (!reference) {
+    return
+  }
+
+  void workspaceStore.updateReference(reference.id, {
+    boardName: referenceForm.referenceType,
+    referenceType: referenceForm.referenceType,
+    title: referenceForm.title,
+    body: referenceForm.body,
+    url: referenceForm.url
+  })
+}
+
+function deleteReference() {
+  const reference = workspaceStore.activeReference
+
+  if (!reference) {
+    return
+  }
+
+  void workspaceStore.deleteReference(reference.id)
 }
 
 onMounted(loadCurrentWorkspace)
