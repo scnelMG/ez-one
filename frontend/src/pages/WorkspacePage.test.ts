@@ -230,6 +230,38 @@ describe('WorkspacePage', () => {
     expect(wrapper.text()).toContain('Hackathon Grand Prize')
   })
 
+  it('WS-009/WS-011/WS-012: shows character count and auto-saves after 2 idle seconds', async () => {
+    const router = makeRouter()
+    router.push('/workspaces/102')
+    await router.isReady()
+
+    const wrapper = mount(WorkspacePage, {
+      global: {
+        plugins: [createPinia(), router]
+      }
+    })
+
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="draft-character-count"]').text()).toContain('7 / 1000')
+
+    vi.useFakeTimers()
+    await wrapper.get('[data-testid="draft-editor"]').setValue('auto saved body')
+
+    expect(wrapper.get('[data-testid="auto-save-status"]').attributes('data-save-state')).toBe('waiting')
+    expect(mocks.saveDraft).not.toHaveBeenCalledWith('102', '103', 'auto saved body')
+
+    await vi.advanceTimersByTimeAsync(1999)
+    expect(mocks.saveDraft).not.toHaveBeenCalledWith('102', '103', 'auto saved body')
+
+    await vi.advanceTimersByTimeAsync(1)
+    expect(mocks.saveDraft).toHaveBeenCalledWith('102', '103', 'auto saved body')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="auto-save-status"]').attributes('data-save-state')).toBe('saved')
+    vi.useRealTimers()
+  })
+
   it('REF-001/REF-002: creates a reference and opens reference detail', async () => {
     const router = makeRouter()
     router.push('/workspaces/102')
