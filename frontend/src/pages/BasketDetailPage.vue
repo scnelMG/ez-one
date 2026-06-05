@@ -63,58 +63,46 @@
   </AppLayout>
 </template>
 
-<script setup lang="ts">
-import { computed, onMounted, reactive, watch } from 'vue'
-import { useRoute } from 'vue-router'
-import AppLayout from '@/shared/AppLayout.vue'
-import StatePanel from '@/shared/StatePanel.vue'
-import { useBasketStore } from '@/stores/basketStore'
-
-const route = useRoute()
-const basketStore = useBasketStore()
-const basketJobId = computed(() => String(route.params.basketJobId ?? ''))
+<script setup>import AppLayout from '@/shared/AppLayout.vue';
+import StatePanel from '@/shared/StatePanel.vue';
+import { computed, onMounted, reactive, watch } from 'vue';
+import { useRoute } from 'vue-router';
+import { useBasketStore } from '@/stores/basketStore';
+const route = useRoute();
+const basketStore = useBasketStore();
+const basketJobId = computed(() => String(route.params.basketJobId ?? ''));
 const form = reactive({
-  companyName: '',
-  positionTitle: '',
-  deadlineLabel: '',
-  sourceUrl: '',
-  applicationMemo: ''
-})
-
-watch(
-  () => basketStore.activeJob,
-  (job) => {
-    form.companyName = job?.companyName ?? ''
-    form.positionTitle = job?.positionTitle ?? ''
-    form.deadlineLabel = job?.deadlineLabel ?? ''
-    form.sourceUrl = job?.sourceUrl ?? ''
-    form.applicationMemo = job?.applicationMemo ?? ''
-  },
-  { immediate: true }
-)
-
+    companyName: '',
+    positionTitle: '',
+    deadlineLabel: '',
+    sourceUrl: '',
+    applicationMemo: ''
+});
+watch(() => basketStore.activeJob, (job) => {
+    form.companyName = job?.companyName ?? '';
+    form.positionTitle = job?.positionTitle ?? '';
+    form.deadlineLabel = job?.deadlineLabel ?? '';
+    form.sourceUrl = job?.sourceUrl ?? '';
+    form.applicationMemo = job?.applicationMemo ?? '';
+}, { immediate: true });
 function loadJob() {
-  if (!basketJobId.value) {
-    return
-  }
-
-  void basketStore.loadJob(basketJobId.value)
+    if (!basketJobId.value) {
+        return;
+    }
+    void basketStore.loadJob(basketJobId.value);
 }
-
 function saveJob() {
-  if (!basketJobId.value) {
-    return
-  }
-
-  void basketStore.updateJob(basketJobId.value, {
-    companyName: form.companyName,
-    positionTitle: form.positionTitle,
-    deadlineLabel: form.deadlineLabel,
-    sourceUrl: form.sourceUrl,
-    applicationMemo: form.applicationMemo
-  })
+    if (!basketJobId.value) {
+        return;
+    }
+    void basketStore.updateJob(basketJobId.value, {
+        companyName: form.companyName,
+        positionTitle: form.positionTitle,
+        deadlineLabel: form.deadlineLabel,
+        sourceUrl: form.sourceUrl,
+        applicationMemo: form.applicationMemo
+    });
 }
-
-onMounted(loadJob)
-watch(basketJobId, loadJob)
+onMounted(loadJob);
+watch(basketJobId, loadJob);
 </script>

@@ -95,43 +95,34 @@
   </AppLayout>
 </template>
 
-<script setup lang="ts">
-import { computed, onMounted } from 'vue'
-import { useNotionStore } from '@/stores/notionStore'
-import AppLayout from '@/shared/AppLayout.vue'
-import StatePanel from '@/shared/StatePanel.vue'
-
-const notionStore = useNotionStore()
-
+<script setup>import AppLayout from '@/shared/AppLayout.vue';
+import StatePanel from '@/shared/StatePanel.vue';
+import { computed, onMounted } from 'vue';
+import { useNotionStore } from '@/stores/notionStore';
+const notionStore = useNotionStore();
 const connectionLabel = computed(() => {
-  if (notionStore.status === 'saving') {
-    return '연결 중'
-  }
-
-  if (notionStore.connection?.connected) {
-    return '연결됨'
-  }
-
-  return '연결하기'
-})
-const syncScopeLabel = computed(() => notionStore.connection?.syncScope ?? 'JOB_ONLY')
+    if (notionStore.status === 'saving') {
+        return '연결 중';
+    }
+    if (notionStore.connection?.connected) {
+        return '연결됨';
+    }
+    return '연결하기';
+});
+const syncScopeLabel = computed(() => notionStore.connection?.syncScope ?? 'JOB_ONLY');
 const syncToggleLabel = computed(() => {
-  if (notionStore.status === 'saving') {
-    return '저장 중'
-  }
-
-  return notionStore.connection?.syncEnabled ? '동기화 끄기' : '동기화 켜기'
-})
-
+    if (notionStore.status === 'saving') {
+        return '저장 중';
+    }
+    return notionStore.connection?.syncEnabled ? '동기화 끄기' : '동기화 켜기';
+});
 onMounted(() => {
-  void notionStore.loadNotionSettings()
-})
-
+    void notionStore.loadNotionSettings();
+});
 function toggleSync() {
-  void notionStore.updateJobOnlySync(!notionStore.connection?.syncEnabled)
+    void notionStore.updateJobOnlySync(!notionStore.connection?.syncEnabled);
 }
-
 function connectNotion() {
-  void notionStore.connectNotion()
+    void notionStore.connectNotion();
 }
 </script>

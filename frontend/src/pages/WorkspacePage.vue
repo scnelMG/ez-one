@@ -306,308 +306,247 @@
   </AppLayout>
 </template>
 
-<script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
-import AppLayout from '@/shared/AppLayout.vue'
-import StatePanel from '@/shared/StatePanel.vue'
-import { useWorkspaceStore } from '@/stores/workspaceStore'
-import type { ReferenceType } from '@/features/workspace/api/workspaceApi'
-
-const route = useRoute()
-const workspaceStore = useWorkspaceStore()
-const workspaceId = computed(() => String(route.params.workspaceId ?? '102'))
-const draftBody = ref('')
-const autoSaveStatus = ref<'idle' | 'waiting' | 'saving' | 'saved' | 'failed'>('idle')
-let autoSaveTimer: ReturnType<typeof setTimeout> | null = null
-let suppressNextDraftWatch = false
-const referenceTypes: ReferenceType[] = ['FREE_MEMO', 'JD', 'NEWS', 'DART', 'TALENT_PROFILE', 'PROMPT', 'CUSTOM']
-const newReferenceType = ref<ReferenceType>('FREE_MEMO')
+<script setup>import AppLayout from '@/shared/AppLayout.vue';
+import StatePanel from '@/shared/StatePanel.vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
+import { useWorkspaceStore } from '@/stores/workspaceStore';
+const route = useRoute();
+const workspaceStore = useWorkspaceStore();
+const workspaceId = computed(() => String(route.params.workspaceId ?? '102'));
+const draftBody = ref('');
+const autoSaveStatus = ref('idle');
+let autoSaveTimer = null;
+let suppressNextDraftWatch = false;
+const referenceTypes = ['FREE_MEMO', 'JD', 'NEWS', 'DART', 'TALENT_PROFILE', 'PROMPT', 'CUSTOM'];
+const newReferenceType = ref('FREE_MEMO');
 const referenceForm = reactive({
-  referenceType: 'FREE_MEMO' as ReferenceType,
-  title: '',
-  body: '',
-  url: ''
-})
-const newQuestion = reactive({
-  prompt: '',
-  maxLength: 1000
-})
-const editQuestion = reactive({
-  prompt: '',
-  maxLength: 1000
-})
-const currentQuestion = computed(() => workspaceStore.workspace?.questions[0] ?? null)
-const profilePanelItems = computed(() => [
-  ...sectionItems('projects', '프로젝트'),
-  ...sectionItems('awards', '수상')
-])
-const headerDescription = computed(() => {
-  const workspace = workspaceStore.workspace
-
-  if (!workspace) {
-    return `워크스페이스 ${workspaceId.value}에서 자기소개서, 참고자료, 서류 기본값을 함께 관리합니다.`
-  }
-
-  return `${workspace.companyName} ${workspace.positionTitle} 지원을 위한 작성 공간입니다.`
-})
-const draftButtonLabel = computed(() => (
-  workspaceStore.status === 'saving' ? '저장 중' : '초안 저장'
-))
-const editorStatusLabel = computed(() => {
-  if (autoSaveStatus.value === 'waiting') {
-    return '자동 저장 대기'
-  }
-
-  if (autoSaveStatus.value === 'saving' || workspaceStore.status === 'saving') {
-    return '저장중'
-  }
-
-  if (autoSaveStatus.value === 'saved') {
-    return '저장완료'
-  }
-
-  if (autoSaveStatus.value === 'failed') {
-    return '저장실패'
-  }
-
-  return '편집 가능'
-})
-
-watch(
-  currentQuestion,
-  (question) => {
-    suppressNextDraftWatch = true
-    draftBody.value = question?.draft ?? ''
-    autoSaveStatus.value = 'idle'
-    editQuestion.prompt = question?.prompt ?? ''
-    editQuestion.maxLength = question?.maxLength ?? 1000
-  },
-  { immediate: true }
-)
-
-watch(draftBody, () => {
-  if (suppressNextDraftWatch) {
-    suppressNextDraftWatch = false
-    return
-  }
-
-  scheduleAutoSave()
-})
-
-watch(
-  () => workspaceStore.activeReference,
-  (reference) => {
-    referenceForm.referenceType = reference?.type ?? 'FREE_MEMO'
-    referenceForm.title = reference?.title ?? ''
-    referenceForm.body = reference?.body ?? ''
-    referenceForm.url = reference?.url ?? ''
-  },
-  { immediate: true }
-)
-
-function loadCurrentWorkspace() {
-  void workspaceStore.loadWorkspace(workspaceId.value)
-}
-
-function sectionItems(sectionName: string, label: string) {
-  const section = workspaceStore.defaults?.sections[sectionName]
-
-  if (!Array.isArray(section)) {
-    return []
-  }
-
-  return section.map((item, index) => {
-    const record = isRecord(item) ? item : {}
-    return {
-      label,
-      title: String(record.title ?? record.name ?? `${label} ${index + 1}`),
-      summary: record.summary ? String(record.summary) : ''
-    }
-  })
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
-
-async function saveDraft() {
-  if (!currentQuestion.value) {
-    return
-  }
-
-  clearAutoSaveTimer()
-  autoSaveStatus.value = 'saving'
-  await workspaceStore.saveDraft(workspaceId.value, currentQuestion.value.id, draftBody.value)
-  autoSaveStatus.value = workspaceStore.status === 'error' ? 'failed' : 'saved'
-}
-
-function scheduleAutoSave() {
-  if (!currentQuestion.value) {
-    return
-  }
-
-  clearAutoSaveTimer()
-  autoSaveStatus.value = 'waiting'
-  autoSaveTimer = setTimeout(() => {
-    void saveDraft()
-  }, 2000)
-}
-
-function clearAutoSaveTimer() {
-  if (!autoSaveTimer) {
-    return
-  }
-
-  clearTimeout(autoSaveTimer)
-  autoSaveTimer = null
-}
-
-function createQuestion() {
-  if (!newQuestion.prompt.trim()) {
-    return
-  }
-
-  void workspaceStore.createQuestion(workspaceId.value, {
-    prompt: newQuestion.prompt,
-    maxLength: newQuestion.maxLength
-  })
-  newQuestion.prompt = ''
-  newQuestion.maxLength = 1000
-}
-
-function updateQuestion() {
-  if (!currentQuestion.value || !editQuestion.prompt.trim()) {
-    return
-  }
-
-  void workspaceStore.updateQuestion(workspaceId.value, currentQuestion.value.id, {
-    prompt: editQuestion.prompt,
-    maxLength: editQuestion.maxLength
-  })
-}
-
-function deleteQuestion() {
-  if (!currentQuestion.value) {
-    return
-  }
-
-  void workspaceStore.deleteQuestion(workspaceId.value, currentQuestion.value.id)
-}
-
-function createVersion() {
-  if (!currentQuestion.value) {
-    return
-  }
-
-  void workspaceStore.createVersion(
-    workspaceId.value,
-    currentQuestion.value.id,
-    `v${workspaceStore.versions.length + 1}`
-  )
-}
-
-function compareVersions() {
-  const [left, right] = workspaceStore.versions
-
-  if (!left || !right) {
-    return
-  }
-
-  void workspaceStore.compareVersions(workspaceId.value, left.id, right.id)
-}
-
-function createReference() {
-  const template = referenceTemplate(newReferenceType.value)
-  void workspaceStore.createReference(workspaceId.value, {
-    boardName: referenceBoardName(newReferenceType.value),
-    referenceType: newReferenceType.value,
-    title: template.title,
-    body: template.body,
+    referenceType: 'FREE_MEMO',
+    title: '',
+    body: '',
     url: ''
-  })
-}
-
-function openReference(referenceId: string) {
-  void workspaceStore.openReference(referenceId)
-}
-
-function saveReference() {
-  const reference = workspaceStore.activeReference
-
-  if (!reference) {
-    return
-  }
-
-  void workspaceStore.updateReference(reference.id, {
-    boardName: referenceForm.referenceType,
-    referenceType: referenceForm.referenceType,
-    title: referenceForm.title,
-    body: referenceForm.body,
-    url: referenceForm.url
-  })
-}
-
-function deleteReference() {
-  const reference = workspaceStore.activeReference
-
-  if (!reference) {
-    return
-  }
-
-  void workspaceStore.deleteReference(reference.id)
-}
-
-onMounted(loadCurrentWorkspace)
-watch(workspaceId, loadCurrentWorkspace)
-onBeforeUnmount(clearAutoSaveTimer)
-
-function referenceTypeLabel(type: ReferenceType) {
-  return {
-    FREE_MEMO: '자유 메모',
-    JD: 'JD',
-    NEWS: '기사',
-    DART: 'DART',
-    TALENT_PROFILE: '인재상',
-    PROMPT: '합격 자소서',
-    CUSTOM: '작성 팁'
-  }[type]
-}
-
-function referenceTemplate(type: ReferenceType) {
-  return {
-    FREE_MEMO: {
-      title: '새 참고 메모',
-      body: '직접 입력한 참고자료입니다.'
-    },
-    JD: {
-      title: 'JD 참고자료',
-      body: '공고의 주요 업무, 자격요건, 우대사항을 직접 정리하세요.'
-    },
-    NEWS: {
-      title: '기사 참고자료',
-      body: '회사 또는 산업 관련 기사에서 자기소개서에 활용할 근거를 정리하세요.'
-    },
-    DART: {
-      title: 'DART 참고자료',
-      body: '사업보고서, 재무, 리스크, 성장 전략 등 DART에서 확인한 내용을 정리하세요.'
-    },
-    TALENT_PROFILE: {
-      title: '인재상 참고자료',
-      body: '공고와 회사에 맞는 인재상 키워드를 직접 정리하세요.'
-    },
-    PROMPT: {
-      title: '합격 자소서 참고자료',
-      body: '합격 자소서에서 참고할 구조, 표현, 근거 전개 방식을 정리하세요.'
-    },
-    CUSTOM: {
-      title: '작성 팁 참고자료',
-      body: '문항별 작성 팁, 강조할 경험, 피해야 할 표현을 정리하세요.'
+});
+const newQuestion = reactive({
+    prompt: '',
+    maxLength: 1000
+});
+const editQuestion = reactive({
+    prompt: '',
+    maxLength: 1000
+});
+const currentQuestion = computed(() => workspaceStore.workspace?.questions[0] ?? null);
+const profilePanelItems = computed(() => [
+    ...sectionItems('projects', '프로젝트'),
+    ...sectionItems('awards', '수상')
+]);
+const headerDescription = computed(() => {
+    const workspace = workspaceStore.workspace;
+    if (!workspace) {
+        return `워크스페이스 ${workspaceId.value}에서 자기소개서, 참고자료, 서류 기본값을 함께 관리합니다.`;
     }
-  }[type]
+    return `${workspace.companyName} ${workspace.positionTitle} 지원을 위한 작성 공간입니다.`;
+});
+const draftButtonLabel = computed(() => (workspaceStore.status === 'saving' ? '저장 중' : '초안 저장'));
+const editorStatusLabel = computed(() => {
+    if (autoSaveStatus.value === 'waiting') {
+        return '자동 저장 대기';
+    }
+    if (autoSaveStatus.value === 'saving' || workspaceStore.status === 'saving') {
+        return '저장중';
+    }
+    if (autoSaveStatus.value === 'saved') {
+        return '저장완료';
+    }
+    if (autoSaveStatus.value === 'failed') {
+        return '저장실패';
+    }
+    return '편집 가능';
+});
+watch(currentQuestion, (question) => {
+    suppressNextDraftWatch = true;
+    draftBody.value = question?.draft ?? '';
+    autoSaveStatus.value = 'idle';
+    editQuestion.prompt = question?.prompt ?? '';
+    editQuestion.maxLength = question?.maxLength ?? 1000;
+}, { immediate: true });
+watch(draftBody, () => {
+    if (suppressNextDraftWatch) {
+        suppressNextDraftWatch = false;
+        return;
+    }
+    scheduleAutoSave();
+});
+watch(() => workspaceStore.activeReference, (reference) => {
+    referenceForm.referenceType = reference?.type ?? 'FREE_MEMO';
+    referenceForm.title = reference?.title ?? '';
+    referenceForm.body = reference?.body ?? '';
+    referenceForm.url = reference?.url ?? '';
+}, { immediate: true });
+function loadCurrentWorkspace() {
+    void workspaceStore.loadWorkspace(workspaceId.value);
 }
-
-function referenceBoardName(type: ReferenceType) {
-  return type === 'FREE_MEMO' ? 'MEMO' : type
+function sectionItems(sectionName, label) {
+    const section = workspaceStore.defaults?.sections[sectionName];
+    if (!Array.isArray(section)) {
+        return [];
+    }
+    return section.map((item, index) => {
+        const record = isRecord(item) ? item : {};
+        return {
+            label,
+            title: String(record.title ?? record.name ?? `${label} ${index + 1}`),
+            summary: record.summary ? String(record.summary) : ''
+        };
+    });
+}
+function isRecord(value) {
+    return typeof value === 'object' && value !== null;
+}
+async function saveDraft() {
+    if (!currentQuestion.value) {
+        return;
+    }
+    clearAutoSaveTimer();
+    autoSaveStatus.value = 'saving';
+    await workspaceStore.saveDraft(workspaceId.value, currentQuestion.value.id, draftBody.value);
+    autoSaveStatus.value = workspaceStore.status === 'error' ? 'failed' : 'saved';
+}
+function scheduleAutoSave() {
+    if (!currentQuestion.value) {
+        return;
+    }
+    clearAutoSaveTimer();
+    autoSaveStatus.value = 'waiting';
+    autoSaveTimer = setTimeout(() => {
+        void saveDraft();
+    }, 2000);
+}
+function clearAutoSaveTimer() {
+    if (!autoSaveTimer) {
+        return;
+    }
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = null;
+}
+function createQuestion() {
+    if (!newQuestion.prompt.trim()) {
+        return;
+    }
+    void workspaceStore.createQuestion(workspaceId.value, {
+        prompt: newQuestion.prompt,
+        maxLength: newQuestion.maxLength
+    });
+    newQuestion.prompt = '';
+    newQuestion.maxLength = 1000;
+}
+function updateQuestion() {
+    if (!currentQuestion.value || !editQuestion.prompt.trim()) {
+        return;
+    }
+    void workspaceStore.updateQuestion(workspaceId.value, currentQuestion.value.id, {
+        prompt: editQuestion.prompt,
+        maxLength: editQuestion.maxLength
+    });
+}
+function deleteQuestion() {
+    if (!currentQuestion.value) {
+        return;
+    }
+    void workspaceStore.deleteQuestion(workspaceId.value, currentQuestion.value.id);
+}
+function createVersion() {
+    if (!currentQuestion.value) {
+        return;
+    }
+    void workspaceStore.createVersion(workspaceId.value, currentQuestion.value.id, `v${workspaceStore.versions.length + 1}`);
+}
+function compareVersions() {
+    const [left, right] = workspaceStore.versions;
+    if (!left || !right) {
+        return;
+    }
+    void workspaceStore.compareVersions(workspaceId.value, left.id, right.id);
+}
+function createReference() {
+    const template = referenceTemplate(newReferenceType.value);
+    void workspaceStore.createReference(workspaceId.value, {
+        boardName: referenceBoardName(newReferenceType.value),
+        referenceType: newReferenceType.value,
+        title: template.title,
+        body: template.body,
+        url: ''
+    });
+}
+function openReference(referenceId) {
+    void workspaceStore.openReference(referenceId);
+}
+function saveReference() {
+    const reference = workspaceStore.activeReference;
+    if (!reference) {
+        return;
+    }
+    void workspaceStore.updateReference(reference.id, {
+        boardName: referenceForm.referenceType,
+        referenceType: referenceForm.referenceType,
+        title: referenceForm.title,
+        body: referenceForm.body,
+        url: referenceForm.url
+    });
+}
+function deleteReference() {
+    const reference = workspaceStore.activeReference;
+    if (!reference) {
+        return;
+    }
+    void workspaceStore.deleteReference(reference.id);
+}
+onMounted(loadCurrentWorkspace);
+watch(workspaceId, loadCurrentWorkspace);
+onBeforeUnmount(clearAutoSaveTimer);
+function referenceTypeLabel(type) {
+    return {
+        FREE_MEMO: '자유 메모',
+        JD: 'JD',
+        NEWS: '기사',
+        DART: 'DART',
+        TALENT_PROFILE: '인재상',
+        PROMPT: '합격 자소서',
+        CUSTOM: '작성 팁'
+    }[type];
+}
+function referenceTemplate(type) {
+    return {
+        FREE_MEMO: {
+            title: '새 참고 메모',
+            body: '직접 입력한 참고자료입니다.'
+        },
+        JD: {
+            title: 'JD 참고자료',
+            body: '공고의 주요 업무, 자격요건, 우대사항을 직접 정리하세요.'
+        },
+        NEWS: {
+            title: '기사 참고자료',
+            body: '회사 또는 산업 관련 기사에서 자기소개서에 활용할 근거를 정리하세요.'
+        },
+        DART: {
+            title: 'DART 참고자료',
+            body: '사업보고서, 재무, 리스크, 성장 전략 등 DART에서 확인한 내용을 정리하세요.'
+        },
+        TALENT_PROFILE: {
+            title: '인재상 참고자료',
+            body: '공고와 회사에 맞는 인재상 키워드를 직접 정리하세요.'
+        },
+        PROMPT: {
+            title: '합격 자소서 참고자료',
+            body: '합격 자소서에서 참고할 구조, 표현, 근거 전개 방식을 정리하세요.'
+        },
+        CUSTOM: {
+            title: '작성 팁 참고자료',
+            body: '문항별 작성 팁, 강조할 경험, 피해야 할 표현을 정리하세요.'
+        }
+    }[type];
+}
+function referenceBoardName(type) {
+    return type === 'FREE_MEMO' ? 'MEMO' : type;
 }
 </script>

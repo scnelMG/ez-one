@@ -253,133 +253,106 @@
   </AppLayout>
 </template>
 
-<script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { documentProfileCards } from '@/data/shellContent'
-import type { DocumentCustomField } from '@/features/document-profile/api/documentProfileApi'
-import {
-  useDocumentProfileStore,
-  type BasicInfoSection,
-  type ReusableProfileItem,
-  type ReusableProfileSectionType
-} from '@/stores/documentProfileStore'
-import AppLayout from '@/shared/AppLayout.vue'
-import ShellCard from '@/shared/ShellCard.vue'
-import StatePanel from '@/shared/StatePanel.vue'
-
-const documentProfileStore = useDocumentProfileStore()
-const activeSection = ref('basicInfo')
-const basicInfoForm = reactive<BasicInfoSection>({
-  nameKo: '',
-  nameEn: '',
-  nameHanja: '',
-  email: '',
-  phone: '',
-  gender: '',
-  birthdate: '',
-  address: '',
-  addressDetail: ''
-})
-const reusableSectionForm = reactive<ReusableProfileItem>({
-  title: '',
-  summary: ''
-})
-const reusableSectionItems = ref<ReusableProfileItem[]>([])
-const editingReusableItemIndex = ref(0)
+<script setup>import AppLayout from '@/shared/AppLayout.vue';
+import StatePanel from '@/shared/StatePanel.vue';
+import ShellCard from '@/shared/ShellCard.vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { documentProfileCards } from '@/data/shellContent';
+import { useDocumentProfileStore } from '@/stores/documentProfileStore';
+const documentProfileStore = useDocumentProfileStore();
+const activeSection = ref('basicInfo');
+const basicInfoForm = reactive({
+    nameKo: '',
+    nameEn: '',
+    nameHanja: '',
+    email: '',
+    phone: '',
+    gender: '',
+    birthdate: '',
+    address: '',
+    addressDetail: ''
+});
+const reusableSectionForm = reactive({
+    title: '',
+    summary: ''
+});
+const reusableSectionItems = ref([]);
+const editingReusableItemIndex = ref(0);
 const customFieldForm = reactive({
-  label: '',
-  fieldType: 'TEXT',
-  value: ''
-})
-const editingCustomFieldId = ref('')
+    label: '',
+    fieldType: 'TEXT',
+    value: ''
+});
+const editingCustomFieldId = ref('');
 const sections = [
-  { id: 'basicInfo', label: '기본 정보' },
-  { id: 'education', label: '학력' },
-  { id: 'career', label: '경력' },
-  { id: 'courses', label: '과목' },
-  { id: 'projects', label: '프로젝트' },
-  { id: 'certificates', label: '자격/어학' },
-  { id: 'awards', label: '수상/활동' },
-  { id: 'essays', label: '자소서' },
-  { id: 'military', label: '병역/보훈' },
-  { id: 'internships', label: '인턴/알바' },
-  { id: 'trainings', label: '교육이수' },
-  { id: 'activities', label: '학내외 활동' },
-  { id: 'custom', label: '커스텀' }
-]
-
-const saveButtonLabel = computed(() => (
-  documentProfileStore.status === 'saving' ? '저장 중' : '저장'
-))
-const activeSectionConfig = computed(() => sections.find((section) => section.id === activeSection.value) ?? sections[0])
-const activeSectionLabel = computed(() => activeSectionConfig.value.label)
+    { id: 'basicInfo', label: '기본 정보' },
+    { id: 'education', label: '학력' },
+    { id: 'career', label: '경력' },
+    { id: 'courses', label: '과목' },
+    { id: 'projects', label: '프로젝트' },
+    { id: 'certificates', label: '자격/어학' },
+    { id: 'awards', label: '수상/활동' },
+    { id: 'essays', label: '자소서' },
+    { id: 'military', label: '병역/보훈' },
+    { id: 'internships', label: '인턴/알바' },
+    { id: 'trainings', label: '교육이수' },
+    { id: 'activities', label: '학내외 활동' },
+    { id: 'custom', label: '커스텀' }
+];
+const saveButtonLabel = computed(() => (documentProfileStore.status === 'saving' ? '저장 중' : '저장'));
+const activeSectionConfig = computed(() => sections.find((section) => section.id === activeSection.value) ?? sections[0]);
+const activeSectionLabel = computed(() => activeSectionConfig.value.label);
 const activeSectionTitle = computed(() => {
-  if (activeSection.value === 'projects') {
-    return '프로젝트'
-  }
-
-  if (activeSection.value === 'courses') {
-    return '과목 정보'
-  }
-
-  if (activeSection.value === 'essays') {
-    return '사전 작성 자소서'
-  }
-
-  if (activeSection.value === 'awards') {
-    return '수상/활동'
-  }
-
-  if (activeSection.value === 'military') {
-    return '병역/장애/보훈'
-  }
-
-  if (activeSection.value === 'internships') {
-    return '인턴/아르바이트/실습'
-  }
-
-  if (activeSection.value === 'trainings') {
-    return '교육이수사항'
-  }
-
-  if (activeSection.value === 'activities') {
-    return '학내외 활동'
-  }
-
-  return '지원서 공통 입력값'
-})
-const reusableSectionTypes: ReusableProfileSectionType[] = [
-  'education',
-  'career',
-  'courses',
-  'projects',
-  'certificates',
-  'awards',
-  'essays',
-  'military',
-  'internships',
-  'trainings',
-  'activities'
-]
-const isReusableSection = computed(() => reusableSectionTypes.includes(activeSection.value as ReusableProfileSectionType))
+    if (activeSection.value === 'projects') {
+        return '프로젝트';
+    }
+    if (activeSection.value === 'courses') {
+        return '과목 정보';
+    }
+    if (activeSection.value === 'essays') {
+        return '사전 작성 자소서';
+    }
+    if (activeSection.value === 'awards') {
+        return '수상/활동';
+    }
+    if (activeSection.value === 'military') {
+        return '병역/장애/보훈';
+    }
+    if (activeSection.value === 'internships') {
+        return '인턴/아르바이트/실습';
+    }
+    if (activeSection.value === 'trainings') {
+        return '교육이수사항';
+    }
+    if (activeSection.value === 'activities') {
+        return '학내외 활동';
+    }
+    return '지원서 공통 입력값';
+});
+const reusableSectionTypes = [
+    'education',
+    'career',
+    'courses',
+    'projects',
+    'certificates',
+    'awards',
+    'essays',
+    'military',
+    'internships',
+    'trainings',
+    'activities'
+];
+const isReusableSection = computed(() => reusableSectionTypes.includes(activeSection.value));
 const statusLabel = computed(() => {
-  if (documentProfileStore.status === 'saving') {
-    return '저장 중'
-  }
-
-  return documentProfileStore.profile ? '불러옴' : '대기'
-})
-
-watch(
-  () => documentProfileStore.basicInfo,
-  (basicInfo) => {
-    Object.assign(basicInfoForm, basicInfo)
-  },
-  { immediate: true }
-)
-
-watch(
-  [
+    if (documentProfileStore.status === 'saving') {
+        return '저장 중';
+    }
+    return documentProfileStore.profile ? '불러옴' : '대기';
+});
+watch(() => documentProfileStore.basicInfo, (basicInfo) => {
+    Object.assign(basicInfoForm, basicInfo);
+}, { immediate: true });
+watch([
     activeSection,
     () => documentProfileStore.education,
     () => documentProfileStore.career,
@@ -392,136 +365,110 @@ watch(
     () => documentProfileStore.internships,
     () => documentProfileStore.trainings,
     () => documentProfileStore.activities
-  ],
-  syncReusableSectionForm,
-  { immediate: true }
-)
-
+], syncReusableSectionForm, { immediate: true });
 onMounted(() => {
-  void documentProfileStore.loadDocumentProfile()
-})
-
+    void documentProfileStore.loadDocumentProfile();
+});
 function saveBasicInfo() {
-  void documentProfileStore.saveBasicInfo({ ...basicInfoForm })
+    void documentProfileStore.saveBasicInfo({ ...basicInfoForm });
 }
-
 function saveReusableSection() {
-  if (!isReusableSection.value) {
-    return
-  }
-  const sectionType = activeReusableSectionType()
-
-  if (hasReusableFormContent() || reusableSectionItems.value[editingReusableItemIndex.value]) {
-    saveReusableItem()
-  }
-  void documentProfileStore.saveReusableSection(sectionType, reusableSectionItems.value.map(copyReusableItem))
+    if (!isReusableSection.value) {
+        return;
+    }
+    const sectionType = activeReusableSectionType();
+    if (hasReusableFormContent() || reusableSectionItems.value[editingReusableItemIndex.value]) {
+        saveReusableItem();
+    }
+    void documentProfileStore.saveReusableSection(sectionType, reusableSectionItems.value.map(copyReusableItem));
 }
-
 function addReusableItem() {
-  editingReusableItemIndex.value = reusableSectionItems.value.length
-  reusableSectionForm.title = ''
-  reusableSectionForm.summary = ''
+    editingReusableItemIndex.value = reusableSectionItems.value.length;
+    reusableSectionForm.title = '';
+    reusableSectionForm.summary = '';
 }
-
-function editReusableItem(index: number) {
-  const item = reusableSectionItems.value[index]
-  if (!item) {
-    return
-  }
-
-  editingReusableItemIndex.value = index
-  reusableSectionForm.title = item.title
-  reusableSectionForm.summary = item.summary
+function editReusableItem(index) {
+    const item = reusableSectionItems.value[index];
+    if (!item) {
+        return;
+    }
+    editingReusableItemIndex.value = index;
+    reusableSectionForm.title = item.title;
+    reusableSectionForm.summary = item.summary;
 }
-
 function saveReusableItem() {
-  if (!hasReusableFormContent() && !reusableSectionItems.value[editingReusableItemIndex.value]) {
-    return
-  }
-
-  const item = {
-    title: reusableSectionForm.title,
-    summary: reusableSectionForm.summary
-  }
-  const nextItems = reusableSectionItems.value.map(copyReusableItem)
-  nextItems[editingReusableItemIndex.value] = item
-  reusableSectionItems.value = nextItems
+    if (!hasReusableFormContent() && !reusableSectionItems.value[editingReusableItemIndex.value]) {
+        return;
+    }
+    const item = {
+        title: reusableSectionForm.title,
+        summary: reusableSectionForm.summary
+    };
+    const nextItems = reusableSectionItems.value.map(copyReusableItem);
+    nextItems[editingReusableItemIndex.value] = item;
+    reusableSectionItems.value = nextItems;
 }
-
-function deleteReusableItem(index: number) {
-  reusableSectionItems.value = reusableSectionItems.value.filter((_, itemIndex) => itemIndex !== index)
-  const nextIndex = Math.min(index, reusableSectionItems.value.length - 1)
-  if (nextIndex >= 0) {
-    editReusableItem(nextIndex)
-    return
-  }
-
-  editingReusableItemIndex.value = 0
-  reusableSectionForm.title = ''
-  reusableSectionForm.summary = ''
+function deleteReusableItem(index) {
+    reusableSectionItems.value = reusableSectionItems.value.filter((_, itemIndex) => itemIndex !== index);
+    const nextIndex = Math.min(index, reusableSectionItems.value.length - 1);
+    if (nextIndex >= 0) {
+        editReusableItem(nextIndex);
+        return;
+    }
+    editingReusableItemIndex.value = 0;
+    reusableSectionForm.title = '';
+    reusableSectionForm.summary = '';
 }
-
 function syncReusableSectionForm() {
-  const source = reusableSectionItemsFor(activeReusableSectionType())
-  reusableSectionItems.value = source.map(copyReusableItem)
-  editingReusableItemIndex.value = 0
-  const firstItem = reusableSectionItems.value[0]
-
-  reusableSectionForm.title = firstItem?.title ?? ''
-  reusableSectionForm.summary = firstItem?.summary ?? ''
+    const source = reusableSectionItemsFor(activeReusableSectionType());
+    reusableSectionItems.value = source.map(copyReusableItem);
+    editingReusableItemIndex.value = 0;
+    const firstItem = reusableSectionItems.value[0];
+    reusableSectionForm.title = firstItem?.title ?? '';
+    reusableSectionForm.summary = firstItem?.summary ?? '';
 }
-
-function copyReusableItem(item: ReusableProfileItem): ReusableProfileItem {
-  return {
-    title: item.title,
-    summary: item.summary
-  }
+function copyReusableItem(item) {
+    return {
+        title: item.title,
+        summary: item.summary
+    };
 }
-
-function activeReusableSectionType(): ReusableProfileSectionType {
-  return isReusableSection.value ? activeSection.value as ReusableProfileSectionType : 'projects'
+function activeReusableSectionType() {
+    return isReusableSection.value ? activeSection.value : 'projects';
 }
-
-function reusableSectionItemsFor(sectionType: ReusableProfileSectionType): ReusableProfileItem[] {
-  return documentProfileStore[sectionType]
+function reusableSectionItemsFor(sectionType) {
+    return documentProfileStore[sectionType];
 }
-
 function hasReusableFormContent() {
-  return reusableSectionForm.title.trim() !== '' || reusableSectionForm.summary.trim() !== ''
+    return reusableSectionForm.title.trim() !== '' || reusableSectionForm.summary.trim() !== '';
 }
-
-function editCustomField(field: DocumentCustomField) {
-  editingCustomFieldId.value = field.id
-  customFieldForm.label = field.label
-  customFieldForm.fieldType = field.fieldType
-  customFieldForm.value = field.value
+function editCustomField(field) {
+    editingCustomFieldId.value = field.id;
+    customFieldForm.label = field.label;
+    customFieldForm.fieldType = field.fieldType;
+    customFieldForm.value = field.value;
 }
-
 function createCustomField() {
-  void documentProfileStore.createCustomField({ ...customFieldForm })
-  resetCustomFieldForm()
+    void documentProfileStore.createCustomField({ ...customFieldForm });
+    resetCustomFieldForm();
 }
-
 function updateCustomField() {
-  if (!editingCustomFieldId.value) {
-    return
-  }
-
-  void documentProfileStore.updateCustomField(editingCustomFieldId.value, { ...customFieldForm })
-  resetCustomFieldForm()
+    if (!editingCustomFieldId.value) {
+        return;
+    }
+    void documentProfileStore.updateCustomField(editingCustomFieldId.value, { ...customFieldForm });
+    resetCustomFieldForm();
 }
-
-function deleteCustomField(fieldId: string) {
-  void documentProfileStore.deleteCustomField(fieldId)
-  if (editingCustomFieldId.value === fieldId) {
-    resetCustomFieldForm()
-  }
+function deleteCustomField(fieldId) {
+    void documentProfileStore.deleteCustomField(fieldId);
+    if (editingCustomFieldId.value === fieldId) {
+        resetCustomFieldForm();
+    }
 }
-
 function resetCustomFieldForm() {
-  editingCustomFieldId.value = ''
-  customFieldForm.label = ''
-  customFieldForm.fieldType = 'TEXT'
-  customFieldForm.value = ''
+    editingCustomFieldId.value = '';
+    customFieldForm.label = '';
+    customFieldForm.fieldType = 'TEXT';
+    customFieldForm.value = '';
 }
 </script>

@@ -181,7 +181,7 @@ BasketJobTable.vue
 ApplicationStatusBadge.vue
 basketStore
 workspaceStore
-basketApi.ts
+basketApi.js
 ```
 
 ## Extension Rules
@@ -203,7 +203,7 @@ basketApi.ts
 | DB table/column | `snake_case` | `basket_jobs` |
 | Vue component | `PascalCase.vue` | `BasketJobTable.vue` |
 | Pinia store | `<domain>Store` | `basketStore` |
-| API client | `<domain>Api.ts` | `basketApi.ts` |
+| API client | `<domain>Api.js` | `basketApi.js` |
 
 Preferred terms: `basketJob`, `job`, `workspace`, `documentProfile`, `referenceMaterial`, `essayDraft`, `essayVersion`, `syncScope`.
 

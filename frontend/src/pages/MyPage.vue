@@ -83,96 +83,83 @@
   </AppLayout>
 </template>
 
-<script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
-import { authApi } from '@/features/auth/api/authApi'
-import { getCurrentUser, saveCurrentUser } from '@/features/auth/session/authSession'
-import { useProfileStore } from '@/stores/profileStore'
-import AppLayout from '@/shared/AppLayout.vue'
-import PageHeader from '@/shared/PageHeader.vue'
-
-const profileStore = useProfileStore()
-const currentUser = ref(getCurrentUser())
-const nickname = ref(currentUser.value?.nickname || currentUser.value?.name || '')
-const saving = ref(false)
-const statusMessage = ref('')
-const preferenceStatusMessage = ref('')
+<script setup>import AppLayout from '@/shared/AppLayout.vue';
+import PageHeader from '@/shared/PageHeader.vue';
+import { onMounted, reactive, ref } from 'vue';
+import { authApi } from '@/features/auth/api/authApi';
+import { getCurrentUser, saveCurrentUser } from '@/features/auth/session/authSession';
+import { useProfileStore } from '@/stores/profileStore';
+const profileStore = useProfileStore();
+const currentUser = ref(getCurrentUser());
+const nickname = ref(currentUser.value?.nickname || currentUser.value?.name || '');
+const saving = ref(false);
+const statusMessage = ref('');
+const preferenceStatusMessage = ref('');
 const profileForm = reactive({
-  desiredRoles: '',
-  companyTypes: '',
-  industries: '',
-  regions: '',
-  skills: '',
-  ssafy: 'false'
-})
-
+    desiredRoles: '',
+    companyTypes: '',
+    industries: '',
+    regions: '',
+    skills: '',
+    ssafy: 'false'
+});
 onMounted(async () => {
-  await profileStore.loadProfile()
-
-  if (profileStore.profile) {
-    syncProfileForm()
-  }
-})
-
+    await profileStore.loadProfile();
+    if (profileStore.profile) {
+        syncProfileForm();
+    }
+});
 async function saveProfile() {
-  const nextNickname = nickname.value.trim()
-
-  if (!nextNickname) {
-    statusMessage.value = '닉네임을 입력해 주세요.'
-    return
-  }
-
-  saving.value = true
-  statusMessage.value = ''
-
-  try {
-    const updatedUser = await authApi.updateCurrentUser({ nickname: nextNickname })
-    currentUser.value = updatedUser
-    nickname.value = updatedUser.nickname
-    saveCurrentUser(updatedUser)
-    statusMessage.value = '저장되었습니다.'
-  } catch {
-    statusMessage.value = '저장하지 못했습니다. 잠시 후 다시 시도해 주세요.'
-  } finally {
-    saving.value = false
-  }
+    const nextNickname = nickname.value.trim();
+    if (!nextNickname) {
+        statusMessage.value = '닉네임을 입력해 주세요.';
+        return;
+    }
+    saving.value = true;
+    statusMessage.value = '';
+    try {
+        const updatedUser = await authApi.updateCurrentUser({ nickname: nextNickname });
+        currentUser.value = updatedUser;
+        nickname.value = updatedUser.nickname;
+        saveCurrentUser(updatedUser);
+        statusMessage.value = '저장되었습니다.';
+    }
+    catch {
+        statusMessage.value = '저장하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+    }
+    finally {
+        saving.value = false;
+    }
 }
-
 async function savePreferences() {
-  await profileStore.saveProfile({
-    desiredRoles: splitCsv(profileForm.desiredRoles),
-    companyTypes: splitCsv(profileForm.companyTypes),
-    industries: splitCsv(profileForm.industries),
-    regions: splitCsv(profileForm.regions),
-    skills: splitCsv(profileForm.skills),
-    ssafy: profileForm.ssafy === 'true'
-  })
-
-  if (profileStore.status === 'ready' && profileStore.profile) {
-    syncProfileForm()
-    preferenceStatusMessage.value = '선호 정보가 저장되었습니다.'
-    return
-  }
-
-  preferenceStatusMessage.value = profileStore.errorMessage || '선호 정보를 저장하지 못했습니다.'
+    await profileStore.saveProfile({
+        desiredRoles: splitCsv(profileForm.desiredRoles),
+        companyTypes: splitCsv(profileForm.companyTypes),
+        industries: splitCsv(profileForm.industries),
+        regions: splitCsv(profileForm.regions),
+        skills: splitCsv(profileForm.skills),
+        ssafy: profileForm.ssafy === 'true'
+    });
+    if (profileStore.status === 'ready' && profileStore.profile) {
+        syncProfileForm();
+        preferenceStatusMessage.value = '선호 정보가 저장되었습니다.';
+        return;
+    }
+    preferenceStatusMessage.value = profileStore.errorMessage || '선호 정보를 저장하지 못했습니다.';
 }
-
 function syncProfileForm() {
-  const profile = profileStore.profile
-
-  if (!profile) {
-    return
-  }
-
-  profileForm.desiredRoles = profile.desiredRoles.join(', ')
-  profileForm.companyTypes = profile.companyTypes.join(', ')
-  profileForm.industries = profile.industries.join(', ')
-  profileForm.regions = profile.regions.join(', ')
-  profileForm.skills = profile.skills.join(', ')
-  profileForm.ssafy = String(profile.ssafy)
+    const profile = profileStore.profile;
+    if (!profile) {
+        return;
+    }
+    profileForm.desiredRoles = profile.desiredRoles.join(', ');
+    profileForm.companyTypes = profile.companyTypes.join(', ');
+    profileForm.industries = profile.industries.join(', ');
+    profileForm.regions = profile.regions.join(', ');
+    profileForm.skills = profile.skills.join(', ');
+    profileForm.ssafy = String(profile.ssafy);
 }
-
-function splitCsv(value: string) {
-  return value.split(',').map((item) => item.trim()).filter(Boolean)
+function splitCsv(value) {
+    return value.split(',').map((item) => item.trim()).filter(Boolean);
 }
 </script>

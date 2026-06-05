@@ -10,12 +10,26 @@
   </article>
 </template>
 
-<script setup lang="ts">
-defineProps<{
-  kicker: string
-  title: string
-  body: string
-  status: string
-  meta?: string
-}>()
+<script setup>defineProps({
+  kicker: {
+    type: String,
+    required: true
+  },
+  status: {
+    type: String,
+    required: true
+  },
+  title: {
+    type: String,
+    required: true
+  },
+  body: {
+    type: String,
+    required: true
+  },
+  meta: {
+    type: String,
+    default: ''
+  }
+});
 </script>

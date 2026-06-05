@@ -104,84 +104,69 @@
   </AppLayout>
 </template>
 
-<script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { useProfileStore } from '@/stores/profileStore'
-import AppLayout from '@/shared/AppLayout.vue'
-import StatePanel from '@/shared/StatePanel.vue'
-
-const router = useRouter()
-const profileStore = useProfileStore()
+<script setup>import AppLayout from '@/shared/AppLayout.vue';
+import StatePanel from '@/shared/StatePanel.vue';
+import { computed, onMounted, reactive, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useProfileStore } from '@/stores/profileStore';
+const router = useRouter();
+const profileStore = useProfileStore();
 const form = reactive({
-  desiredRoles: ['Backend Developer'],
-  companyTypes: ['Startup'],
-  skills: ['Java', 'Spring Boot'],
-  ssafy: false
-})
-const regionInput = ref('Seoul')
-const industryInput = ref('Commerce')
-const roleOptions = ['Backend Developer', 'Server Developer', 'Platform Engineer']
-const companyTypeOptions = ['Large Enterprise', 'Startup', 'Public']
-const skillOptions = ['Java', 'Spring Boot', 'MyBatis', 'MySQL']
-
-const statusLabel = computed(() => {
-  if (profileStore.status === 'saving') {
-    return '저장 중'
-  }
-
-  return profileStore.profile?.completed ? '저장됨' : '첫 로그인'
-})
-const saveButtonLabel = computed(() => (
-  profileStore.status === 'saving' ? '저장 중' : '저장하고 시작'
-))
-
-onMounted(() => {
-  void profileStore.loadProfile()
-})
-
-function toggleListValue(values: string[], value: string) {
-  const index = values.indexOf(value)
-
-  if (index >= 0) {
-    values.splice(index, 1)
-    return
-  }
-
-  values.push(value)
-}
-
-async function saveOnboarding() {
-  await profileStore.saveProfile({
-    desiredRoles: form.desiredRoles,
-    companyTypes: form.companyTypes,
-    industries: splitCsv(industryInput.value),
-    regions: splitCsv(regionInput.value),
-    skills: form.skills,
-    ssafy: form.ssafy
-  })
-
-  if (profileStore.status === 'ready') {
-    await router.push('/main')
-  }
-}
-
-async function skipOnboarding() {
-  await profileStore.saveProfile({
-    desiredRoles: [],
-    companyTypes: [],
-    industries: [],
-    regions: [],
-    skills: [],
+    desiredRoles: ['Backend Developer'],
+    companyTypes: ['Startup'],
+    skills: ['Java', 'Spring Boot'],
     ssafy: false
-  })
-
-  if (profileStore.status === 'ready') {
-    await router.push('/main')
-  }
+});
+const regionInput = ref('Seoul');
+const industryInput = ref('Commerce');
+const roleOptions = ['Backend Developer', 'Server Developer', 'Platform Engineer'];
+const companyTypeOptions = ['Large Enterprise', 'Startup', 'Public'];
+const skillOptions = ['Java', 'Spring Boot', 'MyBatis', 'MySQL'];
+const statusLabel = computed(() => {
+    if (profileStore.status === 'saving') {
+        return '저장 중';
+    }
+    return profileStore.profile?.completed ? '저장됨' : '첫 로그인';
+});
+const saveButtonLabel = computed(() => (profileStore.status === 'saving' ? '저장 중' : '저장하고 시작'));
+onMounted(() => {
+    void profileStore.loadProfile();
+});
+function toggleListValue(values, value) {
+    const index = values.indexOf(value);
+    if (index >= 0) {
+        values.splice(index, 1);
+        return;
+    }
+    values.push(value);
 }
-
-function splitCsv(value: string) {
-  return value.split(',').map((item) => item.trim()).filter(Boolean)
+async function saveOnboarding() {
+    await profileStore.saveProfile({
+        desiredRoles: form.desiredRoles,
+        companyTypes: form.companyTypes,
+        industries: splitCsv(industryInput.value),
+        regions: splitCsv(regionInput.value),
+        skills: form.skills,
+        ssafy: form.ssafy
+    });
+    if (profileStore.status === 'ready') {
+        await router.push('/main');
+    }
+}
+async function skipOnboarding() {
+    await profileStore.saveProfile({
+        desiredRoles: [],
+        companyTypes: [],
+        industries: [],
+        regions: [],
+        skills: [],
+        ssafy: false
+    });
+    if (profileStore.status === 'ready') {
+        await router.push('/main');
+    }
+}
+function splitCsv(value) {
+    return value.split(',').map((item) => item.trim()).filter(Boolean);
 }
 </script>

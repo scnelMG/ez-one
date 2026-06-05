@@ -70,21 +70,16 @@
   </AppLayout>
 </template>
 
-<script setup lang="ts">
-import { onMounted } from 'vue'
-import { RouterLink } from 'vue-router'
-import { useRecommendationStore } from '@/stores/recommendationStore'
-import AppLayout from '@/shared/AppLayout.vue'
-import PageHeader from '@/shared/PageHeader.vue'
-import StatePanel from '@/shared/StatePanel.vue'
-
-const recommendationStore = useRecommendationStore()
-
+<script setup>import AppLayout from '@/shared/AppLayout.vue';
+import StatePanel from '@/shared/StatePanel.vue';
+import PageHeader from '@/shared/PageHeader.vue';
+import { onMounted } from 'vue';
+import { useRecommendationStore } from '@/stores/recommendationStore';
+const recommendationStore = useRecommendationStore();
 onMounted(() => {
-  void recommendationStore.loadRecommendations()
-})
-
-function saveRecommendation(recommendationId: string) {
-  void recommendationStore.saveRecommendation(recommendationId)
+    void recommendationStore.loadRecommendations();
+});
+function saveRecommendation(recommendationId) {
+    void recommendationStore.saveRecommendation(recommendationId);
 }
 </script>
