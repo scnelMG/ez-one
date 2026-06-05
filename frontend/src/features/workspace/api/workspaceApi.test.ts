@@ -132,4 +132,63 @@ describe('workspaceApi', () => {
       }
     ])
   })
+
+  it('REF-001/REF-002: creates and opens a reference material', async () => {
+    const get = vi.fn().mockResolvedValue({
+      data: {
+        success: true,
+        data: {
+          id: 701,
+          boardName: 'MEMO',
+          referenceType: 'FREE_MEMO',
+          title: '면접 메모',
+          body: '직접 입력한 참고자료입니다.',
+          url: 'https://example.com/reference'
+        },
+        error: null
+      }
+    })
+    const post = vi.fn().mockResolvedValue({
+      data: {
+        success: true,
+        data: {
+          id: 701,
+          boardName: 'MEMO',
+          referenceType: 'FREE_MEMO',
+          title: '면접 메모',
+          body: '직접 입력한 참고자료입니다.',
+          url: 'https://example.com/reference'
+        },
+        error: null
+      }
+    })
+
+    const api = createWorkspaceApi({ get, patch: vi.fn(), post })
+    const created = await api.createReference('102', {
+      boardName: 'MEMO',
+      referenceType: 'FREE_MEMO',
+      title: '면접 메모',
+      body: '직접 입력한 참고자료입니다.',
+      url: 'https://example.com/reference'
+    })
+    const opened = await api.getReference('701')
+
+    expect(post).toHaveBeenCalledWith('/api/workspaces/102/references', {
+      boardName: 'MEMO',
+      referenceType: 'FREE_MEMO',
+      title: '면접 메모',
+      body: '직접 입력한 참고자료입니다.',
+      url: 'https://example.com/reference'
+    })
+    expect(get).toHaveBeenCalledWith('/api/references/701')
+    expect(created).toEqual({
+      id: '701',
+      boardName: 'MEMO',
+      type: 'FREE_MEMO',
+      title: '면접 메모',
+      body: '직접 입력한 참고자료입니다.',
+      url: 'https://example.com/reference'
+    })
+    expect(opened).toEqual(created)
+  })
 })
