@@ -70,9 +70,10 @@ public class ExtensionJobController {
             .map(question -> new CreateEssayQuestionRequest(question.prompt(), question.maxLengthOrDefault()))
             .toList();
 
+        Long userId = CurrentUserSupport.currentUserId();
         List<BasketJobResponse> savedJobs = roles.stream()
             .map(role -> workspaceService.createBasketJobWithQuestions(
-                CurrentUserSupport.currentUserId(),
+                userId,
                 new CreateBasketJobRequest(
                     request.companyName(),
                     role,
@@ -83,7 +84,7 @@ public class ExtensionJobController {
                 questions
             ))
             .toList();
-        savedJobs.forEach(notionIntegrationService::recordJobOnlySync);
+        savedJobs.forEach(savedJob -> notionIntegrationService.recordJobOnlySync(userId, savedJob));
         return ApiResponse.success(savedJobs);
     }
 

@@ -6,6 +6,8 @@ import com.ezone.backend.dto.notion.NotionConnectionResponse;
 import com.ezone.backend.dto.notion.SyncLogResponse;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import org.springframework.stereotype.Service;
 
@@ -13,58 +15,66 @@ import org.springframework.stereotype.Service;
 public class NotionIntegrationService {
 
     private final AtomicLong syncLogId = new AtomicLong(1);
-    private NotionConnectionResponse connection = new NotionConnectionResponse(
+    private final Map<Long, NotionConnectionResponse> connections = new ConcurrentHashMap<>();
+    private final Map<Long, List<SyncLogResponse>> syncLogs = new ConcurrentHashMap<>();
+
+    private static final NotionConnectionResponse DEFAULT_CONNECTION = new NotionConnectionResponse(
         false,
         null,
         false,
         SyncScope.JOB_ONLY
     );
-    private final List<SyncLogResponse> syncLogs = new ArrayList<>();
 
-    public NotionConnectionResponse getConnection() {
+    public NotionConnectionResponse getConnection(Long userId) {
+        return connections.getOrDefault(userId, DEFAULT_CONNECTION);
+    }
+
+    public NotionConnectionResponse connect(Long userId) {
+        NotionConnectionResponse connection = new NotionConnectionResponse(true, "notion@example.com", true, SyncScope.JOB_ONLY);
+        connections.put(userId, connection);
+        addLog(userId, "NOTION_CONNECTION", "SUCCESS", "Notion connection saved.");
         return connection;
     }
 
-    public NotionConnectionResponse connect() {
-        connection = new NotionConnectionResponse(true, "notion@example.com", true, SyncScope.JOB_ONLY);
-        addLog("NOTION_CONNECTION", "SUCCESS", "Notion connection saved.");
-        return connection;
+    public void disconnect(Long userId) {
+        connections.put(userId, DEFAULT_CONNECTION);
     }
 
-    public void disconnect() {
-        connection = new NotionConnectionResponse(false, null, false, SyncScope.JOB_ONLY);
-    }
-
-    public NotionConnectionResponse updateSettings(boolean syncEnabled, SyncScope syncScope) {
+    public NotionConnectionResponse updateSettings(Long userId, boolean syncEnabled, SyncScope syncScope) {
+        NotionConnectionResponse currentConnection = getConnection(userId);
         SyncScope p1Scope = syncScope == SyncScope.JOB_ONLY ? syncScope : SyncScope.JOB_ONLY;
-        connection = new NotionConnectionResponse(
-            connection.connected(),
-            connection.notionAccountEmail(),
+        NotionConnectionResponse connection = new NotionConnectionResponse(
+            currentConnection.connected(),
+            currentConnection.notionAccountEmail(),
             syncEnabled,
             p1Scope
         );
+        connections.put(userId, connection);
         return connection;
     }
 
-    public List<SyncLogResponse> listSyncLogs() {
-        List<SyncLogResponse> latestFirst = new ArrayList<>(syncLogs);
+    public List<SyncLogResponse> listSyncLogs(Long userId) {
+        List<SyncLogResponse> latestFirst = new ArrayList<>(syncLogs.getOrDefault(userId, List.of()));
         java.util.Collections.reverse(latestFirst);
         return latestFirst;
     }
 
-    public void recordJobOnlySync(BasketJobResponse basketJob) {
+    public void recordJobOnlySync(Long userId, BasketJobResponse basketJob) {
+        NotionConnectionResponse connection = getConnection(userId);
         if (!connection.connected() || !connection.syncEnabled() || connection.syncScope() != SyncScope.JOB_ONLY) {
             return;
         }
 
         addLog(
+            userId,
             "BASKET_JOB",
             "SUCCESS",
             "JOB_ONLY synced: %s / %s".formatted(basketJob.companyName(), basketJob.positionTitle())
         );
     }
 
-    private void addLog(String target, String status, String message) {
-        syncLogs.add(new SyncLogResponse(syncLogId.getAndIncrement(), target, status, message));
+    private void addLog(Long userId, String target, String status, String message) {
+        syncLogs.computeIfAbsent(userId, ignored -> new ArrayList<>())
+            .add(new SyncLogResponse(syncLogId.getAndIncrement(), target, status, message));
     }
 }
