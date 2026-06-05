@@ -547,6 +547,25 @@ class P1ApiContractTest {
     }
 
     @Test
+    void extensionSaveRejectsInvalidSourceUrl() throws Exception {
+        mockMvc.perform(post("/api/extension/jobs/save")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "companyName": "Invalid Extension Company",
+                      "positionTitle": "Server Engineer",
+                      "deadlineLabel": "D-6",
+                      "sourceUrl": "not-a-url",
+                      "selectedRoles": ["Backend"],
+                      "essayQuestions": []
+                    }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
     void extensionSaveAcceptsActualJasoseolBranchPayload() throws Exception {
         mockMvc.perform(post("/api/extension/jobs/save")
                 .contentType(MediaType.APPLICATION_JSON)
