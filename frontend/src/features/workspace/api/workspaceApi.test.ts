@@ -39,7 +39,7 @@ describe('workspaceApi', () => {
       }
     })
 
-    const api = createWorkspaceApi({ get })
+    const api = createWorkspaceApi({ get, patch: vi.fn(), post: vi.fn() })
     const workspace = await api.getWorkspace('102')
 
     expect(get).toHaveBeenCalledWith('/api/workspaces/102')
@@ -49,5 +49,87 @@ describe('workspaceApi', () => {
       questions: [expect.objectContaining({ id: '103' })],
       references: [expect.objectContaining({ id: '104', type: 'JD' })]
     })
+  })
+
+  it('WS-002: saves a draft through the workspace draft endpoint', async () => {
+    const patch = vi.fn().mockResolvedValue({
+      data: {
+        success: true,
+        data: {
+          id: 103,
+          prompt: '지원 동기를 작성하세요.',
+          draft: '저장된 초안입니다.',
+          maxLength: 1000,
+          currentLength: 9
+        },
+        error: null
+      }
+    })
+
+    const api = createWorkspaceApi({ get: vi.fn(), patch, post: vi.fn() })
+    const question = await api.saveDraft('102', '103', '저장된 초안입니다.')
+
+    expect(patch).toHaveBeenCalledWith('/api/workspaces/102/drafts/103', {
+      body: '저장된 초안입니다.'
+    })
+    expect(question).toEqual({
+      id: '103',
+      prompt: '지원 동기를 작성하세요.',
+      draft: '저장된 초안입니다.',
+      maxLength: 1000
+    })
+  })
+
+  it('WS-004: creates and lists essay versions', async () => {
+    const get = vi.fn().mockResolvedValue({
+      data: {
+        success: true,
+        data: [
+          {
+            id: 501,
+            questionId: 103,
+            versionName: 'v1',
+            body: '초안 v1'
+          }
+        ],
+        error: null
+      }
+    })
+    const post = vi.fn().mockResolvedValue({
+      data: {
+        success: true,
+        data: {
+          id: 502,
+          questionId: 103,
+          versionName: 'v2',
+          body: '초안 v2'
+        },
+        error: null
+      }
+    })
+
+    const api = createWorkspaceApi({ get, patch: vi.fn(), post })
+    const created = await api.createVersion('102', '103', 'v2')
+    const versions = await api.listVersions('102')
+
+    expect(post).toHaveBeenCalledWith('/api/workspaces/102/versions', {
+      questionId: 103,
+      versionName: 'v2'
+    })
+    expect(get).toHaveBeenCalledWith('/api/workspaces/102/versions')
+    expect(created).toEqual({
+      id: '502',
+      questionId: '103',
+      versionName: 'v2',
+      body: '초안 v2'
+    })
+    expect(versions).toEqual([
+      {
+        id: '501',
+        questionId: '103',
+        versionName: 'v1',
+        body: '초안 v1'
+      }
+    ])
   })
 })
