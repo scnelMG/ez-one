@@ -22,9 +22,11 @@ export interface ReusableProfileItem {
 export type ReusableProfileSectionType =
   | 'education'
   | 'career'
+  | 'courses'
   | 'projects'
   | 'certificates'
   | 'awards'
+  | 'essays'
   | 'military'
   | 'internships'
   | 'trainings'
@@ -47,9 +49,11 @@ export const useDocumentProfileStore = defineStore('documentProfile', () => {
   })
   const education = computed<ReusableProfileItem[]>(() => normalizeReusableItems(profile.value?.sections.education))
   const career = computed<ReusableProfileItem[]>(() => normalizeReusableItems(profile.value?.sections.career))
+  const courses = computed<ReusableProfileItem[]>(() => normalizeReusableItems(profile.value?.sections.courses))
   const projects = computed<ReusableProfileItem[]>(() => normalizeReusableItems(profile.value?.sections.projects))
   const certificates = computed<ReusableProfileItem[]>(() => normalizeReusableItems(profile.value?.sections.certificates))
   const awards = computed<ReusableProfileItem[]>(() => normalizeReusableItems(profile.value?.sections.awards))
+  const essays = computed<ReusableProfileItem[]>(() => normalizeReusableItems(profile.value?.sections.essays))
   const military = computed<ReusableProfileItem[]>(() => normalizeReusableItems(profile.value?.sections.military))
   const internships = computed<ReusableProfileItem[]>(() => normalizeReusableItems(profile.value?.sections.internships))
   const trainings = computed<ReusableProfileItem[]>(() => normalizeReusableItems(profile.value?.sections.trainings))
@@ -159,9 +163,11 @@ export const useDocumentProfileStore = defineStore('documentProfile', () => {
     basicInfo,
     education,
     career,
+    courses,
     projects,
     certificates,
     awards,
+    essays,
     military,
     internships,
     trainings,
