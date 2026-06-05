@@ -41,6 +41,34 @@ describe('authApi', () => {
         await api.logout('refresh-token');
         expect(post).toHaveBeenCalledWith('/api/auth/logout', { refreshToken: 'refresh-token' });
     });
+    it('AUTH-002: signs up with email credentials and returns issued tokens', async () => {
+        const post = vi.fn().mockResolvedValue({ data: successEnvelope });
+        const api = createAuthApi({ get: vi.fn(), post, patch: vi.fn(), delete: vi.fn() });
+        const response = await api.signup({
+            email: 'local@example.com',
+            password: 'password123!',
+            name: 'Local User'
+        });
+        expect(post).toHaveBeenCalledWith('/api/auth/signup', {
+            email: 'local@example.com',
+            password: 'password123!',
+            name: 'Local User'
+        });
+        expect(response.accessToken).toBe('access-token');
+    });
+    it('AUTH-003: logs in with email credentials and returns issued tokens', async () => {
+        const post = vi.fn().mockResolvedValue({ data: successEnvelope });
+        const api = createAuthApi({ get: vi.fn(), post, patch: vi.fn(), delete: vi.fn() });
+        const response = await api.loginWithEmail({
+            email: 'local@example.com',
+            password: 'password123!'
+        });
+        expect(post).toHaveBeenCalledWith('/api/auth/login', {
+            email: 'local@example.com',
+            password: 'password123!'
+        });
+        expect(response.refreshToken).toBe('refresh-token');
+    });
     it('AUTH-014: updates the current user nickname', async () => {
         const updatedUser = {
             id: 1,
