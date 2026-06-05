@@ -112,7 +112,7 @@ describe('OnboardingPage', () => {
     })
 
     await flushPromises()
-    await wrapper.get('button.ghost-button').trigger('click')
+    await wrapper.get('[data-testid="skip-onboarding"]').trigger('click')
     await flushPromises()
 
     expect(mocks.saveUserProfile).toHaveBeenCalledWith({
