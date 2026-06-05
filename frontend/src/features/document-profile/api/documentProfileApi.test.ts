@@ -21,7 +21,8 @@ describe('documentProfileApi', () => {
               fieldType: 'URL',
               value: 'https://example.com'
             }
-          ]
+          ],
+          lastSavedAt: '2026-06-05T12:00:00Z'
         },
         error: null
       }
@@ -43,6 +44,7 @@ describe('documentProfileApi', () => {
         value: 'https://example.com'
       }
     ])
+    expect(profile.lastSavedAt).toBe('2026-06-05T12:00:00Z')
   })
 
   it('PROFILE-001: saves a section through the backend section endpoint', async () => {
