@@ -32,6 +32,8 @@
 
 | 메서드 | 경로 | 목적 |
 | --- | --- | --- |
+| POST | `/api/auth/signup` | Email/password signup. Rejects duplicate email with `409 CONFLICT`. |
+| POST | `/api/auth/login` | Email/password login. Invalid credentials return `401 UNAUTHORIZED`. |
 | POST | `/api/auth/google` | Google OAuth 로그인 |
 | POST | `/api/auth/refresh` | refresh token으로 access token 재발급 |
 | POST | `/api/auth/logout` | refresh token revoke |

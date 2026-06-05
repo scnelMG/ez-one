@@ -16,6 +16,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -43,7 +45,14 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers("/api/auth/google", "/api/auth/refresh", "/api/auth/logout", "/api/health").permitAll()
+                .requestMatchers(
+                    "/api/auth/signup",
+                    "/api/auth/login",
+                    "/api/auth/google",
+                    "/api/auth/refresh",
+                    "/api/auth/logout",
+                    "/api/health"
+                ).permitAll()
                 .anyRequest().authenticated())
             .exceptionHandling(exception -> exception
                 .authenticationEntryPoint((request, response, authException) ->
@@ -53,6 +62,11 @@ public class SecurityConfig {
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 
     @Bean

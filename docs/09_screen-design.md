@@ -240,7 +240,7 @@ frontend/src/features/document-profile/
 
 | Route | Page | P1 | Entry | Primary API |
 | --- | --- | --- | --- | --- |
-| `/login` | LoginPage | Yes | 비로그인 진입 | `POST /api/auth/google` |
+| `/login` | LoginPage | Yes | 비로그인 진입 | `POST /api/auth/signup`, `POST /api/auth/login`, `POST /api/auth/google` |
 | `/onboarding` | OnboardingPage 또는 modal | Yes | 최초 로그인 | `GET/PUT /api/me/profile` |
 | `/` | MainPage | Yes | 로그인 후 기본 | `GET /api/dashboard/summary`, `GET /api/recommendations/jobs` |
 | `/basket` | BasketPage | Yes | 대시보드 카드, nav | `GET /api/basket/jobs` |
