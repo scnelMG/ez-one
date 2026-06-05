@@ -192,6 +192,43 @@ describe('workspaceApi', () => {
     })
   })
 
+  it('WS-006/WS-007: updates and deletes an essay question', async () => {
+    const patch = vi.fn().mockResolvedValue({
+      data: {
+        success: true,
+        data: {
+          id: 103,
+          prompt: '수정한 문항',
+          draft: '기존 초안',
+          maxLength: 700,
+          currentLength: 5
+        },
+        error: null
+      }
+    })
+    const deleteRequest = vi.fn().mockResolvedValue({
+      data: { success: true, data: null, error: null }
+    })
+    const api = createWorkspaceApi({ get: vi.fn(), patch, post: vi.fn(), delete: deleteRequest })
+
+    await expect(api.updateQuestion('102', '103', {
+      prompt: '수정한 문항',
+      maxLength: 700
+    })).resolves.toEqual({
+      id: '103',
+      prompt: '수정한 문항',
+      draft: '기존 초안',
+      maxLength: 700
+    })
+    await expect(api.deleteQuestion('102', '103')).resolves.toBeUndefined()
+
+    expect(patch).toHaveBeenCalledWith('/api/workspaces/102/questions/103', {
+      prompt: '수정한 문항',
+      maxLength: 700
+    })
+    expect(deleteRequest).toHaveBeenCalledWith('/api/workspaces/102/questions/103')
+  })
+
   it('REF-001/REF-002: creates and opens a reference material', async () => {
     const get = vi.fn().mockResolvedValue({
       data: {

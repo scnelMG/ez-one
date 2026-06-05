@@ -5,6 +5,7 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -147,6 +148,26 @@ class P1ApiContractTest {
         mockMvc.perform(get("/api/integrations/notion"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.syncScope").value("JOB_ONLY"));
+    }
+
+    @Test
+    void workspaceQuestionCanBeUpdatedAndDeleted() throws Exception {
+        mockMvc.perform(patch("/api/workspaces/102/questions/103")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "prompt": "Updated prompt",
+                      "maxLength": 700
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.prompt").value("Updated prompt"))
+            .andExpect(jsonPath("$.data.maxLength").value(700));
+
+        mockMvc.perform(delete("/api/workspaces/102/questions/103"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true));
     }
 
     @Test
