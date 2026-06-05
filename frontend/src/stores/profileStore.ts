@@ -6,6 +6,7 @@ import {
   type UserProfile,
   type UserProfileRequest
 } from '@/features/profile/api/profileApi'
+import { messageFromError } from '@/shared/errorMessage'
 
 export const useProfileStore = defineStore('profile', () => {
   const status = ref<'idle' | 'loading' | 'ready' | 'saving' | 'error'>('idle')
@@ -19,10 +20,10 @@ export const useProfileStore = defineStore('profile', () => {
     try {
       profile.value = await profileApi.getUserProfile()
       status.value = 'ready'
-    } catch {
+    } catch (error) {
       status.value = 'error'
       profile.value = null
-      errorMessage.value = '온보딩 정보를 불러오지 못했습니다.'
+      errorMessage.value = messageFromError(error, '온보딩 정보를 불러오지 못했습니다.')
     }
   }
 
@@ -39,9 +40,9 @@ export const useProfileStore = defineStore('profile', () => {
       }
 
       status.value = 'ready'
-    } catch {
+    } catch (error) {
       status.value = 'error'
-      errorMessage.value = '온보딩 정보를 저장하지 못했습니다.'
+      errorMessage.value = messageFromError(error, '온보딩 정보를 저장하지 못했습니다.')
     }
   }
 

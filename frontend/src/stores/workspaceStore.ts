@@ -10,6 +10,7 @@ import {
   type WorkspaceDetail,
   type WorkspaceReference
 } from '@/features/workspace/api/workspaceApi'
+import { messageFromError } from '@/shared/errorMessage'
 
 export const useWorkspaceStore = defineStore('workspace', () => {
   const status = ref<'idle' | 'loading' | 'ready' | 'saving' | 'error' | 'forbidden' | 'notFound'>('idle')
@@ -30,14 +31,14 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       versions.value = await workspaceApi.listVersions(workspaceId)
       versionComparison.value = null
       status.value = 'ready'
-    } catch {
+    } catch (error) {
       workspace.value = null
       defaults.value = null
       versions.value = []
       versionComparison.value = null
       activeReference.value = null
       status.value = 'error'
-      errorMessage.value = '워크스페이스를 불러오지 못했습니다.'
+      errorMessage.value = messageFromError(error, '워크스페이스를 불러오지 못했습니다.')
     }
   }
 
@@ -56,9 +57,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         }
       }
       status.value = 'ready'
-    } catch {
+    } catch (error) {
       status.value = 'error'
-      errorMessage.value = '초안을 저장하지 못했습니다.'
+      errorMessage.value = messageFromError(error, '초안을 저장하지 못했습니다.')
     }
   }
 
@@ -75,9 +76,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         }
       }
       status.value = 'ready'
-    } catch {
+    } catch (error) {
       status.value = 'error'
-      errorMessage.value = '문항을 추가하지 못했습니다.'
+      errorMessage.value = messageFromError(error, '문항을 추가하지 못했습니다.')
     }
   }
 
@@ -96,9 +97,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         }
       }
       status.value = 'ready'
-    } catch {
+    } catch (error) {
       status.value = 'error'
-      errorMessage.value = '문항을 수정하지 못했습니다.'
+      errorMessage.value = messageFromError(error, '문항을 수정하지 못했습니다.')
     }
   }
 
@@ -116,9 +117,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       }
       versions.value = versions.value.filter((version) => version.questionId !== questionId)
       status.value = 'ready'
-    } catch {
+    } catch (error) {
       status.value = 'error'
-      errorMessage.value = '문항을 삭제하지 못했습니다.'
+      errorMessage.value = messageFromError(error, '문항을 삭제하지 못했습니다.')
     }
   }
 
@@ -130,9 +131,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       const version = await workspaceApi.createVersion(workspaceId, questionId, versionName)
       versions.value = [version, ...versions.value]
       status.value = 'ready'
-    } catch {
+    } catch (error) {
       status.value = 'error'
-      errorMessage.value = '버전을 저장하지 못했습니다.'
+      errorMessage.value = messageFromError(error, '버전을 저장하지 못했습니다.')
     }
   }
 
@@ -143,9 +144,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     try {
       versionComparison.value = await workspaceApi.compareVersions(workspaceId, leftVersionId, rightVersionId)
       status.value = 'ready'
-    } catch {
+    } catch (error) {
       status.value = 'error'
-      errorMessage.value = '버전을 비교하지 못했습니다.'
+      errorMessage.value = messageFromError(error, '버전을 비교하지 못했습니다.')
     }
   }
 
@@ -163,9 +164,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         }
       }
       status.value = 'ready'
-    } catch {
+    } catch (error) {
       status.value = 'error'
-      errorMessage.value = '참고자료를 저장하지 못했습니다.'
+      errorMessage.value = messageFromError(error, '참고자료를 저장하지 못했습니다.')
     }
   }
 
@@ -176,9 +177,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     try {
       activeReference.value = await workspaceApi.getReference(referenceId)
       status.value = 'ready'
-    } catch {
+    } catch (error) {
       status.value = 'error'
-      errorMessage.value = '참고자료를 열지 못했습니다.'
+      errorMessage.value = messageFromError(error, '참고자료를 열지 못했습니다.')
     }
   }
 
@@ -198,9 +199,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         }
       }
       status.value = 'ready'
-    } catch {
+    } catch (error) {
       status.value = 'error'
-      errorMessage.value = '참고자료를 수정하지 못했습니다.'
+      errorMessage.value = messageFromError(error, '참고자료를 수정하지 못했습니다.')
     }
   }
 
@@ -220,9 +221,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         activeReference.value = null
       }
       status.value = 'ready'
-    } catch {
+    } catch (error) {
       status.value = 'error'
-      errorMessage.value = '참고자료를 삭제하지 못했습니다.'
+      errorMessage.value = messageFromError(error, '참고자료를 삭제하지 못했습니다.')
     }
   }
 
