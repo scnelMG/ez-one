@@ -87,7 +87,7 @@
           </section>
 
           <div class="dialog-actions">
-            <button class="ghost-button" type="button" @click="skipOnboarding">건너뛰기</button>
+            <button class="ghost-button" type="button" data-testid="skip-onboarding" @click="skipOnboarding">건너뛰기</button>
             <button
               class="primary-button"
               type="button"
@@ -166,8 +166,19 @@ async function saveOnboarding() {
   }
 }
 
-function skipOnboarding() {
-  void router.push('/main')
+async function skipOnboarding() {
+  await profileStore.saveProfile({
+    desiredRoles: [],
+    companyTypes: [],
+    industries: [],
+    regions: [],
+    skills: [],
+    ssafy: false
+  })
+
+  if (profileStore.status === 'ready') {
+    await router.push('/main')
+  }
 }
 
 function splitCsv(value: string) {
