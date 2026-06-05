@@ -9,6 +9,8 @@
 | ID | 영역 | 케이스 | 기대 결과 |
 | --- | --- | --- | --- |
 | TC-AUTH-001 | Auth | Google 로그인 성공 | JWT 발급 |
+| TC-AUTH-EMAIL-001 | Auth | Email signup duplicate check | New account receives JWT; duplicate email returns 409 |
+| TC-AUTH-EMAIL-002 | Auth | Email/password login | JWT issued for matching credentials; invalid password returns 401 |
 | TC-AUTH-002 | Auth | 미인증 요청 | 401 공통 오류 |
 | TC-AUTH-003 | Auth | 다른 사용자 데이터 접근 | 403 공통 오류 |
 | TC-AUTH-004 | Auth | refresh token 재발급 | 새 access token 발급 |

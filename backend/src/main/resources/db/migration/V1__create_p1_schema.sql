@@ -5,11 +5,9 @@ CREATE TABLE IF NOT EXISTS users (
   nickname VARCHAR(255) NOT NULL,
   provider VARCHAR(32) NOT NULL,
   provider_id VARCHAR(255) NOT NULL,
-  password_hash VARCHAR(255) NULL,
   profile_completed BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  UNIQUE KEY uk_users_email (email),
   UNIQUE KEY uk_users_provider_subject (provider, provider_id)
 );
 

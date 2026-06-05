@@ -90,8 +90,8 @@
 | 사용자 확인 | AI-006 | AI 결과는 자동 확정하지 않고 사용자가 확인 후 활용한다. | AI | P3 | 정책 | 시작 전 |  |  |  |
 | 알림 고도화 | ALERT-001 | 마감, 상태 변경, 추천, 저장 알림은 P2다. P1은 화면 내 상태 표시만 제공한다. | 공고 관리 | P2 | 기능 | 완료 |  |  | P2. 현재 04. 요구사항 정의서 기준으로 추가 |
 | Google 로그인 | AUTH-001 | Google 로그인으로 서비스에 진입하고 사용자별 공고, 워크스페이스, 프로필 데이터를 분리한다. | 인증/계정 | P1 | 기능 | 완료 |  |  | 현재 04. 요구사항 정의서 기준으로 갱신 |
-| 이메일 중복 검증 | AUTH-002 | 회원가입 시 이메일 중복 여부를 검증한다. | 인증/계정 | P1 | 기능 | 시작 전 |  |  |  |
-| 로그인 | AUTH-003 | 사용자는 이메일/비밀번호로 로그인할 수 있다. | 인증/계정 | P1 | 기능 | 시작 전 |  |  |  |
+| 이메일 중복 검증 | AUTH-002 | 회원가입 시 이메일 중복 여부를 검증한다. | 인증/계정 | P1 | 기능 | 완료 |  |  | Verified by signup duplicate email service/controller tests. |
+| 로그인 | AUTH-003 | 사용자는 이메일/비밀번호로 로그인할 수 있다. | 인증/계정 | P1 | 기능 | 완료 |  |  | Verified by email login service/controller/frontend tests. |
 | 구글 로그인 | AUTH-004 | 사용자는 Google OAuth2로 로그인할 수 있다. | 인증/계정 | P1 | 기능 | 완료 |  |  | Verified by googleOAuth/authApi/LoginCallback tests. |
 | 소셜 계정 매핑 | AUTH-005 | 구글 로그인 계정을 서비스 사용자 계정과 매핑한다. | 인증/계정 | P1 | 기능 | 완료 |  |  | Verified by Google subject user mapping contract tests. |
 | JWT 발급 | AUTH-006 | 로그인 성공 시 Access Token과 Refresh Token을 발급한다. | 인증/계정 | P1 | 기능 | 완료 |  |  | Verified by Google login token envelope tests. |
@@ -238,7 +238,7 @@
 | 온보딩 정보 저장 | ONBOARD-003 | 온보딩에서 입력한 희망 직무, 희망 기업, 희망 근무 지역, 보유 스킬 정보는 마이페이지에 저장한다. | 인증/계정 | P1 | 기능 | 완료 |  |  | Onboarding save updates profile preferences and profileCompleted state. |
 | 온보딩 건너뛰기 | ONBOARD-004 | 사용자는 온보딩 입력을 건너뛸 수 있으며, 추후 마이 페이지에서 동일 정보를 작성 또는 수정할 수 있다. | 인증/계정 | P1 | 기능 | 완료 |  |  | Onboarding skip saves empty preferences and marks profileCompleted. |
 | 희망 기업 분류 관리 | ONBOARD-005 | 희망 기업은 기업 분류(대기업, 공공기관, 중견기업, 중소기업, 스타트업, 기타)와 계열/업종(제조, 금융 등)을 구분하여 저장한다. | 인증/계정 | P1 | 데이터 | 완료 |  |  | companyTypes and industries are stored separately. |
-| 로그인/회원가입 | PAGE-001 | 로그인, 회원가입, 구글 로그인 화면을 제공한다. | 화면 | P1 | 화면 | 시작 전 |  |  |  |
+| 로그인/회원가입 | PAGE-001 | 로그인, 회원가입, 구글 로그인 화면을 제공한다. | 화면 | P1 | 화면 | 완료 |  |  | Login page now supports email login, signup, and Google login. |
 | 메인 대시보드 | PAGE-002 | 지원 공고 수, 마감 임박 공고, 추천 공고 요약을 제공한다. | 화면 | P1 | 화면 | 완료 |  |  | Verified by MainPage dashboard tests. |
 | 공고 장바구니 | PAGE-003 | 공고 목록, 검색, 정렬, 필터링, 지원 상태 변경 화면을 제공한다. | 화면 | P1 | 화면 | 완료 |  |  | Verified by BasketPage list/search/sort/filter/status tests. |
 | 공고 추천 | PAGE-004 | 추천 공고 목록, 추천 사유, 저장, 숨김 화면을 제공한다. | 화면 | P2 | 화면 | 시작 전 |  |  |  |
