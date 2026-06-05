@@ -76,4 +76,64 @@ describe('documentProfileApi', () => {
     })
     expect(profile.sections.basicInfo.email).toBe('jiwon@example.com')
   })
+
+  it('PROFILE-001: creates, updates, and deletes custom fields', async () => {
+    const post = vi.fn().mockResolvedValue({
+      data: {
+        success: true,
+        data: {
+          id: 401,
+          label: 'Portfolio',
+          fieldType: 'URL',
+          value: 'https://example.com'
+        },
+        error: null
+      }
+    })
+    const patch = vi.fn().mockResolvedValue({
+      data: {
+        success: true,
+        data: {
+          id: 401,
+          label: 'Portfolio Updated',
+          fieldType: 'URL',
+          value: 'https://example.com/updated'
+        },
+        error: null
+      }
+    })
+    const deleteRequest = vi.fn().mockResolvedValue({
+      data: { success: true, data: null, error: null }
+    })
+    const api = createDocumentProfileApi({ get: vi.fn(), put: vi.fn(), post, patch, delete: deleteRequest })
+
+    await expect(api.createCustomField({
+      label: 'Portfolio',
+      fieldType: 'URL',
+      value: 'https://example.com'
+    })).resolves.toEqual({
+      id: '401',
+      label: 'Portfolio',
+      fieldType: 'URL',
+      value: 'https://example.com'
+    })
+    await expect(api.updateCustomField('401', {
+      label: 'Portfolio Updated',
+      fieldType: 'URL',
+      value: 'https://example.com/updated'
+    })).resolves.toMatchObject({ label: 'Portfolio Updated' })
+    await expect(api.deleteCustomField('401')).resolves.toBeUndefined()
+
+    expect(post).toHaveBeenCalledWith('/api/document-profile/custom-fields', {
+      label: 'Portfolio',
+      fieldType: 'URL',
+      value: 'https://example.com'
+    })
+    expect(patch).toHaveBeenCalledWith('/api/document-profile/custom-fields/401', {
+      label: 'Portfolio Updated',
+      fieldType: 'URL',
+      value: 'https://example.com/updated'
+    })
+    expect(deleteRequest).toHaveBeenCalledWith('/api/document-profile/custom-fields/401')
+  })
 })
