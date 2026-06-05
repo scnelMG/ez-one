@@ -8,11 +8,22 @@
   </section>
 </template>
 
-<script setup lang="ts">
-defineProps<{
-  id: string
-  title: string
-  body: string
-  tone?: 'purple' | 'navy' | 'green'
-}>()
+<script setup>defineProps({
+  id: {
+    type: String,
+    required: true
+  },
+  title: {
+    type: String,
+    required: true
+  },
+  body: {
+    type: String,
+    required: true
+  },
+  tone: {
+    type: String,
+    default: 'purple'
+  }
+});
 </script>

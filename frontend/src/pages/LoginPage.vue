@@ -163,35 +163,24 @@
   </main>
 </template>
 
-<script setup lang="ts">
-import { ref } from 'vue'
-import { useRoute } from 'vue-router'
-import {
-  buildGoogleOAuthUrl,
-  createOAuthState,
-  getGoogleClientId,
-  getGoogleRedirectUri
-} from '@/features/auth/oauth/googleOAuth'
-
-const route = useRoute()
-const errorMessage = ref('')
-
+<script setup>import { ref } from 'vue';
+import { useRoute } from 'vue-router';
+import { buildGoogleOAuthUrl, createOAuthState, getGoogleClientId, getGoogleRedirectUri } from '@/features/auth/oauth/googleOAuth';
+const route = useRoute();
+const errorMessage = ref('');
 function startGoogleLogin() {
-  const clientId = getGoogleClientId()
-
-  if (!clientId) {
-    errorMessage.value = 'Google OAuth 클라이언트 ID가 설정되지 않았습니다. VITE_GOOGLE_CLIENT_ID를 설정해 주세요.'
-    return
-  }
-
-  const redirectTarget = typeof route.query.redirect === 'string' ? route.query.redirect : '/main'
-  const state = createOAuthState(redirectTarget)
-  const url = buildGoogleOAuthUrl({
-    clientId,
-    redirectUri: getGoogleRedirectUri(),
-    state
-  })
-
-  window.location.assign(url.toString())
+    const clientId = getGoogleClientId();
+    if (!clientId) {
+        errorMessage.value = 'Google OAuth 클라이언트 ID가 설정되지 않았습니다. VITE_GOOGLE_CLIENT_ID를 설정해 주세요.';
+        return;
+    }
+    const redirectTarget = typeof route.query.redirect === 'string' ? route.query.redirect : '/main';
+    const state = createOAuthState(redirectTarget);
+    const url = buildGoogleOAuthUrl({
+        clientId,
+        redirectUri: getGoogleRedirectUri(),
+        state
+    });
+    window.location.assign(url.toString());
 }
 </script>

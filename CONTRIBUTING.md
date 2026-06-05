@@ -141,7 +141,7 @@ Reviewers should check:
 | Vue component | `PascalCase.vue` | `BasketJobTable.vue` |
 | Frontend function/variable | `camelCase` | `saveBasketJob` |
 | Pinia store | `<domain>Store` | `basketStore` |
-| API client file | `<domain>Api.ts` | `basketApi.ts` |
+| API client file | `<domain>Api.js` | `basketApi.js` |
 | Test file | Match target name | `BasketJobServiceTest` |
 
 Preferred domain terms:

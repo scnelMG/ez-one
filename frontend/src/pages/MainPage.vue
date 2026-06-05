@@ -152,101 +152,83 @@
   </AppLayout>
 </template>
 
-<script setup lang="ts">
-import { computed, onMounted } from 'vue'
-import { dashboardCards } from '@/data/shellContent'
-import type { DashboardJob } from '@/features/dashboard/api/dashboardApi'
-import { getCurrentUser } from '@/features/auth/session/authSession'
-import AppLayout from '@/shared/AppLayout.vue'
-import StatePanel from '@/shared/StatePanel.vue'
-import { useDashboardStore } from '@/stores/dashboardStore'
-
-const dashboardStore = useDashboardStore()
-const millisecondsPerDay = 24 * 60 * 60 * 1000
-const currentUser = computed(() => getCurrentUser())
+<script setup>import AppLayout from '@/shared/AppLayout.vue';
+import StatePanel from '@/shared/StatePanel.vue';
+import { computed, onMounted } from 'vue';
+import { dashboardCards } from '@/data/shellContent';
+import { getCurrentUser } from '@/features/auth/session/authSession';
+import { useDashboardStore } from '@/stores/dashboardStore';
+const dashboardStore = useDashboardStore();
+const millisecondsPerDay = 24 * 60 * 60 * 1000;
+const currentUser = computed(() => getCurrentUser());
 const memberDisplayName = computed(() => {
-  const user = currentUser.value
-  return user?.nickname?.trim() || user?.name?.trim() || user?.email || 'EZ One 사용자'
-})
-const memberInitial = computed(() => memberDisplayName.value.trim().charAt(0).toUpperCase())
+    const user = currentUser.value;
+    return user?.nickname?.trim() || user?.name?.trim() || user?.email || 'EZ One 사용자';
+});
+const memberInitial = computed(() => memberDisplayName.value.trim().charAt(0).toUpperCase());
 const deadlineSummaryJobs = computed(() => {
-  const today = startOfDay(new Date())
-
-  return [...dashboardStore.todayJobs]
-    .sort((left, right) => {
-      const deadlineDifference = deadlineOffsetDays(left, today) - deadlineOffsetDays(right, today)
-      return deadlineDifference === 0 ? left.workspaceId.localeCompare(right.workspaceId) : deadlineDifference
+    const today = startOfDay(new Date());
+    return [...dashboardStore.todayJobs]
+        .sort((left, right) => {
+        const deadlineDifference = deadlineOffsetDays(left, today) - deadlineOffsetDays(right, today);
+        return deadlineDifference === 0 ? left.workspaceId.localeCompare(right.workspaceId) : deadlineDifference;
     })
-    .slice(0, 5)
-})
+        .slice(0, 5);
+});
 const weeklyDeadlineDays = computed(() => {
-  const today = startOfDay(new Date())
-
-  return Array.from({ length: 7 }, (_, offset) => {
-    const date = addDays(today, offset)
-    const key = toDateKey(date)
-
-    return {
-      key,
-      label: `${date.getMonth() + 1}/${date.getDate()}`,
-      jobs: dashboardStore.todayJobs.filter((job) => toDateKey(parseDeadlineDate(job, today)) === key)
-    }
-  })
-})
-
+    const today = startOfDay(new Date());
+    return Array.from({ length: 7 }, (_, offset) => {
+        const date = addDays(today, offset);
+        const key = toDateKey(date);
+        return {
+            key,
+            label: `${date.getMonth() + 1}/${date.getDate()}`,
+            jobs: dashboardStore.todayJobs.filter((job) => toDateKey(parseDeadlineDate(job, today)) === key)
+        };
+    });
+});
 onMounted(() => {
-  void dashboardStore.loadSummary()
-})
-
-function parseDeadlineDate(job: DashboardJob, today: Date) {
-  const label = job.deadlineLabel
-  const explicit = label.match(/(20\d{2})[-.](\d{1,2})[-.](\d{1,2})/)
-
-  if (explicit) {
-    return startOfDay(new Date(Number(explicit[1]), Number(explicit[2]) - 1, Number(explicit[3])))
-  }
-
-  const dayOnly = label.match(/(?:^|\D)(\d{1,2})일/)
-  if (dayOnly) {
-    return startOfDay(new Date(today.getFullYear(), today.getMonth(), Number(dayOnly[1])))
-  }
-
-  const dDay = label.match(/D-(\d+)/i)
-  if (dDay) {
-    return addDays(today, Number(dDay[1]))
-  }
-
-  if (label.includes('오늘')) {
-    return today
-  }
-
-  return addDays(today, 99)
+    void dashboardStore.loadSummary();
+});
+function parseDeadlineDate(job, today) {
+    const label = job.deadlineLabel;
+    const explicit = label.match(/(20\d{2})[-.](\d{1,2})[-.](\d{1,2})/);
+    if (explicit) {
+        return startOfDay(new Date(Number(explicit[1]), Number(explicit[2]) - 1, Number(explicit[3])));
+    }
+    const dayOnly = label.match(/(?:^|\D)(\d{1,2})일/);
+    if (dayOnly) {
+        return startOfDay(new Date(today.getFullYear(), today.getMonth(), Number(dayOnly[1])));
+    }
+    const dDay = label.match(/D-(\d+)/i);
+    if (dDay) {
+        return addDays(today, Number(dDay[1]));
+    }
+    if (label.includes('오늘')) {
+        return today;
+    }
+    return addDays(today, 99);
 }
-
-function isDeadlineSoon(job: DashboardJob) {
-  const days = deadlineOffsetDays(job, startOfDay(new Date()))
-  return days >= 0 && days <= 7
+function isDeadlineSoon(job) {
+    const days = deadlineOffsetDays(job, startOfDay(new Date()));
+    return days >= 0 && days <= 7;
 }
-
-function deadlineOffsetDays(job: DashboardJob, today: Date) {
-  return Math.round((parseDeadlineDate(job, today).getTime() - today.getTime()) / millisecondsPerDay)
+function deadlineOffsetDays(job, today) {
+    return Math.round((parseDeadlineDate(job, today).getTime() - today.getTime()) / millisecondsPerDay);
 }
-
-function startOfDay(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate())
+function startOfDay(date) {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
-
-function addDays(date: Date, days: number) {
-  const next = new Date(date)
-  next.setDate(next.getDate() + days)
-  return next
+function addDays(date, days) {
+    const next = new Date(date);
+    next.setDate(next.getDate() + days);
+    return next;
 }
-
-function toDateKey(date: Date) {
-  return [
-    date.getFullYear(),
-    String(date.getMonth() + 1).padStart(2, '0'),
-    String(date.getDate()).padStart(2, '0')
-  ].join('-')
+function toDateKey(date) {
+    return [
+        date.getFullYear(),
+        String(date.getMonth() + 1).padStart(2, '0'),
+        String(date.getDate()).padStart(2, '0')
+    ].join('-');
 }
 </script>

@@ -97,7 +97,7 @@
                 class="status-select"
                 :value="job.status"
                 :data-testid="`status-${job.id}`"
-                @change="changeStatus(job.id, ($event.target as HTMLSelectElement).value as BasketJobStatus)"
+                @change="changeStatus(job.id, $event.target.value)"
               >
                 <option value="NOT_STARTED">지원 전</option>
                 <option value="NOT_APPLIED">미지원</option>
@@ -202,169 +202,130 @@
   </AppLayout>
 </template>
 
-<script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
-import AppLayout from '@/shared/AppLayout.vue'
-import StatePanel from '@/shared/StatePanel.vue'
-import { useBasketStore } from '@/stores/basketStore'
-import type { BasketJob, BasketJobStatus } from '@/features/basket/api/basketApi'
-
-const route = useRoute()
-const basketStore = useBasketStore()
-const searchQuery = ref(String(route.query.q ?? ''))
-const currentPage = ref(1)
-const pageSize = 10
-const weekdays = ['일', '월', '화', '수', '목', '금', '토']
-const monthDays = Array.from({ length: 30 }, (_, index) => index + 1)
-const firstDayOffset = 1
+<script setup>import AppLayout from '@/shared/AppLayout.vue';
+import StatePanel from '@/shared/StatePanel.vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
+import { useBasketStore } from '@/stores/basketStore';
+const route = useRoute();
+const basketStore = useBasketStore();
+const searchQuery = ref(String(route.query.q ?? ''));
+const currentPage = ref(1);
+const pageSize = 10;
+const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+const monthDays = Array.from({ length: 30 }, (_, index) => index + 1);
+const firstDayOffset = 1;
 const manualForm = reactive({
-  companyName: '',
-  positionTitle: '',
-  deadlineLabel: '',
-  sourceUrl: ''
-})
-const statusFilters: Array<{ label: string; value?: BasketJobStatus; to: string }> = [
-  { label: '전체', value: undefined, to: '/basket' },
-  { label: '지원 전', value: 'NOT_STARTED', to: '/basket?status=NOT_STARTED' },
-  { label: '미지원', value: 'NOT_APPLIED', to: '/basket?status=NOT_APPLIED' },
-  { label: '진행 중', value: 'IN_PROGRESS', to: '/basket?status=IN_PROGRESS' },
-  { label: '지원완료', value: 'SUBMITTED', to: '/basket?status=SUBMITTED' }
-]
-
-const selectedStatus = computed<BasketJobStatus | undefined>(() => {
-  const status = route.query.status
-
-  return status === 'NOT_STARTED' || status === 'NOT_APPLIED' || status === 'IN_PROGRESS' || status === 'SUBMITTED'
-    ? status
-    : undefined
-})
-const isOverdueFilter = computed(() => route.query.overdue === 'true')
-
+    companyName: '',
+    positionTitle: '',
+    deadlineLabel: '',
+    sourceUrl: ''
+});
+const statusFilters = [
+    { label: '전체', value: undefined, to: '/basket' },
+    { label: '지원 전', value: 'NOT_STARTED', to: '/basket?status=NOT_STARTED' },
+    { label: '미지원', value: 'NOT_APPLIED', to: '/basket?status=NOT_APPLIED' },
+    { label: '진행 중', value: 'IN_PROGRESS', to: '/basket?status=IN_PROGRESS' },
+    { label: '지원완료', value: 'SUBMITTED', to: '/basket?status=SUBMITTED' }
+];
+const selectedStatus = computed(() => {
+    const status = route.query.status;
+    return status === 'NOT_STARTED' || status === 'NOT_APPLIED' || status === 'IN_PROGRESS' || status === 'SUBMITTED'
+        ? status
+        : undefined;
+});
+const isOverdueFilter = computed(() => route.query.overdue === 'true');
 const searchedJobs = computed(() => {
-  const keyword = searchQuery.value.trim().toLowerCase()
-  const sourceJobs = isOverdueFilter.value ? basketStore.jobs.filter(isOverdueJob) : basketStore.jobs
-
-  if (!keyword) {
-    return sourceJobs
-  }
-
-  return sourceJobs.filter((job) => (
-    job.companyName.toLowerCase().includes(keyword) ||
-    job.positionTitle.toLowerCase().includes(keyword)
-  ))
-})
-
-const sortedJobs = computed(() =>
-  [...searchedJobs.value].sort((left, right) => {
+    const keyword = searchQuery.value.trim().toLowerCase();
+    const sourceJobs = isOverdueFilter.value ? basketStore.jobs.filter(isOverdueJob) : basketStore.jobs;
+    if (!keyword) {
+        return sourceJobs;
+    }
+    return sourceJobs.filter((job) => (job.companyName.toLowerCase().includes(keyword) ||
+        job.positionTitle.toLowerCase().includes(keyword)));
+});
+const sortedJobs = computed(() => [...searchedJobs.value].sort((left, right) => {
     if (route.query.sort === 'deadline') {
-      return deadlineDay(left) - deadlineDay(right)
+        return deadlineDay(left) - deadlineDay(right);
     }
-
-    return Number(left.id) - Number(right.id)
-  })
-)
-const totalPages = computed(() => Math.max(1, Math.ceil(sortedJobs.value.length / pageSize)))
+    return Number(left.id) - Number(right.id);
+}));
+const totalPages = computed(() => Math.max(1, Math.ceil(sortedJobs.value.length / pageSize)));
 const pagedJobs = computed(() => {
-  const start = (currentPage.value - 1) * pageSize
-  return sortedJobs.value.slice(start, start + pageSize)
-})
-
-const statusCounts = computed<Record<BasketJobStatus, number>>(() => ({
-  NOT_STARTED: basketStore.jobs.filter((job) => job.status === 'NOT_STARTED').length,
-  NOT_APPLIED: basketStore.jobs.filter((job) => job.status === 'NOT_APPLIED').length,
-  IN_PROGRESS: basketStore.jobs.filter((job) => job.status === 'IN_PROGRESS').length,
-  SUBMITTED: basketStore.jobs.filter((job) => job.status === 'SUBMITTED').length
-}))
-
-const jobsByDay = computed<Record<number, BasketJob[]>>(() =>
-  sortedJobs.value.reduce<Record<number, BasketJob[]>>((groups, job) => {
-    const day = deadlineDay(job)
-
+    const start = (currentPage.value - 1) * pageSize;
+    return sortedJobs.value.slice(start, start + pageSize);
+});
+const statusCounts = computed(() => ({
+    NOT_STARTED: basketStore.jobs.filter((job) => job.status === 'NOT_STARTED').length,
+    NOT_APPLIED: basketStore.jobs.filter((job) => job.status === 'NOT_APPLIED').length,
+    IN_PROGRESS: basketStore.jobs.filter((job) => job.status === 'IN_PROGRESS').length,
+    SUBMITTED: basketStore.jobs.filter((job) => job.status === 'SUBMITTED').length
+}));
+const jobsByDay = computed(() => sortedJobs.value.reduce((groups, job) => {
+    const day = deadlineDay(job);
     if (!groups[day]) {
-      groups[day] = []
+        groups[day] = [];
     }
-
-    groups[day].push(job)
-    return groups
-  }, {})
-)
-
-function deadlineDay(job: BasketJob) {
-  const source = job.deadlineDate ?? job.deadlineLabel
-  const match = source.match(/(?:2026[-.])?06[-.](\d{1,2})/)
-
-  return match ? Number(match[1]) : 99
+    groups[day].push(job);
+    return groups;
+}, {}));
+function deadlineDay(job) {
+    const source = job.deadlineDate ?? job.deadlineLabel;
+    const match = source.match(/(?:2026[-.])?06[-.](\d{1,2})/);
+    return match ? Number(match[1]) : 99;
 }
-
-function isOverdueJob(job: BasketJob) {
-  const date = parseDeadlineDate(job)
-  return date !== null && date < startOfToday()
+function isOverdueJob(job) {
+    const date = parseDeadlineDate(job);
+    return date !== null && date < startOfToday();
 }
-
-function parseDeadlineDate(job: BasketJob) {
-  const source = job.deadlineDate ?? job.deadlineLabel
-  const match = source.match(/(20\d{2})[-.](\d{1,2})[-.](\d{1,2})/)
-
-  if (!match) {
-    return null
-  }
-
-  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+function parseDeadlineDate(job) {
+    const source = job.deadlineDate ?? job.deadlineLabel;
+    const match = source.match(/(20\d{2})[-.](\d{1,2})[-.](\d{1,2})/);
+    if (!match) {
+        return null;
+    }
+    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
 }
-
 function startOfToday() {
-  const now = new Date()
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
-
 async function createManualJob() {
-  await basketStore.createJob({
-    companyName: manualForm.companyName,
-    positionTitle: manualForm.positionTitle,
-    deadlineLabel: manualForm.deadlineLabel,
-    sourceUrl: manualForm.sourceUrl,
-    savedSource: 'MANUAL'
-  })
-
-  manualForm.companyName = ''
-  manualForm.positionTitle = ''
-  manualForm.deadlineLabel = ''
-  manualForm.sourceUrl = ''
+    await basketStore.createJob({
+        companyName: manualForm.companyName,
+        positionTitle: manualForm.positionTitle,
+        deadlineLabel: manualForm.deadlineLabel,
+        sourceUrl: manualForm.sourceUrl,
+        savedSource: 'MANUAL'
+    });
+    manualForm.companyName = '';
+    manualForm.positionTitle = '';
+    manualForm.deadlineLabel = '';
+    manualForm.sourceUrl = '';
 }
-
-function changeStatus(jobId: string, nextStatus: BasketJobStatus) {
-  void basketStore.updateStatus(jobId, nextStatus)
+function changeStatus(jobId, nextStatus) {
+    void basketStore.updateStatus(jobId, nextStatus);
 }
-
-function archiveJob(jobId: string) {
-  void basketStore.archiveJob(jobId)
+function archiveJob(jobId) {
+    void basketStore.archiveJob(jobId);
 }
-
 onMounted(() => {
-  void basketStore.loadJobs(selectedStatus.value)
-})
-
+    void basketStore.loadJobs(selectedStatus.value);
+});
 watch(selectedStatus, (nextStatus) => {
-  currentPage.value = 1
-  void basketStore.loadJobs(nextStatus)
-})
-
-watch(
-  () => route.query.q,
-  (nextQuery) => {
-    currentPage.value = 1
-    searchQuery.value = String(nextQuery ?? '')
-  }
-)
-
+    currentPage.value = 1;
+    void basketStore.loadJobs(nextStatus);
+});
+watch(() => route.query.q, (nextQuery) => {
+    currentPage.value = 1;
+    searchQuery.value = String(nextQuery ?? '');
+});
 watch([searchQuery, isOverdueFilter, sortedJobs], () => {
-  currentPage.value = 1
-})
-
+    currentPage.value = 1;
+});
 watch(totalPages, (nextTotalPages) => {
-  if (currentPage.value > nextTotalPages) {
-    currentPage.value = nextTotalPages
-  }
-})
+    if (currentPage.value > nextTotalPages) {
+        currentPage.value = nextTotalPages;
+    }
+});
 </script>

@@ -37,24 +37,21 @@
   </div>
 </template>
 
-<script setup lang="ts">
-import { useRouter } from 'vue-router'
-import logoUrl from '@/assets/ez-one-logo.svg'
-import { authApi } from '@/features/auth/api/authApi'
-import { clearAuthSession, getRefreshToken } from '@/features/auth/session/authSession'
-
-const router = useRouter()
-
+<script setup>import { useRouter } from 'vue-router';
+import logoUrl from '@/assets/ez-one-logo.svg';
+import { authApi } from '@/features/auth/api/authApi';
+import { clearAuthSession, getRefreshToken } from '@/features/auth/session/authSession';
+const router = useRouter();
 async function logout() {
-  const refreshToken = getRefreshToken()
-
-  try {
-    if (refreshToken) {
-      await authApi.logout(refreshToken)
+    const refreshToken = getRefreshToken();
+    try {
+        if (refreshToken) {
+            await authApi.logout(refreshToken);
+        }
     }
-  } finally {
-    clearAuthSession()
-    await router.push('/')
-  }
+    finally {
+        clearAuthSession();
+        await router.push('/');
+    }
 }
 </script>

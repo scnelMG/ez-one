@@ -105,8 +105,8 @@ extension/src/
     JobRoleSelector.vue
     SaveResultPanel.vue
   shared/
-    api/extensionJobApi.ts
-    extractors/jasoseolExtractor.ts
+    api/extensionJobApi.js
+    extractors/jasoseolExtractor.js
 ```
 
 완료 기준:
