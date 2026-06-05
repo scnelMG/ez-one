@@ -65,6 +65,18 @@ describe('BasketPage', () => {
         deadlineSoon: true,
         workspaceId: '105',
         sourceUrl: 'https://www.jasoseol.com/'
+      },
+      {
+        id: '106',
+        companyName: 'Overdue Inc',
+        positionTitle: 'Platform Engineer',
+        status: 'NOT_APPLIED',
+        statusLabel: '미지원',
+        deadlineLabel: '2026.06.01',
+        deadlineDate: '2026-06-01',
+        deadlineSoon: false,
+        workspaceId: '107',
+        sourceUrl: 'https://www.jasoseol.com/'
       }
     ])
     mocks.createJob.mockResolvedValue({
@@ -189,6 +201,25 @@ describe('BasketPage', () => {
     await wrapper.get('[data-testid="basket-search"]').setValue('naver')
 
     expect(wrapper.text()).toContain('Naver')
+    expect(wrapper.text()).not.toContain('KakaoPay')
+  })
+
+  it('JOB-014: filters overdue basket jobs', async () => {
+    const router = makeRouter()
+    router.push('/basket?overdue=true')
+    await router.isReady()
+
+    const wrapper = mount(BasketPage, {
+      global: {
+        plugins: [createPinia(), router]
+      }
+    })
+
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="basket-filter-overdue"]').classes()).toContain('active')
+    expect(wrapper.text()).toContain('Overdue Inc')
+    expect(wrapper.text()).not.toContain('Naver')
     expect(wrapper.text()).not.toContain('KakaoPay')
   })
 })
