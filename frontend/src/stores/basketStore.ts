@@ -6,6 +6,7 @@ import {
   type CreateBasketJobPayload,
   type UpdateBasketJobPayload
 } from '@/features/basket/api/basketApi'
+import { messageFromError } from '@/shared/errorMessage'
 
 export const useBasketStore = defineStore('basket', () => {
   const status = ref<'idle' | 'loading' | 'ready' | 'error'>('idle')
@@ -23,9 +24,9 @@ export const useBasketStore = defineStore('basket', () => {
     try {
       jobs.value = await basketApi.listJobs(filterStatus)
       status.value = 'ready'
-    } catch {
+    } catch (error) {
       status.value = 'error'
-      errorMessage.value = '공고함을 불러오지 못했습니다.'
+      errorMessage.value = messageFromError(error, '공고함을 불러오지 못했습니다.')
     }
   }
 
@@ -37,9 +38,9 @@ export const useBasketStore = defineStore('basket', () => {
       const created = await basketApi.createJob(payload)
       jobs.value = [created, ...jobs.value]
       status.value = 'ready'
-    } catch {
+    } catch (error) {
       status.value = 'error'
-      errorMessage.value = '공고를 저장하지 못했습니다.'
+      errorMessage.value = messageFromError(error, '공고를 저장하지 못했습니다.')
     }
   }
 
@@ -50,10 +51,10 @@ export const useBasketStore = defineStore('basket', () => {
     try {
       activeJob.value = await basketApi.getJob(jobId)
       status.value = 'ready'
-    } catch {
+    } catch (error) {
       activeJob.value = null
       status.value = 'error'
-      errorMessage.value = '공고 상세를 불러오지 못했습니다.'
+      errorMessage.value = messageFromError(error, '공고 상세를 불러오지 못했습니다.')
     }
   }
 
@@ -66,9 +67,9 @@ export const useBasketStore = defineStore('basket', () => {
       activeJob.value = updated
       jobs.value = jobs.value.map((job) => (job.id === jobId ? updated : job))
       status.value = 'ready'
-    } catch {
+    } catch (error) {
       status.value = 'error'
-      errorMessage.value = '공고 정보를 수정하지 못했습니다.'
+      errorMessage.value = messageFromError(error, '공고 정보를 수정하지 못했습니다.')
     }
   }
 
@@ -80,9 +81,9 @@ export const useBasketStore = defineStore('basket', () => {
       const updated = await basketApi.updateStatus(jobId, nextStatus)
       jobs.value = jobs.value.map((job) => (job.id === jobId ? updated : job))
       status.value = 'ready'
-    } catch {
+    } catch (error) {
       status.value = 'error'
-      errorMessage.value = '지원 상태를 변경하지 못했습니다.'
+      errorMessage.value = messageFromError(error, '지원 상태를 변경하지 못했습니다.')
     }
   }
 
@@ -94,9 +95,9 @@ export const useBasketStore = defineStore('basket', () => {
       await basketApi.archiveJob(jobId)
       jobs.value = jobs.value.filter((job) => job.id !== jobId)
       status.value = 'ready'
-    } catch {
+    } catch (error) {
       status.value = 'error'
-      errorMessage.value = '공고를 보관 처리하지 못했습니다.'
+      errorMessage.value = messageFromError(error, '공고를 보관 처리하지 못했습니다.')
     }
   }
 
