@@ -43,7 +43,8 @@ describe('BasketDetailPage', () => {
       deadlineLabel: '2026.06.11',
       deadlineSoon: true,
       workspaceId: '102',
-      sourceUrl: 'https://www.jasoseol.com/'
+      sourceUrl: 'https://www.jasoseol.com/',
+      applicationMemo: 'Phone screen scheduled.'
     })
     mocks.updateJob.mockResolvedValue({
       id: '101',
@@ -54,7 +55,8 @@ describe('BasketDetailPage', () => {
       deadlineLabel: '2026.07.01',
       deadlineSoon: false,
       workspaceId: '102',
-      sourceUrl: 'https://www.jasoseol.com/jobs/101'
+      sourceUrl: 'https://www.jasoseol.com/jobs/101',
+      applicationMemo: 'Ask about platform team.'
     })
   })
 
@@ -73,11 +75,15 @@ describe('BasketDetailPage', () => {
 
     expect(mocks.getJob).toHaveBeenCalledWith('101')
     expect((wrapper.get('[data-testid="detail-company"]').element as HTMLInputElement).value).toBe('Naver')
+    expect((wrapper.get('[data-testid="detail-memo"]').element as HTMLTextAreaElement).value).toBe(
+      'Phone screen scheduled.'
+    )
 
     await wrapper.get('[data-testid="detail-company"]').setValue('Naver Cloud')
     await wrapper.get('[data-testid="detail-position"]').setValue('Platform Engineer')
     await wrapper.get('[data-testid="detail-deadline"]').setValue('2026.07.01')
     await wrapper.get('[data-testid="detail-source"]').setValue('https://www.jasoseol.com/jobs/101')
+    await wrapper.get('[data-testid="detail-memo"]').setValue('Ask about platform team.')
     await wrapper.get('[data-testid="detail-form"]').trigger('submit')
     await flushPromises()
 
@@ -85,7 +91,8 @@ describe('BasketDetailPage', () => {
       companyName: 'Naver Cloud',
       positionTitle: 'Platform Engineer',
       deadlineLabel: '2026.07.01',
-      sourceUrl: 'https://www.jasoseol.com/jobs/101'
+      sourceUrl: 'https://www.jasoseol.com/jobs/101',
+      applicationMemo: 'Ask about platform team.'
     })
     expect(wrapper.text()).toContain('Naver Cloud')
   })

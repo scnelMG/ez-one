@@ -130,7 +130,8 @@ class P1ApiContractTest {
                       "companyName": "Updated Company",
                       "positionTitle": "Product Engineer",
                       "deadlineLabel": "2026.06.30",
-                      "sourceUrl": "https://example.com/jobs/101"
+                      "sourceUrl": "https://example.com/jobs/101",
+                      "applicationMemo": "Phone screen scheduled. Ask about platform team."
                     }
                     """))
             .andExpect(status().isOk())
@@ -138,7 +139,8 @@ class P1ApiContractTest {
             .andExpect(jsonPath("$.data.companyName").value("Updated Company"))
             .andExpect(jsonPath("$.data.positionTitle").value("Product Engineer"))
             .andExpect(jsonPath("$.data.deadlineLabel").value("2026.06.30"))
-            .andExpect(jsonPath("$.data.sourceUrl").value("https://example.com/jobs/101"));
+            .andExpect(jsonPath("$.data.sourceUrl").value("https://example.com/jobs/101"))
+            .andExpect(jsonPath("$.data.applicationMemo").value("Phone screen scheduled. Ask about platform team."));
     }
 
     @Test
