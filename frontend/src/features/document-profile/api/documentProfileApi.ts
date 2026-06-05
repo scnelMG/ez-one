@@ -5,7 +5,7 @@ import {
   type HttpClient
 } from '@/shared/apiClient'
 
-export type DocumentSectionPayload = Record<string, unknown>
+export type DocumentSectionPayload = unknown
 
 export interface DocumentCustomField {
   id: string

@@ -31,6 +31,7 @@
           :key="section.id"
           class="tab-button"
           :class="{ active: section.id === activeSection }"
+          :data-testid="`section-${section.id}`"
           type="button"
           @click="activeSection = section.id"
         >
@@ -46,6 +47,7 @@
             :key="section.id"
             class="rail-button"
             :class="{ active: section.id === activeSection }"
+            :data-testid="`section-rail-${section.id}`"
             type="button"
             @click="activeSection = section.id"
           >
@@ -59,13 +61,13 @@
           <template v-else>
             <div class="section-heading">
               <div>
-                <p class="section-kicker">기본 정보</p>
-                <h2>지원서 공통 입력값</h2>
+                <p class="section-kicker">{{ activeSectionLabel }}</p>
+                <h2>{{ activeSectionTitle }}</h2>
               </div>
               <span class="status-chip">{{ statusLabel }}</span>
             </div>
 
-            <section class="form-shell compact" aria-label="기본 정보 입력">
+            <section v-if="activeSection === 'basicInfo'" class="form-shell compact" aria-label="기본 정보 입력">
               <label>
                 이름
                 <input v-model="basicInfoForm.nameKo" data-testid="basic-info-name" />
@@ -82,6 +84,30 @@
                 주소
                 <input v-model="basicInfoForm.address" data-testid="basic-info-address" />
               </label>
+            </section>
+
+            <section v-else-if="isReusableSection" class="form-shell compact" aria-label="서류 재사용 섹션 입력">
+              <label>
+                제목
+                <input v-model="reusableSectionForm.title" data-testid="section-title" />
+              </label>
+              <label>
+                요약
+                <textarea v-model="reusableSectionForm.summary" data-testid="section-summary" />
+              </label>
+              <button
+                class="primary-button"
+                type="button"
+                :disabled="documentProfileStore.status === 'saving'"
+                data-testid="save-section"
+                @click="saveReusableSection"
+              >
+                섹션 저장
+              </button>
+            </section>
+
+            <section v-else class="form-shell compact" aria-label="서류 섹션 준비 중">
+              <p>이 섹션은 다음 MVP 단계에서 입력 폼을 연결합니다.</p>
             </section>
           </template>
         </main>
@@ -109,7 +135,11 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { documentProfileCards } from '@/data/shellContent'
-import { useDocumentProfileStore, type BasicInfoSection } from '@/stores/documentProfileStore'
+import {
+  useDocumentProfileStore,
+  type BasicInfoSection,
+  type ReusableProfileItem
+} from '@/stores/documentProfileStore'
 import AppLayout from '@/shared/AppLayout.vue'
 import ShellCard from '@/shared/ShellCard.vue'
 import StatePanel from '@/shared/StatePanel.vue'
@@ -121,6 +151,10 @@ const basicInfoForm = reactive<BasicInfoSection>({
   email: '',
   phone: '',
   address: ''
+})
+const reusableSectionForm = reactive<ReusableProfileItem>({
+  title: '',
+  summary: ''
 })
 const sections = [
   { id: 'basicInfo', label: '기본 정보' },
@@ -135,6 +169,20 @@ const sections = [
 const saveButtonLabel = computed(() => (
   documentProfileStore.status === 'saving' ? '저장 중' : '저장'
 ))
+const activeSectionConfig = computed(() => sections.find((section) => section.id === activeSection.value) ?? sections[0])
+const activeSectionLabel = computed(() => activeSectionConfig.value.label)
+const activeSectionTitle = computed(() => {
+  if (activeSection.value === 'projects') {
+    return '프로젝트'
+  }
+
+  if (activeSection.value === 'awards') {
+    return '수상/활동'
+  }
+
+  return '지원서 공통 입력값'
+})
+const isReusableSection = computed(() => activeSection.value === 'projects' || activeSection.value === 'awards')
 const statusLabel = computed(() => {
   if (documentProfileStore.status === 'saving') {
     return '저장 중'
@@ -151,11 +199,41 @@ watch(
   { immediate: true }
 )
 
+watch(
+  [activeSection, () => documentProfileStore.projects, () => documentProfileStore.awards],
+  syncReusableSectionForm,
+  { immediate: true }
+)
+
 onMounted(() => {
   void documentProfileStore.loadDocumentProfile()
 })
 
 function saveBasicInfo() {
   void documentProfileStore.saveBasicInfo({ ...basicInfoForm })
+}
+
+function saveReusableSection() {
+  if (!isReusableSection.value) {
+    return
+  }
+  const sectionType = activeSection.value === 'awards' ? 'awards' : 'projects'
+
+  void documentProfileStore.saveReusableSection(sectionType, [
+    {
+      title: reusableSectionForm.title,
+      summary: reusableSectionForm.summary
+    }
+  ])
+}
+
+function syncReusableSectionForm() {
+  const source = activeSection.value === 'awards'
+    ? documentProfileStore.awards
+    : documentProfileStore.projects
+  const firstItem = source[0]
+
+  reusableSectionForm.title = firstItem?.title ?? ''
+  reusableSectionForm.summary = firstItem?.summary ?? ''
 }
 </script>

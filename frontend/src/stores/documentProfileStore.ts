@@ -13,6 +13,11 @@ export interface BasicInfoSection {
   address: string
 }
 
+export interface ReusableProfileItem {
+  title: string
+  summary: string
+}
+
 const emptyBasicInfo: BasicInfoSection = {
   nameKo: '',
   email: '',
@@ -28,6 +33,8 @@ export const useDocumentProfileStore = defineStore('documentProfile', () => {
   const basicInfo = computed<BasicInfoSection>(() => {
     return normalizeBasicInfo(profile.value?.sections.basicInfo)
   })
+  const projects = computed<ReusableProfileItem[]>(() => normalizeReusableItems(profile.value?.sections.projects))
+  const awards = computed<ReusableProfileItem[]>(() => normalizeReusableItems(profile.value?.sections.awards))
 
   async function loadDocumentProfile() {
     status.value = 'loading'
@@ -56,22 +63,60 @@ export const useDocumentProfileStore = defineStore('documentProfile', () => {
     }
   }
 
-  return { status, profile, errorMessage, basicInfo, loadDocumentProfile, saveBasicInfo }
-})
+  async function saveReusableSection(sectionType: 'projects' | 'awards', payload: ReusableProfileItem[]) {
+    status.value = 'saving'
+    errorMessage.value = ''
 
-function normalizeBasicInfo(payload: DocumentSectionPayload | undefined): BasicInfoSection {
-  if (!payload) {
-    return emptyBasicInfo
+    try {
+      profile.value = await documentProfileApi.saveSection(sectionType, payload)
+      status.value = 'ready'
+    } catch {
+      status.value = 'error'
+      errorMessage.value = '서류 섹션을 저장하지 못했습니다.'
+    }
   }
 
   return {
-    nameKo: stringValue(payload.nameKo),
-    email: stringValue(payload.email),
-    phone: stringValue(payload.phone),
-    address: stringValue(payload.address)
+    status,
+    profile,
+    errorMessage,
+    basicInfo,
+    projects,
+    awards,
+    loadDocumentProfile,
+    saveBasicInfo,
+    saveReusableSection
+  }
+})
+
+function normalizeBasicInfo(payload: DocumentSectionPayload | undefined): BasicInfoSection {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return emptyBasicInfo
+  }
+  const record = payload as Record<string, unknown>
+
+  return {
+    nameKo: stringValue(record.nameKo),
+    email: stringValue(record.email),
+    phone: stringValue(record.phone),
+    address: stringValue(record.address)
   }
 }
 
 function stringValue(value: unknown) {
   return typeof value === 'string' ? value : ''
+}
+
+function normalizeReusableItems(payload: DocumentSectionPayload | undefined): ReusableProfileItem[] {
+  if (!Array.isArray(payload)) {
+    return []
+  }
+
+  return payload.map((item) => {
+    const record = typeof item === 'object' && item !== null ? item as Record<string, unknown> : {}
+    return {
+      title: stringValue(record.title),
+      summary: stringValue(record.summary)
+    }
+  })
 }
