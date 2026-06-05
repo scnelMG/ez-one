@@ -52,7 +52,14 @@
             >
               {{ filter.label }}
             </RouterLink>
-            <div class="search-field">회사명 또는 직무명 검색</div>
+            <input
+              v-model="searchQuery"
+              class="search-field"
+              data-testid="basket-search"
+              type="search"
+              aria-label="회사명 또는 직무명 검색"
+              placeholder="회사명 또는 직무명 검색"
+            />
           </div>
 
           <p v-if="basketStore.status === 'loading'" class="basket-loading">공고 목록을 불러오는 중입니다.</p>
@@ -165,7 +172,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppLayout from '@/shared/AppLayout.vue'
 import StatePanel from '@/shared/StatePanel.vue'
@@ -174,6 +181,7 @@ import type { BasketJob, BasketJobStatus } from '@/features/basket/api/basketApi
 
 const route = useRoute()
 const basketStore = useBasketStore()
+const searchQuery = ref(String(route.query.q ?? ''))
 const weekdays = ['일', '월', '화', '수', '목', '금', '토']
 const monthDays = Array.from({ length: 30 }, (_, index) => index + 1)
 const firstDayOffset = 1
@@ -198,8 +206,21 @@ const selectedStatus = computed<BasketJobStatus | undefined>(() => {
     : undefined
 })
 
+const searchedJobs = computed(() => {
+  const keyword = searchQuery.value.trim().toLowerCase()
+
+  if (!keyword) {
+    return basketStore.jobs
+  }
+
+  return basketStore.jobs.filter((job) => (
+    job.companyName.toLowerCase().includes(keyword) ||
+    job.positionTitle.toLowerCase().includes(keyword)
+  ))
+})
+
 const sortedJobs = computed(() =>
-  [...basketStore.jobs].sort((left, right) => {
+  [...searchedJobs.value].sort((left, right) => {
     if (route.query.sort === 'deadline') {
       return deadlineDay(left) - deadlineDay(right)
     }
@@ -264,4 +285,11 @@ onMounted(() => {
 watch(selectedStatus, (nextStatus) => {
   void basketStore.loadJobs(nextStatus)
 })
+
+watch(
+  () => route.query.q,
+  (nextQuery) => {
+    searchQuery.value = String(nextQuery ?? '')
+  }
+)
 </script>
