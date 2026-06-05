@@ -2276,6 +2276,19 @@ li {
   background: #fbfaff;
 }
 
+.pagination-row {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  border-top: 1px solid #edf0f5;
+  padding: 0 14px;
+  color: #4b5563;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
 .job-main-link {
   display: flex;
   min-width: 0;

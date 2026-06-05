@@ -250,19 +250,19 @@ describe('BasketPage', () => {
 
     await flushPromises()
 
-    const firstPageRows = wrapper.findAll('.basket-data-row').map((row) => row.text())
-    expect(firstPageRows.join(' ')).toContain('Company 1')
-    expect(firstPageRows.join(' ')).toContain('Company 10')
-    expect(firstPageRows.join(' ')).not.toContain('Company 11')
+    const firstPageCompanies = wrapper.findAll('.basket-data-row strong').map((company) => company.text())
+    expect(firstPageCompanies).toContain('Company 1')
+    expect(firstPageCompanies).toContain('Company 10')
+    expect(firstPageCompanies).not.toContain('Company 11')
     expect(wrapper.get('[data-testid="basket-page-status"]').text()).toContain('1 / 2')
 
     await wrapper.get('[data-testid="basket-page-next"]').trigger('click')
     await flushPromises()
 
-    const secondPageRows = wrapper.findAll('.basket-data-row').map((row) => row.text())
-    expect(secondPageRows.join(' ')).not.toContain('Company 1')
-    expect(secondPageRows.join(' ')).toContain('Company 11')
-    expect(secondPageRows.join(' ')).toContain('Company 13')
+    const secondPageCompanies = wrapper.findAll('.basket-data-row strong').map((company) => company.text())
+    expect(secondPageCompanies).not.toContain('Company 1')
+    expect(secondPageCompanies).toContain('Company 11')
+    expect(secondPageCompanies).toContain('Company 13')
     expect(wrapper.get('[data-testid="basket-page-status"]').text()).toContain('2 / 2')
   })
 })
