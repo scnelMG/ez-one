@@ -114,6 +114,18 @@ class P1ApiContractTest {
     }
 
     @Test
+    void basketDeadlineSortUsesNearestDeadlineOrder() throws Exception {
+        createDashboardJob("Sort D10 Company", "D-10");
+        createDashboardJob("Sort D1 Company", "D-1");
+        createDashboardJob("Sort D7 Company", "D-7");
+
+        mockMvc.perform(get("/api/basket/jobs?sort=deadline"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data[0].deadlineLabel").value("오늘 18:00"))
+            .andExpect(jsonPath("$.data[1].deadlineLabel").value("D-1"));
+    }
+
+    @Test
     void workspaceDefaultsExposeDocumentProfileSections() throws Exception {
         mockMvc.perform(get("/api/workspaces/102/defaults"))
             .andExpect(status().isOk())
