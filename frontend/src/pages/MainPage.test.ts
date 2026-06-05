@@ -17,8 +17,14 @@ vi.mock('@/features/dashboard/api/dashboardApi', () => ({
         {
           companyName: '네이버',
           positionTitle: 'Backend Engineer',
-          deadlineLabel: '오늘 18:00',
+          deadlineLabel: '2026.06.06',
           workspaceId: '102'
+        },
+        {
+          companyName: 'Future Corp',
+          positionTitle: 'Platform Engineer',
+          deadlineLabel: '2026.06.20',
+          workspaceId: '108'
         }
       ]
     })
@@ -132,5 +138,24 @@ describe('MainPage', () => {
 
     expect(wrapper.get('[data-testid="member-chip"]').text()).toContain('Hong Gil Dong')
     expect(wrapper.get('[data-testid="member-avatar"]').text()).toBe('H')
+  })
+
+  it('MAIN-014/MAIN-015: shows this week deadline jobs and links them to workspaces', async () => {
+    const router = makeRouter()
+    router.push('/main')
+    await router.isReady()
+
+    const wrapper = mount(MainPage, {
+      global: {
+        plugins: [createPinia(), router]
+      }
+    })
+
+    await new Promise((resolve) => setTimeout(resolve))
+
+    const calendar = wrapper.get('[data-testid="main-weekly-calendar"]')
+    expect(calendar.text()).toContain('네이버')
+    expect(calendar.text()).not.toContain('Future Corp')
+    expect(wrapper.get('[data-testid="weekly-calendar-job-102"]').attributes('href')).toBe('/workspaces/102')
   })
 })
