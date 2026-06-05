@@ -20,6 +20,9 @@ import com.ezone.backend.dto.workspace.UpdateDraftRequest;
 import com.ezone.backend.dto.workspace.WorkspaceDefaultsResponse;
 import com.ezone.backend.dto.workspace.WorkspaceResponse;
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -50,11 +53,11 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
     public DashboardSummaryResponse getDashboardSummary(Long userId) {
         List<BasketRecord> activeJobs = activeBasketJobs(userId);
         long inProgress = activeJobs.stream()
-            .filter(job -> job.applicationStatus() == ApplicationStatus.IN_PROGRESS)
+            .filter(job -> effectiveStatus(job) == ApplicationStatus.IN_PROGRESS)
             .count();
         long notStarted = activeJobs.stream()
-            .filter(job -> job.applicationStatus() == ApplicationStatus.NOT_APPLIED
-                || job.applicationStatus() == ApplicationStatus.READY)
+            .filter(job -> effectiveStatus(job) == ApplicationStatus.NOT_APPLIED
+                || effectiveStatus(job) == ApplicationStatus.READY)
             .count();
         long deadlineSoon = activeJobs.stream().filter(BasketRecord::deadlineSoon).count();
 
@@ -70,7 +73,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
     @Override
     public List<BasketJobResponse> listBasketJobs(Long userId, ApplicationStatus status, String sort) {
         return activeBasketJobs(userId).stream()
-            .filter(job -> status == null || job.applicationStatus() == status)
+            .filter(job -> status == null || effectiveStatus(job) == status)
             .sorted(resolveBasketSort(sort))
             .map(this::toBasketResponse)
             .toList();
@@ -564,13 +567,14 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
     }
 
     private BasketJobResponse toBasketResponse(BasketRecord record) {
+        ApplicationStatus status = effectiveStatus(record);
         return new BasketJobResponse(
             record.id(),
             record.workspaceId(),
             record.companyName(),
             record.positionTitle(),
-            record.applicationStatus(),
-            statusLabel(record.applicationStatus()),
+            status,
+            statusLabel(status),
             record.deadlineLabel(),
             record.deadlineSoon(),
             record.sourceUrl(),
@@ -641,6 +645,38 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
 
     private boolean isDeadlineSoon(String deadlineLabel) {
         return deadlineLabel != null && (deadlineLabel.contains("오늘") || deadlineLabel.contains("D-"));
+    }
+
+    private ApplicationStatus effectiveStatus(BasketRecord record) {
+        if (record.applicationStatus() == ApplicationStatus.COMPLETED) {
+            return ApplicationStatus.COMPLETED;
+        }
+
+        LocalDate deadline = parseDeadlineDate(record.deadlineLabel());
+        if (deadline != null && deadline.isBefore(LocalDate.now())) {
+            return ApplicationStatus.NOT_APPLIED;
+        }
+
+        return record.applicationStatus();
+    }
+
+    private LocalDate parseDeadlineDate(String deadlineLabel) {
+        if (deadlineLabel == null || deadlineLabel.isBlank()) {
+            return null;
+        }
+
+        for (DateTimeFormatter formatter : List.of(
+            DateTimeFormatter.ofPattern("yyyy.MM.dd"),
+            DateTimeFormatter.ISO_LOCAL_DATE
+        )) {
+            try {
+                return LocalDate.parse(deadlineLabel.trim(), formatter);
+            } catch (DateTimeParseException ignored) {
+                // Try the next supported deadline label format.
+            }
+        }
+
+        return null;
     }
 
     private String normalizeMemo(String applicationMemo) {
