@@ -76,6 +76,14 @@
                 <input v-model="basicInfoForm.nameKo" data-testid="basic-info-name" />
               </label>
               <label>
+                영문 이름
+                <input v-model="basicInfoForm.nameEn" data-testid="basic-info-name-en" />
+              </label>
+              <label>
+                한자 이름
+                <input v-model="basicInfoForm.nameHanja" data-testid="basic-info-name-hanja" />
+              </label>
+              <label>
                 이메일
                 <input v-model="basicInfoForm.email" data-testid="basic-info-email" />
               </label>
@@ -84,8 +92,20 @@
                 <input v-model="basicInfoForm.phone" data-testid="basic-info-phone" />
               </label>
               <label>
+                성별
+                <input v-model="basicInfoForm.gender" data-testid="basic-info-gender" />
+              </label>
+              <label>
+                생년월일
+                <input v-model="basicInfoForm.birthdate" type="date" data-testid="basic-info-birthdate" />
+              </label>
+              <label>
                 주소
                 <input v-model="basicInfoForm.address" data-testid="basic-info-address" />
+              </label>
+              <label>
+                상세주소
+                <input v-model="basicInfoForm.addressDetail" data-testid="basic-info-address-detail" />
               </label>
             </section>
 
@@ -251,9 +271,14 @@ const documentProfileStore = useDocumentProfileStore()
 const activeSection = ref('basicInfo')
 const basicInfoForm = reactive<BasicInfoSection>({
   nameKo: '',
+  nameEn: '',
+  nameHanja: '',
   email: '',
   phone: '',
-  address: ''
+  gender: '',
+  birthdate: '',
+  address: '',
+  addressDetail: ''
 })
 const reusableSectionForm = reactive<ReusableProfileItem>({
   title: '',
