@@ -49,6 +49,9 @@ public class ExtensionJobController {
         if (!hasText(request.companyName()) || !hasText(request.sourceUrl())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Company name and source URL are required.");
         }
+        if (!isHttpUrl(request.sourceUrl())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Source URL must be an HTTP(S) URL.");
+        }
 
         List<String> rawRoles = request.selectedRoles().isEmpty()
             ? fallbackRole(request.positionTitle())
@@ -90,5 +93,9 @@ public class ExtensionJobController {
 
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
+    }
+
+    private boolean isHttpUrl(String value) {
+        return value != null && value.matches("^https?://\\S+$");
     }
 }
