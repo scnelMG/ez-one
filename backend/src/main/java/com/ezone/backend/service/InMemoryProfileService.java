@@ -6,6 +6,7 @@ import com.ezone.backend.dto.profile.DocumentProfileResponse;
 import com.ezone.backend.dto.profile.UpsertDocumentSectionRequest;
 import com.ezone.backend.dto.profile.UserProfileRequest;
 import com.ezone.backend.dto.profile.UserProfileResponse;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -20,6 +21,7 @@ public class InMemoryProfileService implements ProfileService {
     private final Map<Long, UserProfileResponse> userProfiles = new LinkedHashMap<>();
     private final Map<Long, Map<String, Object>> documentSections = new LinkedHashMap<>();
     private final Map<Long, List<DocumentCustomFieldResponse>> customFields = new LinkedHashMap<>();
+    private final Map<Long, String> documentProfileLastSavedAt = new LinkedHashMap<>();
 
     public InMemoryProfileService() {
         userProfiles.put(1L, new UserProfileResponse(
@@ -71,7 +73,8 @@ public class InMemoryProfileService implements ProfileService {
     public DocumentProfileResponse getDocumentProfile(Long userId) {
         return new DocumentProfileResponse(
             documentSections.computeIfAbsent(userId, ignored -> new LinkedHashMap<>()),
-            customFields.computeIfAbsent(userId, ignored -> new ArrayList<>())
+            customFields.computeIfAbsent(userId, ignored -> new ArrayList<>()),
+            documentProfileLastSavedAt.get(userId)
         );
     }
 
@@ -79,6 +82,7 @@ public class InMemoryProfileService implements ProfileService {
     public DocumentProfileResponse upsertSection(Long userId, String sectionType, UpsertDocumentSectionRequest request) {
         Map<String, Object> sections = documentSections.computeIfAbsent(userId, ignored -> new LinkedHashMap<>());
         sections.put(sectionType, request.payload() == null ? Map.of() : request.payload());
+        touchDocumentProfile(userId);
         return getDocumentProfile(userId);
     }
 
@@ -91,6 +95,7 @@ public class InMemoryProfileService implements ProfileService {
             request.value()
         );
         customFields.computeIfAbsent(userId, ignored -> new ArrayList<>()).add(response);
+        touchDocumentProfile(userId);
         return response;
     }
 
@@ -105,6 +110,7 @@ public class InMemoryProfileService implements ProfileService {
             request.value()
         );
         fields.add(response);
+        touchDocumentProfile(userId);
         return response;
     }
 
@@ -112,6 +118,11 @@ public class InMemoryProfileService implements ProfileService {
     public void deleteCustomField(Long userId, Long fieldId) {
         customFields.computeIfAbsent(userId, ignored -> new ArrayList<>())
             .removeIf(field -> field.id().equals(fieldId));
+        touchDocumentProfile(userId);
+    }
+
+    private void touchDocumentProfile(Long userId) {
+        documentProfileLastSavedAt.put(userId, Instant.now().toString());
     }
 
     private List<String> safeList(List<String> values) {

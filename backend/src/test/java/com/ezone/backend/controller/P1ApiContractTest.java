@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -175,6 +176,19 @@ class P1ApiContractTest {
         mockMvc.perform(get("/api/document-profile"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.sections.basicInfo", notNullValue()));
+
+        mockMvc.perform(put("/api/document-profile/sections/basicInfo")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "payload": {
+                        "nameKo": "Hong Gil Dong",
+                        "email": "user@example.com"
+                      }
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.lastSavedAt", notNullValue()));
 
         mockMvc.perform(post("/api/document-profile/custom-fields")
                 .contentType(MediaType.APPLICATION_JSON)

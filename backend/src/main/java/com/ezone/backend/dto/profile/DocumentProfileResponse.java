@@ -5,6 +5,7 @@ import java.util.Map;
 
 public record DocumentProfileResponse(
     Map<String, Object> sections,
-    List<DocumentCustomFieldResponse> customFields
+    List<DocumentCustomFieldResponse> customFields,
+    String lastSavedAt
 ) {
 }

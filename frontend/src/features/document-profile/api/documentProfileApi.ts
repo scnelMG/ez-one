@@ -19,6 +19,7 @@ export type DocumentCustomFieldPayload = Omit<DocumentCustomField, 'id'>
 export interface DocumentProfile {
   sections: Record<string, DocumentSectionPayload>
   customFields: DocumentCustomField[]
+  lastSavedAt?: string
 }
 
 interface DocumentCustomFieldDto {
@@ -31,6 +32,7 @@ interface DocumentCustomFieldDto {
 interface DocumentProfileDto {
   sections: Record<string, DocumentSectionPayload>
   customFields: DocumentCustomFieldDto[]
+  lastSavedAt?: string
 }
 
 type DocumentProfileHttpClient = Pick<HttpClient, 'get'> & Partial<Pick<HttpClient, 'put' | 'post' | 'patch' | 'delete'>>
@@ -75,7 +77,8 @@ export function createDocumentProfileApi(httpClient: DocumentProfileHttpClient =
 function toDocumentProfile(dto: DocumentProfileDto): DocumentProfile {
   return {
     sections: dto.sections ?? {},
-    customFields: (dto.customFields ?? []).map(toDocumentCustomField)
+    customFields: (dto.customFields ?? []).map(toDocumentCustomField),
+    lastSavedAt: dto.lastSavedAt
   }
 }
 

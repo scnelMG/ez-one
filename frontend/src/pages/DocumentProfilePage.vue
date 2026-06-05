@@ -6,6 +6,9 @@
           <p class="section-kicker">PROFILE-001</p>
           <h1>서류 입력 정보</h1>
           <p>반복해서 쓰는 지원서 정보를 섹션별로 저장하고 워크스페이스 기본값으로 재사용합니다.</p>
+          <p v-if="documentProfileStore.profile?.lastSavedAt" class="last-saved-at">
+            마지막 저장 {{ documentProfileStore.profile.lastSavedAt }}
+          </p>
         </div>
         <button
           class="primary-button"

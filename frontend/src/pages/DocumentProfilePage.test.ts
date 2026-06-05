@@ -62,7 +62,8 @@ describe('DocumentProfilePage', () => {
           fieldType: 'URL',
           value: 'https://example.com'
         }
-      ]
+      ],
+      lastSavedAt: '2026-06-05T12:00:00Z'
     })
     mocks.saveSection.mockResolvedValue({
       sections: {
@@ -103,6 +104,7 @@ describe('DocumentProfilePage', () => {
     expect((wrapper.get('[data-testid="basic-info-email"]').element as HTMLInputElement).value).toBe(
       'user@example.com'
     )
+    expect(wrapper.text()).toContain('2026-06-05T12:00:00Z')
 
     await wrapper.get('[data-testid="basic-info-name"]').setValue('Kim Jiwon')
     await wrapper.get('[data-testid="basic-info-email"]').setValue('jiwon@example.com')
