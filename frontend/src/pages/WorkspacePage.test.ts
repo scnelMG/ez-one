@@ -6,6 +6,7 @@ import WorkspacePage from './WorkspacePage.vue'
 
 const mocks = vi.hoisted(() => ({
   getWorkspace: vi.fn(),
+  getDefaults: vi.fn(),
   listVersions: vi.fn(),
   saveDraft: vi.fn(),
   createVersion: vi.fn(),
@@ -22,6 +23,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/features/workspace/api/workspaceApi', () => ({
   workspaceApi: {
     getWorkspace: mocks.getWorkspace,
+    getDefaults: mocks.getDefaults,
     listVersions: mocks.listVersions,
     saveDraft: mocks.saveDraft,
     createVersion: mocks.createVersion,
@@ -52,6 +54,7 @@ const makeRouter = () =>
 describe('WorkspacePage', () => {
   beforeEach(() => {
     mocks.getWorkspace.mockReset()
+    mocks.getDefaults.mockReset()
     mocks.listVersions.mockReset()
     mocks.saveDraft.mockReset()
     mocks.createVersion.mockReset()
@@ -70,6 +73,14 @@ describe('WorkspacePage', () => {
       deadlineLabel: 'D-3',
       statusLabel: '진행 중',
       sourceUrl: 'https://www.jasoseol.com/',
+      companyDetails: {
+        domain: 'naver.com',
+        companyType: '대기업',
+        size: '1,000명 이상',
+        rating: 4.2,
+        startingSalary: 5000,
+        financialStatus: 'stable'
+      },
       questions: [
         {
           id: '103',
@@ -88,6 +99,13 @@ describe('WorkspacePage', () => {
           url: 'https://example.com/jd'
         }
       ]
+    })
+    mocks.getDefaults.mockResolvedValue({
+      workspaceId: '102',
+      sections: {
+        projects: [{ title: 'EZ One', summary: '지원 관리 서비스' }],
+        awards: [{ title: 'Hackathon Grand Prize' }]
+      }
     })
     mocks.listVersions.mockResolvedValue([
       {
@@ -190,6 +208,26 @@ describe('WorkspacePage', () => {
 
     expect(mocks.createVersion).toHaveBeenCalledWith('102', '103', 'v3')
     expect(wrapper.text()).toContain('v2')
+  })
+
+  it('WS-027/WS-028: renders document profile and company detail panels', async () => {
+    const router = makeRouter()
+    router.push('/workspaces/102')
+    await router.isReady()
+
+    const wrapper = mount(WorkspacePage, {
+      global: {
+        plugins: [createPinia(), router]
+      }
+    })
+
+    await flushPromises()
+
+    expect(mocks.getDefaults).toHaveBeenCalledWith('102')
+    expect(wrapper.text()).toContain('naver.com')
+    expect(wrapper.text()).toContain('5000')
+    expect(wrapper.text()).toContain('EZ One')
+    expect(wrapper.text()).toContain('Hackathon Grand Prize')
   })
 
   it('REF-001/REF-002: creates a reference and opens reference detail', async () => {

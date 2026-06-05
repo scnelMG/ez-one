@@ -3,6 +3,67 @@ import { describe, expect, it, vi } from 'vitest'
 import { createWorkspaceApi } from './workspaceApi'
 
 describe('workspaceApi', () => {
+  it('WS-027/WS-028: maps company details and workspace document defaults', async () => {
+    const get = vi.fn()
+      .mockResolvedValueOnce({
+        data: {
+          success: true,
+          data: {
+            id: 102,
+            basketJobId: 101,
+            companyName: 'Naver',
+            positionTitle: 'Backend Engineer',
+            deadlineLabel: 'D-3',
+            statusLabel: '진행 중',
+            sourceUrl: 'https://www.jasoseol.com/',
+            companyDetails: {
+              domain: 'naver.com',
+              companyType: '대기업',
+              size: '1,000명 이상',
+              rating: 4.2,
+              startingSalary: 5000,
+              financialStatus: 'stable'
+            },
+            questions: [],
+            references: []
+          },
+          error: null
+        }
+      })
+      .mockResolvedValueOnce({
+        data: {
+          success: true,
+          data: {
+            workspaceId: 102,
+            sections: {
+              projects: [{ title: 'EZ One', summary: '지원 관리 서비스' }],
+              awards: [{ title: '해커톤 대상' }]
+            }
+          },
+          error: null
+        }
+      })
+
+    const api = createWorkspaceApi({ get, patch: vi.fn(), post: vi.fn() })
+    const workspace = await api.getWorkspace('102')
+    const defaults = await api.getDefaults('102')
+
+    expect(get).toHaveBeenNthCalledWith(1, '/api/workspaces/102')
+    expect(get).toHaveBeenNthCalledWith(2, '/api/workspaces/102/defaults')
+    expect(workspace.companyDetails).toEqual({
+      domain: 'naver.com',
+      companyType: '대기업',
+      size: '1,000명 이상',
+      rating: 4.2,
+      startingSalary: 5000,
+      financialStatus: 'stable'
+    })
+    expect(defaults.sections.projects).toEqual([
+      { title: 'EZ One', summary: '지원 관리 서비스' }
+    ])
+    expect(defaults.sections.awards).toEqual([{ title: '해커톤 대상' }])
+  })
+
   it('WS-001: loads workspace detail and reference boards from /api/workspaces/:id', async () => {
     const get = vi.fn().mockResolvedValue({
       data: {

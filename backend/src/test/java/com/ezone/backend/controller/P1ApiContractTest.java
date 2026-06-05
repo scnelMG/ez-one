@@ -86,8 +86,19 @@ class P1ApiContractTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data.companyName").value("네이버"))
+            .andExpect(jsonPath("$.data.companyDetails.companyType", notNullValue()))
+            .andExpect(jsonPath("$.data.companyDetails.size", notNullValue()))
             .andExpect(jsonPath("$.data.questions[0].prompt", notNullValue()))
             .andExpect(jsonPath("$.data.references[0].title").value("JD 핵심 역량"));
+    }
+
+    @Test
+    void workspaceDefaultsExposeDocumentProfileSections() throws Exception {
+        mockMvc.perform(get("/api/workspaces/102/defaults"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.sections.projects", notNullValue()))
+            .andExpect(jsonPath("$.data.sections.awards", notNullValue()));
     }
 
     @Test
