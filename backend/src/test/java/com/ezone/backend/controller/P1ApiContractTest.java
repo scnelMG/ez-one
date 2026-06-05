@@ -184,6 +184,39 @@ class P1ApiContractTest {
     }
 
     @Test
+    void basketJobRejectsInvalidSourceUrlAndDeadlineFormat() throws Exception {
+        mockMvc.perform(post("/api/basket/jobs")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "companyName": "Invalid URL Company",
+                      "positionTitle": "Backend Developer",
+                      "deadlineLabel": "D-3",
+                      "sourceUrl": "not-a-url",
+                      "savedSource": "DIRECT"
+                    }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+
+        mockMvc.perform(patch("/api/basket/jobs/101")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "companyName": "Updated Company",
+                      "positionTitle": "Product Engineer",
+                      "deadlineLabel": "June someday",
+                      "sourceUrl": "https://example.com/jobs/101",
+                      "applicationMemo": "Phone screen scheduled."
+                    }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
     void duplicateBasketJobUsesCompanyAndPositionRegardlessOfUrl() throws Exception {
         String firstBody = mockMvc.perform(post("/api/basket/jobs")
                 .contentType(MediaType.APPLICATION_JSON)
