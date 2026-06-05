@@ -54,6 +54,8 @@ describe('DocumentProfilePage', () => {
         projects: [{ title: 'EZ One', summary: 'Job workspace MVP' }],
         certificates: [{ title: 'TOEIC', summary: '900' }],
         awards: [{ title: 'Hackathon Grand Prize', summary: 'P1 service award' }],
+        courses: [{ title: 'Database Systems', summary: 'MySQL schema design and query tuning' }],
+        essays: [{ title: '지원동기 기본안', summary: '산업 관심과 백엔드 경험을 연결한 초안' }],
         military: [{ title: 'Completed', summary: 'Army / Sergeant / 2022.03-2023.09' }],
         internships: [{ title: 'Startup Intern', summary: 'Backend internship' }],
         trainings: [{ title: 'Cloud Course', summary: '120 hours' }],
@@ -82,6 +84,8 @@ describe('DocumentProfilePage', () => {
         projects: [{ title: 'EZ One Renewal', summary: 'Workspace and profile integration' }],
         certificates: [{ title: 'TOEIC', summary: '900' }],
         awards: [{ title: 'Hackathon Grand Prize', summary: 'P1 service award' }],
+        courses: [{ title: 'Data Engineering', summary: 'ETL and analytics project' }],
+        essays: [{ title: '지원동기 기본안', summary: '산업 관심과 백엔드 경험을 연결한 초안' }],
         military: [{ title: 'Completed', summary: 'Army / Sergeant / 2022.03-2023.09' }],
         internships: [{ title: 'Startup Intern', summary: 'Backend internship' }],
         trainings: [{ title: 'Cloud Course', summary: '120 hours' }],
@@ -219,6 +223,38 @@ describe('DocumentProfilePage', () => {
 
     await wrapper.get('[data-testid="section-activities"]').trigger('click')
     expect((wrapper.get('[data-testid="section-title"]').element as HTMLInputElement).value).toBe('Student Club')
+  })
+
+  it('PROFILE-002/PROFILE-016: edits course and prewritten essay sections', async () => {
+    const wrapper = await mountPage()
+
+    await wrapper.get('[data-testid="section-courses"]').trigger('click')
+    expect((wrapper.get('[data-testid="section-title"]').element as HTMLInputElement).value).toBe('Database Systems')
+
+    await wrapper.get('[data-testid="section-title"]').setValue('Data Engineering')
+    await wrapper.get('[data-testid="section-summary"]').setValue('ETL and analytics project')
+    await wrapper.get('[data-testid="save-section"]').trigger('click')
+
+    expect(mocks.saveSection).toHaveBeenLastCalledWith('courses', [
+      {
+        title: 'Data Engineering',
+        summary: 'ETL and analytics project'
+      }
+    ])
+
+    await wrapper.get('[data-testid="section-essays"]').trigger('click')
+    expect((wrapper.get('[data-testid="section-title"]').element as HTMLInputElement).value).toBe('지원동기 기본안')
+
+    await wrapper.get('[data-testid="section-title"]').setValue('성장과정 기본안')
+    await wrapper.get('[data-testid="section-summary"]').setValue('문제 해결 경험을 정리한 사전 작성 자소서')
+    await wrapper.get('[data-testid="save-section"]').trigger('click')
+
+    expect(mocks.saveSection).toHaveBeenLastCalledWith('essays', [
+      {
+        title: '성장과정 기본안',
+        summary: '문제 해결 경험을 정리한 사전 작성 자소서'
+      }
+    ])
   })
 
   it('PROFILE-001/PROFILE-006: creates, updates, and deletes custom fields', async () => {

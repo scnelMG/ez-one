@@ -271,9 +271,11 @@ const sections = [
   { id: 'basicInfo', label: '기본 정보' },
   { id: 'education', label: '학력' },
   { id: 'career', label: '경력' },
+  { id: 'courses', label: '과목' },
   { id: 'projects', label: '프로젝트' },
   { id: 'certificates', label: '자격/어학' },
   { id: 'awards', label: '수상/활동' },
+  { id: 'essays', label: '자소서' },
   { id: 'military', label: '병역/보훈' },
   { id: 'internships', label: '인턴/알바' },
   { id: 'trainings', label: '교육이수' },
@@ -289,6 +291,14 @@ const activeSectionLabel = computed(() => activeSectionConfig.value.label)
 const activeSectionTitle = computed(() => {
   if (activeSection.value === 'projects') {
     return '프로젝트'
+  }
+
+  if (activeSection.value === 'courses') {
+    return '과목 정보'
+  }
+
+  if (activeSection.value === 'essays') {
+    return '사전 작성 자소서'
   }
 
   if (activeSection.value === 'awards') {
@@ -316,9 +326,11 @@ const activeSectionTitle = computed(() => {
 const reusableSectionTypes: ReusableProfileSectionType[] = [
   'education',
   'career',
+  'courses',
   'projects',
   'certificates',
   'awards',
+  'essays',
   'military',
   'internships',
   'trainings',
@@ -346,9 +358,11 @@ watch(
     activeSection,
     () => documentProfileStore.education,
     () => documentProfileStore.career,
+    () => documentProfileStore.courses,
     () => documentProfileStore.projects,
     () => documentProfileStore.certificates,
     () => documentProfileStore.awards,
+    () => documentProfileStore.essays,
     () => documentProfileStore.military,
     () => documentProfileStore.internships,
     () => documentProfileStore.trainings,
