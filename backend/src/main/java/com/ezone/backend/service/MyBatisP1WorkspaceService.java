@@ -175,6 +175,9 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         if (mapper.updateBasketJobMemo(userId, basketJobId, normalizeMemo(request.applicationMemo())) == 0) {
             throw new IllegalArgumentException("Basket job not found");
         }
+        if (isPresent(request.applicationMemo())) {
+            mapper.markBasketJobInProgress(userId, basketJobId);
+        }
         return getBasketJob(userId, basketJobId);
     }
 
@@ -219,6 +222,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         question.setMaxLength(request.maxLength());
         mapper.insertEssayQuestion(question);
         mapper.insertEssayDraft(question);
+        mapper.markWorkspaceBasketJobInProgress(userId, workspaceId);
         return toQuestionResponse(question);
     }
 
@@ -238,6 +242,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         if (mapper.updateQuestion(question) == 0) {
             throw new IllegalArgumentException("Question not found");
         }
+        mapper.markWorkspaceBasketJobInProgress(userId, workspaceId);
         return toQuestionResponse(question);
     }
 
@@ -255,11 +260,13 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
     }
 
     @Override
+    @Transactional
     public EssayQuestionResponse updateDraft(Long userId, Long workspaceId, Long draftId, UpdateDraftRequest request) {
         requireWorkspace(userId, workspaceId);
         EssayQuestionRow question = mapper.findQuestion(workspaceId, draftId)
             .orElseThrow(() -> new IllegalArgumentException("Draft not found"));
         mapper.updateDraft(draftId, request.body());
+        mapper.markWorkspaceBasketJobInProgress(userId, workspaceId);
         question.setDraft(request.body());
         return toQuestionResponse(question);
     }
@@ -312,6 +319,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
     }
 
     @Override
+    @Transactional
     public ReferenceResponse createReference(Long userId, Long workspaceId, CreateReferenceRequest request) {
         requireWorkspace(userId, workspaceId);
         ReferenceMaterialRow reference = new ReferenceMaterialRow();
@@ -323,6 +331,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         reference.setBody(request.body());
         reference.setUrl(request.url());
         mapper.insertReferenceMaterial(reference);
+        mapper.markWorkspaceBasketJobInProgress(userId, workspaceId);
         return toReferenceResponse(reference);
     }
 
@@ -332,6 +341,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
     }
 
     @Override
+    @Transactional
     public ReferenceResponse updateReference(Long userId, Long referenceId, CreateReferenceRequest request) {
         ReferenceMaterialRow current = requireReference(userId, referenceId);
         current.setBoardName(request.boardName());
@@ -342,6 +352,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         if (mapper.updateReference(current) == 0) {
             throw new IllegalArgumentException("Reference not found");
         }
+        mapper.markWorkspaceBasketJobInProgress(userId, current.getWorkspaceId());
         return toReferenceResponse(current);
     }
 
@@ -478,6 +489,10 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
 
     private String normalizeMemo(String applicationMemo) {
         return applicationMemo == null ? "" : applicationMemo;
+    }
+
+    private boolean isPresent(String value) {
+        return value != null && !value.isBlank();
     }
 
     private String statusLabel(ApplicationStatus status) {

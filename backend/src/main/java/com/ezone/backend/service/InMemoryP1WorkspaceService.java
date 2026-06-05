@@ -126,13 +126,17 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
     @Override
     public BasketJobResponse updateBasketJob(Long userId, Long basketJobId, UpdateBasketJobRequest request) {
         BasketRecord current = requireBasketJob(userId, basketJobId);
+        ApplicationStatus status = current.applicationStatus();
+        if (isPresent(request.applicationMemo())) {
+            status = startedStatus(status);
+        }
         BasketRecord updated = new BasketRecord(
             current.id(),
             current.userId(),
             current.workspaceId(),
             request.companyName(),
             request.positionTitle(),
-            current.applicationStatus(),
+            status,
             normalizeDeadline(request.deadlineLabel()),
             isDeadlineSoon(request.deadlineLabel()),
             request.sourceUrl(),
@@ -215,6 +219,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
     @Override
     public EssayQuestionResponse createQuestion(Long userId, Long workspaceId, CreateEssayQuestionRequest request) {
         WorkspaceRecord workspace = requireWorkspace(userId, workspaceId);
+        markWorkspaceInProgress(workspace);
         EssayQuestionRecord question = new EssayQuestionRecord(
             idGenerator.incrementAndGet(),
             request.prompt(),
@@ -233,6 +238,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
         CreateEssayQuestionRequest request
     ) {
         WorkspaceRecord workspace = requireWorkspace(userId, workspaceId);
+        markWorkspaceInProgress(workspace);
         EssayQuestionRecord current = workspace.questions().stream()
             .filter(item -> item.id().equals(questionId))
             .findFirst()
@@ -264,6 +270,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
     @Override
     public EssayQuestionResponse updateDraft(Long userId, Long workspaceId, Long draftId, UpdateDraftRequest request) {
         WorkspaceRecord workspace = requireWorkspace(userId, workspaceId);
+        markWorkspaceInProgress(workspace);
         EssayQuestionRecord current = workspace.questions().stream()
             .filter(item -> item.id().equals(draftId))
             .findFirst()
@@ -339,7 +346,8 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
 
     @Override
     public ReferenceResponse createReference(Long userId, Long workspaceId, CreateReferenceRequest request) {
-        requireWorkspace(userId, workspaceId);
+        WorkspaceRecord workspace = requireWorkspace(userId, workspaceId);
+        markWorkspaceInProgress(workspace);
         ReferenceRecord reference = new ReferenceRecord(
             idGenerator.incrementAndGet(),
             userId,
@@ -363,6 +371,8 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
     @Override
     public ReferenceResponse updateReference(Long userId, Long referenceId, CreateReferenceRequest request) {
         ReferenceRecord current = requireReference(userId, referenceId);
+        WorkspaceRecord workspace = requireWorkspace(userId, current.workspaceId());
+        markWorkspaceInProgress(workspace);
         ReferenceRecord updated = new ReferenceRecord(
             current.id(),
             current.userId(),
@@ -635,6 +645,53 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
 
     private String normalizeMemo(String applicationMemo) {
         return applicationMemo == null ? "" : applicationMemo;
+    }
+
+    private boolean isPresent(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private void markWorkspaceInProgress(WorkspaceRecord workspace) {
+        BasketRecord current = basketJobs.get(workspace.basketJobId());
+        if (current == null || current.deleted()) {
+            return;
+        }
+        ApplicationStatus status = startedStatus(current.applicationStatus());
+        if (status == current.applicationStatus()) {
+            return;
+        }
+        BasketRecord updated = new BasketRecord(
+            current.id(),
+            current.userId(),
+            current.workspaceId(),
+            current.companyName(),
+            current.positionTitle(),
+            status,
+            current.deadlineLabel(),
+            current.deadlineSoon(),
+            current.sourceUrl(),
+            current.applicationMemo(),
+            current.deleted()
+        );
+        basketJobs.put(current.id(), updated);
+        workspaces.put(workspace.id(), new WorkspaceRecord(
+            workspace.id(),
+            workspace.userId(),
+            workspace.basketJobId(),
+            workspace.companyName(),
+            workspace.positionTitle(),
+            workspace.deadlineLabel(),
+            statusLabel(status),
+            workspace.sourceUrl(),
+            workspace.questions()
+        ));
+    }
+
+    private ApplicationStatus startedStatus(ApplicationStatus current) {
+        if (current == ApplicationStatus.COMPLETED || current == ApplicationStatus.IN_PROGRESS) {
+            return current;
+        }
+        return ApplicationStatus.IN_PROGRESS;
     }
 
     private String statusLabel(ApplicationStatus status) {
