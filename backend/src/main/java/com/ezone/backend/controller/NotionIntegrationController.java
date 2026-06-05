@@ -33,7 +33,10 @@ public class NotionIntegrationController {
 
     @PostMapping("/connect")
     public ApiResponse<NotionConnectionResponse> connect(@RequestBody NotionConnectRequest request) {
-        return ApiResponse.success(notionIntegrationService.connect(CurrentUserSupport.currentUserId()));
+        return ApiResponse.success(notionIntegrationService.connect(
+            CurrentUserSupport.currentUserId(),
+            request.authorizationCode()
+        ));
     }
 
     @DeleteMapping

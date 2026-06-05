@@ -9,7 +9,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class NotionIntegrationService {
@@ -29,7 +31,12 @@ public class NotionIntegrationService {
         return connections.getOrDefault(userId, DEFAULT_CONNECTION);
     }
 
-    public NotionConnectionResponse connect(Long userId) {
+    public NotionConnectionResponse connect(Long userId, String authorizationCode) {
+        if (authorizationCode == null || authorizationCode.isBlank() || authorizationCode.contains("expired")) {
+            addLog(userId, "NOTION_CONNECTION", "FAILURE", "Notion connection failed or expired.");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Notion authorization failed.");
+        }
+
         NotionConnectionResponse connection = new NotionConnectionResponse(true, "notion@example.com", true, SyncScope.JOB_ONLY);
         connections.put(userId, connection);
         addLog(userId, "NOTION_CONNECTION", "SUCCESS", "Notion connection saved.");
@@ -41,13 +48,16 @@ public class NotionIntegrationService {
     }
 
     public NotionConnectionResponse updateSettings(Long userId, boolean syncEnabled, SyncScope syncScope) {
+        if (syncScope != SyncScope.JOB_ONLY) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "P1 Notion sync scope must be JOB_ONLY.");
+        }
+
         NotionConnectionResponse currentConnection = getConnection(userId);
-        SyncScope p1Scope = syncScope == SyncScope.JOB_ONLY ? syncScope : SyncScope.JOB_ONLY;
         NotionConnectionResponse connection = new NotionConnectionResponse(
             currentConnection.connected(),
             currentConnection.notionAccountEmail(),
             syncEnabled,
-            p1Scope
+            SyncScope.JOB_ONLY
         );
         connections.put(userId, connection);
         return connection;

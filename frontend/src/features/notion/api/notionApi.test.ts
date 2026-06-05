@@ -71,7 +71,7 @@ describe('notionApi', () => {
     const connection = await api.connect()
 
     expect(post).toHaveBeenCalledWith('/api/integrations/notion/connect', {
-      code: 'local-mvp-connect'
+      authorizationCode: 'local-mvp-connect'
     })
     expect(connection.connected).toBe(true)
     expect(connection.syncScope).toBe('JOB_ONLY')
