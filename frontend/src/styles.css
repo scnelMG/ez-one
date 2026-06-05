@@ -784,6 +784,7 @@ li {
   .document-editor-grid,
   .workspace-canvas,
   .metric-strip,
+  .weekly-deadline-calendar,
   .workspace-summary,
   .recommendation-grid,
   .reference-board-grid,
@@ -2497,6 +2498,34 @@ li {
   border-radius: 8px;
   background: #fff;
   padding: 20px;
+}
+
+.weekly-deadline-calendar {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid #e4e8f0;
+  border-radius: 8px;
+}
+
+.weekly-deadline-day {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-height: 84px;
+  border-right: 1px solid #edf0f5;
+  background: #fbfcff;
+  padding: 8px;
+}
+
+.weekly-deadline-day:last-child {
+  border-right: 0;
+}
+
+.weekly-deadline-day > span {
+  color: #7a8393;
+  font-size: 0.74rem;
+  font-weight: 900;
 }
 
 .app-main {
