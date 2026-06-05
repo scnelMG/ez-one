@@ -84,6 +84,99 @@ class AuthControllerTest {
     }
 
     @Test
+    void signupReturnsTokenEnvelope() throws Exception {
+        when(authService.signup(any())).thenReturn(
+            new AuthTokenResponse(
+                "access-token",
+                "refresh-token",
+                "Bearer",
+                3600,
+                new CurrentUserResponse(
+                    2L,
+                    "local@example.com",
+                    "Local User",
+                    "Local User",
+                    false
+                )
+            )
+        );
+
+        mockMvc.perform(post("/api/auth/signup")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "email": "local@example.com",
+                      "password": "password123!",
+                      "name": "Local User"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.accessToken").value("access-token"))
+            .andExpect(jsonPath("$.data.refreshToken").value("refresh-token"))
+            .andExpect(jsonPath("$.data.user.email").value("local@example.com"))
+            .andExpect(jsonPath("$.data.user.profileCompleted").value(false));
+    }
+
+    @Test
+    void emailLoginReturnsTokenEnvelope() throws Exception {
+        when(authService.loginWithEmail(any())).thenReturn(
+            new AuthTokenResponse(
+                "access-token",
+                "refresh-token",
+                "Bearer",
+                3600,
+                new CurrentUserResponse(
+                    2L,
+                    "local@example.com",
+                    "Local User",
+                    "Local User",
+                    true
+                )
+            )
+        );
+
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "email": "local@example.com",
+                      "password": "password123!"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.accessToken").value("access-token"))
+            .andExpect(jsonPath("$.data.refreshToken").value("refresh-token"))
+            .andExpect(jsonPath("$.data.user.email").value("local@example.com"))
+            .andExpect(jsonPath("$.data.user.profileCompleted").value(true));
+    }
+
+    @Test
+    void duplicateEmailSignupReturnsConflictEnvelope() throws Exception {
+        doThrow(new org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.CONFLICT,
+                "Email is already registered."
+            ))
+            .when(authService)
+            .signup(any());
+
+        mockMvc.perform(post("/api/auth/signup")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "email": "local@example.com",
+                      "password": "password123!",
+                      "name": "Local User"
+                    }
+                    """))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.error.code").value("CONFLICT"))
+            .andExpect(jsonPath("$.error.message").value("Email is already registered."));
+    }
+
+    @Test
     void googleLoginFailureReturnsApiEnvelope() throws Exception {
         doThrow(new GoogleOAuthException("Google 인증 코드 교환에 실패했습니다. 다시 로그인해 주세요.", null))
             .when(authService)

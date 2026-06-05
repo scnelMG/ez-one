@@ -7,8 +7,10 @@ import static org.mockito.Mockito.when;
 import com.ezone.backend.client.GoogleOAuthClient;
 import com.ezone.backend.domain.UserAccount;
 import com.ezone.backend.dto.auth.AuthTokenResponse;
+import com.ezone.backend.dto.auth.EmailLoginRequest;
 import com.ezone.backend.dto.auth.GoogleLoginRequest;
 import com.ezone.backend.dto.auth.GoogleUserProfile;
+import com.ezone.backend.dto.auth.SignupRequest;
 import com.ezone.backend.mapper.UserAccountMapper;
 import com.ezone.backend.security.AuthTokenIssuer;
 import com.ezone.backend.security.IssuedTokenPair;
@@ -18,6 +20,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.server.ResponseStatusException;
 
 @ExtendWith(MockitoExtension.class)
 class DefaultAuthServiceTest {
@@ -30,6 +34,9 @@ class DefaultAuthServiceTest {
 
     @Mock
     private AuthTokenIssuer authTokenIssuer;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
     @InjectMocks
     private DefaultAuthService authService;
@@ -71,5 +78,94 @@ class DefaultAuthServiceTest {
         assertThat(response.user().email()).isEqualTo("user@example.com");
         assertThat(response.user().profileCompleted()).isFalse();
         verify(userAccountMapper).createFromGoogleProfile(profile);
+    }
+
+    @Test
+    void signupRejectsDuplicateEmail() {
+        SignupRequest request = new SignupRequest("local@example.com", "password123!", "Local User");
+        when(userAccountMapper.findByEmail("local@example.com")).thenReturn(Optional.of(
+            new UserAccount(
+                2L,
+                null,
+                "local@example.com",
+                "Local User",
+                "Local User",
+                false
+            )
+        ));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> authService.signup(request))
+            .isInstanceOf(ResponseStatusException.class)
+            .hasMessageContaining("Email is already registered.");
+    }
+
+    @Test
+    void signupHashesPasswordCreatesLocalUserAndIssuesTokens() {
+        SignupRequest request = new SignupRequest("local@example.com", "password123!", "Local User");
+        UserAccount createdUser = new UserAccount(
+            2L,
+            null,
+            "local@example.com",
+            "Local User",
+            "Local User",
+            false
+        );
+
+        when(userAccountMapper.findByEmail("local@example.com")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode("password123!")).thenReturn("bcrypt-hash");
+        when(userAccountMapper.createLocalUser("local@example.com", "Local User", "bcrypt-hash")).thenReturn(createdUser);
+        when(authTokenIssuer.issueFor(createdUser)).thenReturn(
+            new IssuedTokenPair("access-token", "refresh-token", 3600)
+        );
+
+        AuthTokenResponse response = authService.signup(request);
+
+        assertThat(response.accessToken()).isEqualTo("access-token");
+        assertThat(response.user().email()).isEqualTo("local@example.com");
+        verify(userAccountMapper).createLocalUser("local@example.com", "Local User", "bcrypt-hash");
+    }
+
+    @Test
+    void emailLoginRejectsInvalidPassword() {
+        EmailLoginRequest request = new EmailLoginRequest("local@example.com", "wrong-password");
+        when(userAccountMapper.findByEmail("local@example.com")).thenReturn(Optional.of(
+            new UserAccount(
+                2L,
+                null,
+                "local@example.com",
+                "Local User",
+                "Local User",
+                false
+            )
+        ));
+        when(userAccountMapper.findPasswordHashByEmail("local@example.com")).thenReturn(Optional.of("bcrypt-hash"));
+        when(passwordEncoder.matches("wrong-password", "bcrypt-hash")).thenReturn(false);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> authService.loginWithEmail(request))
+            .isInstanceOf(ResponseStatusException.class)
+            .hasMessageContaining("Email or password is invalid.");
+    }
+
+    @Test
+    void emailLoginIssuesTokensForMatchingPassword() {
+        EmailLoginRequest request = new EmailLoginRequest("local@example.com", "password123!");
+        UserAccount user = new UserAccount(
+            2L,
+            null,
+            "local@example.com",
+            "Local User",
+            "Local User",
+            true
+        );
+
+        when(userAccountMapper.findByEmail("local@example.com")).thenReturn(Optional.of(user));
+        when(userAccountMapper.findPasswordHashByEmail("local@example.com")).thenReturn(Optional.of("bcrypt-hash"));
+        when(passwordEncoder.matches("password123!", "bcrypt-hash")).thenReturn(true);
+        when(authTokenIssuer.issueFor(user)).thenReturn(new IssuedTokenPair("access-token", "refresh-token", 3600));
+
+        AuthTokenResponse response = authService.loginWithEmail(request);
+
+        assertThat(response.accessToken()).isEqualTo("access-token");
+        assertThat(response.user().profileCompleted()).isTrue();
     }
 }
