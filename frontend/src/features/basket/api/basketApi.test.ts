@@ -41,7 +41,7 @@ describe('basketApi', () => {
     expect(get).toHaveBeenCalledWith('/api/basket/jobs', { params: undefined })
     expect(jobs).toEqual([
       expect.objectContaining({ id: '101', status: 'IN_PROGRESS', workspaceId: '102' }),
-      expect.objectContaining({ id: '104', status: 'NOT_STARTED', workspaceId: '105' })
+      expect.objectContaining({ id: '104', status: 'NOT_APPLIED', workspaceId: '105' })
     ])
   })
 
@@ -88,6 +88,7 @@ describe('basketApi', () => {
       sourceUrl: 'https://www.jasoseol.com/jobs/201'
     })).resolves.toMatchObject({ id: '201' })
     await expect(api.updateStatus('201', 'SUBMITTED')).resolves.toMatchObject({ status: 'SUBMITTED' })
+    await expect(api.updateStatus('201', 'NOT_APPLIED')).resolves.toMatchObject({ status: 'SUBMITTED' })
     await expect(api.archiveJob('201')).resolves.toBeUndefined()
 
     expect(post).toHaveBeenCalledWith('/api/basket/jobs', {
@@ -106,6 +107,9 @@ describe('basketApi', () => {
     })
     expect(patch).toHaveBeenCalledWith('/api/basket/jobs/201/status', {
       applicationStatus: 'COMPLETED'
+    })
+    expect(patch).toHaveBeenCalledWith('/api/basket/jobs/201/status', {
+      applicationStatus: 'NOT_APPLIED'
     })
     expect(deleteRequest).toHaveBeenCalledWith('/api/basket/jobs/201')
   })
