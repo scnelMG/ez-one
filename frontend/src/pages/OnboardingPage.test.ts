@@ -90,6 +90,42 @@ describe('OnboardingPage', () => {
     expect(router.currentRoute.value.path).toBe('/main')
     expect(JSON.parse(localStorage.getItem('ezone.currentUser') ?? '{}').profileCompleted).toBe(true)
   })
+
+  it('ONBOARD-004: skipping onboarding marks the profile complete with empty preferences', async () => {
+    mocks.saveUserProfile.mockResolvedValue({
+      desiredRoles: [],
+      companyTypes: [],
+      industries: [],
+      regions: [],
+      skills: [],
+      ssafy: false,
+      completed: true
+    })
+    const router = makeRouter()
+    router.push('/onboarding')
+    await router.isReady()
+
+    const wrapper = mount(OnboardingPage, {
+      global: {
+        plugins: [createPinia(), router]
+      }
+    })
+
+    await flushPromises()
+    await wrapper.get('button.ghost-button').trigger('click')
+    await flushPromises()
+
+    expect(mocks.saveUserProfile).toHaveBeenCalledWith({
+      desiredRoles: [],
+      companyTypes: [],
+      industries: [],
+      regions: [],
+      skills: [],
+      ssafy: false
+    })
+    expect(router.currentRoute.value.path).toBe('/main')
+    expect(JSON.parse(localStorage.getItem('ezone.currentUser') ?? '{}').profileCompleted).toBe(true)
+  })
 })
 
 function flushPromises() {
