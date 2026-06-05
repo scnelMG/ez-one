@@ -87,7 +87,7 @@ describe('MyPage', () => {
 
     const wrapper = mount(MyPage, {
       global: {
-        plugins: [router]
+        plugins: [createPinia(), router]
       }
     })
 
