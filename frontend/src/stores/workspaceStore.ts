@@ -2,14 +2,17 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import {
   workspaceApi,
+  type CreateReferencePayload,
   type EssayVersion,
-  type WorkspaceDetail
+  type WorkspaceDetail,
+  type WorkspaceReference
 } from '@/features/workspace/api/workspaceApi'
 
 export const useWorkspaceStore = defineStore('workspace', () => {
   const status = ref<'idle' | 'loading' | 'ready' | 'saving' | 'error' | 'forbidden' | 'notFound'>('idle')
   const workspace = ref<WorkspaceDetail | null>(null)
   const versions = ref<EssayVersion[]>([])
+  const activeReference = ref<WorkspaceReference | null>(null)
   const errorMessage = ref('')
 
   async function loadWorkspace(workspaceId: string) {
@@ -23,6 +26,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     } catch {
       workspace.value = null
       versions.value = []
+      activeReference.value = null
       status.value = 'error'
       errorMessage.value = '워크스페이스를 불러오지 못했습니다.'
     }
@@ -63,5 +67,49 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     }
   }
 
-  return { status, workspace, versions, errorMessage, loadWorkspace, saveDraft, createVersion }
+  async function createReference(workspaceId: string, payload: CreateReferencePayload) {
+    status.value = 'saving'
+    errorMessage.value = ''
+
+    try {
+      const reference = await workspaceApi.createReference(workspaceId, payload)
+      activeReference.value = reference
+      if (workspace.value) {
+        workspace.value = {
+          ...workspace.value,
+          references: [reference, ...workspace.value.references]
+        }
+      }
+      status.value = 'ready'
+    } catch {
+      status.value = 'error'
+      errorMessage.value = '참고자료를 저장하지 못했습니다.'
+    }
+  }
+
+  async function openReference(referenceId: string) {
+    status.value = 'loading'
+    errorMessage.value = ''
+
+    try {
+      activeReference.value = await workspaceApi.getReference(referenceId)
+      status.value = 'ready'
+    } catch {
+      status.value = 'error'
+      errorMessage.value = '참고자료를 열지 못했습니다.'
+    }
+  }
+
+  return {
+    status,
+    workspace,
+    versions,
+    activeReference,
+    errorMessage,
+    loadWorkspace,
+    saveDraft,
+    createVersion,
+    createReference,
+    openReference
+  }
 })

@@ -110,16 +110,51 @@
               <p class="section-kicker">작성 중 참고자료</p>
               <h2>참고자료</h2>
             </div>
-            <button class="ghost-button" type="button">추가</button>
+            <button
+              class="ghost-button"
+              type="button"
+              :disabled="workspaceStore.status === 'saving'"
+              data-testid="create-reference"
+              @click="createReference"
+            >
+              추가
+            </button>
           </div>
           <ul v-if="workspaceStore.workspace">
             <li v-for="reference in workspaceStore.workspace.references" :key="reference.id">
               <span class="status-chip">{{ reference.type }}</span>
               <strong>{{ reference.title }}</strong>
               <p>작성 중인 문항 옆에서 바로 열어볼 수 있습니다.</p>
+              <button
+                class="text-button"
+                type="button"
+                :data-testid="`open-reference-${reference.id}`"
+                @click="openReference(reference.id)"
+              >
+                열기
+              </button>
             </li>
           </ul>
         </aside>
+      </section>
+
+      <section v-if="workspaceStore.activeReference" class="wire-panel" aria-label="참고자료 상세">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">{{ workspaceStore.activeReference.type }}</p>
+            <h2>{{ workspaceStore.activeReference.title }}</h2>
+          </div>
+        </div>
+        <p>{{ workspaceStore.activeReference.body }}</p>
+        <a
+          v-if="workspaceStore.activeReference.url"
+          class="text-button"
+          :href="workspaceStore.activeReference.url"
+          target="_blank"
+          rel="noreferrer"
+        >
+          원문 열기
+        </a>
       </section>
 
       <section class="wire-panel" aria-label="버전 목록">
@@ -199,6 +234,20 @@ function createVersion() {
     currentQuestion.value.id,
     `v${workspaceStore.versions.length + 1}`
   )
+}
+
+function createReference() {
+  void workspaceStore.createReference(workspaceId.value, {
+    boardName: 'MEMO',
+    referenceType: 'FREE_MEMO',
+    title: '새 참고 메모',
+    body: '직접 입력한 참고자료입니다.',
+    url: ''
+  })
+}
+
+function openReference(referenceId: string) {
+  void workspaceStore.openReference(referenceId)
 }
 
 onMounted(loadCurrentWorkspace)

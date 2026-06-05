@@ -22,8 +22,21 @@ export interface EssayVersion {
 
 export interface WorkspaceReference {
   id: string
-  type: 'JD' | 'NEWS' | 'DART' | 'TALENT_PROFILE' | 'PROMPT' | 'MEMO'
+  boardName?: string
+  type: ReferenceType
   title: string
+  body?: string
+  url?: string
+}
+
+export type ReferenceType = 'FREE_MEMO' | 'JD' | 'NEWS' | 'DART' | 'TALENT_PROFILE' | 'PROMPT' | 'CUSTOM'
+
+export interface CreateReferencePayload {
+  boardName: string
+  referenceType: ReferenceType
+  title: string
+  body: string
+  url: string
 }
 
 export interface WorkspaceDetail {
@@ -55,11 +68,20 @@ interface WorkspaceDto {
   references: Array<{
     id: number
     boardName: string
-    referenceType: WorkspaceReference['type']
+    referenceType: ReferenceType
     title: string
     body: string
     url: string
   }>
+}
+
+interface ReferenceDto {
+  id: number
+  boardName: string
+  referenceType: ReferenceType
+  title: string
+  body: string
+  url: string
 }
 
 interface EssayQuestionDto {
@@ -94,11 +116,7 @@ export function createWorkspaceApi(httpClient: WorkspaceHttpClient = defaultHttp
           statusLabel: data.statusLabel,
           sourceUrl: data.sourceUrl,
           questions: data.questions.map(toWorkspaceQuestion),
-          references: data.references.map((reference) => ({
-            id: String(reference.id),
-            type: reference.referenceType,
-            title: reference.title
-          }))
+          references: data.references.map(toWorkspaceReference)
         }
       } catch {
         const mockWorkspace = mockWorkspaces[workspaceId]
@@ -135,6 +153,22 @@ export function createWorkspaceApi(httpClient: WorkspaceHttpClient = defaultHttp
         `/api/workspaces/${workspaceId}/versions`
       )
       return unwrapApiData(response.data).map(toEssayVersion)
+    },
+
+    async createReference(
+      workspaceId: string,
+      payload: CreateReferencePayload
+    ): Promise<WorkspaceReference> {
+      const response = await httpClient.post<ApiEnvelope<ReferenceDto>>(
+        `/api/workspaces/${workspaceId}/references`,
+        payload
+      )
+      return toWorkspaceReference(unwrapApiData(response.data))
+    },
+
+    async getReference(referenceId: string): Promise<WorkspaceReference> {
+      const response = await httpClient.get<ApiEnvelope<ReferenceDto>>(`/api/references/${referenceId}`)
+      return toWorkspaceReference(unwrapApiData(response.data))
     }
   }
 }
@@ -154,6 +188,17 @@ function toEssayVersion(version: EssayVersionDto): EssayVersion {
     questionId: String(version.questionId),
     versionName: version.versionName,
     body: version.body
+  }
+}
+
+function toWorkspaceReference(reference: ReferenceDto): WorkspaceReference {
+  return {
+    id: String(reference.id),
+    boardName: reference.boardName,
+    type: reference.referenceType,
+    title: reference.title,
+    body: reference.body,
+    url: reference.url
   }
 }
 

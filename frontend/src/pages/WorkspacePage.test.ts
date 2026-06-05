@@ -8,7 +8,9 @@ const mocks = vi.hoisted(() => ({
   getWorkspace: vi.fn(),
   listVersions: vi.fn(),
   saveDraft: vi.fn(),
-  createVersion: vi.fn()
+  createVersion: vi.fn(),
+  createReference: vi.fn(),
+  getReference: vi.fn()
 }))
 
 vi.mock('@/features/workspace/api/workspaceApi', () => ({
@@ -16,7 +18,9 @@ vi.mock('@/features/workspace/api/workspaceApi', () => ({
     getWorkspace: mocks.getWorkspace,
     listVersions: mocks.listVersions,
     saveDraft: mocks.saveDraft,
-    createVersion: mocks.createVersion
+    createVersion: mocks.createVersion,
+    createReference: mocks.createReference,
+    getReference: mocks.getReference
   }
 }))
 
@@ -39,6 +43,8 @@ describe('WorkspacePage', () => {
     mocks.listVersions.mockReset()
     mocks.saveDraft.mockReset()
     mocks.createVersion.mockReset()
+    mocks.createReference.mockReset()
+    mocks.getReference.mockReset()
     mocks.getWorkspace.mockResolvedValue({
       id: '102',
       companyName: '네이버',
@@ -58,7 +64,9 @@ describe('WorkspacePage', () => {
         {
           id: '104',
           type: 'JD',
-          title: 'JD 핵심 요약'
+          title: 'JD 핵심 요약',
+          body: 'JD 본문',
+          url: 'https://example.com/jd'
         }
       ]
     })
@@ -81,6 +89,22 @@ describe('WorkspacePage', () => {
       questionId: '103',
       versionName: 'v2',
       body: '새 초안'
+    })
+    mocks.createReference.mockResolvedValue({
+      id: '701',
+      boardName: 'MEMO',
+      type: 'FREE_MEMO',
+      title: '새 참고 메모',
+      body: '직접 입력한 참고자료입니다.',
+      url: ''
+    })
+    mocks.getReference.mockResolvedValue({
+      id: '104',
+      boardName: 'JD',
+      type: 'JD',
+      title: 'JD 핵심 요약',
+      body: 'JD 본문',
+      url: 'https://example.com/jd'
     })
   })
 
@@ -112,6 +136,37 @@ describe('WorkspacePage', () => {
 
     expect(mocks.createVersion).toHaveBeenCalledWith('102', '103', 'v2')
     expect(wrapper.text()).toContain('v2')
+  })
+
+  it('REF-001/REF-002: creates a reference and opens reference detail', async () => {
+    const router = makeRouter()
+    router.push('/workspaces/102')
+    await router.isReady()
+
+    const wrapper = mount(WorkspacePage, {
+      global: {
+        plugins: [createPinia(), router]
+      }
+    })
+
+    await flushPromises()
+    await wrapper.get('[data-testid="create-reference"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.createReference).toHaveBeenCalledWith('102', {
+      boardName: 'MEMO',
+      referenceType: 'FREE_MEMO',
+      title: '새 참고 메모',
+      body: '직접 입력한 참고자료입니다.',
+      url: ''
+    })
+    expect(wrapper.text()).toContain('새 참고 메모')
+
+    await wrapper.get('[data-testid="open-reference-104"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.getReference).toHaveBeenCalledWith('104')
+    expect(wrapper.text()).toContain('JD 본문')
   })
 })
 

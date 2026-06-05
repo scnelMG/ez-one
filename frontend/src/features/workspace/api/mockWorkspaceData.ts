@@ -18,7 +18,7 @@ const workspaceDefaults = {
     },
     {
       id: 'r-2',
-      type: 'MEMO' as const,
+      type: 'FREE_MEMO' as const,
       title: '지원 전략 메모'
     }
   ]
