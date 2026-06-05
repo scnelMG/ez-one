@@ -25,6 +25,12 @@
     <result property="deadlineLabel" column="deadline_label"/>
     <result property="applicationStatus" column="application_status"/>
     <result property="sourceUrl" column="source_url"/>
+    <result property="companyDomain" column="company_domain"/>
+    <result property="companyType" column="company_type"/>
+    <result property="companySize" column="company_size"/>
+    <result property="companyRating" column="company_rating"/>
+    <result property="companyStartingSalary" column="company_starting_salary"/>
+    <result property="companyFinancialStatus" column="company_financial_status"/>
   </resultMap>
 
   <resultMap id="questionRowMap" type="com.ezone.backend.domain.persistence.EssayQuestionRow">
@@ -155,7 +161,10 @@
 
   <select id="findWorkspace" resultMap="workspaceRowMap">
     SELECT w.id, w.user_id, w.basket_job_id, c.name AS company_name, j.title AS position_title,
-           j.deadline_label, bj.application_status, j.url AS source_url
+           j.deadline_label, bj.application_status, j.url AS source_url,
+           c.domain AS company_domain, c.company_type, c.size AS company_size,
+           c.rating AS company_rating, c.starting_salary AS company_starting_salary,
+           'unverified' AS company_financial_status
     FROM workspaces w
     JOIN basket_jobs bj ON bj.id = w.basket_job_id
     JOIN jobs j ON j.id = bj.job_id

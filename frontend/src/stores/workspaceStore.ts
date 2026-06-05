@@ -6,6 +6,7 @@ import {
   type CreateReferencePayload,
   type EssayVersion,
   type VersionComparison,
+  type WorkspaceDefaults,
   type WorkspaceDetail,
   type WorkspaceReference
 } from '@/features/workspace/api/workspaceApi'
@@ -13,6 +14,7 @@ import {
 export const useWorkspaceStore = defineStore('workspace', () => {
   const status = ref<'idle' | 'loading' | 'ready' | 'saving' | 'error' | 'forbidden' | 'notFound'>('idle')
   const workspace = ref<WorkspaceDetail | null>(null)
+  const defaults = ref<WorkspaceDefaults | null>(null)
   const versions = ref<EssayVersion[]>([])
   const versionComparison = ref<VersionComparison | null>(null)
   const activeReference = ref<WorkspaceReference | null>(null)
@@ -24,11 +26,13 @@ export const useWorkspaceStore = defineStore('workspace', () => {
 
     try {
       workspace.value = await workspaceApi.getWorkspace(workspaceId)
+      defaults.value = await workspaceApi.getDefaults(workspaceId)
       versions.value = await workspaceApi.listVersions(workspaceId)
       versionComparison.value = null
       status.value = 'ready'
     } catch {
       workspace.value = null
+      defaults.value = null
       versions.value = []
       versionComparison.value = null
       activeReference.value = null
@@ -225,6 +229,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   return {
     status,
     workspace,
+    defaults,
     versions,
     versionComparison,
     activeReference,

@@ -42,6 +42,20 @@ export interface WorkspaceReference {
   url?: string
 }
 
+export interface CompanyDetails {
+  domain?: string
+  companyType?: string
+  size?: string
+  rating?: number
+  startingSalary?: number
+  financialStatus?: string
+}
+
+export interface WorkspaceDefaults {
+  workspaceId: string
+  sections: Record<string, unknown>
+}
+
 export type ReferenceType = 'FREE_MEMO' | 'JD' | 'NEWS' | 'DART' | 'TALENT_PROFILE' | 'PROMPT' | 'CUSTOM'
 
 export interface CreateReferencePayload {
@@ -59,6 +73,7 @@ export interface WorkspaceDetail {
   deadlineLabel: string
   statusLabel: string
   sourceUrl: string
+  companyDetails?: CompanyDetails
   questions: WorkspaceQuestion[]
   references: WorkspaceReference[]
 }
@@ -71,6 +86,7 @@ interface WorkspaceDto {
   deadlineLabel: string
   statusLabel: string
   sourceUrl: string
+  companyDetails?: CompanyDetails
   questions: Array<{
     id: number
     prompt: string
@@ -86,6 +102,11 @@ interface WorkspaceDto {
     body: string
     url: string
   }>
+}
+
+interface WorkspaceDefaultsDto {
+  workspaceId: number
+  sections: Record<string, unknown>
 }
 
 interface ReferenceDto {
@@ -136,6 +157,7 @@ export function createWorkspaceApi(httpClient: WorkspaceHttpClient = defaultHttp
           deadlineLabel: data.deadlineLabel,
           statusLabel: data.statusLabel,
           sourceUrl: data.sourceUrl,
+          companyDetails: data.companyDetails,
           questions: data.questions.map(toWorkspaceQuestion),
           references: data.references.map(toWorkspaceReference)
         }
@@ -147,6 +169,17 @@ export function createWorkspaceApi(httpClient: WorkspaceHttpClient = defaultHttp
         }
 
         return mockWorkspace
+      }
+    },
+
+    async getDefaults(workspaceId: string): Promise<WorkspaceDefaults> {
+      const response = await httpClient.get<ApiEnvelope<WorkspaceDefaultsDto>>(
+        `/api/workspaces/${workspaceId}/defaults`
+      )
+      const data = unwrapApiData(response.data)
+      return {
+        workspaceId: String(data.workspaceId),
+        sections: data.sections
       }
     },
 

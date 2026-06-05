@@ -14,6 +14,7 @@ import com.ezone.backend.dto.dashboard.DashboardJobResponse;
 import com.ezone.backend.dto.dashboard.DashboardSummaryResponse;
 import com.ezone.backend.dto.workspace.CompareEssayVersionsRequest;
 import com.ezone.backend.dto.workspace.CompareEssayVersionsResponse;
+import com.ezone.backend.dto.workspace.CompanyDetailsResponse;
 import com.ezone.backend.dto.workspace.CreateEssayQuestionRequest;
 import com.ezone.backend.dto.workspace.CreateEssayVersionRequest;
 import com.ezone.backend.dto.workspace.CreateReferenceRequest;
@@ -406,6 +407,14 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
             row.getDeadlineLabel(),
             statusLabel(row.getApplicationStatus()),
             row.getSourceUrl(),
+            new CompanyDetailsResponse(
+                row.getCompanyDomain(),
+                row.getCompanyType(),
+                row.getCompanySize(),
+                row.getCompanyRating(),
+                row.getCompanyStartingSalary(),
+                row.getCompanyFinancialStatus()
+            ),
             mapper.listQuestions(row.getId()).stream().map(this::toQuestionResponse).toList(),
             mapper.listReferences(row.getId()).stream().map(this::toReferenceResponse).toList()
         );

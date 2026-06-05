@@ -8,6 +8,7 @@ import com.ezone.backend.dto.dashboard.DashboardJobResponse;
 import com.ezone.backend.dto.dashboard.DashboardSummaryResponse;
 import com.ezone.backend.dto.workspace.CompareEssayVersionsRequest;
 import com.ezone.backend.dto.workspace.CompareEssayVersionsResponse;
+import com.ezone.backend.dto.workspace.CompanyDetailsResponse;
 import com.ezone.backend.dto.workspace.CreateEssayQuestionRequest;
 import com.ezone.backend.dto.workspace.CreateEssayVersionRequest;
 import com.ezone.backend.dto.workspace.CreateReferenceRequest;
@@ -17,6 +18,7 @@ import com.ezone.backend.dto.workspace.ReferenceResponse;
 import com.ezone.backend.dto.workspace.UpdateDraftRequest;
 import com.ezone.backend.dto.workspace.WorkspaceDefaultsResponse;
 import com.ezone.backend.dto.workspace.WorkspaceResponse;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -543,6 +545,14 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             record.deadlineLabel(),
             record.statusLabel(),
             record.sourceUrl(),
+            new CompanyDetailsResponse(
+                "naver.com",
+                "대기업",
+                "1,000명 이상",
+                BigDecimal.valueOf(4.2),
+                5000,
+                "stable"
+            ),
             record.questions().stream().map(this::toQuestionResponse).toList(),
             listReferences(record.userId(), record.id())
         );

@@ -10,6 +10,7 @@ public record WorkspaceResponse(
     String deadlineLabel,
     String statusLabel,
     String sourceUrl,
+    CompanyDetailsResponse companyDetails,
     List<EssayQuestionResponse> questions,
     List<ReferenceResponse> references
 ) {

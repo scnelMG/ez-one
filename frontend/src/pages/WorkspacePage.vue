@@ -48,6 +48,57 @@
         </div>
       </section>
 
+      <section v-if="workspaceStore.workspace?.companyDetails" class="wire-panel" aria-label="기업 세부 정보">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">기업 정보</p>
+            <h2>{{ workspaceStore.workspace.companyName }}</h2>
+          </div>
+        </div>
+        <dl class="info-grid">
+          <div>
+            <dt>도메인</dt>
+            <dd>{{ workspaceStore.workspace.companyDetails.domain ?? '미입력' }}</dd>
+          </div>
+          <div>
+            <dt>분류</dt>
+            <dd>{{ workspaceStore.workspace.companyDetails.companyType ?? '미입력' }}</dd>
+          </div>
+          <div>
+            <dt>규모</dt>
+            <dd>{{ workspaceStore.workspace.companyDetails.size ?? '미입력' }}</dd>
+          </div>
+          <div>
+            <dt>평점</dt>
+            <dd>{{ workspaceStore.workspace.companyDetails.rating ?? '미입력' }}</dd>
+          </div>
+          <div>
+            <dt>초봉</dt>
+            <dd>{{ workspaceStore.workspace.companyDetails.startingSalary ?? '미입력' }}</dd>
+          </div>
+          <div>
+            <dt>재무상태</dt>
+            <dd>{{ workspaceStore.workspace.companyDetails.financialStatus ?? '미입력' }}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section v-if="profilePanelItems.length > 0" class="wire-panel" aria-label="서류 입력 정보 패널">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">내 서류 정보</p>
+            <h2>워크스페이스 기본값</h2>
+          </div>
+        </div>
+        <ul class="summary-stack">
+          <li v-for="item in profilePanelItems" :key="item.label + item.title">
+            <strong>{{ item.label }}</strong>
+            <p>{{ item.title }}</p>
+            <small v-if="item.summary">{{ item.summary }}</small>
+          </li>
+        </ul>
+      </section>
+
       <section class="workspace-tabs" aria-label="워크스페이스 탭">
         <button class="tab-button active" type="button">초안 작성</button>
         <button class="tab-button" type="button">참고자료</button>
@@ -272,6 +323,10 @@ const editQuestion = reactive({
   maxLength: 1000
 })
 const currentQuestion = computed(() => workspaceStore.workspace?.questions[0] ?? null)
+const profilePanelItems = computed(() => [
+  ...sectionItems('projects', '프로젝트'),
+  ...sectionItems('awards', '수상')
+])
 const headerDescription = computed(() => {
   const workspace = workspaceStore.workspace
 
@@ -311,6 +366,27 @@ watch(
 
 function loadCurrentWorkspace() {
   void workspaceStore.loadWorkspace(workspaceId.value)
+}
+
+function sectionItems(sectionName: string, label: string) {
+  const section = workspaceStore.defaults?.sections[sectionName]
+
+  if (!Array.isArray(section)) {
+    return []
+  }
+
+  return section.map((item, index) => {
+    const record = isRecord(item) ? item : {}
+    return {
+      label,
+      title: String(record.title ?? record.name ?? `${label} ${index + 1}`),
+      summary: record.summary ? String(record.summary) : ''
+    }
+  })
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
 }
 
 function saveDraft() {

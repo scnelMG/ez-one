@@ -1,6 +1,7 @@
 package com.ezone.backend.domain.persistence;
 
 import com.ezone.backend.domain.ApplicationStatus;
+import java.math.BigDecimal;
 
 public class WorkspaceRow {
     private Long id;
@@ -11,6 +12,12 @@ public class WorkspaceRow {
     private String deadlineLabel;
     private ApplicationStatus applicationStatus;
     private String sourceUrl;
+    private String companyDomain;
+    private String companyType;
+    private String companySize;
+    private BigDecimal companyRating;
+    private Integer companyStartingSalary;
+    private String companyFinancialStatus;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -28,4 +35,16 @@ public class WorkspaceRow {
     public void setApplicationStatus(ApplicationStatus applicationStatus) { this.applicationStatus = applicationStatus; }
     public String getSourceUrl() { return sourceUrl; }
     public void setSourceUrl(String sourceUrl) { this.sourceUrl = sourceUrl; }
+    public String getCompanyDomain() { return companyDomain; }
+    public void setCompanyDomain(String companyDomain) { this.companyDomain = companyDomain; }
+    public String getCompanyType() { return companyType; }
+    public void setCompanyType(String companyType) { this.companyType = companyType; }
+    public String getCompanySize() { return companySize; }
+    public void setCompanySize(String companySize) { this.companySize = companySize; }
+    public BigDecimal getCompanyRating() { return companyRating; }
+    public void setCompanyRating(BigDecimal companyRating) { this.companyRating = companyRating; }
+    public Integer getCompanyStartingSalary() { return companyStartingSalary; }
+    public void setCompanyStartingSalary(Integer companyStartingSalary) { this.companyStartingSalary = companyStartingSalary; }
+    public String getCompanyFinancialStatus() { return companyFinancialStatus; }
+    public void setCompanyFinancialStatus(String companyFinancialStatus) { this.companyFinancialStatus = companyFinancialStatus; }
 }
