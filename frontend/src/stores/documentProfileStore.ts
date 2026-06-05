@@ -6,6 +6,7 @@ import {
   type DocumentProfile,
   type DocumentSectionPayload
 } from '@/features/document-profile/api/documentProfileApi'
+import { messageFromError } from '@/shared/errorMessage'
 
 export interface BasicInfoSection {
   nameKo: string
@@ -76,10 +77,10 @@ export const useDocumentProfileStore = defineStore('documentProfile', () => {
     try {
       profile.value = await documentProfileApi.getDocumentProfile()
       status.value = 'ready'
-    } catch {
+    } catch (error) {
       status.value = 'error'
       profile.value = null
-      errorMessage.value = '서류 입력 정보를 불러오지 못했습니다.'
+      errorMessage.value = messageFromError(error, '서류 입력 정보를 불러오지 못했습니다.')
     }
   }
 
@@ -90,9 +91,9 @@ export const useDocumentProfileStore = defineStore('documentProfile', () => {
     try {
       profile.value = await documentProfileApi.saveSection('basicInfo', { ...payload })
       status.value = 'ready'
-    } catch {
+    } catch (error) {
       status.value = 'error'
-      errorMessage.value = '기본 정보를 저장하지 못했습니다.'
+      errorMessage.value = messageFromError(error, '기본 정보를 저장하지 못했습니다.')
     }
   }
 
@@ -103,9 +104,9 @@ export const useDocumentProfileStore = defineStore('documentProfile', () => {
     try {
       profile.value = await documentProfileApi.saveSection(sectionType, payload)
       status.value = 'ready'
-    } catch {
+    } catch (error) {
       status.value = 'error'
-      errorMessage.value = '서류 섹션을 저장하지 못했습니다.'
+      errorMessage.value = messageFromError(error, '서류 섹션을 저장하지 못했습니다.')
     }
   }
 
@@ -122,9 +123,9 @@ export const useDocumentProfileStore = defineStore('documentProfile', () => {
         }
       }
       status.value = 'ready'
-    } catch {
+    } catch (error) {
       status.value = 'error'
-      errorMessage.value = '커스텀 항목을 추가하지 못했습니다.'
+      errorMessage.value = messageFromError(error, '커스텀 항목을 추가하지 못했습니다.')
     }
   }
 
@@ -141,9 +142,9 @@ export const useDocumentProfileStore = defineStore('documentProfile', () => {
         }
       }
       status.value = 'ready'
-    } catch {
+    } catch (error) {
       status.value = 'error'
-      errorMessage.value = '커스텀 항목을 수정하지 못했습니다.'
+      errorMessage.value = messageFromError(error, '커스텀 항목을 수정하지 못했습니다.')
     }
   }
 
@@ -160,9 +161,9 @@ export const useDocumentProfileStore = defineStore('documentProfile', () => {
         }
       }
       status.value = 'ready'
-    } catch {
+    } catch (error) {
       status.value = 'error'
-      errorMessage.value = '커스텀 항목을 삭제하지 못했습니다.'
+      errorMessage.value = messageFromError(error, '커스텀 항목을 삭제하지 못했습니다.')
     }
   }
 

@@ -5,6 +5,7 @@ import {
   type NotionConnection,
   type NotionSyncLog
 } from '@/features/notion/api/notionApi'
+import { messageFromError } from '@/shared/errorMessage'
 
 export const useNotionStore = defineStore('notion', () => {
   const status = ref<'idle' | 'loading' | 'ready' | 'saving' | 'error'>('idle')
@@ -24,11 +25,11 @@ export const useNotionStore = defineStore('notion', () => {
       connection.value = loadedConnection
       syncLogs.value = loadedLogs
       status.value = 'ready'
-    } catch {
+    } catch (error) {
       connection.value = null
       syncLogs.value = []
       status.value = 'error'
-      errorMessage.value = 'Notion 설정을 불러오지 못했습니다.'
+      errorMessage.value = messageFromError(error, 'Notion 설정을 불러오지 못했습니다.')
     }
   }
 
@@ -39,9 +40,9 @@ export const useNotionStore = defineStore('notion', () => {
     try {
       connection.value = await notionApi.updateSyncSettings(syncEnabled)
       status.value = 'ready'
-    } catch {
+    } catch (error) {
       status.value = 'error'
-      errorMessage.value = 'Notion 동기화 설정을 저장하지 못했습니다.'
+      errorMessage.value = messageFromError(error, 'Notion 동기화 설정을 저장하지 못했습니다.')
     }
   }
 
@@ -53,9 +54,9 @@ export const useNotionStore = defineStore('notion', () => {
       connection.value = await notionApi.connect()
       syncLogs.value = await notionApi.listSyncLogs()
       status.value = 'ready'
-    } catch {
+    } catch (error) {
       status.value = 'error'
-      errorMessage.value = 'Notion 계정을 연결하지 못했습니다.'
+      errorMessage.value = messageFromError(error, 'Notion 계정을 연결하지 못했습니다.')
     }
   }
 

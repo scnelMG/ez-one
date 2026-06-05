@@ -5,6 +5,7 @@ import {
   type RecommendationJob,
   type SavedRecommendationJob
 } from '@/features/recommendations/api/recommendationApi'
+import { messageFromError } from '@/shared/errorMessage'
 
 export const useRecommendationStore = defineStore('recommendation', () => {
   const status = ref<'idle' | 'loading' | 'ready' | 'saving' | 'error'>('idle')
@@ -19,10 +20,10 @@ export const useRecommendationStore = defineStore('recommendation', () => {
     try {
       jobs.value = await recommendationApi.listJobs()
       status.value = 'ready'
-    } catch {
+    } catch (error) {
       jobs.value = []
       status.value = 'error'
-      errorMessage.value = '추천 공고를 불러오지 못했습니다.'
+      errorMessage.value = messageFromError(error, '추천 공고를 불러오지 못했습니다.')
     }
   }
 
@@ -33,9 +34,9 @@ export const useRecommendationStore = defineStore('recommendation', () => {
     try {
       savedJob.value = await recommendationApi.saveJob(recommendationId)
       status.value = 'ready'
-    } catch {
+    } catch (error) {
       status.value = 'error'
-      errorMessage.value = '추천 공고를 저장하지 못했습니다.'
+      errorMessage.value = messageFromError(error, '추천 공고를 저장하지 못했습니다.')
     }
   }
 
