@@ -15,6 +15,7 @@ import com.ezone.backend.dto.workspace.WorkspaceResponse;
 import com.ezone.backend.service.P1WorkspaceService;
 import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -53,6 +54,29 @@ public class WorkspaceController {
             workspaceId,
             request
         ));
+    }
+
+    @PatchMapping("/{workspaceId}/questions/{questionId}")
+    public ApiResponse<EssayQuestionResponse> updateQuestion(
+        @PathVariable Long workspaceId,
+        @PathVariable Long questionId,
+        @Valid @RequestBody CreateEssayQuestionRequest request
+    ) {
+        return ApiResponse.success(workspaceService.updateQuestion(
+            CurrentUserSupport.currentUserId(),
+            workspaceId,
+            questionId,
+            request
+        ));
+    }
+
+    @DeleteMapping("/{workspaceId}/questions/{questionId}")
+    public ApiResponse<Void> deleteQuestion(
+        @PathVariable Long workspaceId,
+        @PathVariable Long questionId
+    ) {
+        workspaceService.deleteQuestion(CurrentUserSupport.currentUserId(), workspaceId, questionId);
+        return ApiResponse.success(null);
     }
 
     @PatchMapping("/{workspaceId}/drafts/{draftId}")

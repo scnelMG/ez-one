@@ -184,6 +184,42 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
     }
 
     @Override
+    public EssayQuestionResponse updateQuestion(
+        Long userId,
+        Long workspaceId,
+        Long questionId,
+        CreateEssayQuestionRequest request
+    ) {
+        WorkspaceRecord workspace = requireWorkspace(userId, workspaceId);
+        EssayQuestionRecord current = workspace.questions().stream()
+            .filter(item -> item.id().equals(questionId))
+            .findFirst()
+            .orElseThrow(() -> new IllegalArgumentException("Question not found"));
+        workspace.questions().remove(current);
+        EssayQuestionRecord updated = new EssayQuestionRecord(
+            current.id(),
+            request.prompt(),
+            current.draft(),
+            request.maxLength()
+        );
+        workspace.questions().add(updated);
+        return toQuestionResponse(updated);
+    }
+
+    @Override
+    public void deleteQuestion(Long userId, Long workspaceId, Long questionId) {
+        WorkspaceRecord workspace = requireWorkspace(userId, workspaceId);
+        boolean removed = workspace.questions().removeIf(item -> item.id().equals(questionId));
+        if (!removed) {
+            throw new IllegalArgumentException("Question not found");
+        }
+        versions.entrySet().removeIf(entry ->
+            entry.getValue().workspaceId().equals(workspaceId)
+                && entry.getValue().questionId().equals(questionId)
+        );
+    }
+
+    @Override
     public EssayQuestionResponse updateDraft(Long userId, Long workspaceId, Long draftId, UpdateDraftRequest request) {
         WorkspaceRecord workspace = requireWorkspace(userId, workspaceId);
         EssayQuestionRecord current = workspace.questions().stream()

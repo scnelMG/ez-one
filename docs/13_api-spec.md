@@ -78,6 +78,8 @@
 | GET | `/api/workspaces/{workspaceId}` | 워크스페이스 상세 |
 | GET | `/api/workspaces/{workspaceId}/defaults` | 서류 입력 정보 기반 기본값 |
 | POST | `/api/workspaces/{workspaceId}/questions` | 자소서 문항 추가 |
+| PATCH | `/api/workspaces/{workspaceId}/questions/{questionId}` | 자소서 문항 수정 |
+| DELETE | `/api/workspaces/{workspaceId}/questions/{questionId}` | 자소서 문항 삭제 |
 | PATCH | `/api/workspaces/{workspaceId}/drafts/{draftId}` | 도화지/초안 자동 저장 |
 | POST | `/api/workspaces/{workspaceId}/versions` | 자소서 버전 생성 |
 | GET | `/api/workspaces/{workspaceId}/versions` | 버전 목록 |

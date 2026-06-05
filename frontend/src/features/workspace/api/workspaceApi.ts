@@ -166,6 +166,26 @@ export function createWorkspaceApi(httpClient: WorkspaceHttpClient = defaultHttp
       return toWorkspaceQuestion(unwrapApiData(response.data))
     },
 
+    async updateQuestion(
+      workspaceId: string,
+      questionId: string,
+      payload: CreateQuestionPayload
+    ): Promise<WorkspaceQuestion> {
+      const response = await httpClient.patch<ApiEnvelope<EssayQuestionDto>>(
+        `/api/workspaces/${workspaceId}/questions/${questionId}`,
+        payload
+      )
+      return toWorkspaceQuestion(unwrapApiData(response.data))
+    },
+
+    async deleteQuestion(workspaceId: string, questionId: string): Promise<void> {
+      if (!httpClient.delete) {
+        throw new Error('HTTP delete is not configured')
+      }
+
+      await httpClient.delete<ApiEnvelope<null>>(`/api/workspaces/${workspaceId}/questions/${questionId}`)
+    },
+
     async createVersion(workspaceId: string, questionId: string, versionName: string): Promise<EssayVersion> {
       const response = await httpClient.post<ApiEnvelope<EssayVersionDto>>(
         `/api/workspaces/${workspaceId}/versions`,

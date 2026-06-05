@@ -200,6 +200,38 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
     }
 
     @Override
+    @Transactional
+    public EssayQuestionResponse updateQuestion(
+        Long userId,
+        Long workspaceId,
+        Long questionId,
+        CreateEssayQuestionRequest request
+    ) {
+        requireWorkspace(userId, workspaceId);
+        EssayQuestionRow question = mapper.findQuestion(workspaceId, questionId)
+            .orElseThrow(() -> new IllegalArgumentException("Question not found"));
+        question.setPrompt(request.prompt());
+        question.setMaxLength(request.maxLength());
+        if (mapper.updateQuestion(question) == 0) {
+            throw new IllegalArgumentException("Question not found");
+        }
+        return toQuestionResponse(question);
+    }
+
+    @Override
+    @Transactional
+    public void deleteQuestion(Long userId, Long workspaceId, Long questionId) {
+        requireWorkspace(userId, workspaceId);
+        mapper.findQuestion(workspaceId, questionId)
+            .orElseThrow(() -> new IllegalArgumentException("Question not found"));
+        mapper.deleteQuestionVersions(workspaceId, questionId);
+        mapper.deleteQuestionDraft(workspaceId, questionId);
+        if (mapper.deleteQuestion(workspaceId, questionId) == 0) {
+            throw new IllegalArgumentException("Question not found");
+        }
+    }
+
+    @Override
     public EssayQuestionResponse updateDraft(Long userId, Long workspaceId, Long draftId, UpdateDraftRequest request) {
         requireWorkspace(userId, workspaceId);
         EssayQuestionRow question = mapper.findQuestion(workspaceId, draftId)

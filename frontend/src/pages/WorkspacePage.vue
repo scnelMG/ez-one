@@ -78,6 +78,20 @@
           <button class="question-item" type="button" data-testid="create-question" @click="createQuestion">
             문항 추가
           </button>
+          <label>
+            현재 문항
+            <input v-model="editQuestion.prompt" data-testid="edit-question-prompt" />
+          </label>
+          <label>
+            제한
+            <input v-model.number="editQuestion.maxLength" data-testid="edit-question-max" type="number" min="1" />
+          </label>
+          <button class="question-item" type="button" data-testid="update-question" @click="updateQuestion">
+            문항 수정
+          </button>
+          <button class="text-button danger" type="button" data-testid="delete-question" @click="deleteQuestion">
+            삭제
+          </button>
           <div class="mini-lines" aria-hidden="true">
             <span></span>
             <span></span>
@@ -253,6 +267,10 @@ const newQuestion = reactive({
   prompt: '',
   maxLength: 1000
 })
+const editQuestion = reactive({
+  prompt: '',
+  maxLength: 1000
+})
 const currentQuestion = computed(() => workspaceStore.workspace?.questions[0] ?? null)
 const headerDescription = computed(() => {
   const workspace = workspaceStore.workspace
@@ -274,6 +292,8 @@ watch(
   currentQuestion,
   (question) => {
     draftBody.value = question?.draft ?? ''
+    editQuestion.prompt = question?.prompt ?? ''
+    editQuestion.maxLength = question?.maxLength ?? 1000
   },
   { immediate: true }
 )
@@ -312,6 +332,25 @@ function createQuestion() {
   })
   newQuestion.prompt = ''
   newQuestion.maxLength = 1000
+}
+
+function updateQuestion() {
+  if (!currentQuestion.value || !editQuestion.prompt.trim()) {
+    return
+  }
+
+  void workspaceStore.updateQuestion(workspaceId.value, currentQuestion.value.id, {
+    prompt: editQuestion.prompt,
+    maxLength: editQuestion.maxLength
+  })
+}
+
+function deleteQuestion() {
+  if (!currentQuestion.value) {
+    return
+  }
+
+  void workspaceStore.deleteQuestion(workspaceId.value, currentQuestion.value.id)
 }
 
 function createVersion() {

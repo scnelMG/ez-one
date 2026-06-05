@@ -47,6 +47,10 @@ public interface P1WorkspaceService {
 
     EssayQuestionResponse createQuestion(Long userId, Long workspaceId, CreateEssayQuestionRequest request);
 
+    EssayQuestionResponse updateQuestion(Long userId, Long workspaceId, Long questionId, CreateEssayQuestionRequest request);
+
+    void deleteQuestion(Long userId, Long workspaceId, Long questionId);
+
     EssayQuestionResponse updateDraft(Long userId, Long workspaceId, Long draftId, UpdateDraftRequest request);
 
     EssayVersionResponse createVersion(Long userId, Long workspaceId, CreateEssayVersionRequest request);

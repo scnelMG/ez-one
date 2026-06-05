@@ -14,7 +14,9 @@ const mocks = vi.hoisted(() => ({
   updateReference: vi.fn(),
   deleteReference: vi.fn(),
   createQuestion: vi.fn(),
-  compareVersions: vi.fn()
+  compareVersions: vi.fn(),
+  updateQuestion: vi.fn(),
+  deleteQuestion: vi.fn()
 }))
 
 vi.mock('@/features/workspace/api/workspaceApi', () => ({
@@ -28,7 +30,9 @@ vi.mock('@/features/workspace/api/workspaceApi', () => ({
     updateReference: mocks.updateReference,
     deleteReference: mocks.deleteReference,
     createQuestion: mocks.createQuestion,
-    compareVersions: mocks.compareVersions
+    compareVersions: mocks.compareVersions,
+    updateQuestion: mocks.updateQuestion,
+    deleteQuestion: mocks.deleteQuestion
   }
 }))
 
@@ -57,6 +61,8 @@ describe('WorkspacePage', () => {
     mocks.deleteReference.mockReset()
     mocks.createQuestion.mockReset()
     mocks.compareVersions.mockReset()
+    mocks.updateQuestion.mockReset()
+    mocks.deleteQuestion.mockReset()
     mocks.getWorkspace.mockResolvedValue({
       id: '102',
       companyName: 'Naver',
@@ -147,6 +153,13 @@ describe('WorkspacePage', () => {
       rightBody: '초안 v2',
       changed: true
     })
+    mocks.updateQuestion.mockResolvedValue({
+      id: '103',
+      prompt: '수정한 문항',
+      draft: '기존 초안',
+      maxLength: 700
+    })
+    mocks.deleteQuestion.mockResolvedValue(undefined)
   })
 
   it('WS-002/WS-004: saves a draft and creates an explicit version', async () => {
@@ -276,6 +289,36 @@ describe('WorkspacePage', () => {
     expect(mocks.compareVersions).toHaveBeenCalledWith('102', '501', '502')
     expect(wrapper.text()).toContain('초안 v1')
     expect(wrapper.text()).toContain('초안 v2')
+  })
+
+  it('WS-006/WS-007: updates and deletes the current question', async () => {
+    const router = makeRouter()
+    router.push('/workspaces/102')
+    await router.isReady()
+
+    const wrapper = mount(WorkspacePage, {
+      global: {
+        plugins: [createPinia(), router]
+      }
+    })
+
+    await flushPromises()
+    await wrapper.get('[data-testid="edit-question-prompt"]').setValue('수정한 문항')
+    await wrapper.get('[data-testid="edit-question-max"]').setValue(700)
+    await wrapper.get('[data-testid="update-question"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.updateQuestion).toHaveBeenCalledWith('102', '103', {
+      prompt: '수정한 문항',
+      maxLength: 700
+    })
+    expect(wrapper.text()).toContain('수정한 문항')
+
+    await wrapper.get('[data-testid="delete-question"]').trigger('click')
+    await flushPromises()
+
+    expect(mocks.deleteQuestion).toHaveBeenCalledWith('102', '103')
+    expect(wrapper.text()).not.toContain('수정한 문항')
   })
 })
 

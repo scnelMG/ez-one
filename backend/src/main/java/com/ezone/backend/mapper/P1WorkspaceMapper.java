@@ -63,6 +63,14 @@ public interface P1WorkspaceMapper {
 
     int updateDraft(@Param("questionId") Long questionId, @Param("body") String body);
 
+    int updateQuestion(EssayQuestionRow row);
+
+    int deleteQuestionVersions(@Param("workspaceId") Long workspaceId, @Param("questionId") Long questionId);
+
+    int deleteQuestionDraft(@Param("workspaceId") Long workspaceId, @Param("questionId") Long questionId);
+
+    int deleteQuestion(@Param("workspaceId") Long workspaceId, @Param("questionId") Long questionId);
+
     void insertEssayVersion(EssayVersionRow row);
 
     List<EssayVersionRow> listVersions(@Param("userId") Long userId, @Param("workspaceId") Long workspaceId);

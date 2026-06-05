@@ -77,6 +77,47 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     }
   }
 
+  async function updateQuestion(workspaceId: string, questionId: string, payload: CreateQuestionPayload) {
+    status.value = 'saving'
+    errorMessage.value = ''
+
+    try {
+      const question = await workspaceApi.updateQuestion(workspaceId, questionId, payload)
+      if (workspace.value) {
+        workspace.value = {
+          ...workspace.value,
+          questions: workspace.value.questions.map((item) => (
+            item.id === question.id ? question : item
+          ))
+        }
+      }
+      status.value = 'ready'
+    } catch {
+      status.value = 'error'
+      errorMessage.value = '문항을 수정하지 못했습니다.'
+    }
+  }
+
+  async function deleteQuestion(workspaceId: string, questionId: string) {
+    status.value = 'saving'
+    errorMessage.value = ''
+
+    try {
+      await workspaceApi.deleteQuestion(workspaceId, questionId)
+      if (workspace.value) {
+        workspace.value = {
+          ...workspace.value,
+          questions: workspace.value.questions.filter((item) => item.id !== questionId)
+        }
+      }
+      versions.value = versions.value.filter((version) => version.questionId !== questionId)
+      status.value = 'ready'
+    } catch {
+      status.value = 'error'
+      errorMessage.value = '문항을 삭제하지 못했습니다.'
+    }
+  }
+
   async function createVersion(workspaceId: string, questionId: string, versionName: string) {
     status.value = 'saving'
     errorMessage.value = ''
@@ -191,6 +232,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     loadWorkspace,
     saveDraft,
     createQuestion,
+    updateQuestion,
+    deleteQuestion,
     createVersion,
     compareVersions,
     createReference,

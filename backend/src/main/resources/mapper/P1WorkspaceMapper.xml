@@ -188,6 +188,27 @@
     WHERE question_id = #{questionId}
   </update>
 
+  <update id="updateQuestion">
+    UPDATE essay_questions
+    SET question_text = #{prompt}, max_length = #{maxLength}
+    WHERE id = #{id} AND workspace_id = #{workspaceId}
+  </update>
+
+  <delete id="deleteQuestionVersions">
+    DELETE FROM essay_versions
+    WHERE workspace_id = #{workspaceId} AND question_id = #{questionId}
+  </delete>
+
+  <delete id="deleteQuestionDraft">
+    DELETE FROM essay_drafts
+    WHERE workspace_id = #{workspaceId} AND question_id = #{questionId}
+  </delete>
+
+  <delete id="deleteQuestion">
+    DELETE FROM essay_questions
+    WHERE workspace_id = #{workspaceId} AND id = #{questionId}
+  </delete>
+
   <insert id="insertEssayVersion" useGeneratedKeys="true" keyProperty="id">
     INSERT INTO essay_versions (workspace_id, question_id, version_name, body, created_at)
     VALUES (#{workspaceId}, #{questionId}, #{versionName}, #{body}, CURRENT_TIMESTAMP)
