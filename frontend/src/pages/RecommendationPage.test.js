@@ -39,46 +39,67 @@ describe('RecommendationPage', () => {
                 positionTitle: 'Commerce Backend Developer',
                 deadlineLabel: 'D-10',
                 deadlineDate: '2026-06-16',
-                companyLogoUrl: 'https://example.com/ohou.png',
+                companyLogoUrl: 'https://logo.clearbit.com/ohou.se',
                 workspaceId: null
             },
             {
                 id: '9001',
-                companyName: '라인',
+                companyName: 'LINE',
                 positionTitle: 'Server Platform Engineer',
                 deadlineLabel: 'D-7',
                 deadlineDate: '2026-06-13',
-                companyLogoUrl: 'https://example.com/line.png',
+                companyLogoUrl: 'https://logo.clearbit.com/line.me',
+                workspaceId: null
+            },
+            {
+                id: '9004',
+                companyName: '쿠팡',
+                positionTitle: 'Platform Engineer',
+                deadlineLabel: 'D-12',
+                deadlineDate: '2026-06-18',
+                companyLogoUrl: 'https://logo.clearbit.com/coupang.com',
+                workspaceId: null
+            },
+            {
+                id: '9003',
+                companyName: '토스',
+                positionTitle: 'Frontend Developer',
+                deadlineLabel: 'D-3',
+                deadlineDate: '2026-06-09',
+                companyLogoUrl: 'https://logo.clearbit.com/toss.im',
                 workspaceId: null
             }
         ]);
         mocks.saveJob.mockResolvedValue({
             basketJobId: '101',
             workspaceId: '102',
-            companyName: '라인',
+            companyName: 'LINE',
             positionTitle: 'Server Platform Engineer'
         });
     });
 
-    it('REC-001: renders deadline-sorted recommendations without filters and saves one into a workspace', async () => {
+    it('renders deadline-sorted recommendations with real-looking logos and saves one into a workspace', async () => {
         const wrapper = await mountRecommendation();
 
         expect(mocks.listJobs).toHaveBeenCalled();
+        expect(wrapper.text()).not.toContain('REC-001');
+        expect(wrapper.text()).not.toContain('Jasoseol');
+        expect(wrapper.text()).not.toContain('자소설');
+        expect(wrapper.text()).toContain('관심 직무와 입력한 정보를 바탕으로 지금 확인할 만한 공고를 모아 보여드립니다.');
         expect(wrapper.find('.filter-bar').exists()).toBe(false);
-        expect(wrapper.text()).toContain('마감일이 가까운 공고부터 보여드립니다.');
-        expect(wrapper.text()).not.toContain('별표');
+        expect(wrapper.find('.recommendation-sort-note').exists()).toBe(false);
 
         const cards = wrapper.findAll('[data-testid="recommendation-card"]');
-        expect(cards).toHaveLength(2);
-        expect(cards[0].text()).toContain('라인');
-        expect(cards[1].text()).toContain('오늘의집');
-        expect(cards[0].find('img').attributes('src')).toBe('https://example.com/line.png');
+        expect(cards).toHaveLength(4);
+        expect(cards.map((card) => card.find('h3').text())).toEqual(['토스', 'LINE', '오늘의집', '쿠팡']);
+        expect(cards[0].find('img').attributes('src')).toBe('https://logo.clearbit.com/toss.im');
+        expect(cards[1].find('img').attributes('src')).toBe('https://logo.clearbit.com/line.me');
 
         await wrapper.get('[data-testid="save-recommendation-9001"]').trigger('click');
         await flushPromises();
         expect(mocks.saveJob).toHaveBeenCalledWith('9001');
         expect(wrapper.text()).toContain('공고를 담았습니다');
-        expect(wrapper.text()).toContain('라인 Server Platform Engineer 워크스페이스가 준비됐습니다.');
+        expect(wrapper.text()).toContain('LINE Server Platform Engineer 워크스페이스가 준비됐습니다.');
         expect(wrapper.get('[data-testid="saved-workspace-link"]').text()).toContain('워크스페이스 열기');
         expect(wrapper.get('[data-testid="saved-workspace-link"]').attributes('href')).toBe('/workspaces/102');
     });

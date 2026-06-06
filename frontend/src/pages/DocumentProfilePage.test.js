@@ -44,11 +44,11 @@ describe('DocumentProfilePage', () => {
             sections: {
                 basicInfo: {
                     nameKo: '홍길동',
-                    nameEn: 'Gil Dong Hong',
+                    nameEn: 'Hong Gildong',
                     nameHanja: '洪吉童',
                     email: 'user@example.com',
                     phone: '010-1234-5678',
-                    gender: '남성',
+                    gender: '남',
                     birthdate: '1999-01-01',
                     address: 'Seoul',
                     addressDetail: 'Gangnam-gu'
@@ -60,7 +60,7 @@ describe('DocumentProfilePage', () => {
                 awards: [{ title: 'Hackathon Grand Prize', summary: 'P1 service award' }],
                 courses: [{ title: 'Database Systems', summary: 'MySQL schema design and query tuning' }],
                 essays: [{ title: '지원동기 기본값', summary: '산업 관심과 백엔드 경험을 연결한 초안' }],
-                military: [{ title: 'Completed', summary: 'Army / Sergeant / 2022.03-2023.09' }],
+                military: [{ title: '군필', summary: '육군 / 병장 / 만기제대' }],
                 internships: [{ title: 'Startup Intern', summary: 'Backend internship' }],
                 trainings: [{ title: 'Cloud Course', summary: '120 hours' }],
                 activities: [{ title: 'Student Club', summary: 'Backend lead' }]
@@ -107,16 +107,39 @@ describe('DocumentProfilePage', () => {
         mocks.deleteCustomField.mockResolvedValue(undefined);
     });
 
-    it('PROFILE-001: removes the right helper panel and keeps one global save button', async () => {
+    it('PROFILE-001: uses the extension settings structure without visible requirement IDs or autosave copy', async () => {
         const wrapper = await mountPage();
 
         expect(mocks.getDocumentProfile).toHaveBeenCalled();
-        expect(wrapper.text()).toContain('서류 입력 정보');
+        expect(wrapper.get('h1').text()).toBe('정보 입력');
+        expect(wrapper.text()).toContain('마지막 저장: 2026-06-05T12:00:00Z');
+        expect(wrapper.text()).not.toContain('PROFILE-001');
+        expect(wrapper.text()).not.toContain('자동 저장');
+        expect(wrapper.find('[data-testid="document-autosave-status"]').exists()).toBe(false);
+        expect(wrapper.find('.workspace-tabs').exists()).toBe(false);
         expect(wrapper.find('.wire-side-panel').exists()).toBe(false);
-        expect(wrapper.find('[data-testid="save-section"]').exists()).toBe(false);
         expect(wrapper.get('[data-testid="save-document-profile"]').text()).toContain('저장');
         expect(wrapper.get('[data-testid="basic-info-name"]').element.value).toBe('홍길동');
-        expect(wrapper.text()).toContain('2026-06-05T12:00:00Z');
+    });
+
+    it('PROFILE-001: exposes the same major setting sections from the PDF', async () => {
+        const wrapper = await mountPage();
+
+        const sectionLabels = wrapper.findAll('.document-section-rail button').map((button) => button.text());
+        expect(sectionLabels).toEqual([
+            '기본 정보',
+            '병역 / 장애 / 보훈',
+            '학교 정보',
+            '경력',
+            '자격증 / 어학',
+            '자소서',
+            '프로젝트',
+            '인턴 / 알바',
+            '수상경력',
+            '교육이수사항',
+            '학내외 활동',
+            '커스텀 필드'
+        ]);
     });
 
     it('PROFILE-001: saves the active section from the single save button', async () => {
@@ -128,11 +151,11 @@ describe('DocumentProfilePage', () => {
         await flushPromises();
         expect(mocks.saveSection).toHaveBeenCalledWith('basicInfo', {
             nameKo: '김지원',
-            nameEn: 'Gil Dong Hong',
+            nameEn: 'Hong Gildong',
             nameHanja: '洪吉童',
             email: 'jiwon@example.com',
             phone: '010-1234-5678',
-            gender: '남성',
+            gender: '남',
             birthdate: '1999-01-01',
             address: 'Seoul',
             addressDetail: 'Gangnam-gu'
@@ -151,15 +174,13 @@ describe('DocumentProfilePage', () => {
         ]);
     });
 
-    it('PROFILE-001: auto-saves the active section after two idle seconds', async () => {
+    it('PROFILE-001: still auto-saves the active section without showing autosave text', async () => {
         const wrapper = await mountPage();
 
         vi.useFakeTimers();
         await wrapper.get('[data-testid="basic-info-phone"]').setValue('010-9999-0000');
-        expect(wrapper.get('[data-testid="document-autosave-status"]').attributes('data-save-state')).toBe('waiting');
-        await vi.advanceTimersByTimeAsync(1999);
-        expect(mocks.saveSection).not.toHaveBeenCalledWith('basicInfo', expect.objectContaining({ phone: '010-9999-0000' }));
-        await vi.advanceTimersByTimeAsync(1);
+        expect(wrapper.text()).not.toContain('자동 저장');
+        await vi.advanceTimersByTimeAsync(2000);
         expect(mocks.saveSection).toHaveBeenCalledWith('basicInfo', expect.objectContaining({ phone: '010-9999-0000' }));
     });
 

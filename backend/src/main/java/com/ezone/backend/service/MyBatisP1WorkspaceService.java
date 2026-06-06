@@ -411,31 +411,21 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
 
     @Override
     public List<DashboardJobResponse> listRecommendationJobs(Long userId) {
-        return List.of(
-            new DashboardJobResponse(9001L, null, "라인", "Server Platform Engineer", "D-7"),
-            new DashboardJobResponse(9002L, null, "오늘의집", "Commerce Backend Developer", "D-10")
-        );
+        return mapper.listRecommendationJobs().stream()
+            .map(this::toRecommendationResponse)
+            .toList();
     }
 
     @Override
     public BasketJobResponse saveRecommendation(Long userId, Long recommendationId) {
-        if (recommendationId == 9002L) {
-            return createBasketJob(userId, new CreateBasketJobRequest(
-                "오늘의집",
-                "Commerce Backend Developer",
-                "D-10",
-                "https://www.jasoseol.com/",
-                null,
-                "RECOMMENDATION"
-            ));
-        }
-
+        JobRow recommendation = mapper.findRecommendationJob(recommendationId)
+            .orElseThrow(() -> new IllegalArgumentException("Recommendation not found"));
         return createBasketJob(userId, new CreateBasketJobRequest(
-            "라인",
-            "Server Platform Engineer",
-            "D-7",
-            "https://www.jasoseol.com/",
-            null,
+            recommendation.getCompanyName(),
+            recommendation.getPositionTitle(),
+            recommendation.getDeadlineLabel(),
+            recommendation.getSourceUrl(),
+            recommendation.getCompanyLogoUrl(),
             "RECOMMENDATION"
         ));
     }
@@ -526,7 +516,19 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
             row.getWorkspaceId(),
             row.getCompanyName(),
             row.getPositionTitle(),
-            row.getDeadlineLabel()
+            row.getDeadlineLabel(),
+            row.getCompanyLogoUrl()
+        );
+    }
+
+    private DashboardJobResponse toRecommendationResponse(JobRow row) {
+        return new DashboardJobResponse(
+            row.getId(),
+            null,
+            row.getCompanyName(),
+            row.getPositionTitle(),
+            row.getDeadlineLabel(),
+            row.getCompanyLogoUrl()
         );
     }
 

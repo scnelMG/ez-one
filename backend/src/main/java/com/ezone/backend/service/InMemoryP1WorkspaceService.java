@@ -419,33 +419,69 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
 
     @Override
     public List<DashboardJobResponse> listRecommendationJobs(Long userId) {
-        return List.of(
-            new DashboardJobResponse(9001L, null, "라인", "Server Platform Engineer", "D-7"),
-            new DashboardJobResponse(9002L, null, "오늘의집", "Commerce Backend Developer", "D-10")
-        );
+        return recommendationSamples().stream()
+            .map(sample -> new DashboardJobResponse(
+                sample.id(),
+                null,
+                sample.companyName(),
+                sample.positionTitle(),
+                sample.deadlineLabel(),
+                sample.logoUrl()
+            ))
+            .toList();
     }
 
     @Override
     public BasketJobResponse saveRecommendation(Long userId, Long recommendationId) {
-        if (recommendationId == 9002L) {
-            return createBasketJob(userId, new CreateBasketJobRequest(
+        RecommendationSample sample = recommendationSamples().stream()
+            .filter(item -> item.id().equals(recommendationId))
+            .findFirst()
+            .orElseGet(() -> recommendationSamples().get(0));
+        return createBasketJob(userId, new CreateBasketJobRequest(
+            sample.companyName(),
+            sample.positionTitle(),
+            sample.deadlineLabel(),
+            sample.sourceUrl(),
+            sample.logoUrl(),
+            "RECOMMENDATION"
+        ));
+    }
+
+    private List<RecommendationSample> recommendationSamples() {
+        return List.of(
+            new RecommendationSample(
+                9003L,
+                "토스",
+                "Frontend Developer",
+                "D-3",
+                "https://toss.im/career",
+                "https://logo.clearbit.com/toss.im"
+            ),
+            new RecommendationSample(
+                9001L,
+                "LINE",
+                "Server Platform Engineer",
+                "D-7",
+                "https://line.me/career",
+                "https://logo.clearbit.com/line.me"
+            ),
+            new RecommendationSample(
+                9002L,
                 "오늘의집",
                 "Commerce Backend Developer",
                 "D-10",
-                "https://www.jasoseol.com/",
-                null,
-                "RECOMMENDATION"
-            ));
-        }
-
-        return createBasketJob(userId, new CreateBasketJobRequest(
-            "라인",
-            "Server Platform Engineer",
-            "D-7",
-            "https://www.jasoseol.com/",
-            null,
-            "RECOMMENDATION"
-        ));
+                "https://ohou.se/careers",
+                "https://logo.clearbit.com/ohou.se"
+            ),
+            new RecommendationSample(
+                9004L,
+                "쿠팡",
+                "Platform Engineer",
+                "D-12",
+                "https://www.coupang.com/np/jobs",
+                "https://logo.clearbit.com/coupang.com"
+            )
+        );
     }
 
     private void seed(
@@ -608,7 +644,8 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             record.workspaceId(),
             record.companyName(),
             record.positionTitle(),
-            record.deadlineLabel()
+            record.deadlineLabel(),
+            record.companyLogoUrl()
         );
     }
 
@@ -832,6 +869,16 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
         Long questionId,
         String versionName,
         String body
+    ) {
+    }
+
+    private record RecommendationSample(
+        Long id,
+        String companyName,
+        String positionTitle,
+        String deadlineLabel,
+        String sourceUrl,
+        String logoUrl
     ) {
     }
 }

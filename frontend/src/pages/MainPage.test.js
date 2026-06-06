@@ -89,6 +89,7 @@ const defaultRecommendationJobs = [
         companyName: 'Toss',
         positionTitle: 'Frontend Developer',
         deadlineLabel: 'D-3',
+        companyLogoUrl: 'https://logo.clearbit.com/toss.im',
         workspaceId: null
     },
     {
@@ -96,6 +97,7 @@ const defaultRecommendationJobs = [
         companyName: 'Danggeun',
         positionTitle: 'Server Engineer',
         deadlineLabel: 'D-5',
+        companyLogoUrl: 'https://logo.clearbit.com/daangn.com',
         workspaceId: null
     },
     {
@@ -103,6 +105,7 @@ const defaultRecommendationJobs = [
         companyName: 'Coupang',
         positionTitle: 'Platform Engineer',
         deadlineLabel: 'D-7',
+        companyLogoUrl: 'https://logo.clearbit.com/coupang.com',
         workspaceId: null
     },
     {
@@ -110,6 +113,7 @@ const defaultRecommendationJobs = [
         companyName: 'Woowa Bros',
         positionTitle: 'Product Engineer',
         deadlineLabel: 'D-9',
+        companyLogoUrl: 'https://logo.clearbit.com/woowahan.com',
         workspaceId: null
     }
 ];
@@ -170,7 +174,7 @@ describe('MainPage', () => {
         }));
         const wrapper = await mountMain();
 
-        expect(wrapper.text()).toContain('오늘의 지원 흐름');
+        expect(wrapper.text()).not.toContain('오늘의 지원 흐름');
         expect(wrapper.text()).toContain('공고 장바구니');
         expect(wrapper.text()).toContain('추천공고');
         expect(wrapper.find('.dashboard-rail').exists()).toBe(false);
@@ -193,6 +197,7 @@ describe('MainPage', () => {
         localStorage.setItem('ezone.recentWorkspaces', JSON.stringify(['102']));
         const wrapper = await mountMain();
 
+        expect(wrapper.text()).toContain('마감 임박순으로 제공됩니다');
         const rows = wrapper.findAll('[data-testid="main-basket-preview-job"]');
         expect(rows).toHaveLength(3);
         expect(rows.map((row) => row.text())).toEqual([
@@ -226,6 +231,7 @@ describe('MainPage', () => {
         expect(wrapper.get('[data-testid="metric-deadline"]').text()).toContain('2');
         expect(wrapper.get('[data-testid="metric-progress"]').text()).toContain('1');
         expect(wrapper.get('[data-testid="metric-not-started"]').text()).toContain('1');
+        expect(wrapper.findAll('.main-metric-strip small')).toHaveLength(0);
     });
 
     it('ONB-001: opens onboarding as a floating modal only for first-login users', async () => {

@@ -3,7 +3,6 @@
     <section class="dashboard-page main-dashboard-page">
       <header class="dashboard-header main-dashboard-header">
         <div class="dashboard-title">
-          <p class="section-kicker">오늘의 지원 흐름</p>
           <h1>지원 준비를 한 화면에서 정리하세요</h1>
           <p>저장한 공고와 추천 공고를 빠르게 훑고 다음 작업으로 이동합니다.</p>
         </div>
@@ -13,30 +12,26 @@
         <RouterLink to="/basket" data-testid="metric-total">
           <span>총 지원</span>
           <strong>{{ dashboardStore.summary?.totalApplications ?? 0 }}</strong>
-          <small>유저 대비 상위 %</small>
         </RouterLink>
         <RouterLink to="/basket?sort=deadline" data-testid="metric-deadline">
           <span>마감 임박 개수</span>
           <strong>{{ dashboardStore.summary?.deadlineSoon ?? 0 }}</strong>
-          <small>유저 대비</small>
         </RouterLink>
         <RouterLink to="/basket" data-testid="metric-progress">
           <span>진행 개수</span>
           <strong>{{ dashboardStore.summary?.inProgress ?? 0 }}</strong>
-          <small>유저 대비</small>
         </RouterLink>
         <RouterLink to="/basket" data-testid="metric-not-started">
           <span>지원 전</span>
           <strong>{{ dashboardStore.summary?.notStarted ?? 0 }}</strong>
-          <small>유저 대비</small>
         </RouterLink>
       </section>
 
       <section class="dashboard-panel main-basket-preview" aria-label="공고 장바구니 미리보기">
         <div class="section-heading">
           <div>
-            <p class="section-kicker">마감 임박순</p>
             <h2>공고 장바구니</h2>
+            <p class="main-preview-note">마감 임박순으로 제공됩니다.</p>
           </div>
           <RouterLink class="text-button" to="/basket?sort=deadline">전체 보기</RouterLink>
         </div>
@@ -75,7 +70,6 @@
       <section class="dashboard-panel main-recommendation-preview" aria-label="추천공고 미리보기">
         <div class="section-heading">
           <div>
-            <p class="section-kicker">추천</p>
             <h2>추천공고</h2>
           </div>
           <RouterLink class="text-button" to="/recommendations">추천 더보기</RouterLink>
@@ -95,7 +89,15 @@
             class="recommendation-thumbnail-card"
             data-testid="main-recommendation-preview-job"
           >
-            <div class="thumbnail-placeholder" aria-hidden="true">
+            <div class="recommendation-thumbnail-logo" aria-hidden="true">
+              <img
+                v-if="item.companyLogoUrl"
+                :src="item.companyLogoUrl"
+                :alt="`${item.companyName} logo`"
+              />
+              <span v-else>{{ companyInitial(item.companyName) }}</span>
+            </div>
+            <div class="recommendation-thumbnail-meta">
               <span>{{ item.deadlineLabel }}</span>
             </div>
             <strong>{{ item.companyName }}</strong>
@@ -144,5 +146,9 @@ function deadlineRank(job) {
     }
     const dDay = source.match(/D-(\d+)/i);
     return dDay ? Number(dDay[1]) : Number.MAX_SAFE_INTEGER;
+}
+
+function companyInitial(companyName) {
+    return (companyName ?? '?').trim().charAt(0).toUpperCase() || '?';
 }
 </script>

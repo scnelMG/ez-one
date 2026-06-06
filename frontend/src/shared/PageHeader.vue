@@ -2,7 +2,7 @@
   <section class="page-header">
     <div class="page-header-row">
       <div>
-        <p class="eyebrow">{{ eyebrow }}</p>
+        <p v-if="eyebrow" class="eyebrow">{{ eyebrow }}</p>
         <h1>{{ title }}</h1>
         <p>{{ description }}</p>
       </div>
@@ -14,7 +14,7 @@
 <script setup>defineProps({
   eyebrow: {
     type: String,
-    required: true
+    default: ''
   },
   title: {
     type: String,

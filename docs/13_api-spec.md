@@ -60,7 +60,7 @@
 
 | 메서드 | 경로 | 목적 |
 | --- | --- | --- |
-| GET | `/api/recommendations/jobs` | Jasoseol.com 기반 추천 공고 목록 |
+| GET | `/api/recommendations/jobs` | 입력 정보와 저장 이력 기반 추천 공고 목록 |
 | POST | `/api/recommendations/jobs/{recommendationId}/save` | 추천 공고 장바구니 저장 |
 | GET | `/api/recommendations/jobs/{recommendationId}/summary` | P2 추천 hover 기업 요약 |
 
@@ -134,6 +134,7 @@
 - `POST /api/extension/jobs/save` accepts optional `logoUrl` with the extracted posting payload.
 - `POST /api/basket/jobs` also accepts optional `logoUrl` for manually or externally created saved jobs.
 - `BasketJobResponse` includes `companyLogoUrl`.
+- `GET /api/recommendations/jobs` returns each recommendation with `companyLogoUrl` when stored company logo metadata exists.
 - `GET /api/workspaces/{workspaceId}` includes `companyDetails.logoUrl`.
 - Invalid or missing `logoUrl` values must not fail the core job save flow; the server ignores invalid logo candidates.
 - `GET /api/extension/document-profile` is part of the approved P1 extension auto-fill scope. It uses the existing Bearer token and returns the current user's document profile for the active-tab injection flow.

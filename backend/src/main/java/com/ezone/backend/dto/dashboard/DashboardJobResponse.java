@@ -5,6 +5,7 @@ public record DashboardJobResponse(
     Long workspaceId,
     String companyName,
     String positionTitle,
-    String deadlineLabel
+    String deadlineLabel,
+    String companyLogoUrl
 ) {
 }

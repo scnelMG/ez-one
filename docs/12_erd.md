@@ -78,3 +78,4 @@ erDiagram
 - Company deduplication should prefer `name + domain` over company name alone. New schema and migration use `uk_companies_name_domain (name, domain)`.
 - P1 overwrite policy: when a save request includes a valid optional `logoUrl`, the server stores it only if `companies.logo_url` is empty. Existing company logos are preserved.
 - Basket and workspace API responses expose the company logo as `companyLogoUrl` and `companyDetails.logoUrl`; clients should fall back to an initials badge when the URL is missing or broken.
+- `V9__seed_demo_jobs_and_recommendations.sql` temporarily seeds demo basket jobs and `jobs.source = 'RECOMMENDATION'` rows with company logos for local UI verification. These rows use `ez-one-demo-*` source URLs so they can be removed later.

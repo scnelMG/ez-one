@@ -3,21 +3,13 @@
     <section class="wire-page document-wire document-profile-page">
       <header class="wire-toolbar document-profile-toolbar">
         <div>
-          <p class="section-kicker">PROFILE-001</p>
-          <h1>서류 입력 정보</h1>
-          <p>반복해서 쓰는 지원서 정보를 한 화면에서 저장하고 워크스페이스 기본값으로 재사용합니다.</p>
+          <h1>정보 입력</h1>
+          <p>지원서 자동 입력과 워크스페이스 기본값에 사용할 정보를 관리합니다.</p>
           <p v-if="documentProfileStore.profile?.lastSavedAt" class="last-saved-at">
-            마지막 저장 {{ documentProfileStore.profile.lastSavedAt }}
+            마지막 저장: {{ documentProfileStore.profile.lastSavedAt }}
           </p>
         </div>
         <div class="document-save-controls">
-          <span
-            class="status-chip"
-            data-testid="document-autosave-status"
-            :data-save-state="autoSaveStatus"
-          >
-            {{ autoSaveLabel }}
-          </span>
           <button
             class="primary-button"
             type="button"
@@ -38,20 +30,6 @@
         :body="documentProfileStore.errorMessage"
       />
 
-      <section class="workspace-tabs" aria-label="서류 정보 탭">
-        <button
-          v-for="section in sections"
-          :key="section.id"
-          class="tab-button"
-          :class="{ active: section.id === activeSection }"
-          :data-testid="`section-${section.id}`"
-          type="button"
-          @click="activeSection = section.id"
-        >
-          {{ section.label }}
-        </button>
-      </section>
-
       <div class="document-editor-grid document-editor-grid-focused">
         <aside class="wire-side-rail document-section-rail" aria-label="서류 섹션 목록">
           <strong>입력 섹션</strong>
@@ -60,7 +38,7 @@
             :key="section.id"
             class="rail-button"
             :class="{ active: section.id === activeSection }"
-            :data-testid="`section-rail-${section.id}`"
+            :data-testid="`section-${section.id}`"
             type="button"
             @click="activeSection = section.id"
           >
@@ -74,15 +52,13 @@
           <template v-else>
             <div class="section-heading">
               <div>
-                <p class="section-kicker">{{ activeSectionLabel }}</p>
                 <h2>{{ activeSectionTitle }}</h2>
               </div>
-              <span class="status-chip">{{ statusLabel }}</span>
             </div>
 
             <section v-if="activeSection === 'basicInfo'" class="form-shell compact document-basic-form" aria-label="기본 정보 입력">
               <label>
-                이름
+                한글 이름
                 <input v-model="basicInfoForm.nameKo" data-testid="basic-info-name" />
               </label>
               <label>
@@ -143,15 +119,15 @@
               </div>
               <div class="repeatable-tools">
                 <button class="ghost-button" type="button" data-testid="add-reusable-item" @click="addReusableItem">
-                  항목 추가
+                  {{ activeSectionTitle }} 추가
                 </button>
               </div>
               <label>
-                제목
+                항목명
                 <input v-model="reusableSectionForm.title" data-testid="section-title" />
               </label>
               <label>
-                요약
+                상세 내용
                 <textarea v-model="reusableSectionForm.summary" data-testid="section-summary" />
               </label>
             </section>
@@ -260,24 +236,22 @@ let autoSaveTimer = null;
 let suppressFormWatch = true;
 
 const sections = [
-  { id: 'basicInfo', label: '기본 정보', title: '지원서 공통 입력값' },
-  { id: 'education', label: '학력', title: '학력' },
+  { id: 'basicInfo', label: '기본 정보', title: '기본 정보' },
+  { id: 'military', label: '병역 / 장애 / 보훈', title: '병역 / 장애 / 보훈' },
+  { id: 'education', label: '학교 정보', title: '학교 정보' },
   { id: 'career', label: '경력', title: '경력' },
-  { id: 'courses', label: '과목', title: '과목 정보' },
+  { id: 'certificates', label: '자격증 / 어학', title: '자격증 / 어학' },
+  { id: 'essays', label: '자소서', title: '자소서' },
   { id: 'projects', label: '프로젝트', title: '프로젝트' },
-  { id: 'certificates', label: '자격/어학', title: '자격/어학' },
-  { id: 'awards', label: '수상/활동', title: '수상/활동' },
-  { id: 'essays', label: '자소서', title: '사전 작성 자소서' },
-  { id: 'military', label: '병역/보훈', title: '병역/장애/보훈' },
-  { id: 'internships', label: '인턴/알바', title: '인턴/아르바이트/실습' },
-  { id: 'trainings', label: '교육이수', title: '교육이수사항' },
+  { id: 'internships', label: '인턴 / 알바', title: '인턴 / 알바' },
+  { id: 'awards', label: '수상경력', title: '수상경력' },
+  { id: 'trainings', label: '교육이수사항', title: '교육이수사항' },
   { id: 'activities', label: '학내외 활동', title: '학내외 활동' },
-  { id: 'custom', label: '커스텀', title: '커스텀 항목' }
+  { id: 'custom', label: '커스텀 필드', title: '커스텀 필드' }
 ];
 const reusableSectionTypes = [
   'education',
   'career',
-  'courses',
   'projects',
   'certificates',
   'awards',
@@ -290,22 +264,8 @@ const reusableSectionTypes = [
 
 const saveButtonLabel = computed(() => (documentProfileStore.status === 'saving' ? '저장 중' : '저장'));
 const activeSectionConfig = computed(() => sections.find((section) => section.id === activeSection.value) ?? sections[0]);
-const activeSectionLabel = computed(() => activeSectionConfig.value.label);
 const activeSectionTitle = computed(() => activeSectionConfig.value.title);
 const isReusableSection = computed(() => reusableSectionTypes.includes(activeSection.value));
-const statusLabel = computed(() => {
-  if (documentProfileStore.status === 'saving') return '저장 중';
-  if (autoSaveStatus.value === 'waiting') return '자동 저장 대기';
-  if (autoSaveStatus.value === 'saved') return '저장됨';
-  return documentProfileStore.profile ? '불러옴' : '대기';
-});
-const autoSaveLabel = computed(() => {
-  if (autoSaveStatus.value === 'waiting') return '자동 저장 대기';
-  if (autoSaveStatus.value === 'saving') return '자동 저장 중';
-  if (autoSaveStatus.value === 'saved') return '자동 저장 완료';
-  if (autoSaveStatus.value === 'failed') return '자동 저장 실패';
-  return '자동 저장 켜짐';
-});
 
 watch(() => documentProfileStore.basicInfo, (basicInfo) => {
   suppressFormWatch = true;

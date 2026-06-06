@@ -50,6 +50,10 @@ public interface P1WorkspaceMapper {
         @Param("sort") String sort
     );
 
+    List<JobRow> listRecommendationJobs();
+
+    Optional<JobRow> findRecommendationJob(@Param("recommendationId") Long recommendationId);
+
     Optional<BasketJobRow> findBasketJob(@Param("userId") Long userId, @Param("basketJobId") Long basketJobId);
 
     Optional<Long> findBasketJobOwner(@Param("basketJobId") Long basketJobId);

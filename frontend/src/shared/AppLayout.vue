@@ -7,7 +7,6 @@
       </RouterLink>
 
       <nav class="primary-nav" aria-label="주요 메뉴">
-        <RouterLink to="/">메인</RouterLink>
         <RouterLink to="/basket">공고 장바구니</RouterLink>
         <RouterLink to="/document-profile">서류 입력 정보</RouterLink>
         <RouterLink to="/recommendations">추천 공고</RouterLink>
@@ -17,8 +16,8 @@
       <div class="header-actions">
         <div
           class="profile-menu"
-          @mouseenter="isProfileMenuOpen = true"
-          @mouseleave="isProfileMenuOpen = false"
+          @mouseenter="openProfileMenu"
+          @mouseleave="scheduleProfileMenuClose"
         >
           <button
             type="button"
@@ -26,7 +25,7 @@
             data-testid="mypage-menu-trigger"
             aria-haspopup="menu"
             :aria-expanded="isProfileMenuOpen ? 'true' : 'false'"
-            @mouseenter="isProfileMenuOpen = true"
+            @mouseenter="openProfileMenu"
             @click="isProfileMenuOpen = !isProfileMenuOpen"
           >
             <img
@@ -38,27 +37,23 @@
             />
             <span v-else class="profile-avatar-fallback" data-testid="profile-avatar">{{ profileInitial }}</span>
             <span class="profile-menu-copy">
-              <small>로그인 계정</small>
               <strong>{{ profileDisplayName }}</strong>
             </span>
             <span class="profile-menu-chevron" aria-hidden="true">⌄</span>
           </button>
 
-          <div v-if="isProfileMenuOpen" class="profile-dropdown mypage-dropdown" data-testid="mypage-dropdown" role="menu">
+          <div
+            v-if="isProfileMenuOpen"
+            class="profile-dropdown mypage-dropdown"
+            data-testid="mypage-dropdown"
+            role="menu"
+            @mouseenter="openProfileMenu"
+            @mouseleave="scheduleProfileMenuClose"
+          >
             <div class="mypage-dropdown-account">
               <strong>{{ currentUser?.email ?? '계정 정보 없음' }}</strong>
               <small>Google 간편 가입</small>
             </div>
-            <RouterLink
-              class="mypage-progress-link"
-              role="menuitem"
-              to="/basket"
-              @click="isProfileMenuOpen = false"
-            >
-              <span aria-hidden="true">☑</span>
-              <strong>지원 진행상황</strong>
-              <small>지원 진행상황을 확인하세요</small>
-            </RouterLink>
             <RouterLink data-testid="mypage-link-account" role="menuitem" to="/mypage" @click="isProfileMenuOpen = false">
               내 계정
             </RouterLink>
@@ -67,18 +62,6 @@
             </RouterLink>
             <RouterLink data-testid="mypage-link-onboarding" role="menuitem" to="/mypage/onboarding" @click="isProfileMenuOpen = false">
               온보딩 정보
-            </RouterLink>
-            <RouterLink data-testid="mypage-link-qna" role="menuitem" to="/mypage/qna" @click="isProfileMenuOpen = false">
-              QnA
-            </RouterLink>
-            <RouterLink data-testid="mypage-link-inquiry" role="menuitem" to="/mypage/inquiry" @click="isProfileMenuOpen = false">
-              1:1 문의
-            </RouterLink>
-            <RouterLink data-testid="mypage-link-partnership" role="menuitem" to="/mypage/partnership" @click="isProfileMenuOpen = false">
-              제휴 문의
-            </RouterLink>
-            <RouterLink data-testid="mypage-link-terms" role="menuitem" to="/mypage/terms" @click="isProfileMenuOpen = false">
-              이용약관
             </RouterLink>
             <button type="button" role="menuitem" data-testid="account-switch" @click="switchAccount">
               다른 계정으로 로그인
@@ -114,6 +97,7 @@ import { clearAuthSession, getCurrentUser, getRefreshToken } from '@/features/au
 
 const router = useRouter();
 const isProfileMenuOpen = ref(false);
+let profileMenuCloseTimer = null;
 const currentUser = computed(() => getCurrentUser());
 
 const profileDisplayName = computed(() => {
@@ -127,6 +111,24 @@ const profileImageUrl = computed(() => {
 });
 
 const profileInitial = computed(() => profileDisplayName.value.trim().charAt(0).toUpperCase() || 'E');
+
+function openProfileMenu() {
+  if (profileMenuCloseTimer) {
+    clearTimeout(profileMenuCloseTimer);
+    profileMenuCloseTimer = null;
+  }
+  isProfileMenuOpen.value = true;
+}
+
+function scheduleProfileMenuClose() {
+  if (profileMenuCloseTimer) {
+    clearTimeout(profileMenuCloseTimer);
+  }
+  profileMenuCloseTimer = setTimeout(() => {
+    isProfileMenuOpen.value = false;
+    profileMenuCloseTimer = null;
+  }, 180);
+}
 
 async function logout() {
   await endCurrentSession('/login');
@@ -143,6 +145,10 @@ async function endCurrentSession(nextPath) {
       await authApi.logout(refreshToken);
     }
   } finally {
+    if (profileMenuCloseTimer) {
+      clearTimeout(profileMenuCloseTimer);
+      profileMenuCloseTimer = null;
+    }
     isProfileMenuOpen.value = false;
     clearAuthSession();
     await router.push(nextPath);

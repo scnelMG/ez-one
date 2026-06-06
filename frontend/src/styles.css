@@ -3662,7 +3662,7 @@ li {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  min-width: 154px;
+  min-width: 128px;
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.92);
@@ -3694,15 +3694,9 @@ li {
 }
 
 .profile-menu-copy {
-  display: grid;
+  display: block;
   justify-items: start;
   line-height: 1.2;
-}
-
-.profile-menu-copy small {
-  color: var(--color-muted);
-  font-size: 0.72rem;
-  font-weight: 800;
 }
 
 .profile-menu-copy strong {
@@ -3723,7 +3717,7 @@ li {
 .profile-dropdown {
   position: absolute;
   right: 0;
-  top: calc(100% + 10px);
+  top: calc(100% - 1px);
   z-index: 40;
   min-width: 210px;
   display: grid;
@@ -3766,33 +3760,12 @@ li {
   font-size: 1rem;
 }
 
-.mypage-dropdown-account small,
-.mypage-progress-link small {
+.mypage-dropdown-account small {
   color: var(--color-muted);
   font-weight: 700;
 }
 
-.mypage-progress-link {
-  display: grid !important;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 2px 12px;
-  border: 1px solid var(--color-border) !important;
-  background: #fff !important;
-  padding: 14px !important;
-}
-
-.mypage-progress-link span {
-  grid-row: span 2;
-  color: var(--color-primary-strong);
-  font-weight: 900;
-}
-
 .mypage-dropdown a:nth-of-type(3) {
-  border-bottom: 1px solid var(--color-border);
-  padding-bottom: 14px;
-}
-
-.mypage-dropdown a:nth-of-type(6) {
   border-bottom: 1px solid var(--color-border);
   padding-bottom: 14px;
 }
@@ -3814,6 +3787,13 @@ li {
 
 .main-dashboard-header .dashboard-title h1 {
   font-size: clamp(2rem, 3vw, 3.15rem);
+}
+
+.main-preview-note {
+  margin: 4px 0 0;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
 }
 
 .main-metric-strip a {
@@ -3892,23 +3872,32 @@ li {
   background: #fff;
 }
 
-.thumbnail-placeholder {
+.recommendation-thumbnail-logo {
   display: flex;
-  align-items: flex-start;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: center;
   height: 72px;
   border-radius: 6px;
-  background:
-    linear-gradient(to bottom right, transparent 49%, #d1d5db 50%, transparent 51%),
-    linear-gradient(to top right, transparent 49%, #d1d5db 50%, transparent 51%),
-    #f3f4f6;
+  background: #f8fafc;
   border: 1px solid #d9dde6;
   padding: 8px;
 }
 
-.thumbnail-placeholder span {
+.recommendation-thumbnail-logo img {
+  max-width: 112px;
+  max-height: 44px;
+  object-fit: contain;
+}
+
+.recommendation-thumbnail-logo span {
+  color: var(--color-primary-strong);
+  font-size: 1.4rem;
+  font-weight: 900;
+}
+
+.recommendation-thumbnail-meta span {
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.86);
+  background: #eef2ff;
   color: var(--color-primary-strong);
   font-size: 0.72rem;
   font-weight: 900;

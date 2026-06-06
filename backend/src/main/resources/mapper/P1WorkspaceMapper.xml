@@ -18,6 +18,19 @@
     <result property="applicationMemo" column="application_memo"/>
   </resultMap>
 
+  <resultMap id="jobRowMap" type="com.ezone.backend.domain.persistence.JobRow">
+    <id property="id" column="id"/>
+    <result property="companyId" column="company_id"/>
+    <result property="companyName" column="company_name"/>
+    <result property="companyDomain" column="company_domain"/>
+    <result property="companyType" column="company_type"/>
+    <result property="companySize" column="company_size"/>
+    <result property="companyLogoUrl" column="company_logo_url"/>
+    <result property="positionTitle" column="position_title"/>
+    <result property="deadlineLabel" column="deadline_label"/>
+    <result property="sourceUrl" column="source_url"/>
+  </resultMap>
+
   <resultMap id="workspaceRowMap" type="com.ezone.backend.domain.persistence.WorkspaceRow">
     <id property="id" column="id"/>
     <result property="userId" column="user_id"/>
@@ -171,6 +184,32 @@
         <when test="sort != null and sort.equalsIgnoreCase('deadline')">deadline_soon DESC, bj.id ASC</when>
         <otherwise>bj.id ASC</otherwise>
       </choose>
+  </select>
+
+  <select id="listRecommendationJobs" resultMap="jobRowMap">
+    SELECT j.id, j.company_id, c.name AS company_name, c.domain AS company_domain,
+           c.company_type, c.size AS company_size, c.logo_url AS company_logo_url,
+           j.title AS position_title, j.deadline_label, j.url AS source_url
+    FROM jobs j
+    JOIN companies c ON c.id = j.company_id
+    WHERE j.source = 'RECOMMENDATION'
+    ORDER BY
+      CASE
+        WHEN j.deadline_label LIKE 'D-%' THEN CAST(SUBSTRING(j.deadline_label, 3) AS UNSIGNED)
+        ELSE 999999
+      END,
+      j.id
+  </select>
+
+  <select id="findRecommendationJob" resultMap="jobRowMap">
+    SELECT j.id, j.company_id, c.name AS company_name, c.domain AS company_domain,
+           c.company_type, c.size AS company_size, c.logo_url AS company_logo_url,
+           j.title AS position_title, j.deadline_label, j.url AS source_url
+    FROM jobs j
+    JOIN companies c ON c.id = j.company_id
+    WHERE j.source = 'RECOMMENDATION'
+      AND j.id = #{recommendationId}
+    LIMIT 1
   </select>
 
   <select id="findBasketJob" resultMap="basketJobRowMap">

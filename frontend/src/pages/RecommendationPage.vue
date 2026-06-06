@@ -2,15 +2,9 @@
   <AppLayout>
     <section class="wire-page recommendation-page">
       <PageHeader
-        eyebrow="REC-001"
         title="추천 공고"
-        description="프로필과 저장 이력을 기준으로 지금 확인할 만한 Jasoseol.com 공고 후보를 보여드립니다."
+        description="관심 직무와 입력한 정보를 바탕으로 지금 확인할 만한 공고를 모아 보여드립니다. 마음에 드는 공고는 바로 담아 지원 준비를 이어갈 수 있습니다."
       />
-
-      <section class="recommendation-sort-note" aria-label="추천 공고 정렬 기준">
-        <strong>마감순 정렬</strong>
-        <span>마감일이 가까운 공고부터 보여드립니다.</span>
-      </section>
 
       <StatePanel
         v-if="recommendationStore.status === 'error'"
