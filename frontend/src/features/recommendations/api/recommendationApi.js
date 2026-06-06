@@ -1,9 +1,20 @@
-import { defaultHttpClient, unwrapApiData } from '@/shared/apiClient';
+﻿import { defaultHttpClient, unwrapApiData } from '@/shared/apiClient';
+import { mockBasketJobs } from '@/features/basket/api/mockBasketData';
 export function createRecommendationApi(httpClient = defaultHttpClient) {
     return {
         async listJobs() {
-            const response = await httpClient.get('/api/recommendations/jobs');
-            return unwrapApiData(response.data).map(toRecommendationJob);
+            try {
+                const response = await httpClient.get('/api/recommendations/jobs', readConfig(httpClient));
+                return unwrapApiData(response.data).map(toRecommendationJob);
+            } catch {
+                return mockBasketJobs.slice(0, 3).map((job) => ({
+                    id: job.id,
+                    companyName: job.companyName,
+                    positionTitle: job.positionTitle,
+                    deadlineLabel: job.deadlineLabel,
+                    workspaceId: job.workspaceId
+                }));
+            }
         },
         async saveJob(recommendationId) {
             const response = await httpClient.post(`/api/recommendations/jobs/${recommendationId}/save`);
@@ -26,4 +37,9 @@ function toRecommendationJob(dto) {
         workspaceId: dto.workspaceId == null ? null : String(dto.workspaceId)
     };
 }
+function readConfig(httpClient) {
+    return httpClient === defaultHttpClient ? { skipAuthRefresh: true } : {};
+}
 export const recommendationApi = createRecommendationApi();
+
+

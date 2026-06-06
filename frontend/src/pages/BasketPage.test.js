@@ -27,7 +27,8 @@ const makeRouter = () => createRouter({
         { path: '/mypage', component: { template: '<div>my page</div>' } },
         { path: '/workspaces/:workspaceId', component: { template: '<div>workspace</div>' } },
         { path: '/recommendations', component: { template: '<div>recommendations</div>' } },
-        { path: '/document-profile', component: { template: '<div>document profile</div>' } }
+        { path: '/document-profile', component: { template: '<div>document profile</div>' } },
+        { path: '/mypage/notion', component: { template: '<div>notion</div>' } }
     ]
 });
 describe('BasketPage', () => {
@@ -36,6 +37,7 @@ describe('BasketPage', () => {
         mocks.createJob.mockReset();
         mocks.updateStatus.mockReset();
         mocks.archiveJob.mockReset();
+        vi.stubGlobal('confirm', vi.fn(() => true));
         mocks.listJobs.mockResolvedValue([
             {
                 id: '101',

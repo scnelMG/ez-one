@@ -21,6 +21,7 @@ const makeRouter = () => createRouter({
     history: createMemoryHistory(),
     routes: [
         { path: '/mypage/notion', component: NotionSettingsPage },
+        { path: '/', component: { template: '<div>main</div>' } },
         { path: '/main', component: { template: '<div>main</div>' } },
         { path: '/basket', component: { template: '<div>basket</div>' } },
         { path: '/mypage', component: { template: '<div>mypage</div>' } },
@@ -74,7 +75,7 @@ describe('NotionSettingsPage', () => {
         expect(mocks.getConnection).toHaveBeenCalled();
         expect(mocks.listSyncLogs).toHaveBeenCalled();
         expect(wrapper.text()).toContain('notion@example.com');
-        expect(wrapper.text()).toContain('JOB_ONLY');
+        expect(wrapper.text()).toContain('공고만 동기화');
         expect(wrapper.text()).toContain('Synced');
         await wrapper.get('[data-testid="toggle-job-only-sync"]').trigger('click');
         await flushPromises();

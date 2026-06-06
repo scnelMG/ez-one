@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+﻿import { describe, expect, it, vi } from 'vitest';
 import { createNotionApi } from './notionApi';
 describe('notionApi', () => {
     it('NOTION-001: loads the current Notion connection', async () => {
@@ -16,7 +16,7 @@ describe('notionApi', () => {
         });
         const api = createNotionApi({ get, post: vi.fn(), put: vi.fn() });
         const connection = await api.getConnection();
-        expect(get).toHaveBeenCalledWith('/api/integrations/notion');
+        expect(get).toHaveBeenCalledWith('/api/integrations/notion', {});
         expect(connection).toEqual({
             connected: true,
             notionAccountEmail: 'notion@example.com',
@@ -83,7 +83,7 @@ describe('notionApi', () => {
         });
         const api = createNotionApi({ get, post: vi.fn(), put: vi.fn() });
         const logs = await api.listSyncLogs();
-        expect(get).toHaveBeenCalledWith('/api/integrations/notion/sync-logs');
+        expect(get).toHaveBeenCalledWith('/api/integrations/notion/sync-logs', {});
         expect(logs).toEqual([
             {
                 id: '1',
@@ -94,3 +94,4 @@ describe('notionApi', () => {
         ]);
     });
 });
+

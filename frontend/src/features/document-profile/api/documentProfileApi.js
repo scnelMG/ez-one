@@ -1,9 +1,13 @@
-import { defaultHttpClient, unwrapApiData } from '@/shared/apiClient';
+﻿import { defaultHttpClient, unwrapApiData } from '@/shared/apiClient';
 export function createDocumentProfileApi(httpClient = defaultHttpClient) {
     return {
         async getDocumentProfile() {
-            const response = await httpClient.get('/api/document-profile');
-            return toDocumentProfile(unwrapApiData(response.data));
+            try {
+                const response = await httpClient.get('/api/document-profile', readConfig(httpClient));
+                return toDocumentProfile(unwrapApiData(response.data));
+            } catch {
+                return toDocumentProfile({ sections: {}, customFields: [], lastSavedAt: null });
+            }
         },
         async saveSection(sectionType, payload) {
             const response = await httpClient.put(`/api/document-profile/sections/${sectionType}`, { payload });
@@ -37,4 +41,9 @@ function toDocumentCustomField(dto) {
         value: dto.value
     };
 }
+function readConfig(httpClient) {
+    return httpClient === defaultHttpClient ? { skipAuthRefresh: true } : {};
+}
 export const documentProfileApi = createDocumentProfileApi();
+
+

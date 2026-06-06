@@ -1,11 +1,12 @@
-import { defaultHttpClient, unwrapApiData } from '@/shared/apiClient';
+﻿import { defaultHttpClient, unwrapApiData } from '@/shared/apiClient';
 import { mockBasketJobs } from './mockBasketData';
 export function createBasketApi(httpClient = defaultHttpClient) {
     return {
         async listJobs(status) {
             try {
                 const response = await httpClient.get('/api/basket/jobs', {
-                    params: status ? { status: toBackendStatus(status) } : undefined
+                    params: status ? { status: toBackendStatus(status) } : undefined,
+                    ...readConfig(httpClient)
                 });
                 return unwrapApiData(response.data).map(toBasketJob);
             }
@@ -79,4 +80,8 @@ function toBackendStatus(status) {
     }
     return 'NOT_APPLIED';
 }
+function readConfig(httpClient) {
+    return httpClient === defaultHttpClient ? { skipAuthRefresh: true } : {};
+}
 export const basketApi = createBasketApi();
+

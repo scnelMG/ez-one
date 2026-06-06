@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --blue: #6d4dff;
   --blue-strong: #5838e8;
   --blue-soft: #f1efff;
@@ -17,8 +17,17 @@
   --green: #0f8f6f;
   color: var(--text);
   background: var(--bg);
-  font-family: Inter, Pretendard, "Noto Sans KR", "Malgun Gothic", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-sans: "Pretendard Variable", Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  font-family: var(--font-sans);
   font-synthesis: none;
+}
+
+@font-face {
+  font-family: "Pretendard Variable";
+  font-weight: 45 920;
+  font-style: normal;
+  font-display: swap;
+  src: url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/variable/woff2/PretendardVariable.woff2") format("woff2-variations");
 }
 
 * {
@@ -27,6 +36,13 @@
 
 body {
   margin: 0;
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 a {
@@ -37,6 +53,13 @@ a {
 button,
 input {
   font: inherit;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: var(--font-sans);
 }
 
 .app-frame {
@@ -717,19 +740,26 @@ h1 {
   margin-bottom: 6px;
   color: var(--ink);
   font-size: 1.28rem;
+  letter-spacing: -0.035em;
   line-height: 1.2;
+  text-wrap: balance;
 }
 
 h2 {
   margin-bottom: 7px;
   color: var(--ink);
   font-size: 0.96rem;
+  letter-spacing: -0.025em;
   line-height: 1.35;
+  text-wrap: balance;
 }
 
 h3 {
   color: var(--ink);
   font-size: 0.9rem;
+  letter-spacing: -0.02em;
+  line-height: 1.4;
+  text-wrap: balance;
 }
 
 p,
@@ -737,6 +767,8 @@ li {
   color: var(--muted);
   font-size: 0.84rem;
   line-height: 1.5;
+  letter-spacing: -0.01em;
+  text-wrap: pretty;
 }
 
 .auth-page {
@@ -1732,6 +1764,63 @@ li {
   flex-wrap: wrap;
   gap: 12px;
   margin-top: 30px;
+}
+.email-auth-form {
+  display: grid;
+  gap: 12px;
+  width: min(100%, 420px);
+  margin-top: 18px;
+}
+
+.email-auth-tabs {
+  display: inline-flex;
+  width: fit-content;
+  overflow: hidden;
+  border: 1px solid #d9deea;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.email-auth-tabs button {
+  min-height: 36px;
+  border: 0;
+  background: #ffffff;
+  color: #4b5563;
+  cursor: pointer;
+  font-weight: 900;
+  padding: 0 14px;
+}
+
+.email-auth-tabs button.active {
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
+.email-auth-form label {
+  display: grid;
+  gap: 6px;
+  color: #111827;
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.email-auth-form input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #d9deea;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111827;
+  padding: 0 12px;
+}
+
+.email-auth-form input:focus {
+  outline: 2px solid rgba(109, 77, 255, 0.18);
+  border-color: var(--blue-line);
+}
+
+.email-auth-form .landing-secondary {
+  width: 100%;
 }
 
 .landing-hero-actions .landing-primary {
@@ -2767,3 +2856,4 @@ li {
     grid-column: 1 / -1;
   }
 }
+

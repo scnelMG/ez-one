@@ -24,7 +24,7 @@ vi.mock('@/features/auth/oauth/googleOAuth', () => ({
 }));
 const makeRouter = () => createRouter({
     history: createMemoryHistory(),
-    routes: [{ path: '/', component: LoginPage }]
+    routes: [{ path: '/login', component: LoginPage }]
 });
 describe('LoginPage', () => {
     beforeEach(() => {
@@ -37,7 +37,7 @@ describe('LoginPage', () => {
     it('AUTH-001: starts real Google OAuth with the protected redirect target', async () => {
         vi.stubGlobal('location', { assign: vi.fn(), origin: 'http://localhost:5173' });
         const router = makeRouter();
-        router.push('/?redirect=/basket');
+        router.push('/login?redirect=/basket');
         await router.isReady();
         const wrapper = mount(LoginPage, {
             global: {
@@ -49,7 +49,7 @@ describe('LoginPage', () => {
     });
     it('EXT-024: exposes local Chrome extension install guidance from the public entry page', async () => {
         const router = makeRouter();
-        router.push('/');
+        router.push('/login');
         await router.isReady();
         const wrapper = mount(LoginPage, {
             global: {
@@ -68,7 +68,7 @@ describe('LoginPage', () => {
         });
         const router = makeRouter();
         router.addRoute({ path: '/basket', component: { template: '<div>Basket</div>' } });
-        router.push('/?redirect=/basket');
+        router.push('/login?redirect=/basket');
         await router.isReady();
         const wrapper = mount(LoginPage, {
             global: {
@@ -93,8 +93,8 @@ describe('LoginPage', () => {
             user: { id: 2, email: 'local@example.com' }
         });
         const router = makeRouter();
-        router.addRoute({ path: '/main', component: { template: '<div>Main</div>' } });
-        router.push('/');
+        router.addRoute({ path: '/', component: { template: '<div>Main</div>' } });
+        router.push('/login');
         await router.isReady();
         const wrapper = mount(LoginPage, {
             global: {
@@ -113,6 +113,6 @@ describe('LoginPage', () => {
             password: 'password123!'
         });
         expect(mocks.saveAuthSession).toHaveBeenCalled();
-        expect(router.currentRoute.value.path).toBe('/main');
+        expect(router.currentRoute.value.path).toBe('/');
     });
 });

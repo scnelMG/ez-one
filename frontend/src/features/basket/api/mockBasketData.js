@@ -1,8 +1,8 @@
-export const mockBasketJobs = [
+﻿export const mockBasketJobs = [
     {
         id: '101',
         companyName: '네이버',
-        positionTitle: 'Backend Engineer',
+        positionTitle: '백엔드 개발자',
         status: 'IN_PROGRESS',
         statusLabel: '진행 중',
         deadlineLabel: '2026.06.11',
@@ -15,7 +15,7 @@ export const mockBasketJobs = [
     {
         id: '104',
         companyName: '카카오페이',
-        positionTitle: 'Server Developer',
+        positionTitle: '서버 개발자',
         status: 'NOT_STARTED',
         statusLabel: '지원 전',
         deadlineLabel: '2026.06.20',
@@ -28,9 +28,9 @@ export const mockBasketJobs = [
     {
         id: '107',
         companyName: '토스',
-        positionTitle: 'Platform Engineer',
+        positionTitle: '플랫폼 엔지니어',
         status: 'SUBMITTED',
-        statusLabel: '지원완료',
+        statusLabel: '지원 완료',
         deadlineLabel: '2026.06.23',
         deadlineDate: '2026-06-23',
         deadlineSoon: false,
@@ -41,7 +41,7 @@ export const mockBasketJobs = [
     {
         id: '110',
         companyName: '라인플러스',
-        positionTitle: 'Frontend Engineer',
+        positionTitle: '프론트엔드 개발자',
         status: 'NOT_STARTED',
         statusLabel: '지원 전',
         deadlineLabel: '2026.06.28',
@@ -54,7 +54,7 @@ export const mockBasketJobs = [
     {
         id: '113',
         companyName: '우아한형제들',
-        positionTitle: 'Product Backend Developer',
+        positionTitle: '프로덕트 백엔드 개발자',
         status: 'IN_PROGRESS',
         statusLabel: '진행 중',
         deadlineLabel: '2026.06.30',

@@ -198,9 +198,9 @@
               <label>
                 유형
                 <select v-model="customFieldForm.fieldType" data-testid="custom-type">
-                  <option value="TEXT">TEXT</option>
-                  <option value="URL">URL</option>
-                  <option value="NUMBER">NUMBER</option>
+                  <option value="TEXT">텍스트</option>
+                  <option value="URL">링크</option>
+                  <option value="NUMBER">숫자</option>
                 </select>
               </label>
               <label>

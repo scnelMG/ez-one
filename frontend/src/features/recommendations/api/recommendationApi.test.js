@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+﻿import { describe, expect, it, vi } from 'vitest';
 import { createRecommendationApi } from './recommendationApi';
 describe('recommendationApi', () => {
     it('REC-001: loads recommendation jobs from the backend', async () => {
@@ -9,7 +9,7 @@ describe('recommendationApi', () => {
                     {
                         basketJobId: 9001,
                         workspaceId: null,
-                        companyName: '라인',
+                        companyName: '?쇱씤',
                         positionTitle: 'Server Platform Engineer',
                         deadlineLabel: 'D-7'
                     }
@@ -19,11 +19,11 @@ describe('recommendationApi', () => {
         });
         const api = createRecommendationApi({ get, post: vi.fn() });
         const jobs = await api.listJobs();
-        expect(get).toHaveBeenCalledWith('/api/recommendations/jobs');
+        expect(get).toHaveBeenCalledWith('/api/recommendations/jobs', {});
         expect(jobs).toEqual([
             {
                 id: '9001',
-                companyName: '라인',
+                companyName: '?쇱씤',
                 positionTitle: 'Server Platform Engineer',
                 deadlineLabel: 'D-7',
                 workspaceId: null
@@ -37,10 +37,10 @@ describe('recommendationApi', () => {
                 data: {
                     id: 101,
                     workspaceId: 102,
-                    companyName: '라인',
+                    companyName: '?쇱씤',
                     positionTitle: 'Server Platform Engineer',
                     applicationStatus: 'NOT_APPLIED',
-                    statusLabel: '지원 예정',
+                    statusLabel: '吏???덉젙',
                     deadlineLabel: 'D-7',
                     deadlineSoon: true,
                     sourceUrl: 'https://www.jasoseol.com/'
@@ -54,8 +54,9 @@ describe('recommendationApi', () => {
         expect(savedJob).toEqual({
             basketJobId: '101',
             workspaceId: '102',
-            companyName: '라인',
+            companyName: '?쇱씤',
             positionTitle: 'Server Platform Engineer'
         });
     });
 });
+

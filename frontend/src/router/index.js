@@ -17,12 +17,14 @@ export const router = createRouter({
     routes: [
         {
             path: '/',
-            name: 'login',
-            component: LoginPage
+            name: 'main',
+            component: MainPage,
+            meta: { requiresAuth: true }
         },
         {
             path: '/login',
-            redirect: '/'
+            name: 'login',
+            component: LoginPage
         },
         {
             path: '/login/callback',
@@ -43,9 +45,7 @@ export const router = createRouter({
         },
         {
             path: '/main',
-            name: 'main',
-            component: MainPage,
-            meta: { requiresAuth: true }
+            redirect: '/'
         },
         {
             path: '/basket',
@@ -95,6 +95,9 @@ router.beforeEach((to) => {
     if (to.name === 'login' && isAuthenticated()) {
         return getAuthenticatedHomePath(to.query.redirect);
     }
+    if (to.name === 'main' && isAuthenticated() && typeof to.query.redirect === 'string') {
+        return getAuthenticatedHomePath(to.query.redirect);
+    }
     if (!to.meta.requiresAuth) {
         return true;
     }
@@ -118,7 +121,7 @@ function getAuthenticatedHomePath(redirect = undefined) {
     if (getCurrentUser()?.profileCompleted === false) {
         return '/onboarding';
     }
-    return typeof redirect === 'string' && isSafeRedirectPath(redirect) ? redirect : '/main';
+    return typeof redirect === 'string' && isSafeRedirectPath(redirect) ? redirect : '/';
 }
 function isSafeRedirectPath(path) {
     return path.startsWith('/') && !path.startsWith('//') && !path.startsWith('/login');

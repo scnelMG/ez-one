@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <main class="landing-page">
     <header class="landing-nav">
       <RouterLink class="landing-brand" to="/" aria-label="EZ One">
@@ -18,7 +18,7 @@
 
     <section class="landing-hero" aria-labelledby="login-title">
       <div class="landing-hero-copy">
-        <p class="landing-eyebrow">EZ One Workspace</p>
+        <p class="landing-eyebrow">EZ One 지원 워크스페이스</p>
         <h1 id="login-title">지원할 공고와 자기소개서를 한 곳에서 정리하세요</h1>
         <p>
           EZ One은 채용 공고, 마감 일정, 참고자료, 자기소개서 초안을 공고별로 묶어
@@ -123,17 +123,17 @@
           </div>
           <div class="preview-row">
             <span>네이버</span>
-            <span>Backend Engineer</span>
+            <span>백엔드 개발자</span>
             <strong>D-2</strong>
           </div>
           <div class="preview-row">
             <span>카카오페이</span>
-            <span>Server Developer</span>
+            <span>서버 개발자</span>
             <strong>D-5</strong>
           </div>
           <div class="preview-row">
             <span>토스</span>
-            <span>Platform Engineer</span>
+            <span>플랫폼 엔지니어</span>
             <strong>오늘</strong>
           </div>
         </div>
@@ -142,14 +142,14 @@
 
     <section id="features" class="landing-section" aria-label="핵심 기능">
       <div class="landing-section-heading">
-        <p class="landing-eyebrow">Core Features</p>
+        <p class="landing-eyebrow">핵심 기능</p>
         <h2>지원 준비에 필요한 화면만 깔끔하게 연결합니다</h2>
       </div>
 
       <div class="landing-feature-grid">
         <article>
           <span>01</span>
-          <h3>공고 장바구니</h3>
+          <h3>공고 바구니</h3>
           <p>관심 공고를 모아 마감일과 지원 상태를 한눈에 확인합니다.</p>
         </article>
         <article>
@@ -167,7 +167,7 @@
 
     <section id="extension-install" class="landing-section extension-install" aria-label="Chrome 확장프로그램 설치">
       <div class="landing-section-heading">
-        <p class="landing-eyebrow">Chrome Extension</p>
+        <p class="landing-eyebrow">브라우저 확장 프로그램</p>
         <h2>Chrome 확장프로그램 설치</h2>
       </div>
 
@@ -179,8 +179,8 @@
         </article>
         <article>
           <span>02</span>
-          <h3>Chrome에 로드</h3>
-          <p><code>chrome://extensions</code>에서 개발자 모드를 켠 뒤 <code>C:\ez-one\extension\dist</code> 폴더를 로드합니다.</p>
+          <h3>Chrome에 불러오기</h3>
+          <p><code>chrome://extensions</code>에서 개발자 모드를 켠 뒤 <code>C:\ez-one\extension\dist</code> 폴더를 불러옵니다.</p>
         </article>
         <article>
           <span>03</span>
@@ -210,7 +210,7 @@
         </li>
         <li>
           <span>04</span>
-          <strong>장바구니</strong>
+          <strong>바구니</strong>
         </li>
         <li>
           <span>05</span>
@@ -279,6 +279,7 @@ async function submitEmailAuth() {
 }
 
 function getRedirectTarget() {
-    return typeof route.query.redirect === 'string' ? route.query.redirect : '/main';
+    return typeof route.query.redirect === 'string' ? route.query.redirect : '/';
 }
 </script>
+

@@ -1,4 +1,4 @@
-import { defaultHttpClient, unwrapApiData } from '@/shared/apiClient';
+﻿import { defaultHttpClient, unwrapApiData } from '@/shared/apiClient';
 import { mockWorkspaces } from './mockWorkspaceData';
 export function createWorkspaceApi(httpClient = defaultHttpClient) {
     return {
@@ -125,4 +125,8 @@ function toWorkspaceReference(reference) {
         url: reference.url
     };
 }
+function readConfig(httpClient) {
+    return httpClient === defaultHttpClient ? { skipAuthRefresh: true } : {};
+}
 export const workspaceApi = createWorkspaceApi();
+

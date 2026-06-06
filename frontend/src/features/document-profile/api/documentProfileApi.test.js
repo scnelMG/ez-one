@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+﻿import { describe, expect, it, vi } from 'vitest';
 import { createDocumentProfileApi } from './documentProfileApi';
+
 describe('documentProfileApi', () => {
     it('PROFILE-001: loads the document profile sections and custom fields', async () => {
         const get = vi.fn().mockResolvedValue({
@@ -27,7 +28,7 @@ describe('documentProfileApi', () => {
         });
         const api = createDocumentProfileApi({ get, put: vi.fn() });
         const profile = await api.getDocumentProfile();
-        expect(get).toHaveBeenCalledWith('/api/document-profile');
+        expect(get).toHaveBeenCalledWith('/api/document-profile', {});
         expect(profile.sections.basicInfo).toEqual({
             nameKo: '홍길동',
             email: 'user@example.com'
@@ -42,6 +43,7 @@ describe('documentProfileApi', () => {
         ]);
         expect(profile.lastSavedAt).toBe('2026-06-05T12:00:00Z');
     });
+
     it('PROFILE-001: saves a section through the backend section endpoint', async () => {
         const put = vi.fn().mockResolvedValue({
             data: {
@@ -71,13 +73,14 @@ describe('documentProfileApi', () => {
         });
         expect(profile.sections.basicInfo.email).toBe('jiwon@example.com');
     });
+
     it('PROFILE-001: creates, updates, and deletes custom fields', async () => {
         const post = vi.fn().mockResolvedValue({
             data: {
                 success: true,
                 data: {
                     id: 401,
-                    label: 'Portfolio',
+                    label: '포트폴리오',
                     fieldType: 'URL',
                     value: 'https://example.com'
                 },
@@ -89,7 +92,7 @@ describe('documentProfileApi', () => {
                 success: true,
                 data: {
                     id: 401,
-                    label: 'Portfolio Updated',
+                    label: '포트폴리오 수정',
                     fieldType: 'URL',
                     value: 'https://example.com/updated'
                 },
@@ -101,28 +104,28 @@ describe('documentProfileApi', () => {
         });
         const api = createDocumentProfileApi({ get: vi.fn(), put: vi.fn(), post, patch, delete: deleteRequest });
         await expect(api.createCustomField({
-            label: 'Portfolio',
+            label: '포트폴리오',
             fieldType: 'URL',
             value: 'https://example.com'
         })).resolves.toEqual({
             id: '401',
-            label: 'Portfolio',
+            label: '포트폴리오',
             fieldType: 'URL',
             value: 'https://example.com'
         });
         await expect(api.updateCustomField('401', {
-            label: 'Portfolio Updated',
+            label: '포트폴리오 수정',
             fieldType: 'URL',
             value: 'https://example.com/updated'
-        })).resolves.toMatchObject({ label: 'Portfolio Updated' });
+        })).resolves.toMatchObject({ label: '포트폴리오 수정' });
         await expect(api.deleteCustomField('401')).resolves.toBeUndefined();
         expect(post).toHaveBeenCalledWith('/api/document-profile/custom-fields', {
-            label: 'Portfolio',
+            label: '포트폴리오',
             fieldType: 'URL',
             value: 'https://example.com'
         });
         expect(patch).toHaveBeenCalledWith('/api/document-profile/custom-fields/401', {
-            label: 'Portfolio Updated',
+            label: '포트폴리오 수정',
             fieldType: 'URL',
             value: 'https://example.com/updated'
         });

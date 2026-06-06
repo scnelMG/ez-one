@@ -16,10 +16,11 @@ describe('router', () => {
         expect(routeNames).toContain('recommendations');
         expect(routeNames).toContain('notion-settings');
     });
-    it('uses the login page as the first page and keeps the dashboard behind /main', () => {
+    it('uses / as the authenticated dashboard and /login as the public login page', () => {
         const routes = router.getRoutes();
-        expect(routes.find((route) => route.path === '/')?.name).toBe('login');
-        expect(routes.find((route) => route.path === '/main')?.name).toBe('main');
+        expect(routes.find((route) => route.path === '/')?.name).toBe('main');
+        expect(routes.find((route) => route.path === '/login')?.name).toBe('login');
+        expect(routes.find((route) => route.path === '/main')?.redirect).toBe('/');
         expect(routes.find((route) => route.path === '/basket/:basketJobId')?.name).toBe('basket-detail');
     });
     it('redirects protected P1 pages to login when the user is not authenticated', async () => {
@@ -60,7 +61,7 @@ describe('router', () => {
             nickname: 'Gil Dong',
             profileCompleted: false
         }));
-        await router.push('/');
+        await router.push('/login');
         expect(router.currentRoute.value.name).toBe('onboarding');
     });
     it('sends authenticated users from extension login redirect to the extension connect page', async () => {

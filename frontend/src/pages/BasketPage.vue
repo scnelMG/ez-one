@@ -96,6 +96,7 @@
               <select
                 class="status-select"
                 :value="job.status"
+                :aria-label="`${job.companyName} ${job.positionTitle} 지원 상태 변경`"
                 :data-testid="`status-${job.id}`"
                 @change="changeStatus(job.id, $event.target.value)"
               >
@@ -154,19 +155,47 @@
           <form class="manual-job-form" data-testid="manual-create" @submit.prevent="createManualJob">
             <label>
               회사명
-              <input v-model="manualForm.companyName" data-testid="manual-company" required />
+              <input
+                v-model="manualForm.companyName"
+                data-testid="manual-company"
+                name="companyName"
+                autocomplete="organization"
+                required
+              />
             </label>
             <label>
               직무명
-              <input v-model="manualForm.positionTitle" data-testid="manual-position" required />
+              <input
+                v-model="manualForm.positionTitle"
+                data-testid="manual-position"
+                name="positionTitle"
+                autocomplete="organization-title"
+                required
+              />
             </label>
             <label>
               마감일
-              <input v-model="manualForm.deadlineLabel" data-testid="manual-deadline" placeholder="2026.06.30" />
+              <input
+                v-model="manualForm.deadlineLabel"
+                data-testid="manual-deadline"
+                name="deadline"
+                inputmode="numeric"
+                autocomplete="off"
+                placeholder="2026.06.30"
+              />
             </label>
             <label>
               공고 URL
-              <input v-model="manualForm.sourceUrl" data-testid="manual-source" required />
+              <input
+                v-model="manualForm.sourceUrl"
+                data-testid="manual-source"
+                name="sourceUrl"
+                type="url"
+                inputmode="url"
+                autocomplete="off"
+                placeholder="https://example.com/jobs/123"
+                required
+              />
             </label>
             <button class="primary-button" type="submit">공고 저장</button>
           </form>
@@ -178,10 +207,10 @@
               <p class="section-kicker">마감 일정</p>
               <h2>마감일 스냅샷</h2>
             </div>
-            <span>2026년 6월</span>
+            <span>{{ calendarMonthLabel }}</span>
           </div>
 
-          <div class="deadline-calendar" aria-label="2026년 6월 마감일">
+          <div class="deadline-calendar" :aria-label="`${calendarMonthLabel} 마감일`">
             <span v-for="weekday in weekdays" :key="weekday" class="weekday">{{ weekday }}</span>
             <div v-for="offset in firstDayOffset" :key="`offset-${offset}`" aria-hidden="true"></div>
             <div v-for="day in monthDays" :key="day" class="deadline-day">
@@ -213,8 +242,16 @@ const searchQuery = ref(String(route.query.q ?? ''));
 const currentPage = ref(1);
 const pageSize = 10;
 const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
-const monthDays = Array.from({ length: 30 }, (_, index) => index + 1);
-const firstDayOffset = 1;
+const currentMonthDate = new Date();
+const monthDays = Array.from(
+    { length: new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() + 1, 0).getDate() },
+    (_, index) => index + 1
+);
+const firstDayOffset = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth(), 1).getDay();
+const calendarMonthLabel = new Intl.DateTimeFormat('ko-KR', {
+    year: 'numeric',
+    month: 'long'
+}).format(currentMonthDate);
 const manualForm = reactive({
     companyName: '',
     positionTitle: '',
@@ -271,7 +308,8 @@ const jobsByDay = computed(() => sortedJobs.value.reduce((groups, job) => {
 }, {}));
 function deadlineDay(job) {
     const source = job.deadlineDate ?? job.deadlineLabel;
-    const match = source.match(/(?:2026[-.])?06[-.](\d{1,2})/);
+    const month = String(currentMonthDate.getMonth() + 1).padStart(2, '0');
+    const match = source.match(new RegExp(`(?:${currentMonthDate.getFullYear()}[-.])?${month}[-.](\\d{1,2})`));
     return match ? Number(match[1]) : 99;
 }
 function isOverdueJob(job) {
@@ -307,6 +345,11 @@ function changeStatus(jobId, nextStatus) {
     void basketStore.updateStatus(jobId, nextStatus);
 }
 function archiveJob(jobId) {
+    const job = basketStore.jobs.find((basketJob) => basketJob.id === jobId);
+    const label = job ? `${job.companyName} ${job.positionTitle}` : '이 공고';
+    if (!window.confirm(`${label}를 보관하시겠습니까? 보관한 공고는 목록에서 숨겨집니다.`)) {
+        return;
+    }
     void basketStore.archiveJob(jobId);
 }
 onMounted(() => {

@@ -1,9 +1,13 @@
-import { defaultHttpClient, unwrapApiData } from '@/shared/apiClient';
+﻿import { defaultHttpClient, unwrapApiData } from '@/shared/apiClient';
 export function createNotionApi(httpClient = defaultHttpClient) {
     return {
         async getConnection() {
-            const response = await httpClient.get('/api/integrations/notion');
-            return unwrapApiData(response.data);
+            try {
+                const response = await httpClient.get('/api/integrations/notion', readConfig(httpClient));
+                return unwrapApiData(response.data);
+            } catch {
+                return { connected: false, syncEnabled: false, syncScope: 'JOB_ONLY', accountName: '' };
+            }
         },
         async connect() {
             const response = await httpClient.post('/api/integrations/notion/connect', {
@@ -19,14 +23,23 @@ export function createNotionApi(httpClient = defaultHttpClient) {
             return unwrapApiData(response.data);
         },
         async listSyncLogs() {
-            const response = await httpClient.get('/api/integrations/notion/sync-logs');
-            return unwrapApiData(response.data).map((log) => ({
-                id: String(log.id),
-                target: log.target,
-                status: log.status,
-                message: log.message
-            }));
+            try {
+                const response = await httpClient.get('/api/integrations/notion/sync-logs', readConfig(httpClient));
+                return unwrapApiData(response.data).map((log) => ({
+                    id: String(log.id),
+                    target: log.target,
+                    status: log.status,
+                    message: log.message
+                }));
+            } catch {
+                return [];
+            }
         }
     };
 }
+function readConfig(httpClient) {
+    return httpClient === defaultHttpClient ? { skipAuthRefresh: true } : {};
+}
 export const notionApi = createNotionApi();
+
+

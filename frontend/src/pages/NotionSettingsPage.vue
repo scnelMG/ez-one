@@ -40,7 +40,7 @@
           <section class="wire-panel" aria-label="Notion 계정 카드">
             <div class="section-heading">
               <div>
-                <p class="section-kicker">Connection</p>
+                <p class="section-kicker">연결 상태</p>
                 <h2>Notion 계정</h2>
               </div>
               <button
@@ -55,7 +55,7 @@
             </div>
             <div class="notion-preview">
               <strong>{{ notionStore.connection?.notionAccountEmail ?? '연결된 계정 없음' }}</strong>
-              <p>현재 P1 동기화 범위는 JOB_ONLY로 고정됩니다.</p>
+              <p>현재 P1 동기화 범위는 공고만 동기화로 고정됩니다.</p>
               <div class="mini-lines" aria-hidden="true">
                 <span></span>
                 <span></span>
@@ -67,7 +67,7 @@
           <section class="wire-panel" aria-label="Notion 동기화 로그">
             <div class="section-heading">
               <div>
-                <p class="section-kicker">Sync logs</p>
+                <p class="section-kicker">동기화 기록</p>
                 <h2>최근 동기화 기록</h2>
               </div>
             </div>
@@ -109,7 +109,10 @@ const connectionLabel = computed(() => {
     }
     return '연결하기';
 });
-const syncScopeLabel = computed(() => notionStore.connection?.syncScope ?? 'JOB_ONLY');
+const syncScopeLabel = computed(() => {
+    const scope = notionStore.connection?.syncScope ?? 'JOB_ONLY';
+    return scope === 'JOB_ONLY' ? '공고만 동기화' : scope;
+});
 const syncToggleLabel = computed(() => {
     if (notionStore.status === 'saving') {
         return '저장 중';
