@@ -52,6 +52,18 @@ describe('LoginPage', () => {
         }));
         expect(location.assign).toHaveBeenCalledWith('https://accounts.google.com/o/oauth2/v2/auth?state=state-123');
     });
+    it('AUTH-004: hides account switching from the default login entry', async () => {
+        const router = makeRouter();
+        router.push('/login');
+        await router.isReady();
+        const wrapper = mount(LoginPage, {
+            global: {
+                plugins: [router]
+            }
+        });
+        expect(wrapper.find('button[data-testid="google-account-switch"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="account-switch-callout"]').exists()).toBe(false);
+    });
     it('AUTH-004: starts Google OAuth account selection when the user chooses another account', async () => {
         vi.stubGlobal('location', { assign: vi.fn(), origin: 'http://localhost:5173' });
         const router = makeRouter();
@@ -62,6 +74,7 @@ describe('LoginPage', () => {
                 plugins: [router]
             }
         });
+        expect(wrapper.get('[data-testid="account-switch-callout"]').text()).toContain('다른 Google 계정으로 전환');
         await wrapper.get('button[data-testid="google-account-switch"]').trigger('click');
         expect(mocks.buildGoogleOAuthUrl).toHaveBeenCalledWith(expect.objectContaining({
             selectAccount: true

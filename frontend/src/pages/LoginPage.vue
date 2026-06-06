@@ -33,13 +33,20 @@
         <div class="landing-sub-actions" aria-label="보조 이동">
           <a href="#features">작동 방식 보기</a>
           <a href="#extension-install">확장 프로그램 보기</a>
+        </div>
+
+        <div v-if="isAccountSwitchFlow" class="account-switch-callout" data-testid="account-switch-callout">
+          <div>
+            <strong>다른 Google 계정으로 전환할까요?</strong>
+            <p>현재 계정에서 로그아웃한 뒤 Google 계정 선택 화면으로 이동합니다.</p>
+          </div>
           <button
             class="landing-sub-action-button"
             data-testid="google-account-switch"
             type="button"
             @click="startGoogleLogin(true)"
           >
-            다른 Google 계정으로 로그인
+            다른 Google 계정으로 계속
           </button>
         </div>
 
@@ -300,7 +307,7 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { authApi } from '@/features/auth/api/authApi';
 import { buildGoogleOAuthUrl, createOAuthState, getGoogleClientId, getGoogleRedirectUri } from '@/features/auth/oauth/googleOAuth';
@@ -312,6 +319,7 @@ const errorMessage = ref('');
 const authMode = ref('login');
 const isSubmitting = ref(false);
 const showEmailAuth = ref(false);
+const isAccountSwitchFlow = computed(() => route.query.switch === 'account');
 const extensionInstallUrl = import.meta.env.VITE_EXTENSION_INSTALL_URL || 'https://chromewebstore.google.com/';
 const emailForm = reactive({
     name: '',

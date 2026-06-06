@@ -110,3 +110,4 @@
 - `TC-MYPAGE-NOTION-001`: Notion sync page removes the old left board list, separates Google and Notion accounts, and toggles auto sync items.
 - `TC-MYPAGE-ONBOARDING-001`: Onboarding page saves recommendation preferences from chip-style controls.
 - `TC-MYPAGE-SUPPORT-001`: QnA, 1:1 inquiry, partnership inquiry, and terms routes render as independent mypage support pages.
+- `TC-AUTH-SWITCH-ENTRY-001`: Default `/login` hides account switching, while `/login?switch=account` renders the account-switch callout and starts Google OAuth with `prompt=select_account`.
