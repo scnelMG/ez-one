@@ -308,3 +308,12 @@ Related requirements: `AUTH-001`, `AUTH-004`, `AUTH-008`, `ONB-001`.
 - Explicit account switching is initiated from the signed-in app header and routes the user to `/login?switch=account` after revoking the current EZ-ONE refresh token.
 - The different Google account login action uses Google OAuth `prompt=select_account` so the user can choose another Google account.
 - Backend API contract is unchanged: the frontend still exchanges the returned authorization code through `POST /api/auth/google`.
+
+## 2026-06-07 Local Login Stack Guardrail
+
+Related requirements: `AUTH-001`, `AUTH-006`.
+
+- Backend local runs import `backend/.env` through `spring.config.import=optional:file:.env[.properties]`, so `cd backend; .\mvnw.cmd spring-boot:run` uses the local DB, JWT, and Google OAuth settings.
+- Before testing login locally, run `.\tools\check-local-login-stack.ps1` from the repository root.
+- The preflight checks required env keys, MySQL reachability, backend `/api/health`, and the Vite dev server without printing secret values.
+- If Flyway drift is suspected, run `.\tools\check-local-login-stack.ps1 -CheckFlyway` after the backend and database are reachable.
