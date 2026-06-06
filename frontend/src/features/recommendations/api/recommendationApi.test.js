@@ -1,4 +1,4 @@
-﻿import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createRecommendationApi } from './recommendationApi';
 describe('recommendationApi', () => {
     it('REC-001: loads recommendation jobs from the backend', async () => {

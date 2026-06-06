@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <AppLayout>
     <section class="wire-page onboarding-wire">
       <div class="modal-scrim">

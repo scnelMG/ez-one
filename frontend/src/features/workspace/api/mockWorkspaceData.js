@@ -1,4 +1,4 @@
-﻿const workspaceDefaults = {
+const workspaceDefaults = {
     sourceUrl: 'https://www.jasoseol.com/',
     questions: [
         {

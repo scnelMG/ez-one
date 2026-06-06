@@ -1,4 +1,4 @@
-﻿import { defaultHttpClient, unwrapApiData } from '@/shared/apiClient';
+import { defaultHttpClient, unwrapApiData } from '@/shared/apiClient';
 export function createDocumentProfileApi(httpClient = defaultHttpClient) {
     return {
         async getDocumentProfile() {

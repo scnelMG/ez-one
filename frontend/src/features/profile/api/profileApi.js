@@ -1,4 +1,4 @@
-﻿import { defaultHttpClient, unwrapApiData } from '@/shared/apiClient';
+import { defaultHttpClient, unwrapApiData } from '@/shared/apiClient';
 export function createProfileApi(httpClient = defaultHttpClient) {
     return {
         async getUserProfile() {
