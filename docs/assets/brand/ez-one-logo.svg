@@ -1,19 +1,19 @@
-﻿<svg width="1396" height="498" viewBox="0 0 1396 498" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+<svg width="860" height="260" viewBox="0 0 860 260" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
   <title id="title">EZ One 로고</title>
-  <desc id="desc">문서 체크 아이콘, EZ One 워드마크, 이제 쉽게 지원하자 태그라인.</desc>
-  <rect width="1396" height="498" rx="32" fill="#FFFFFF"/>
+  <desc id="desc">문서 체크 아이콘과 EZ One 워드마크, 이제 쉽게 지원하자 태그라인.</desc>
+  <rect x="8" y="8" width="844" height="244" rx="28" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="2"/>
 
-  <g stroke="#6F55F6" stroke-width="13" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M37 133C37 105.938 58.938 84 86 84H141L192 135V254C192 281.062 170.062 303 143 303H86C58.938 303 37 281.062 37 254V133Z"/>
-    <path d="M141 85V119C141 130.046 149.954 139 161 139H191"/>
-    <path d="M76 219L113 256L155 209"/>
+  <g transform="translate(92 58)" stroke="#6F55F6" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M0 30C0 13.431 13.431 0 30 0H70L110 40V118C110 134.569 96.569 148 80 148H30C13.431 148 0 134.569 0 118V30Z"/>
+    <path d="M70 1V28C70 36.837 77.163 44 86 44H109"/>
+    <path d="M29 91L55 117L86 80"/>
   </g>
 
-  <text x="254" y="297" fill="#0B1020" font-family="Pretendard, 'Noto Sans KR', 'Malgun Gothic', Arial, sans-serif" font-size="286" font-weight="900" letter-spacing="-2">EZ</text>
-  <rect x="642" y="193" width="99" height="42" rx="3" fill="#0B1020"/>
-  <text x="773" y="297" fill="#7057F6" font-family="Pretendard, 'Noto Sans KR', 'Malgun Gothic', Arial, sans-serif" font-size="286" font-weight="900" letter-spacing="-3">ONE</text>
+  <text x="242" y="154" fill="#0B1020" font-family="Pretendard, 'Noto Sans KR', 'Malgun Gothic', Arial, sans-serif" font-size="96" font-weight="900" letter-spacing="-2">EZ</text>
+  <rect x="386" y="119" width="44" height="14" rx="2" fill="#0B1020"/>
+  <text x="455" y="154" fill="#7057F6" font-family="Pretendard, 'Noto Sans KR', 'Malgun Gothic', Arial, sans-serif" font-size="96" font-weight="900" letter-spacing="-2">ONE</text>
 
-  <text x="248" y="468" fill="#111827" font-family="Pretendard, 'Noto Sans KR', 'Malgun Gothic', Arial, sans-serif" font-size="76" font-weight="900" letter-spacing="-1">
+  <text x="242" y="205" fill="#111827" font-family="Pretendard, 'Noto Sans KR', 'Malgun Gothic', Arial, sans-serif" font-size="28" font-weight="900" letter-spacing="-0.5">
     이제 쉽게 <tspan fill="#7057F6">지원하자</tspan>
   </text>
 </svg>
