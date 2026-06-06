@@ -1,60 +1,60 @@
-# EZ One
+﻿# EZ One
 
 <p align="center">
   <img src="./docs/assets/brand/ez-one-logo.svg" alt="EZ One 로고" width="720" />
 </p>
 
 <p align="center">
-  <strong>채용 공고 저장부터 지원서 준비까지 한곳에서 관리하는 취업 준비 워크스페이스</strong>
+  <strong>梨꾩슜 怨듦퀬 ??λ???吏?먯꽌 以鍮꾧퉴吏 ?쒓납?먯꽌 愿由ы븯??痍⑥뾽 以鍮??뚰겕?ㅽ럹?댁뒪</strong>
 </p>
 
-## 프로젝트 소개
+## ?꾨줈?앺듃 ?뚭컻
 
-EZ One은 취업 준비자가 여러 채용 공고와 지원 준비 과정을 공고 단위로 정리할 수 있도록 돕는 웹 서비스입니다.
+EZ One? 痍⑥뾽 以鍮꾩옄媛 ?щ윭 梨꾩슜 怨듦퀬? 吏??以鍮?怨쇱젙??怨듦퀬 ?⑥쐞濡??뺣━?????덈룄濡??뺣뒗 ???쒕퉬?ㅼ엯?덈떎.
 
-채용 공고를 저장하고, 마감일과 지원 상태를 확인하고, 공고별 워크스페이스에서 자기소개서와 참고자료를 함께 관리합니다. 반복해서 입력해야 하는 학력, 경력, 프로젝트, 자격증 같은 서류 정보도 한 번 정리해 재사용할 수 있습니다.
+梨꾩슜 怨듦퀬瑜???ν븯怨? 留덇컧?쇨낵 吏???곹깭瑜??뺤씤?섍퀬, 怨듦퀬蹂??뚰겕?ㅽ럹?댁뒪?먯꽌 ?먭린?뚭컻?쒖? 李멸퀬?먮즺瑜??④퍡 愿由ы빀?덈떎. 諛섎났?댁꽌 ?낅젰?댁빞 ?섎뒗 ?숇젰, 寃쎈젰, ?꾨줈?앺듃, ?먭꺽利?媛숈? ?쒕쪟 ?뺣낫????踰??뺣━???ъ궗?⑺븷 ???덉뒿?덈떎.
 
-## 해결하려는 문제
+## ?닿껐?섎젮??臾몄젣
 
-취업 준비를 하다 보면 정보가 쉽게 흩어집니다.
+痍⑥뾽 以鍮꾨? ?섎떎 蹂대㈃ ?뺣낫媛 ?쎄쾶 ?⑹뼱吏묐땲??
 
-- 공고 링크는 브라우저 북마크에 남습니다.
-- 마감일은 캘린더나 메모장에 따로 적습니다.
-- 자기소개서는 문서 파일마다 흩어집니다.
-- 기업 조사, JD, 뉴스, DART 자료는 별도 탭과 메모 앱에 남습니다.
-- 반복 입력해야 하는 서류 정보는 매번 다시 찾게 됩니다.
+- 怨듦퀬 留곹겕??釉뚮씪?곗? 遺곷쭏?ъ뿉 ?⑥뒿?덈떎.
+- 留덇컧?쇱? 罹섎┛?붾굹 硫붾え?μ뿉 ?곕줈 ?곸뒿?덈떎.
+- ?먭린?뚭컻?쒕뒗 臾몄꽌 ?뚯씪留덈떎 ?⑹뼱吏묐땲??
+- 湲곗뾽 議곗궗, JD, ?댁뒪, DART ?먮즺??蹂꾨룄 ??낵 硫붾え ?깆뿉 ?⑥뒿?덈떎.
+- 諛섎났 ?낅젰?댁빞 ?섎뒗 ?쒕쪟 ?뺣낫??留ㅻ쾲 ?ㅼ떆 李얘쾶 ?⑸땲??
 
-EZ One은 이 흐름을 공고 중심으로 묶어 “어떤 공고를 저장했고, 어디까지 준비했고, 다음에 무엇을 해야 하는지”를 한눈에 볼 수 있게 합니다.
+EZ One? ???먮쫫??怨듦퀬 以묒떖?쇰줈 臾띠뼱 ?쒖뼱??怨듦퀬瑜???ν뻽怨? ?대뵒源뚯? 以鍮꾪뻽怨? ?ㅼ쓬??臾댁뾿???댁빞 ?섎뒗吏?앸? ?쒕늿??蹂????덇쾶 ?⑸땲??
 
-## 핵심 사용자 흐름
+## ?듭떖 ?ъ슜???먮쫫
 
 ```text
-로그인 -> 온보딩 -> 공고 저장 -> 공고함 -> 지원 워크스페이스 -> 자기소개서/참고자료/서류 정보 관리 -> Notion 동기화
+濡쒓렇??-> ?⑤낫??-> 怨듦퀬 ???-> 怨듦퀬??-> 吏???뚰겕?ㅽ럹?댁뒪 -> ?먭린?뚭컻??李멸퀬?먮즺/?쒕쪟 ?뺣낫 愿由?-> Notion ?숆린??
 ```
 
-## 주요 기능
+## 二쇱슂 湲곕뒫
 
-| 기능 | 설명 |
+| 湲곕뒫 | ?ㅻ챸 |
 | --- | --- |
-| 공고 저장 | 관심 있는 채용 공고를 저장하고 중복 저장을 방지합니다. |
-| 공고함 | 저장한 공고의 마감일, 지원 상태, 준비 현황을 관리합니다. |
-| 지원 워크스페이스 | 공고별 자기소개서, 참고자료, 지원 메모를 한곳에서 관리합니다. |
-| 서류 입력 정보 | 학력, 경력, 프로젝트, 자격증 등 반복 입력 정보를 정리해 재사용합니다. |
-| 추천공고 | 온보딩에서 입력한 선호 정보 기반으로 확인할 공고 후보를 보여줍니다. |
-| Chrome Extension | 채용 사이트에서 공고 정보를 추출하고 미리보기 후 저장합니다. |
-| Notion 동기화 | 저장한 공고 정보를 Notion에 동기화합니다. |
+| 怨듦퀬 ???| 愿???덈뒗 梨꾩슜 怨듦퀬瑜???ν븯怨?以묐났 ??μ쓣 諛⑹??⑸땲?? |
+| 怨듦퀬??| ??ν븳 怨듦퀬??留덇컧?? 吏???곹깭, 以鍮??꾪솴??愿由ы빀?덈떎. |
+| 吏???뚰겕?ㅽ럹?댁뒪 | 怨듦퀬蹂??먭린?뚭컻?? 李멸퀬?먮즺, 吏??硫붾え瑜??쒓납?먯꽌 愿由ы빀?덈떎. |
+| ?쒕쪟 ?낅젰 ?뺣낫 | ?숇젰, 寃쎈젰, ?꾨줈?앺듃, ?먭꺽利???諛섎났 ?낅젰 ?뺣낫瑜??뺣━???ъ궗?⑺빀?덈떎. |
+| 異붿쿇怨듦퀬 | ?⑤낫?⑹뿉???낅젰???좏샇 ?뺣낫 湲곕컲?쇰줈 ?뺤씤??怨듦퀬 ?꾨낫瑜?蹂댁뿬以띾땲?? |
+| Chrome Extension | 梨꾩슜 ?ъ씠?몄뿉??怨듦퀬 ?뺣낫瑜?異붿텧?섍퀬 誘몃━蹂닿린 ????ν빀?덈떎. |
+| Notion ?숆린??| ??ν븳 怨듦퀬 ?뺣낫瑜?Notion???숆린?뷀빀?덈떎. |
 
-## 현재 개발 상태
+## ?꾩옱 媛쒕컻 ?곹깭
 
-현재는 P1 제품 흐름을 기준으로 스캐폴드, Google 로그인 시작 흐름, 한국어 프론트 route shell이 준비된 상태입니다.
+?꾩옱??P1 ?쒗뭹 ?먮쫫??湲곗??쇰줈 ?ㅼ틦?대뱶, Google 濡쒓렇???쒖옉 ?먮쫫, ?쒓뎅???꾨줎??route shell??以鍮꾨맂 ?곹깭?낅땲??
 
-다음 개발 우선순위는 온보딩 프로필 저장과 건너뛰기 흐름입니다. 온보딩 정보는 추천공고, 마이페이지, 워크스페이스 기본값의 기반이 됩니다.
+?ㅼ쓬 媛쒕컻 ?곗꽑?쒖쐞???⑤낫???꾨줈????κ낵 嫄대꼫?곌린 ?먮쫫?낅땲?? ?⑤낫???뺣낫??異붿쿇怨듦퀬, 留덉씠?섏씠吏, ?뚰겕?ㅽ럹?댁뒪 湲곕낯媛믪쓽 湲곕컲???⑸땲??
 
-자세한 구현 진행 기록은 [docs/18_wbs.md](./docs/18_wbs.md)와 [docs/24_development-start-checklist.md](./docs/24_development-start-checklist.md)를 봅니다.
+?먯꽭??援ы쁽 吏꾪뻾 湲곕줉? [docs/18_wbs.md](./docs/18_wbs.md)? [docs/24_development-start-checklist.md](./docs/24_development-start-checklist.md)瑜?遊낅땲??
 
-## 기술 스택
+## 湲곗닠 ?ㅽ깮
 
-| 영역 | 스택 |
+| ?곸뿭 | ?ㅽ깮 |
 | --- | --- |
 | Backend | Spring Boot, Spring MVC, Spring Security, JWT, MyBatis |
 | Frontend | Vue 3, Vite, Vue Router, Pinia, Axios |
@@ -63,26 +63,27 @@ EZ One은 이 흐름을 공고 중심으로 묶어 “어떤 공고를 저장했
 | External | Google OAuth2, Notion API |
 | Deploy | AWS EC2 |
 
-## 저장소 구조
+## ??μ냼 援ъ“
 
-| 경로 | 설명 |
+| 寃쎈줈 | ?ㅻ챸 |
 | --- | --- |
-| `backend/` | Spring Boot REST API, 인증/인가, DB, 외부 연동 |
-| `frontend/` | Vue 3 웹 앱, route shell, API client, 상태 관리 |
-| `extension/` | Chrome Extension 팝업, 공고 추출, 미리보기, 저장 |
-| `docs/` | 요구사항, 화면 설계, API, ERD, 테스트 계획, 협업 문서 |
-| `infra/` | 배포, 환경, 운영 스크립트 |
+| `backend/` | Spring Boot REST API, ?몄쬆/?멸?, DB, ?몃? ?곕룞 |
+| `frontend/` | Vue 3 ???? route shell, API client, ?곹깭 愿由?|
+| `extension/` | Chrome Extension ?앹뾽, 怨듦퀬 異붿텧, 誘몃━蹂닿린, ???|
+| `docs/` | ?붽뎄?ы빆, ?붾㈃ ?ㅺ퀎, API, ERD, ?뚯뒪??怨꾪쉷, ?묒뾽 臾몄꽌 |
+| `infra/` | 諛고룷, ?섍꼍, ?댁쁺 ?ㅽ겕由쏀듃 |
 
-## 문서
+## 臾몄꽌
 
-| 목적 | 문서 |
+| 紐⑹쟻 | 臾몄꽌 |
 | --- | --- |
-| 요구사항 | [docs/04_requirements.md](./docs/04_requirements.md) |
-| 전체 IA | [docs/08_information-architecture.md](./docs/08_information-architecture.md) |
-| 화면 설계 | [docs/09_screen-design.md](./docs/09_screen-design.md) |
-| 기능 명세 | [docs/10_feature-spec.md](./docs/10_feature-spec.md) |
-| API 명세 | [docs/13_api-spec.md](./docs/13_api-spec.md) |
-| DB 설계 | [docs/12_erd.md](./docs/12_erd.md) |
-| 테스트 계획 | [docs/21_test-plan.md](./docs/21_test-plan.md) |
-| 작업 계획 | [docs/18_wbs.md](./docs/18_wbs.md) |
-| 협업 규칙 | [docs/30_team-collaboration-workflow.md](./docs/30_team-collaboration-workflow.md) |
+| ?붽뎄?ы빆 | [docs/04_requirements.md](./docs/04_requirements.md) |
+| ?꾩껜 IA | [docs/08_information-architecture.md](./docs/08_information-architecture.md) |
+| ?붾㈃ ?ㅺ퀎 | [docs/09_screen-design.md](./docs/09_screen-design.md) |
+| 湲곕뒫 紐낆꽭 | [docs/10_feature-spec.md](./docs/10_feature-spec.md) |
+| API 紐낆꽭 | [docs/13_api-spec.md](./docs/13_api-spec.md) |
+| DB ?ㅺ퀎 | [docs/12_erd.md](./docs/12_erd.md) |
+| ?뚯뒪??怨꾪쉷 | [docs/21_test-plan.md](./docs/21_test-plan.md) |
+| ?묒뾽 怨꾪쉷 | [docs/18_wbs.md](./docs/18_wbs.md) |
+| ?묒뾽 洹쒖튃 | [docs/30_team-collaboration-workflow.md](./docs/30_team-collaboration-workflow.md) |
+

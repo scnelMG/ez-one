@@ -1,7 +1,7 @@
-<svg width="1396" height="498" viewBox="0 0 1396 498" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
-  <title id="title">EZ-ONE logo</title>
-  <desc id="desc">Document check icon, EZ-ONE wordmark, and Korean tagline.</desc>
-  <rect width="1396" height="498" fill="#FFFFFF"/>
+﻿<svg width="1396" height="498" viewBox="0 0 1396 498" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">EZ One 로고</title>
+  <desc id="desc">문서 체크 아이콘, EZ One 워드마크, 이제 쉽게 지원하자 태그라인.</desc>
+  <rect width="1396" height="498" rx="32" fill="#FFFFFF"/>
 
   <g stroke="#6F55F6" stroke-width="13" stroke-linecap="round" stroke-linejoin="round">
     <path d="M37 133C37 105.938 58.938 84 86 84H141L192 135V254C192 281.062 170.062 303 143 303H86C58.938 303 37 281.062 37 254V133Z"/>
@@ -9,11 +9,11 @@
     <path d="M76 219L113 256L155 209"/>
   </g>
 
-  <text x="254" y="297" fill="#0B1020" font-family="Inter, Pretendard, 'Noto Sans KR', 'Malgun Gothic', Arial, sans-serif" font-size="286" font-weight="900" letter-spacing="-2">EZ</text>
+  <text x="254" y="297" fill="#0B1020" font-family="Pretendard, 'Noto Sans KR', 'Malgun Gothic', Arial, sans-serif" font-size="286" font-weight="900" letter-spacing="-2">EZ</text>
   <rect x="642" y="193" width="99" height="42" rx="3" fill="#0B1020"/>
-  <text x="773" y="297" fill="#7057F6" font-family="Inter, Pretendard, 'Noto Sans KR', 'Malgun Gothic', Arial, sans-serif" font-size="286" font-weight="900" letter-spacing="-3">ONE</text>
+  <text x="773" y="297" fill="#7057F6" font-family="Pretendard, 'Noto Sans KR', 'Malgun Gothic', Arial, sans-serif" font-size="286" font-weight="900" letter-spacing="-3">ONE</text>
 
   <text x="248" y="468" fill="#111827" font-family="Pretendard, 'Noto Sans KR', 'Malgun Gothic', Arial, sans-serif" font-size="76" font-weight="900" letter-spacing="-1">
-    이제 쉽게 <tspan fill="#7057F6">지원(Z-ONE)</tspan>하자
+    이제 쉽게 <tspan fill="#7057F6">지원하자</tspan>
   </text>
 </svg>
