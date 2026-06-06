@@ -1,28 +1,19 @@
-<svg width="1536" height="864" viewBox="0 0 1536 864" preserveAspectRatio="xMidYMid meet" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+<svg width="1396" height="498" viewBox="0 0 1396 498" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
   <title id="title">EZ-ONE logo</title>
-  <desc id="desc">EZ-ONE wordmark with a document check icon and Korean tagline.</desc>
-  <defs>
-    <linearGradient id="brandPurple" x1="188" y1="235" x2="1350" y2="620" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#6D4DFF"/>
-      <stop offset="1" stop-color="#7A5CFF"/>
-    </linearGradient>
-    <linearGradient id="brandDark" x1="470" y1="290" x2="790" y2="540" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#111827"/>
-      <stop offset="1" stop-color="#0B1020"/>
-    </linearGradient>
-  </defs>
+  <desc id="desc">Document check icon, EZ-ONE wordmark, and Korean tagline.</desc>
+  <rect width="1396" height="498" fill="#FFFFFF"/>
 
-  <rect width="1536" height="864" fill="#FFFFFF"/>
-
-  <g transform="translate(294 221) scale(0.43)" stroke="url(#brandPurple)" stroke-width="24" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M177 332C177 285.056 215.056 247 262 247H359L446 334V535C446 581.944 407.944 620 361 620H262C215.056 620 177 581.944 177 535V332Z"/>
-    <path d="M359 248V315C359 331.569 372.431 345 389 345H445"/>
-    <path d="M245 485L307 547L382 466"/>
+  <g stroke="#6F55F6" stroke-width="13" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M37 133C37 105.938 58.938 84 86 84H141L192 135V254C192 281.062 170.062 303 143 303H86C58.938 303 37 281.062 37 254V133Z"/>
+    <path d="M141 85V119C141 130.046 149.954 139 161 139H191"/>
+    <path d="M76 219L113 256L155 209"/>
   </g>
 
-  <text x="527" y="487" fill="url(#brandDark)" font-family="Inter, Pretendard, Helvetica Neue, Arial, sans-serif" font-size="220" font-weight="900" letter-spacing="2">EZ-<tspan fill="url(#brandPurple)">ONE</tspan></text>
+  <text x="254" y="297" fill="#0B1020" font-family="Inter, Pretendard, 'Noto Sans KR', 'Malgun Gothic', Arial, sans-serif" font-size="286" font-weight="900" letter-spacing="-2">EZ</text>
+  <rect x="642" y="193" width="99" height="42" rx="3" fill="#0B1020"/>
+  <text x="773" y="297" fill="#7057F6" font-family="Inter, Pretendard, 'Noto Sans KR', 'Malgun Gothic', Arial, sans-serif" font-size="286" font-weight="900" letter-spacing="-3">ONE</text>
 
-  <text x="527" y="632" font-family="Pretendard, Noto Sans KR, Malgun Gothic, Arial, sans-serif" font-size="64" font-weight="800" fill="#111827">
-    이제 쉽게 <tspan fill="#6D4DFF">지원(Z-ONE)</tspan>하자
+  <text x="248" y="468" fill="#111827" font-family="Pretendard, 'Noto Sans KR', 'Malgun Gothic', Arial, sans-serif" font-size="76" font-weight="900" letter-spacing="-1">
+    이제 쉽게 <tspan fill="#7057F6">지원(Z-ONE)</tspan>하자
   </text>
 </svg>

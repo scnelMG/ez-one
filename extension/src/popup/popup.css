@@ -72,16 +72,9 @@ a {
 }
 
 .brand-mark {
-  display: grid;
   width: 30px;
   height: 30px;
-  place-items: center;
-  border: 1px solid var(--blue-line);
-  border-radius: 7px;
-  background: var(--blue-soft);
-  color: var(--blue);
-  font-size: 0.72rem;
-  font-weight: 900;
+  flex: 0 0 auto;
 }
 
 .brand-lockup strong {
