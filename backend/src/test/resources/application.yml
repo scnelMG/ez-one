@@ -1,0 +1,7 @@
+auth:
+  jwt:
+    access-secret: test-access-secret-for-mvc-slices-test-access-secret
+    refresh-secret: test-refresh-secret-for-mvc-slices-test-refresh-secret
+  google:
+    client-id: test-google-client-id
+    client-secret: test-google-client-secret
