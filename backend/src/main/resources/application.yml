@@ -34,7 +34,7 @@ auth:
     token-uri: ${GOOGLE_TOKEN_URI:https://oauth2.googleapis.com/token}
     user-info-uri: ${GOOGLE_USER_INFO_URI:https://www.googleapis.com/oauth2/v3/userinfo}
   jwt:
-    access-secret: ${JWT_ACCESS_SECRET:dev-access-secret-change-me-dev-access-secret-change-me}
-    refresh-secret: ${JWT_REFRESH_SECRET:dev-refresh-secret-change-me-dev-refresh-secret-change-me}
+    access-secret: ${JWT_ACCESS_SECRET}
+    refresh-secret: ${JWT_REFRESH_SECRET}
     access-ttl-minutes: ${JWT_ACCESS_TTL_MINUTES:30}
     refresh-ttl-days: ${JWT_REFRESH_TTL_DAYS:14}
