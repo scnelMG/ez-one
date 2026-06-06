@@ -1,22 +1,11 @@
 <template>
   <AppLayout>
-    <section class="wire-page notion-wire">
-      <header class="wire-toolbar">
-        <div>
-          <p class="section-kicker">NOTION-001</p>
-          <h1>Notion 동기화</h1>
-          <p>저장한 공고 정보만 Notion으로 보내고 자기소개서 작성 내용은 동기화하지 않습니다.</p>
-        </div>
-        <button
-          class="primary-button"
-          type="button"
-          :disabled="notionStore.status === 'saving' || notionStore.connection?.connected"
-          data-testid="connect-notion"
-          @click="connectNotion"
-        >
-          {{ connectionLabel }}
-        </button>
-      </header>
+    <section class="wire-page mypage-page">
+      <PageHeader
+        eyebrow="마이페이지"
+        title="마이페이지 · 노션 연동 관리"
+        description="내보내기가 아니라 계정 연동만으로 공고와 작성 자료를 자동 동기화합니다."
+      />
 
       <StatePanel
         v-if="notionStore.status === 'error'"
@@ -26,106 +15,138 @@
         :body="notionStore.errorMessage"
       />
 
-      <div class="settings-grid">
-        <main class="wire-board">
-          <section class="notion-shell" aria-label="Notion 동기화 설정">
+      <section class="mypage-panel" aria-label="노션 연동 관리">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">노션 연동 상태</p>
+            <h2>Notion에 연결됨</h2>
+          </div>
+          <button
+            class="ghost-button danger"
+            type="button"
+            :disabled="notionStore.status === 'saving'"
+          >
+            연결 해제
+          </button>
+        </div>
+
+        <article class="notion-account-card">
+          <div>
+            <span class="service-badge">G</span>
+            <small>로그인 계정 (Google)</small>
+            <strong>{{ loginEmail }}</strong>
+          </div>
+          <div>
+            <span class="service-badge notion">N</span>
+            <small>연동된 노션 계정</small>
+            <strong>{{ notionStore.connection?.notionAccountEmail ?? '연결된 계정 없음' }}</strong>
+          </div>
+          <p>로그인 이메일과 노션 이메일이 서로 달라도 연동돼요. 가입 시 노션과 같은 계정을 쓰면 더 편해요.</p>
+        </article>
+
+        <section class="sync-settings-card" aria-label="자동 동기화">
+          <div class="section-heading compact-heading">
             <div>
-              <p class="section-kicker">동기화 범위</p>
-              <h2>공고만 동기화</h2>
-              <p>공고명, 회사, 직무, 마감일, 원문 링크만 Notion으로 보냅니다.</p>
+              <p class="section-kicker">자동 동기화</p>
+              <h3>자동 동기화</h3>
+              <p>노션 계정만 연동하면 아래 데이터가 노션에 자동으로 동기화돼요.</p>
             </div>
-            <span class="status-chip">{{ syncScopeLabel }}</span>
-          </section>
+            <button
+              class="toggle-switch"
+              type="button"
+              :class="{ active: notionStore.connection?.syncEnabled }"
+              data-testid="toggle-job-only-sync"
+              @click="toggleSync"
+            >
+              {{ notionStore.connection?.syncEnabled ? '켜짐' : '꺼짐' }}
+            </button>
+          </div>
+          <div class="sync-row">
+            <div>
+              <strong>공고 정보</strong>
+              <small>공고 관리 데이터베이스로 동기화</small>
+            </div>
+            <span class="toggle-switch active">켜짐</span>
+          </div>
+          <div class="sync-row">
+            <div>
+              <strong>자소서 · 도화지</strong>
+              <small>각 공고의 노션 페이지 안에 중첩</small>
+            </div>
+            <span class="toggle-switch active">켜짐</span>
+          </div>
+          <div class="sync-row">
+            <div>
+              <strong>과거 지원 내역</strong>
+              <small>지원 결과와 기업활동 기록</small>
+            </div>
+            <span class="toggle-switch active">켜짐</span>
+          </div>
+          <label class="sync-location">
+            대상 위치
+            <select>
+              <option>취업 준비 (자동 생성)</option>
+            </select>
+            <a href="https://www.notion.so/" target="_blank" rel="noreferrer">노션에서 열기 ↗</a>
+          </label>
+        </section>
 
-          <section class="wire-panel" aria-label="Notion 계정 카드">
-            <div class="section-heading">
-              <div>
-                <p class="section-kicker">연결 상태</p>
-                <h2>Notion 계정</h2>
-              </div>
-              <button
-                class="ghost-button"
-                type="button"
-                :disabled="notionStore.status === 'saving'"
-                data-testid="toggle-job-only-sync"
-                @click="toggleSync"
-              >
-                {{ syncToggleLabel }}
-              </button>
+        <section class="sync-log-card" aria-label="최근 동기화 기록">
+          <div class="section-heading compact-heading">
+            <div>
+              <p class="section-kicker">동기화 기록</p>
+              <h3>최근 동기화 기록</h3>
             </div>
-            <div class="notion-preview">
-              <strong>{{ notionStore.connection?.notionAccountEmail ?? '연결된 계정 없음' }}</strong>
-              <p>현재 P1 동기화 범위는 공고만 동기화로 고정됩니다.</p>
-              <div class="mini-lines" aria-hidden="true">
-                <span></span>
-                <span></span>
-                <span></span>
-              </div>
-            </div>
-          </section>
+          </div>
+          <p v-if="notionStore.status === 'loading'">Notion 설정을 불러오는 중입니다.</p>
+          <ul v-else-if="notionStore.syncLogs.length > 0" class="summary-stack">
+            <li v-for="log in notionStore.syncLogs" :key="log.id">
+              <strong>{{ log.target }} · {{ log.status }}</strong>
+              <p>{{ log.message }}</p>
+            </li>
+          </ul>
+          <p v-else>아직 동기화 기록이 없습니다.</p>
+        </section>
 
-          <section class="wire-panel" aria-label="Notion 동기화 로그">
-            <div class="section-heading">
-              <div>
-                <p class="section-kicker">동기화 기록</p>
-                <h2>최근 동기화 기록</h2>
-              </div>
-            </div>
-            <p v-if="notionStore.status === 'loading'">Notion 설정을 불러오는 중입니다.</p>
-            <ul v-else-if="notionStore.syncLogs.length > 0" class="summary-stack">
-              <li v-for="log in notionStore.syncLogs" :key="log.id">
-                <strong>{{ log.target }} · {{ log.status }}</strong>
-                <p>{{ log.message }}</p>
-              </li>
-            </ul>
-            <p v-else>아직 동기화 기록이 없습니다.</p>
-          </section>
-        </main>
-
-        <aside class="wire-side-panel">
-          <StatePanel
-            id="notion-job-only"
-            tone="green"
-            title="작성 내용은 동기화하지 않음"
-            body="현재는 저장한 공고 정보만 Notion에 보냅니다. 자기소개서 초안과 개인 작성 내용은 서비스 안에 남습니다."
-          />
-        </aside>
-      </div>
+        <button
+          class="primary-button"
+          type="button"
+          :disabled="notionStore.status === 'saving' || notionStore.connection?.connected"
+          data-testid="connect-notion"
+          @click="connectNotion"
+        >
+          {{ connectionLabel }}
+        </button>
+      </section>
     </section>
   </AppLayout>
 </template>
 
-<script setup>import AppLayout from '@/shared/AppLayout.vue';
-import StatePanel from '@/shared/StatePanel.vue';
+<script setup>
 import { computed, onMounted } from 'vue';
+import { getCurrentUser } from '@/features/auth/session/authSession';
 import { useNotionStore } from '@/stores/notionStore';
+import AppLayout from '@/shared/AppLayout.vue';
+import PageHeader from '@/shared/PageHeader.vue';
+import StatePanel from '@/shared/StatePanel.vue';
+
 const notionStore = useNotionStore();
+const loginEmail = computed(() => getCurrentUser()?.email ?? 'hong.gildong@gmail.com');
 const connectionLabel = computed(() => {
-    if (notionStore.status === 'saving') {
-        return '연결 중';
-    }
-    if (notionStore.connection?.connected) {
-        return '연결됨';
-    }
-    return '연결하기';
+  if (notionStore.status === 'saving') return '연결 중';
+  if (notionStore.connection?.connected) return '연결됨';
+  return '연결하기';
 });
-const syncScopeLabel = computed(() => {
-    const scope = notionStore.connection?.syncScope ?? 'JOB_ONLY';
-    return scope === 'JOB_ONLY' ? '공고만 동기화' : scope;
-});
-const syncToggleLabel = computed(() => {
-    if (notionStore.status === 'saving') {
-        return '저장 중';
-    }
-    return notionStore.connection?.syncEnabled ? '동기화 끄기' : '동기화 켜기';
-});
+
 onMounted(() => {
-    void notionStore.loadNotionSettings();
+  void notionStore.loadNotionSettings();
 });
+
 function toggleSync() {
-    void notionStore.updateJobOnlySync(!notionStore.connection?.syncEnabled);
+  void notionStore.updateJobOnlySync(!notionStore.connection?.syncEnabled);
 }
+
 function connectNotion() {
-    void notionStore.connectNotion();
+  void notionStore.connectNotion();
 }
 </script>

@@ -1,18 +1,15 @@
 <template>
   <AppLayout>
-    <section class="wire-page">
+    <section class="wire-page recommendation-page">
       <PageHeader
         eyebrow="REC-001"
         title="추천 공고"
-        description="프로필과 저장 이력을 기준으로 지금 확인할 만한 Jasoseol.com 공고 후보를 보여줍니다."
+        description="프로필과 저장 이력을 기준으로 지금 확인할 만한 Jasoseol.com 공고 후보를 보여드립니다."
       />
 
-      <section class="filter-bar" aria-label="추천 공고 필터">
-        <button class="filter-chip active" type="button">전체</button>
-        <button class="filter-chip" type="button">백엔드</button>
-        <button class="filter-chip" type="button">Java/Spring</button>
-        <button class="filter-chip" type="button">서울</button>
-        <div class="search-field">추천 공고 검색</div>
+      <section class="recommendation-sort-note" aria-label="추천 공고 정렬 기준">
+        <strong>마감순 정렬</strong>
+        <span>마감일이 가까운 공고부터 보여드립니다.</span>
       </section>
 
       <StatePanel
@@ -25,19 +22,35 @@
 
       <section class="wire-section" aria-label="추천 공고 목록">
         <p v-if="recommendationStore.status === 'loading'">추천 공고를 불러오는 중입니다.</p>
-        <div v-else-if="recommendationStore.jobs.length > 0" class="recommendation-grid">
-          <article v-for="item in recommendationStore.jobs" :key="item.id" class="recommendation-card">
-            <span class="shell-card-kicker">{{ item.deadlineLabel }}</span>
+        <div v-else-if="sortedJobs.length > 0" class="recommendation-grid recommendation-page-grid">
+          <article
+            v-for="item in sortedJobs"
+            :key="item.id"
+            class="recommendation-card recommendation-job-card"
+            data-testid="recommendation-card"
+          >
+            <div class="recommendation-company-row">
+              <span class="recommendation-logo" aria-hidden="true">
+                <img
+                  v-if="item.companyLogoUrl"
+                  :src="item.companyLogoUrl"
+                  :alt="`${item.companyName} logo`"
+                  @error="item.companyLogoUrl = ''"
+                />
+                <span v-else>{{ companyInitial(item.companyName) }}</span>
+              </span>
+              <span class="shell-card-kicker">{{ item.deadlineLabel }}</span>
+            </div>
             <h3>{{ item.companyName }}</h3>
             <p>{{ item.positionTitle }}</p>
             <button
-              class="text-button"
+              class="primary-button compact-action"
               type="button"
               :disabled="recommendationStore.status === 'saving'"
               :data-testid="`save-recommendation-${item.id}`"
               @click="saveRecommendation(item.id)"
             >
-              별표로 담기
+              담기
             </button>
           </article>
         </div>
@@ -50,36 +63,74 @@
         />
       </section>
 
-      <StatePanel
+      <section
         v-if="recommendationStore.savedJob"
-        id="recommendation-saved"
-        tone="green"
-        title="공고를 담았습니다"
-        :body="`${recommendationStore.savedJob.companyName} ${recommendationStore.savedJob.positionTitle} 워크스페이스가 준비됐습니다.`"
-      />
-
-      <RouterLink
-        v-if="recommendationStore.savedJob"
-        class="primary-button"
-        :to="`/workspaces/${recommendationStore.savedJob.workspaceId}`"
-        data-testid="saved-workspace-link"
+        class="recommendation-save-alert"
+        role="status"
+        aria-live="polite"
       >
-        워크스페이스 열기
-      </RouterLink>
+        <div class="save-alert-dot" aria-hidden="true"></div>
+        <div>
+          <h2>공고를 담았습니다</h2>
+          <p>
+            {{ recommendationStore.savedJob.companyName }}
+            {{ recommendationStore.savedJob.positionTitle }}
+            워크스페이스가 준비됐습니다.
+          </p>
+        </div>
+        <RouterLink
+          class="primary-button"
+          :to="`/workspaces/${recommendationStore.savedJob.workspaceId}`"
+          data-testid="saved-workspace-link"
+        >
+          워크스페이스 열기
+        </RouterLink>
+      </section>
     </section>
   </AppLayout>
 </template>
 
-<script setup>import AppLayout from '@/shared/AppLayout.vue';
-import StatePanel from '@/shared/StatePanel.vue';
-import PageHeader from '@/shared/PageHeader.vue';
-import { onMounted } from 'vue';
+<script setup>
+import { computed, onMounted } from 'vue';
 import { useRecommendationStore } from '@/stores/recommendationStore';
+import AppLayout from '@/shared/AppLayout.vue';
+import PageHeader from '@/shared/PageHeader.vue';
+import StatePanel from '@/shared/StatePanel.vue';
+
 const recommendationStore = useRecommendationStore();
+
+const sortedJobs = computed(() => [...recommendationStore.jobs].sort(compareByDeadline));
+
 onMounted(() => {
-    void recommendationStore.loadRecommendations();
+  void recommendationStore.loadRecommendations();
 });
+
 function saveRecommendation(recommendationId) {
-    void recommendationStore.saveRecommendation(recommendationId);
+  void recommendationStore.saveRecommendation(recommendationId);
+}
+
+function compareByDeadline(left, right) {
+  return deadlineRank(left) - deadlineRank(right);
+}
+
+function deadlineRank(job) {
+  if (job.deadlineDate) {
+    const time = Date.parse(job.deadlineDate);
+    if (!Number.isNaN(time)) {
+      return time;
+    }
+  }
+  const dDay = /^D-(\d+)$/i.exec(job.deadlineLabel ?? '');
+  if (dDay) {
+    return Number(dDay[1]);
+  }
+  if (job.deadlineLabel === '오늘마감' || job.deadlineLabel === 'D-DAY') {
+    return 0;
+  }
+  return Number.MAX_SAFE_INTEGER;
+}
+
+function companyInitial(companyName) {
+  return (companyName ?? '?').trim().charAt(0).toUpperCase() || '?';
 }
 </script>

@@ -8,7 +8,7 @@ describe('extensionAuth', () => {
         });
         expect(url.toString()).toBe('http://localhost:5173/?redirect=%2Fextension%2Fconnect%3FsourceUrl%3Dhttps%253A%252F%252Fwww.jasoseol.com%252Frecruit%252F1');
     });
-    it('stores the web-issued EZ One session sent by the extension connect page', async () => {
+    it('stores the web-issued EZ-ONE session sent by the extension connect page', async () => {
         const storage = {
             set: vi.fn(async () => undefined),
             get: vi.fn(async () => ({})),

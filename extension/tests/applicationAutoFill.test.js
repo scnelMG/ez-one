@@ -14,7 +14,7 @@ const profile = {
             { title: 'Korea University', summary: 'Computer Science' }
         ],
         projects: [
-            { title: 'EZ One', summary: 'Job application workspace' }
+            { title: 'EZ-ONE', summary: 'Job application workspace' }
         ],
         essays: [
             { title: 'Do not use me', summary: 'This should never be auto-filled.' }
@@ -93,7 +93,7 @@ describe('applicationAutoFill', () => {
             'Hong Gil Dong',
             'Korea University',
             'Computer Science',
-            'EZ One',
+            'EZ-ONE',
             'Job application workspace',
             'https://portfolio.example.com'
         ]));

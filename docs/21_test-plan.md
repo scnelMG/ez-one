@@ -66,3 +66,47 @@
 - `TC-EXT-DOC-AUTOFILL-001`: Extension parser fills basic/document/custom fields from labels, placeholders, name/id, tables, and nearby text.
 - `TC-EXT-DOC-AUTOFILL-002`: Essay and long-form textarea fields are excluded from automatic input and reported for manual review.
 - Real company application pages remain manual smoke-test territory because login, personal data, and accidental submission risk make automated E2E unsafe.
+
+## 2026-06-06 MVP Main Dashboard Tests
+
+- `TC-MAIN-WIREFRAME-001`: Main page removes the left sidebar and top filter bar, then renders dashboard metrics, basket preview, and recommendation thumbnails.
+- `TC-MAIN-BASKET-RECENT-001`: Main basket preview is sorted by nearest deadline and marks recently opened workspaces with `최근 방문`.
+- `TC-BASKET-RECENT-001`: Basket page rows also show the same `최근 방문` marker for recently opened workspaces.
+- `TC-HEADER-PROFILE-001`: Header shows the signed-in user's profile photo/name and keeps logout/account-switch actions inside the mypage dropdown.
+
+## 2026-06-06 MVP Basket Layout Tests
+
+- `TC-BASKET-CALENDAR-001`: Basket page keeps dashboard metrics, removes weekly/manual panels, and places `공고 캘린더` above the basket table.
+- `TC-BASKET-CALENDAR-002`: Calendar cards render only saved job deadlines with company, position, status, and workspace links.
+- `TC-BASKET-INLINE-CREATE-001`: Basket table supports manual job creation from the inline add row instead of a separate side panel.
+- `TC-BASKET-SORT-001`: Basket table supports status filtering plus `마감일순` and `담은 순` sorting.
+
+## 2026-06-06 MVP Workspace Push Drawer Tests
+
+- `TC-WS-PUSH-DRAWER-001`: Workspace renders support/company info, fixed bottom `도화지` and `자소서 버전관리` modes, and the right-side persistent drawer together.
+- `TC-WS-PUSH-DRAWER-002`: Reference board triggers open `JD`, `NEWS`, `DART`, `TALENT_PROFILE`, `AWARDS_PROJECTS`, `PROMPT`, and `FREE_MEMO` inside the same route without page navigation.
+- `TC-WS-PUSH-DRAWER-003`: Drawer width control updates the push layout variable so main content reflows instead of being covered by an overlay.
+- `TC-WS-REFERENCE-EDIT-001`: Existing references open in the drawer and can be edited or deleted through the existing reference API.
+- `TC-WS-VERSION-DRAWER-001`: Version management mode keeps the side drawer available while comparing two saved essay versions.
+
+## 2026-06-06 MVP Recommendation Page Tests
+
+- `TC-REC-DEADLINE-SORT-001`: Recommendation page removes filter chips/search and renders jobs sorted by nearest deadline.
+- `TC-REC-SAVE-CTA-001`: Recommendation save CTA uses `담기` wording instead of star wording.
+- `TC-REC-SAVE-ALERT-001`: Successful save shows `공고를 담았습니다` and a `워크스페이스 열기` link to the returned workspace.
+- `TC-REC-LOGO-001`: Recommendation cards render company logos when `companyLogoUrl` or `logoUrl` is provided, with initial fallback otherwise.
+
+## 2026-06-06 MVP Document Profile Tests
+
+- `TC-PROFILE-FOCUSED-LAYOUT-001`: Document profile removes the right helper panel and keeps section navigation plus the main editor only.
+- `TC-PROFILE-SINGLE-SAVE-001`: Section-specific save buttons are removed; the top-level `저장` button saves the active section.
+- `TC-PROFILE-AUTOSAVE-001`: Edited basic/reusable section values auto-save after two idle seconds and expose visible auto-save status.
+- `TC-PROFILE-REPEATABLE-001`: Repeatable document items can be added, selected, deleted, and persisted through the single save button.
+
+## 2026-06-06 MVP MyPage Dropdown/Page Tests
+
+- `TC-MYPAGE-DROPDOWN-001`: Header profile trigger opens the mypage dropdown by hover/click and exposes links for account, Notion sync, onboarding, QnA, inquiry, partnership, and terms.
+- `TC-MYPAGE-ACCOUNT-001`: Account page removes the old left board list and shows profile, Google login account, Notion account mismatch guidance, and account actions.
+- `TC-MYPAGE-NOTION-001`: Notion sync page removes the old left board list, separates Google and Notion accounts, and toggles auto sync items.
+- `TC-MYPAGE-ONBOARDING-001`: Onboarding page saves recommendation preferences from chip-style controls.
+- `TC-MYPAGE-SUPPORT-001`: QnA, 1:1 inquiry, partnership inquiry, and terms routes render as independent mypage support pages.

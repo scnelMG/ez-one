@@ -1,12 +1,12 @@
 <template>
   <main class="auth-page">
     <section class="auth-panel" aria-labelledby="extension-connect-title">
-      <img class="auth-logo" src="../assets/ez-one-logo.svg" alt="EZ One" />
+      <img class="auth-logo" src="../assets/ez-one-logo.svg" alt="EZ-ONE" />
       <p class="section-kicker">Chrome 확장 연결</p>
       <h1 id="extension-connect-title">확장프로그램 연결</h1>
       <p>{{ statusMessage }}</p>
       <RouterLink v-if="hasError" class="primary-button" to="/">다시 로그인하기</RouterLink>
-      <RouterLink v-else class="primary-button" to="/main">EZ One 열기</RouterLink>
+      <RouterLink v-else class="primary-button" to="/main">EZ-ONE 열기</RouterLink>
     </section>
   </main>
 </template>

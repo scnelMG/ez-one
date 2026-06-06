@@ -12,6 +12,8 @@ export function createRecommendationApi(httpClient = defaultHttpClient) {
                     companyName: job.companyName,
                     positionTitle: job.positionTitle,
                     deadlineLabel: job.deadlineLabel,
+                    deadlineDate: job.deadlineDate,
+                    companyLogoUrl: job.companyLogoUrl ?? job.logoUrl ?? null,
                     workspaceId: job.workspaceId
                 }));
             }
@@ -34,6 +36,8 @@ function toRecommendationJob(dto) {
         companyName: dto.companyName,
         positionTitle: dto.positionTitle,
         deadlineLabel: dto.deadlineLabel,
+        deadlineDate: dto.deadlineDate ?? null,
+        companyLogoUrl: dto.companyLogoUrl ?? dto.logoUrl ?? null,
         workspaceId: dto.workspaceId == null ? null : String(dto.workspaceId)
     };
 }

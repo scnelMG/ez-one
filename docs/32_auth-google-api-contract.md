@@ -13,7 +13,7 @@
 
 P1에서 활성화할 동작:
 
-- Google OAuth 결과를 서버에 전달해 EZ One 사용자 세션을 만든다.
+- Google OAuth 결과를 서버에 전달해 EZ-ONE 사용자 세션을 만든다.
 - 로그인 성공 시 access token과 refresh token을 발급한다.
 - refresh token으로 access token을 재발급한다.
 - logout 시 refresh token을 폐기한다.
@@ -283,7 +283,7 @@ UpdateCurrentUserRequest
 | 인증됨 | access token 유효 | 원래 요청 화면 유지 |
 | access token 만료 | refresh token 있음 | refresh 후 재시도 |
 | refresh 실패 | refresh token 만료/폐기 | 토큰 삭제 후 `/login` 이동 |
-| 온보딩 미완료 | `profileCompleted=false` | `/onboarding` 이동 |
+| 온보딩 미완료 | `profileCompleted=false` | `/` 이동 후 온보딩 모달 표시 |
 
 ## 테스트 기준
 
@@ -295,3 +295,12 @@ UpdateCurrentUserRequest
 | `TC-AUTH-004` | refresh token으로 새 access token 발급 |
 | `TC-AUTH-005` | logout 후 같은 refresh token 재사용 거부 |
 | `TC-AUTH-006` | 마이페이지 닉네임 수정 후 현재 사용자 DTO와 프론트 세션 갱신 |
+## 2026-06-06 OAuth Prompt Policy Addendum
+
+Related requirements: `AUTH-001`, `AUTH-004`, `AUTH-008`, `ONB-001`.
+
+- Default Google login must not force `prompt=consent` or `prompt=select_account`.
+- When the browser already has a valid Google session, the user should continue into EZ-ONE without seeing Google's account confirmation screen again.
+- Explicit account switching is initiated from the signed-in app header and routes the user to `/login?switch=account` after revoking the current EZ-ONE refresh token.
+- The different Google account login action uses Google OAuth `prompt=select_account` so the user can choose another Google account.
+- Backend API contract is unchanged: the frontend still exchanges the returned authorization code through `POST /api/auth/google`.

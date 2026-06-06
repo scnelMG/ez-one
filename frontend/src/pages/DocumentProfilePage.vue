@@ -1,23 +1,33 @@
 <template>
   <AppLayout>
-    <section class="wire-page document-wire">
-      <header class="wire-toolbar">
+    <section class="wire-page document-wire document-profile-page">
+      <header class="wire-toolbar document-profile-toolbar">
         <div>
           <p class="section-kicker">PROFILE-001</p>
           <h1>서류 입력 정보</h1>
-          <p>반복해서 쓰는 지원서 정보를 섹션별로 저장하고 워크스페이스 기본값으로 재사용합니다.</p>
+          <p>반복해서 쓰는 지원서 정보를 한 화면에서 저장하고 워크스페이스 기본값으로 재사용합니다.</p>
           <p v-if="documentProfileStore.profile?.lastSavedAt" class="last-saved-at">
             마지막 저장 {{ documentProfileStore.profile.lastSavedAt }}
           </p>
         </div>
-        <button
-          class="primary-button"
-          type="button"
-          :disabled="documentProfileStore.status === 'saving'"
-          @click="saveBasicInfo"
-        >
-          {{ saveButtonLabel }}
-        </button>
+        <div class="document-save-controls">
+          <span
+            class="status-chip"
+            data-testid="document-autosave-status"
+            :data-save-state="autoSaveStatus"
+          >
+            {{ autoSaveLabel }}
+          </span>
+          <button
+            class="primary-button"
+            type="button"
+            :disabled="documentProfileStore.status === 'saving'"
+            data-testid="save-document-profile"
+            @click="saveActiveSection"
+          >
+            {{ saveButtonLabel }}
+          </button>
+        </div>
       </header>
 
       <StatePanel
@@ -42,8 +52,8 @@
         </button>
       </section>
 
-      <div class="document-editor-grid">
-        <aside class="wire-side-rail" aria-label="서류 섹션 목록">
+      <div class="document-editor-grid document-editor-grid-focused">
+        <aside class="wire-side-rail document-section-rail" aria-label="서류 섹션 목록">
           <strong>입력 섹션</strong>
           <button
             v-for="section in sections"
@@ -58,7 +68,7 @@
           </button>
         </aside>
 
-        <main class="document-form-panel">
+        <main class="document-form-panel document-form-panel-focused">
           <p v-if="documentProfileStore.status === 'loading'">서류 입력 정보를 불러오는 중입니다.</p>
 
           <template v-else>
@@ -70,7 +80,7 @@
               <span class="status-chip">{{ statusLabel }}</span>
             </div>
 
-            <section v-if="activeSection === 'basicInfo'" class="form-shell compact" aria-label="기본 정보 입력">
+            <section v-if="activeSection === 'basicInfo'" class="form-shell compact document-basic-form" aria-label="기본 정보 입력">
               <label>
                 이름
                 <input v-model="basicInfoForm.nameKo" data-testid="basic-info-name" />
@@ -109,18 +119,17 @@
               </label>
             </section>
 
-            <section v-else-if="isReusableSection" class="form-shell compact" aria-label="서류 재사용 섹션 입력">
-              <ul class="summary-stack">
-                <li v-for="(item, index) in reusableSectionItems" :key="`${activeSection}-${index}`">
-                  <strong>{{ item.title || '제목 없음' }}</strong>
-                  <p>{{ item.summary }}</p>
-                  <button
-                    class="text-button"
-                    type="button"
-                    :data-testid="`edit-reusable-${index}`"
-                    @click="editReusableItem(index)"
-                  >
-                    수정
+            <section v-else-if="isReusableSection" class="form-shell compact document-repeatable-form" aria-label="서류 재사용 섹션 입력">
+              <div class="repeatable-list">
+                <div
+                  v-for="(item, index) in reusableSectionItems"
+                  :key="`${activeSection}-${index}`"
+                  class="repeatable-item"
+                  :class="{ active: index === editingReusableItemIndex }"
+                >
+                  <button type="button" :data-testid="`edit-reusable-${index}`" @click="editReusableItem(index)">
+                    <strong>{{ item.title || '제목 없음' }}</strong>
+                    <span>{{ item.summary || '요약 없음' }}</span>
                   </button>
                   <button
                     class="text-button danger"
@@ -130,16 +139,13 @@
                   >
                     삭제
                   </button>
-                </li>
-              </ul>
-              <button
-                class="text-button"
-                type="button"
-                data-testid="add-reusable-item"
-                @click="addReusableItem"
-              >
-                항목 추가
-              </button>
+                </div>
+              </div>
+              <div class="repeatable-tools">
+                <button class="ghost-button" type="button" data-testid="add-reusable-item" @click="addReusableItem">
+                  항목 추가
+                </button>
+              </div>
               <label>
                 제목
                 <input v-model="reusableSectionForm.title" data-testid="section-title" />
@@ -148,26 +154,9 @@
                 요약
                 <textarea v-model="reusableSectionForm.summary" data-testid="section-summary" />
               </label>
-              <button
-                class="text-button"
-                type="button"
-                data-testid="save-reusable-item"
-                @click="saveReusableItem"
-              >
-                항목 반영
-              </button>
-              <button
-                class="primary-button"
-                type="button"
-                :disabled="documentProfileStore.status === 'saving'"
-                data-testid="save-section"
-                @click="saveReusableSection"
-              >
-                섹션 저장
-              </button>
             </section>
 
-            <section v-else-if="activeSection === 'custom'" class="form-shell compact" aria-label="커스텀 항목 입력">
+            <section v-else-if="activeSection === 'custom'" class="form-shell compact document-custom-form" aria-label="커스텀 항목 입력">
               <ul class="summary-stack">
                 <li v-for="field in documentProfileStore.profile?.customFields ?? []" :key="field.id">
                   <strong>{{ field.label }}</strong>
@@ -207,268 +196,288 @@
                 값
                 <input v-model="customFieldForm.value" data-testid="custom-value" />
               </label>
-              <button
-                v-if="editingCustomFieldId"
-                class="primary-button"
-                type="button"
-                data-testid="update-custom-field"
-                @click="updateCustomField"
-              >
-                커스텀 수정
-              </button>
-              <button
-                v-else
-                class="primary-button"
-                type="button"
-                data-testid="create-custom-field"
-                @click="createCustomField"
-              >
-                커스텀 추가
-              </button>
-            </section>
-
-            <section v-else class="form-shell compact" aria-label="서류 섹션 준비 중">
-              <p>이 섹션은 다음 MVP 단계에서 입력 폼을 연결합니다.</p>
+              <div class="repeatable-tools">
+                <button
+                  v-if="editingCustomFieldId"
+                  class="primary-button"
+                  type="button"
+                  data-testid="update-custom-field"
+                  @click="updateCustomField"
+                >
+                  커스텀 수정
+                </button>
+                <button
+                  v-else
+                  class="primary-button"
+                  type="button"
+                  data-testid="create-custom-field"
+                  @click="createCustomField"
+                >
+                  커스텀 추가
+                </button>
+              </div>
             </section>
           </template>
         </main>
-
-        <aside class="wire-side-panel">
-          <p class="section-kicker">워크스페이스 기본값</p>
-          <h2>저장된 정보 재사용</h2>
-          <p>저장한 값은 워크스페이스의 자기소개서 기본값과 서류 정보 패널에서 다시 불러올 수 있습니다.</p>
-          <div class="summary-stack">
-            <ShellCard
-              v-for="card in documentProfileCards"
-              :key="card.title"
-              :kicker="card.kicker"
-              :title="card.title"
-              :body="card.body"
-              :status="card.status"
-            />
-          </div>
-        </aside>
       </div>
     </section>
   </AppLayout>
 </template>
 
-<script setup>import AppLayout from '@/shared/AppLayout.vue';
-import StatePanel from '@/shared/StatePanel.vue';
-import ShellCard from '@/shared/ShellCard.vue';
-import { computed, onMounted, reactive, ref, watch } from 'vue';
-import { documentProfileCards } from '@/data/shellContent';
+<script setup>
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { useDocumentProfileStore } from '@/stores/documentProfileStore';
+import AppLayout from '@/shared/AppLayout.vue';
+import StatePanel from '@/shared/StatePanel.vue';
+
 const documentProfileStore = useDocumentProfileStore();
 const activeSection = ref('basicInfo');
+const autoSaveStatus = ref('idle');
 const basicInfoForm = reactive({
-    nameKo: '',
-    nameEn: '',
-    nameHanja: '',
-    email: '',
-    phone: '',
-    gender: '',
-    birthdate: '',
-    address: '',
-    addressDetail: ''
+  nameKo: '',
+  nameEn: '',
+  nameHanja: '',
+  email: '',
+  phone: '',
+  gender: '',
+  birthdate: '',
+  address: '',
+  addressDetail: ''
 });
 const reusableSectionForm = reactive({
-    title: '',
-    summary: ''
+  title: '',
+  summary: ''
 });
 const reusableSectionItems = ref([]);
 const editingReusableItemIndex = ref(0);
 const customFieldForm = reactive({
-    label: '',
-    fieldType: 'TEXT',
-    value: ''
+  label: '',
+  fieldType: 'TEXT',
+  value: ''
 });
 const editingCustomFieldId = ref('');
+let autoSaveTimer = null;
+let suppressFormWatch = true;
+
 const sections = [
-    { id: 'basicInfo', label: '기본 정보' },
-    { id: 'education', label: '학력' },
-    { id: 'career', label: '경력' },
-    { id: 'courses', label: '과목' },
-    { id: 'projects', label: '프로젝트' },
-    { id: 'certificates', label: '자격/어학' },
-    { id: 'awards', label: '수상/활동' },
-    { id: 'essays', label: '자소서' },
-    { id: 'military', label: '병역/보훈' },
-    { id: 'internships', label: '인턴/알바' },
-    { id: 'trainings', label: '교육이수' },
-    { id: 'activities', label: '학내외 활동' },
-    { id: 'custom', label: '커스텀' }
+  { id: 'basicInfo', label: '기본 정보', title: '지원서 공통 입력값' },
+  { id: 'education', label: '학력', title: '학력' },
+  { id: 'career', label: '경력', title: '경력' },
+  { id: 'courses', label: '과목', title: '과목 정보' },
+  { id: 'projects', label: '프로젝트', title: '프로젝트' },
+  { id: 'certificates', label: '자격/어학', title: '자격/어학' },
+  { id: 'awards', label: '수상/활동', title: '수상/활동' },
+  { id: 'essays', label: '자소서', title: '사전 작성 자소서' },
+  { id: 'military', label: '병역/보훈', title: '병역/장애/보훈' },
+  { id: 'internships', label: '인턴/알바', title: '인턴/아르바이트/실습' },
+  { id: 'trainings', label: '교육이수', title: '교육이수사항' },
+  { id: 'activities', label: '학내외 활동', title: '학내외 활동' },
+  { id: 'custom', label: '커스텀', title: '커스텀 항목' }
 ];
+const reusableSectionTypes = [
+  'education',
+  'career',
+  'courses',
+  'projects',
+  'certificates',
+  'awards',
+  'essays',
+  'military',
+  'internships',
+  'trainings',
+  'activities'
+];
+
 const saveButtonLabel = computed(() => (documentProfileStore.status === 'saving' ? '저장 중' : '저장'));
 const activeSectionConfig = computed(() => sections.find((section) => section.id === activeSection.value) ?? sections[0]);
 const activeSectionLabel = computed(() => activeSectionConfig.value.label);
-const activeSectionTitle = computed(() => {
-    if (activeSection.value === 'projects') {
-        return '프로젝트';
-    }
-    if (activeSection.value === 'courses') {
-        return '과목 정보';
-    }
-    if (activeSection.value === 'essays') {
-        return '사전 작성 자소서';
-    }
-    if (activeSection.value === 'awards') {
-        return '수상/활동';
-    }
-    if (activeSection.value === 'military') {
-        return '병역/장애/보훈';
-    }
-    if (activeSection.value === 'internships') {
-        return '인턴/아르바이트/실습';
-    }
-    if (activeSection.value === 'trainings') {
-        return '교육이수사항';
-    }
-    if (activeSection.value === 'activities') {
-        return '학내외 활동';
-    }
-    return '지원서 공통 입력값';
-});
-const reusableSectionTypes = [
-    'education',
-    'career',
-    'courses',
-    'projects',
-    'certificates',
-    'awards',
-    'essays',
-    'military',
-    'internships',
-    'trainings',
-    'activities'
-];
+const activeSectionTitle = computed(() => activeSectionConfig.value.title);
 const isReusableSection = computed(() => reusableSectionTypes.includes(activeSection.value));
 const statusLabel = computed(() => {
-    if (documentProfileStore.status === 'saving') {
-        return '저장 중';
-    }
-    return documentProfileStore.profile ? '불러옴' : '대기';
+  if (documentProfileStore.status === 'saving') return '저장 중';
+  if (autoSaveStatus.value === 'waiting') return '자동 저장 대기';
+  if (autoSaveStatus.value === 'saved') return '저장됨';
+  return documentProfileStore.profile ? '불러옴' : '대기';
 });
+const autoSaveLabel = computed(() => {
+  if (autoSaveStatus.value === 'waiting') return '자동 저장 대기';
+  if (autoSaveStatus.value === 'saving') return '자동 저장 중';
+  if (autoSaveStatus.value === 'saved') return '자동 저장 완료';
+  if (autoSaveStatus.value === 'failed') return '자동 저장 실패';
+  return '자동 저장 켜짐';
+});
+
 watch(() => documentProfileStore.basicInfo, (basicInfo) => {
-    Object.assign(basicInfoForm, basicInfo);
+  suppressFormWatch = true;
+  Object.assign(basicInfoForm, basicInfo);
+  queueMicrotask(() => {
+    suppressFormWatch = false;
+  });
 }, { immediate: true });
+
 watch([
-    activeSection,
-    () => documentProfileStore.education,
-    () => documentProfileStore.career,
-    () => documentProfileStore.courses,
-    () => documentProfileStore.projects,
-    () => documentProfileStore.certificates,
-    () => documentProfileStore.awards,
-    () => documentProfileStore.essays,
-    () => documentProfileStore.military,
-    () => documentProfileStore.internships,
-    () => documentProfileStore.trainings,
-    () => documentProfileStore.activities
-], syncReusableSectionForm, { immediate: true });
+  activeSection,
+  () => documentProfileStore.education,
+  () => documentProfileStore.career,
+  () => documentProfileStore.courses,
+  () => documentProfileStore.projects,
+  () => documentProfileStore.certificates,
+  () => documentProfileStore.awards,
+  () => documentProfileStore.essays,
+  () => documentProfileStore.military,
+  () => documentProfileStore.internships,
+  () => documentProfileStore.trainings,
+  () => documentProfileStore.activities
+], () => {
+  suppressFormWatch = true;
+  syncReusableSectionForm();
+  queueMicrotask(() => {
+    suppressFormWatch = false;
+  });
+}, { immediate: true });
+
+watch(basicInfoForm, () => {
+  if (activeSection.value !== 'basicInfo') return;
+  scheduleAutoSave();
+}, { deep: true });
+
+watch(reusableSectionForm, () => {
+  if (!isReusableSection.value) return;
+  scheduleAutoSave();
+}, { deep: true });
+
 onMounted(() => {
-    void documentProfileStore.loadDocumentProfile();
+  void documentProfileStore.loadDocumentProfile();
 });
-function saveBasicInfo() {
-    void documentProfileStore.saveBasicInfo({ ...basicInfoForm });
-}
-function saveReusableSection() {
-    if (!isReusableSection.value) {
-        return;
+onBeforeUnmount(clearAutoSaveTimer);
+
+async function saveActiveSection() {
+  clearAutoSaveTimer();
+  autoSaveStatus.value = 'saving';
+  try {
+    if (activeSection.value === 'basicInfo') {
+      await documentProfileStore.saveBasicInfo({ ...basicInfoForm });
+    } else if (isReusableSection.value) {
+      await documentProfileStore.saveReusableSection(activeSection.value, reusablePayload());
     }
-    const sectionType = activeReusableSectionType();
-    if (hasReusableFormContent() || reusableSectionItems.value[editingReusableItemIndex.value]) {
-        saveReusableItem();
-    }
-    void documentProfileStore.saveReusableSection(sectionType, reusableSectionItems.value.map(copyReusableItem));
+    autoSaveStatus.value = documentProfileStore.status === 'error' ? 'failed' : 'saved';
+  } catch {
+    autoSaveStatus.value = 'failed';
+  }
 }
+
+function scheduleAutoSave() {
+  if (suppressFormWatch || activeSection.value === 'custom') return;
+  clearAutoSaveTimer();
+  autoSaveStatus.value = 'waiting';
+  autoSaveTimer = setTimeout(() => {
+    void saveActiveSection();
+  }, 2000);
+}
+
+function clearAutoSaveTimer() {
+  if (!autoSaveTimer) return;
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = null;
+}
+
+function reusablePayload() {
+  applyReusableForm();
+  return reusableSectionItems.value.map(copyReusableItem);
+}
+
 function addReusableItem() {
-    editingReusableItemIndex.value = reusableSectionItems.value.length;
-    reusableSectionForm.title = '';
-    reusableSectionForm.summary = '';
+  editingReusableItemIndex.value = reusableSectionItems.value.length;
+  reusableSectionForm.title = '';
+  reusableSectionForm.summary = '';
 }
+
 function editReusableItem(index) {
-    const item = reusableSectionItems.value[index];
-    if (!item) {
-        return;
-    }
-    editingReusableItemIndex.value = index;
-    reusableSectionForm.title = item.title;
-    reusableSectionForm.summary = item.summary;
+  const item = reusableSectionItems.value[index];
+  if (!item) return;
+  editingReusableItemIndex.value = index;
+  reusableSectionForm.title = item.title;
+  reusableSectionForm.summary = item.summary;
 }
-function saveReusableItem() {
-    if (!hasReusableFormContent() && !reusableSectionItems.value[editingReusableItemIndex.value]) {
-        return;
-    }
-    const item = {
-        title: reusableSectionForm.title,
-        summary: reusableSectionForm.summary
-    };
-    const nextItems = reusableSectionItems.value.map(copyReusableItem);
-    nextItems[editingReusableItemIndex.value] = item;
-    reusableSectionItems.value = nextItems;
-}
+
 function deleteReusableItem(index) {
-    reusableSectionItems.value = reusableSectionItems.value.filter((_, itemIndex) => itemIndex !== index);
-    const nextIndex = Math.min(index, reusableSectionItems.value.length - 1);
-    if (nextIndex >= 0) {
-        editReusableItem(nextIndex);
-        return;
-    }
-    editingReusableItemIndex.value = 0;
-    reusableSectionForm.title = '';
-    reusableSectionForm.summary = '';
+  if (index < 0) return;
+  reusableSectionItems.value = reusableSectionItems.value.filter((_, itemIndex) => itemIndex !== index);
+  if (editingReusableItemIndex.value > index) {
+    editingReusableItemIndex.value -= 1;
+    return;
+  }
+  if (editingReusableItemIndex.value === index && reusableSectionItems.value[index]) {
+    editReusableItem(index);
+    return;
+  }
+  editingReusableItemIndex.value = Math.max(0, Math.min(editingReusableItemIndex.value, reusableSectionItems.value.length));
 }
+
+function applyReusableForm() {
+  if (!hasReusableFormContent() && !reusableSectionItems.value[editingReusableItemIndex.value]) return;
+  const nextItems = reusableSectionItems.value.map(copyReusableItem);
+  nextItems[editingReusableItemIndex.value] = {
+    title: reusableSectionForm.title,
+    summary: reusableSectionForm.summary
+  };
+  reusableSectionItems.value = nextItems.filter((item) => item.title.trim() || item.summary.trim());
+}
+
 function syncReusableSectionForm() {
-    const source = reusableSectionItemsFor(activeReusableSectionType());
-    reusableSectionItems.value = source.map(copyReusableItem);
-    editingReusableItemIndex.value = 0;
-    const firstItem = reusableSectionItems.value[0];
-    reusableSectionForm.title = firstItem?.title ?? '';
-    reusableSectionForm.summary = firstItem?.summary ?? '';
+  if (!isReusableSection.value) return;
+  reusableSectionItems.value = reusableSectionItemsFor(activeSection.value).map(copyReusableItem);
+  editingReusableItemIndex.value = 0;
+  const firstItem = reusableSectionItems.value[0];
+  reusableSectionForm.title = firstItem?.title ?? '';
+  reusableSectionForm.summary = firstItem?.summary ?? '';
+  autoSaveStatus.value = 'idle';
 }
-function copyReusableItem(item) {
-    return {
-        title: item.title,
-        summary: item.summary
-    };
-}
-function activeReusableSectionType() {
-    return isReusableSection.value ? activeSection.value : 'projects';
-}
+
 function reusableSectionItemsFor(sectionType) {
-    return documentProfileStore[sectionType];
+  return documentProfileStore[sectionType] ?? [];
 }
+
+function copyReusableItem(item) {
+  return {
+    title: item.title,
+    summary: item.summary
+  };
+}
+
 function hasReusableFormContent() {
-    return reusableSectionForm.title.trim() !== '' || reusableSectionForm.summary.trim() !== '';
+  return reusableSectionForm.title.trim() !== '' || reusableSectionForm.summary.trim() !== '';
 }
+
 function editCustomField(field) {
-    editingCustomFieldId.value = field.id;
-    customFieldForm.label = field.label;
-    customFieldForm.fieldType = field.fieldType;
-    customFieldForm.value = field.value;
+  editingCustomFieldId.value = field.id;
+  customFieldForm.label = field.label;
+  customFieldForm.fieldType = field.fieldType;
+  customFieldForm.value = field.value;
 }
+
 function createCustomField() {
-    void documentProfileStore.createCustomField({ ...customFieldForm });
-    resetCustomFieldForm();
+  void documentProfileStore.createCustomField({ ...customFieldForm });
+  resetCustomFieldForm();
 }
+
 function updateCustomField() {
-    if (!editingCustomFieldId.value) {
-        return;
-    }
-    void documentProfileStore.updateCustomField(editingCustomFieldId.value, { ...customFieldForm });
-    resetCustomFieldForm();
+  if (!editingCustomFieldId.value) return;
+  void documentProfileStore.updateCustomField(editingCustomFieldId.value, { ...customFieldForm });
+  resetCustomFieldForm();
 }
+
 function deleteCustomField(fieldId) {
-    void documentProfileStore.deleteCustomField(fieldId);
-    if (editingCustomFieldId.value === fieldId) {
-        resetCustomFieldForm();
-    }
+  void documentProfileStore.deleteCustomField(fieldId);
+  if (editingCustomFieldId.value === fieldId) {
+    resetCustomFieldForm();
+  }
 }
+
 function resetCustomFieldForm() {
-    editingCustomFieldId.value = '';
-    customFieldForm.label = '';
-    customFieldForm.fieldType = 'TEXT';
-    customFieldForm.value = '';
+  editingCustomFieldId.value = '';
+  customFieldForm.label = '';
+  customFieldForm.fieldType = 'TEXT';
+  customFieldForm.value = '';
 }
 </script>

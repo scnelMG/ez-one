@@ -20,7 +20,6 @@ function makeRouter() {
         history: createMemoryHistory(),
         routes: [
             { path: '/login/callback', component: LoginCallbackPage },
-            { path: '/onboarding', component: { template: '<div>onboarding</div>' } },
             { path: '/basket', component: { template: '<div>basket</div>' } },
             { path: '/', component: { template: '<div>login</div>' } }
         ]
@@ -61,7 +60,7 @@ describe('LoginCallbackPage', () => {
         expect(getAccessToken()).toBe('access-token');
         expect(router.currentRoute.value.fullPath).toBe('/basket');
     });
-    it('ONB-001: sends first-login users to onboarding after Google login', async () => {
+    it('ONB-001: sends first-login users to the main page where onboarding opens as a modal', async () => {
         mocks.loginWithGoogle.mockResolvedValue({
             accessToken: 'access-token',
             refreshToken: 'refresh-token',
@@ -84,6 +83,6 @@ describe('LoginCallbackPage', () => {
             }
         });
         await new Promise((resolve) => setTimeout(resolve));
-        expect(router.currentRoute.value.fullPath).toBe('/onboarding');
+        expect(router.currentRoute.value.fullPath).toBe('/');
     });
 });

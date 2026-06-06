@@ -6,7 +6,7 @@ For human contribution rules, use `CONTRIBUTING.md`. For project onboarding, use
 
 ## Mission
 
-EZ One is a job application workspace service. The P1 product loop is:
+EZ-ONE is a job application workspace service. The P1 product loop is:
 
 ```text
 Google login -> onboarding -> main -> job save -> basket -> workspace -> essay/reference/document profile -> Notion JOB_ONLY sync

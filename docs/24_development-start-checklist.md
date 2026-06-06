@@ -40,7 +40,7 @@
 | 프로젝트 스캐폴드 | 완료 | `backend`, `frontend`, `extension`, `docs`, `infra` 기본 구조 생성 |
 | 에이전트 협업 규칙 | 완료 | `docs/30_team-collaboration-workflow.md`, `docs/31_agent-workflow.md` |
 | AUTH-001 Google 로그인 | 완료 | `POST /api/auth/google`, JWT 발급, refresh token hash 저장, README/Notion 기록 |
-| 프론트 route shell | 완료 | `/login`, `/onboarding`, `/`, `/basket`, `/workspaces/:workspaceId`, `/document-profile`, `/recommendations`, `/mypage`, `/mypage/notion` |
+| 프론트 route shell | 완료 | `/login`, `/`, `/basket`, `/workspaces/:workspaceId`, `/document-profile`, `/recommendations`, `/mypage`, `/mypage/notion`; 온보딩은 `/` floating modal |
 | P2 route 비활성 경계 | 완료 | `/history`, `/alerts`, `/basket/calendar`, `/mypage/support` 미등록 테스트 추가 |
 
 ### 검증

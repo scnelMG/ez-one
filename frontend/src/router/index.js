@@ -9,7 +9,6 @@ import ExtensionConnectPage from '@/pages/ExtensionConnectPage.vue';
 import MainPage from '@/pages/MainPage.vue';
 import MyPage from '@/pages/MyPage.vue';
 import NotionSettingsPage from '@/pages/NotionSettingsPage.vue';
-import OnboardingPage from '@/pages/OnboardingPage.vue';
 import RecommendationPage from '@/pages/RecommendationPage.vue';
 import WorkspacePage from '@/pages/WorkspacePage.vue';
 export const router = createRouter({
@@ -35,12 +34,6 @@ export const router = createRouter({
             path: '/extension/connect',
             name: 'extension-connect',
             component: ExtensionConnectPage,
-            meta: { requiresAuth: true }
-        },
-        {
-            path: '/onboarding',
-            name: 'onboarding',
-            component: OnboardingPage,
             meta: { requiresAuth: true }
         },
         {
@@ -79,15 +72,45 @@ export const router = createRouter({
         },
         {
             path: '/mypage',
-            name: 'mypage',
+            name: 'mypage-account',
             component: MyPage,
-            meta: { requiresAuth: true }
+            meta: { requiresAuth: true, mypageSection: 'account' }
         },
         {
             path: '/mypage/notion',
-            name: 'notion-settings',
+            name: 'mypage-notion',
             component: NotionSettingsPage,
             meta: { requiresAuth: true }
+        },
+        {
+            path: '/mypage/onboarding',
+            name: 'mypage-onboarding',
+            component: MyPage,
+            meta: { requiresAuth: true, mypageSection: 'onboarding' }
+        },
+        {
+            path: '/mypage/qna',
+            name: 'mypage-qna',
+            component: MyPage,
+            meta: { requiresAuth: true, mypageSection: 'qna' }
+        },
+        {
+            path: '/mypage/inquiry',
+            name: 'mypage-inquiry',
+            component: MyPage,
+            meta: { requiresAuth: true, mypageSection: 'inquiry' }
+        },
+        {
+            path: '/mypage/partnership',
+            name: 'mypage-partnership',
+            component: MyPage,
+            meta: { requiresAuth: true, mypageSection: 'partnership' }
+        },
+        {
+            path: '/mypage/terms',
+            name: 'mypage-terms',
+            component: MyPage,
+            meta: { requiresAuth: true, mypageSection: 'terms' }
         }
     ]
 });
@@ -102,8 +125,8 @@ router.beforeEach((to) => {
         return true;
     }
     if (hasAccessToken()) {
-        if (to.name !== 'onboarding' && getCurrentUser()?.profileCompleted === false) {
-            return '/onboarding';
+        if (to.name !== 'main' && getCurrentUser()?.profileCompleted === false) {
+            return '/';
         }
         return true;
     }
@@ -119,7 +142,7 @@ function hasAccessToken() {
 }
 function getAuthenticatedHomePath(redirect = undefined) {
     if (getCurrentUser()?.profileCompleted === false) {
-        return '/onboarding';
+        return '/';
     }
     return typeof redirect === 'string' && isSafeRedirectPath(redirect) ? redirect : '/';
 }

@@ -34,7 +34,7 @@ describe('workspaceApi', () => {
                 data: {
                     workspaceId: 102,
                     sections: {
-                        projects: [{ title: 'EZ One', summary: '지원 관리 서비스' }],
+                        projects: [{ title: 'EZ-ONE', summary: '지원 관리 서비스' }],
                         awards: [{ title: '해커톤 대상' }]
                     }
                 },
@@ -55,7 +55,7 @@ describe('workspaceApi', () => {
             financialStatus: 'stable'
         });
         expect(defaults.sections.projects).toEqual([
-            { title: 'EZ One', summary: '지원 관리 서비스' }
+            { title: 'EZ-ONE', summary: '지원 관리 서비스' }
         ]);
         expect(defaults.sections.awards).toEqual([{ title: '해커톤 대상' }]);
     });

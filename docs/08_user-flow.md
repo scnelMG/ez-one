@@ -6,7 +6,7 @@
 
 ## 기준 이미지
 
-![EZ One MVP Connected Flow Chart](assets/flows/mvp-connected-flow-chart.svg)
+![EZ-ONE MVP Connected Flow Chart](assets/flows/mvp-connected-flow-chart.svg)
 
 ## IA 사이트맵
 

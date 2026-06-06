@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createRecommendationApi } from './recommendationApi';
+
 describe('recommendationApi', () => {
-    it('REC-001: loads recommendation jobs from the backend', async () => {
+    it('REC-001: loads recommendation jobs from the backend with deadline and logo metadata', async () => {
         const get = vi.fn().mockResolvedValue({
             data: {
                 success: true,
@@ -9,9 +10,11 @@ describe('recommendationApi', () => {
                     {
                         basketJobId: 9001,
                         workspaceId: null,
-                        companyName: '?쇱씤',
+                        companyName: '라인',
                         positionTitle: 'Server Platform Engineer',
-                        deadlineLabel: 'D-7'
+                        deadlineLabel: 'D-7',
+                        deadlineDate: '2026-06-13',
+                        companyLogoUrl: 'https://example.com/line.png'
                     }
                 ],
                 error: null
@@ -19,17 +22,21 @@ describe('recommendationApi', () => {
         });
         const api = createRecommendationApi({ get, post: vi.fn() });
         const jobs = await api.listJobs();
+
         expect(get).toHaveBeenCalledWith('/api/recommendations/jobs', {});
         expect(jobs).toEqual([
             {
                 id: '9001',
-                companyName: '?쇱씤',
+                companyName: '라인',
                 positionTitle: 'Server Platform Engineer',
                 deadlineLabel: 'D-7',
+                deadlineDate: '2026-06-13',
+                companyLogoUrl: 'https://example.com/line.png',
                 workspaceId: null
             }
         ]);
     });
+
     it('REC-001: saves a recommendation and returns the basket workspace path', async () => {
         const post = vi.fn().mockResolvedValue({
             data: {
@@ -37,10 +44,10 @@ describe('recommendationApi', () => {
                 data: {
                     id: 101,
                     workspaceId: 102,
-                    companyName: '?쇱씤',
+                    companyName: '라인',
                     positionTitle: 'Server Platform Engineer',
                     applicationStatus: 'NOT_APPLIED',
-                    statusLabel: '吏???덉젙',
+                    statusLabel: '지원 전',
                     deadlineLabel: 'D-7',
                     deadlineSoon: true,
                     sourceUrl: 'https://www.jasoseol.com/'
@@ -50,13 +57,13 @@ describe('recommendationApi', () => {
         });
         const api = createRecommendationApi({ get: vi.fn(), post });
         const savedJob = await api.saveJob('9001');
+
         expect(post).toHaveBeenCalledWith('/api/recommendations/jobs/9001/save');
         expect(savedJob).toEqual({
             basketJobId: '101',
             workspaceId: '102',
-            companyName: '?쇱씤',
+            companyName: '라인',
             positionTitle: 'Server Platform Engineer'
         });
     });
 });
-

@@ -1,234 +1,148 @@
 <template>
   <AppLayout>
-    <section class="dashboard-page">
-      <header class="dashboard-header">
+    <section class="dashboard-page main-dashboard-page">
+      <header class="dashboard-header main-dashboard-header">
         <div class="dashboard-title">
           <p class="section-kicker">오늘의 지원 흐름</p>
           <h1>지원 준비를 한 화면에서 정리하세요</h1>
-          <p>저장한 공고, 오늘 마감 일정, 추천 공고를 한 화면에서 훑고 다음 작업으로 이동합니다.</p>
-        </div>
-
-        <div class="dashboard-actions">
-          <RouterLink
-            class="member-chip"
-            data-testid="member-chip"
-            to="/mypage"
-            aria-label="마이페이지에서 회원 정보 수정"
-          >
-            <span class="member-avatar" data-testid="member-avatar" aria-hidden="true">
-              {{ memberInitial }}
-            </span>
-            <span>
-              <small>로그인 계정</small>
-              <strong>{{ memberDisplayName }}</strong>
-            </span>
-          </RouterLink>
-          <RouterLink class="ghost-button" to="/document-profile">서류 정보</RouterLink>
-          <RouterLink class="primary-button" to="/basket">공고 장바구니</RouterLink>
+          <p>저장한 공고와 추천 공고를 빠르게 훑고 다음 작업으로 이동합니다.</p>
         </div>
       </header>
 
-      <div class="dashboard-grid">
-        <aside class="dashboard-rail" aria-label="대시보드 메뉴">
-          <strong>지원 현황</strong>
-          <RouterLink to="/basket?status=IN_PROGRESS">진행 중</RouterLink>
-          <RouterLink to="/basket?status=NOT_STARTED">지원 전</RouterLink>
-          <RouterLink to="/basket?sort=deadline">마감 임박</RouterLink>
-          <RouterLink to="/recommendations">추천 공고</RouterLink>
-        </aside>
+      <section class="metric-strip main-metric-strip" aria-label="지원 현황 숫자 요약">
+        <RouterLink to="/basket" data-testid="metric-total">
+          <span>총 지원</span>
+          <strong>{{ dashboardStore.summary?.totalApplications ?? 0 }}</strong>
+          <small>유저 대비 상위 %</small>
+        </RouterLink>
+        <RouterLink to="/basket?sort=deadline" data-testid="metric-deadline">
+          <span>마감 임박 개수</span>
+          <strong>{{ dashboardStore.summary?.deadlineSoon ?? 0 }}</strong>
+          <small>유저 대비</small>
+        </RouterLink>
+        <RouterLink to="/basket" data-testid="metric-progress">
+          <span>진행 개수</span>
+          <strong>{{ dashboardStore.summary?.inProgress ?? 0 }}</strong>
+          <small>유저 대비</small>
+        </RouterLink>
+        <RouterLink to="/basket" data-testid="metric-not-started">
+          <span>지원 전</span>
+          <strong>{{ dashboardStore.summary?.notStarted ?? 0 }}</strong>
+          <small>유저 대비</small>
+        </RouterLink>
+      </section>
 
-        <main class="dashboard-board">
-          <section class="filter-bar compact" aria-label="대시보드 필터">
-            <button class="filter-chip active" type="button">전체</button>
-            <button class="filter-chip" type="button">오늘 마감</button>
-            <button class="filter-chip" type="button">진행 중</button>
-            <div class="search-field">회사명, 직무명 검색</div>
-          </section>
+      <section class="dashboard-panel main-basket-preview" aria-label="공고 장바구니 미리보기">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">마감 임박순</p>
+            <h2>공고 장바구니</h2>
+          </div>
+          <RouterLink class="text-button" to="/basket?sort=deadline">전체 보기</RouterLink>
+        </div>
 
-          <section class="metric-strip" aria-label="지원 현황 숫자 요약">
-            <RouterLink to="/basket">
-              <span>전체 지원</span>
-              <strong>{{ dashboardStore.summary?.totalApplications ?? 0 }}</strong>
-            </RouterLink>
-            <RouterLink to="/basket?status=IN_PROGRESS">
-              <span>진행 중</span>
-              <strong>{{ dashboardStore.summary?.inProgress ?? 0 }}</strong>
-            </RouterLink>
-            <RouterLink to="/basket?status=NOT_STARTED">
-              <span>지원 전</span>
-              <strong>{{ dashboardStore.summary?.notStarted ?? 0 }}</strong>
-            </RouterLink>
-            <RouterLink to="/basket?sort=deadline">
-              <span>마감 임박</span>
-              <strong>{{ dashboardStore.summary?.deadlineSoon ?? 0 }}</strong>
-            </RouterLink>
-          </section>
-
-          <section
-            class="dashboard-panel"
-            data-testid="main-weekly-calendar"
-            aria-label="이번 주 마감 캘린더"
+        <p v-if="basketStore.status === 'loading'" class="basket-loading">공고 목록을 불러오는 중입니다.</p>
+        <StatePanel
+          v-else-if="basketStore.status === 'error'"
+          id="main-basket-error"
+          tone="navy"
+          title="공고 목록 로딩 실패"
+          :body="basketStore.errorMessage"
+        />
+        <div v-else class="main-basket-table">
+          <div class="main-basket-head">
+            <span>회사명</span>
+            <span>직무</span>
+            <span>상태</span>
+            <span>마감일</span>
+          </div>
+          <RouterLink
+            v-for="job in basketPreviewJobs"
+            :key="job.id"
+            class="main-basket-row"
+            data-testid="main-basket-preview-job"
+            :to="`/workspaces/${job.workspaceId}`"
           >
-            <div class="section-heading">
-              <div>
-                <p class="section-kicker">주간 일정</p>
-                <h2>이번 주 마감 공고</h2>
-              </div>
-              <RouterLink class="text-button" to="/basket?sort=deadline">마감순 보기</RouterLink>
-            </div>
-            <div class="weekly-deadline-calendar">
-              <div v-for="day in weeklyDeadlineDays" :key="day.key" class="weekly-deadline-day">
-                <span>{{ day.label }}</span>
-                <RouterLink
-                  v-for="job in day.jobs"
-                  :key="job.workspaceId"
-                  class="deadline-job-chip"
-                  :data-testid="`weekly-calendar-job-${job.workspaceId}`"
-                  :to="`/workspaces/${job.workspaceId}`"
-                >
-                  {{ job.companyName }}
-                </RouterLink>
-              </div>
-            </div>
-          </section>
+            <strong>{{ job.companyName }}</strong>
+            <span>{{ job.positionTitle }}</span>
+            <span>{{ job.statusLabel }}</span>
+            <span class="deadline-pill" :class="{ urgent: job.deadlineSoon }">{{ job.deadlineLabel }}</span>
+            <span v-if="isRecentWorkspace(job.workspaceId)" class="recent-visit-badge">최근 방문</span>
+          </RouterLink>
+        </div>
+      </section>
 
-          <section class="dashboard-panel" aria-label="오늘 챙겨볼 공고">
-            <div class="section-heading">
-              <div>
-                <p class="section-kicker">마감 임박</p>
-                <h2>오늘 챙겨볼 공고</h2>
-              </div>
-              <RouterLink class="text-button" to="/basket">전체 보기</RouterLink>
+      <section class="dashboard-panel main-recommendation-preview" aria-label="추천공고 미리보기">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">추천</p>
+            <h2>추천공고</h2>
+          </div>
+          <RouterLink class="text-button" to="/recommendations">추천 더보기</RouterLink>
+        </div>
+        <p v-if="recommendationStore.status === 'loading'" class="basket-loading">추천 공고를 불러오는 중입니다.</p>
+        <StatePanel
+          v-else-if="recommendationStore.status === 'error'"
+          id="main-recommendation-error"
+          tone="navy"
+          title="추천 공고 로딩 실패"
+          :body="recommendationStore.errorMessage"
+        />
+        <div v-else class="recommendation-thumbnail-grid">
+          <article
+            v-for="item in recommendationPreviewItems"
+            :key="item.id"
+            class="recommendation-thumbnail-card"
+            data-testid="main-recommendation-preview-job"
+          >
+            <div class="thumbnail-placeholder" aria-hidden="true">
+              <span>{{ item.deadlineLabel }}</span>
             </div>
-            <p v-if="dashboardStore.status === 'loading'">대시보드 정보를 불러오는 중입니다.</p>
-            <StatePanel
-              v-else-if="dashboardStore.status === 'error'"
-              id="main-error"
-              tone="navy"
-              title="대시보드 로딩 실패"
-              :body="dashboardStore.errorMessage"
-            />
-            <div v-else class="wire-table">
-              <div class="wire-row table-head">
-                <span>회사</span>
-                <span>직무</span>
-                <span>마감</span>
-              </div>
-              <RouterLink
-                v-for="job in deadlineSummaryJobs"
-                :key="job.workspaceId"
-                class="wire-row"
-                :class="{ 'is-deadline-soon': isDeadlineSoon(job) }"
-                data-testid="deadline-summary-job"
-                :to="`/workspaces/${job.workspaceId}`"
-              >
-                <strong>{{ job.companyName }}</strong>
-                <span>{{ job.positionTitle }}</span>
-                <span class="deadline-pill">{{ job.deadlineLabel }}</span>
-              </RouterLink>
-            </div>
-          </section>
-
-          <section class="dashboard-panel" aria-label="추천 공고 미리보기">
-            <div class="section-heading">
-              <div>
-                <p class="section-kicker">맞춤 추천</p>
-                <h2>추천 공고</h2>
-              </div>
-              <RouterLink class="text-button" to="/recommendations">추천 더보기</RouterLink>
-            </div>
-            <div class="recommendation-grid dense">
-              <article v-for="card in dashboardCards" :key="card.kicker" class="recommendation-card">
-                <span class="shell-card-kicker">{{ card.kicker }}</span>
-                <h3>{{ card.title }}</h3>
-                <p>{{ card.body }}</p>
-                <strong>{{ card.meta }}</strong>
-              </article>
-            </div>
-          </section>
-        </main>
-      </div>
+            <strong>{{ item.companyName }}</strong>
+            <span>{{ item.positionTitle }}</span>
+          </article>
+        </div>
+      </section>
     </section>
+    <OnboardingPage v-if="showOnboardingModal" @completed="showOnboardingModal = false" />
   </AppLayout>
 </template>
 
-<script setup>import AppLayout from '@/shared/AppLayout.vue';
+<script setup>
+import { computed, onMounted, ref } from 'vue';
+import AppLayout from '@/shared/AppLayout.vue';
 import StatePanel from '@/shared/StatePanel.vue';
-import { computed, onMounted } from 'vue';
-import { dashboardCards } from '@/data/shellContent';
+import OnboardingPage from '@/pages/OnboardingPage.vue';
 import { getCurrentUser } from '@/features/auth/session/authSession';
+import { isRecentWorkspace } from '@/features/basket/recentWorkspaces';
+import { useBasketStore } from '@/stores/basketStore';
 import { useDashboardStore } from '@/stores/dashboardStore';
+import { useRecommendationStore } from '@/stores/recommendationStore';
+
 const dashboardStore = useDashboardStore();
-const millisecondsPerDay = 24 * 60 * 60 * 1000;
-const currentUser = computed(() => getCurrentUser());
-const memberDisplayName = computed(() => {
-    const user = currentUser.value;
-    return user?.nickname?.trim() || user?.name?.trim() || user?.email || 'EZ One 사용자';
-});
-const memberInitial = computed(() => memberDisplayName.value.trim().charAt(0).toUpperCase());
-const deadlineSummaryJobs = computed(() => {
-    const today = startOfDay(new Date());
-    return [...dashboardStore.todayJobs]
-        .sort((left, right) => {
-        const deadlineDifference = deadlineOffsetDays(left, today) - deadlineOffsetDays(right, today);
-        return deadlineDifference === 0 ? left.workspaceId.localeCompare(right.workspaceId) : deadlineDifference;
-    })
-        .slice(0, 5);
-});
-const weeklyDeadlineDays = computed(() => {
-    const today = startOfDay(new Date());
-    return Array.from({ length: 7 }, (_, offset) => {
-        const date = addDays(today, offset);
-        const key = toDateKey(date);
-        return {
-            key,
-            label: `${date.getMonth() + 1}/${date.getDate()}`,
-            jobs: dashboardStore.todayJobs.filter((job) => toDateKey(parseDeadlineDate(job, today)) === key)
-        };
-    });
-});
+const basketStore = useBasketStore();
+const recommendationStore = useRecommendationStore();
+const showOnboardingModal = ref(getCurrentUser()?.profileCompleted === false);
+
+const basketPreviewJobs = computed(() => [...basketStore.jobs]
+    .sort((left, right) => deadlineRank(left) - deadlineRank(right))
+    .slice(0, 5));
+
+const recommendationPreviewItems = computed(() => recommendationStore.jobs.slice(0, 4));
+
 onMounted(() => {
     void dashboardStore.loadSummary();
+    void basketStore.loadJobs();
+    void recommendationStore.loadRecommendations();
 });
-function parseDeadlineDate(job, today) {
-    const label = job.deadlineLabel;
-    const explicit = label.match(/(20\d{2})[-.](\d{1,2})[-.](\d{1,2})/);
+
+function deadlineRank(job) {
+    const source = job.deadlineDate ?? job.deadlineLabel ?? '';
+    const explicit = source.match(/(20\d{2})[-.](\d{1,2})[-.](\d{1,2})/);
     if (explicit) {
-        return startOfDay(new Date(Number(explicit[1]), Number(explicit[2]) - 1, Number(explicit[3])));
+        return new Date(Number(explicit[1]), Number(explicit[2]) - 1, Number(explicit[3])).getTime();
     }
-    const dayOnly = label.match(/(?:^|\D)(\d{1,2})일/);
-    if (dayOnly) {
-        return startOfDay(new Date(today.getFullYear(), today.getMonth(), Number(dayOnly[1])));
-    }
-    const dDay = label.match(/D-(\d+)/i);
-    if (dDay) {
-        return addDays(today, Number(dDay[1]));
-    }
-    if (label.includes('오늘')) {
-        return today;
-    }
-    return addDays(today, 99);
-}
-function isDeadlineSoon(job) {
-    const days = deadlineOffsetDays(job, startOfDay(new Date()));
-    return days >= 0 && days <= 7;
-}
-function deadlineOffsetDays(job, today) {
-    return Math.round((parseDeadlineDate(job, today).getTime() - today.getTime()) / millisecondsPerDay);
-}
-function startOfDay(date) {
-    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
-function addDays(date, days) {
-    const next = new Date(date);
-    next.setDate(next.getDate() + days);
-    return next;
-}
-function toDateKey(date) {
-    return [
-        date.getFullYear(),
-        String(date.getMonth() + 1).padStart(2, '0'),
-        String(date.getDate()).padStart(2, '0')
-    ].join('-');
+    const dDay = source.match(/D-(\d+)/i);
+    return dDay ? Number(dDay[1]) : Number.MAX_SAFE_INTEGER;
 }
 </script>
