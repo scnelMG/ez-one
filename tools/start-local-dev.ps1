@@ -45,6 +45,19 @@ function Wait-HttpReady($Name, $Uri, $TimeoutSeconds) {
     throw "$Name did not become ready at $Uri within ${TimeoutSeconds}s."
 }
 
+function Resolve-MavenCommand() {
+    $cachedMaven = Get-ChildItem -Path "$env:USERPROFILE\.m2\wrapper\dists" `
+        -Recurse `
+        -Filter "mvn.cmd" `
+        -ErrorAction SilentlyContinue |
+        Sort-Object FullName -Descending |
+        Select-Object -First 1
+    if ($cachedMaven) {
+        return $cachedMaven.FullName
+    }
+    return $null
+}
+
 function Stop-PortOwner($Port) {
     $owners = @()
     try {
@@ -101,6 +114,7 @@ $backendDir = Join-Path $root "backend"
 $frontendDir = Join-Path $root "frontend"
 $backendEnv = Read-DotEnv (Join-Path $backendDir ".env")
 $frontendEnv = Read-DotEnv (Join-Path $frontendDir ".env")
+$startedProcessIds = @()
 
 Require-Key $backendEnv "DB_HOST" "backend/.env"
 Require-Key $backendEnv "DB_PORT" "backend/.env"
@@ -137,13 +151,19 @@ if (Test-HttpReady $backendHealth) {
     Write-Host "[ok] backend already running"
 } else {
     Write-Host "[start] backend"
-    Start-Process `
-        -FilePath (Join-Path $backendDir "mvnw.cmd") `
-        -ArgumentList "spring-boot:run" `
+    $mavenCommand = Resolve-MavenCommand
+    if (-not $mavenCommand) {
+        $mavenCommand = Join-Path $backendDir "mvnw.cmd"
+    }
+    $backendProcess = Start-Process `
+        -FilePath $mavenCommand `
+        -ArgumentList @("-Dmaven.repo.local=$env:USERPROFILE\.m2\repository", "spring-boot:run") `
         -WorkingDirectory $backendDir `
         -WindowStyle Hidden `
         -RedirectStandardOutput (Join-Path $backendDir "backend-server.log") `
-        -RedirectStandardError (Join-Path $backendDir "backend-server.err.log") | Out-Null
+        -RedirectStandardError (Join-Path $backendDir "backend-server.err.log") `
+        -PassThru
+    $startedProcessIds += $backendProcess.Id
 }
 Wait-HttpReady "Backend" $backendHealth 90
 
@@ -151,14 +171,21 @@ if (Test-HttpReady $frontendUrl) {
     Write-Host "[ok] frontend already running"
 } else {
     Write-Host "[start] frontend"
-    Start-Process `
+    $frontendProcess = Start-Process `
         -FilePath "npm.cmd" `
         -ArgumentList "run", "dev:vite", "--", "--host", "localhost", "--port", "5173" `
         -WorkingDirectory $frontendDir `
         -WindowStyle Hidden `
         -RedirectStandardOutput (Join-Path $frontendDir "frontend-server.log") `
-        -RedirectStandardError (Join-Path $frontendDir "frontend-server.err.log") | Out-Null
+        -RedirectStandardError (Join-Path $frontendDir "frontend-server.err.log") `
+        -PassThru
+    $startedProcessIds += $frontendProcess.Id
 }
 Wait-HttpReady "Frontend" $frontendUrl 60
 
 Write-Host "[ok] EZ-ONE local dev stack is ready: $frontendUrl"
+
+if ($startedProcessIds.Count -gt 0) {
+    Write-Host "[hold] Dev servers started by this command are running. Press Ctrl+C to stop watching this terminal."
+    Wait-Process -Id $startedProcessIds
+}
