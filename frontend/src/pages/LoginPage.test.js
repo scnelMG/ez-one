@@ -64,6 +64,22 @@ describe('LoginPage', () => {
         expect(wrapper.find('button[data-testid="google-account-switch"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="account-switch-callout"]').exists()).toBe(false);
     });
+    it('AUTH-001: redirects local alias access to the configured OAuth callback origin before login', async () => {
+        vi.stubGlobal('location', {
+            assign: vi.fn(),
+            replace: vi.fn(),
+            origin: 'http://127.0.0.1:5173'
+        });
+        const router = makeRouter();
+        router.push('/login?redirect=/basket');
+        await router.isReady();
+        mount(LoginPage, {
+            global: {
+                plugins: [router]
+            }
+        });
+        expect(location.replace).toHaveBeenCalledWith('http://localhost:5173/login?redirect=/basket');
+    });
     it('AUTH-004: starts Google OAuth account selection when the user chooses another account', async () => {
         vi.stubGlobal('location', { assign: vi.fn(), origin: 'http://localhost:5173' });
         const router = makeRouter();

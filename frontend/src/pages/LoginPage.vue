@@ -307,7 +307,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { authApi } from '@/features/auth/api/authApi';
 import { buildGoogleOAuthUrl, createOAuthState, getGoogleClientId, getGoogleRedirectUri } from '@/features/auth/oauth/googleOAuth';
@@ -325,6 +325,10 @@ const emailForm = reactive({
     name: '',
     email: '',
     password: ''
+});
+
+onMounted(() => {
+    redirectToConfiguredLocalOAuthOrigin();
 });
 
 function startGoogleLogin(selectAccount = false) {
@@ -376,5 +380,22 @@ function openEmailAuth() {
 
 function getRedirectTarget() {
     return typeof route.query.redirect === 'string' ? route.query.redirect : '/';
+}
+
+function redirectToConfiguredLocalOAuthOrigin() {
+    const redirectUri = getGoogleRedirectUri();
+    const currentOrigin = new URL(window.location.origin);
+    const redirectOrigin = new URL(redirectUri);
+    if (currentOrigin.hostname === redirectOrigin.hostname) {
+        return;
+    }
+    if (!isLocalHostname(currentOrigin.hostname) || !isLocalHostname(redirectOrigin.hostname)) {
+        return;
+    }
+    window.location.replace(`${redirectOrigin.origin}${route.fullPath}`);
+}
+
+function isLocalHostname(hostname) {
+    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
 }
 </script>
