@@ -314,6 +314,6 @@ Related requirements: `AUTH-001`, `AUTH-004`, `AUTH-008`, `ONB-001`.
 Related requirements: `AUTH-001`, `AUTH-006`.
 
 - Backend local runs import `backend/.env` through `spring.config.import=optional:file:.env[.properties]`, so `cd backend; .\mvnw.cmd spring-boot:run` uses the local DB, JWT, and Google OAuth settings.
-- Before testing login locally, run `.\tools\check-local-login-stack.ps1` from the repository root.
+- Before testing login locally, run `.\tools\start-local-dev.ps1` from the repository root. It starts missing backend/frontend dev servers and waits for readiness.
 - The preflight checks required env keys, MySQL reachability, backend `/api/health`, and the Vite dev server without printing secret values.
 - If Flyway drift is suspected, run `.\tools\check-local-login-stack.ps1 -CheckFlyway` after the backend and database are reachable.
