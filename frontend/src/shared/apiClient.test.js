@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { AxiosError } from 'axios';
-import { clearAuthSession, getAccessToken, saveAuthSession } from '@/features/auth/session/authSession';
+import { clearAuthSession, getAccessToken, getRefreshToken, saveAuthSession } from '@/features/auth/session/authSession';
 import { defaultHttpClient, resolveApiBaseUrl } from './apiClient';
 describe('apiClient', () => {
     const originalAdapter = defaultHttpClient.defaults.adapter;
@@ -77,6 +77,43 @@ describe('apiClient', () => {
         expect(response.data.data.email).toBe('user@example.com');
         expect(getAccessToken()).toBe('new-access-token');
         expect(calls).toEqual(['GET /api/me', 'POST /api/auth/refresh', 'GET /api/me']);
+    });
+    it('AUTH-005/AUTH-007: clears the local session when refresh token reuse fails', async () => {
+        saveAuthSession({
+            accessToken: 'expired-access-token',
+            refreshToken: 'revoked-refresh-token',
+            tokenType: 'Bearer',
+            expiresIn: 1,
+            user: {
+                id: 1,
+                email: 'user@example.com',
+                name: 'Hong Gil Dong',
+                nickname: 'Gil Dong',
+                profileCompleted: true
+            }
+        });
+        const adapter = async (config) => {
+            if (config.url === '/api/me') {
+                const response = makeResponse(config, 401, {
+                    success: false,
+                    data: null,
+                    error: { code: 'UNAUTHORIZED', message: 'Authentication is required.' }
+                });
+                throw new AxiosError('Unauthorized', 'ERR_BAD_REQUEST', config, null, response);
+            }
+            const response = makeResponse(config, 401, {
+                success: false,
+                data: null,
+                error: { code: 'INVALID_REFRESH_TOKEN', message: 'Refresh token is expired, revoked, or unknown.' }
+            });
+            throw new AxiosError('Unauthorized', 'ERR_BAD_REQUEST', config, null, response);
+        };
+        defaultHttpClient.defaults.adapter = adapter;
+
+        await expect(defaultHttpClient.get('/api/me')).rejects.toThrow('Unauthorized');
+
+        expect(getAccessToken()).toBeNull();
+        expect(getRefreshToken()).toBeNull();
     });
 });
 function makeResponse(config, status, data) {

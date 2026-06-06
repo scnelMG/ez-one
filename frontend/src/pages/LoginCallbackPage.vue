@@ -26,6 +26,13 @@ const statusMessage = computed(() => errorMessage.value || 'Google 계정 확인
 onMounted(async () => {
     const code = typeof route.query.code === 'string' ? route.query.code : '';
     const state = typeof route.query.state === 'string' ? route.query.state : '';
+    const oauthError = typeof route.query.error === 'string' ? route.query.error : '';
+    if (oauthError) {
+        errorMessage.value = oauthError === 'access_denied'
+            ? 'Google 로그인이 취소되었거나 승인되지 않았습니다. 다시 로그인해 주세요.'
+            : 'Google 로그인 과정에서 오류가 발생했습니다. 다시 로그인해 주세요.';
+        return;
+    }
     if (!code || !state) {
         errorMessage.value = 'Google 로그인 응답이 올바르지 않습니다. 다시 로그인해 주세요.';
         return;

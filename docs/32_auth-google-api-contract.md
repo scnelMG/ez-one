@@ -41,6 +41,7 @@ Google OAuth 인증 결과로 로그인하거나 사용자를 생성한다.
 
 Local frontend must use the same redirect URI registered in Google Cloud Console. For local MVP testing, set `VITE_GOOGLE_REDIRECT_URI=http://localhost:5173/login/callback`; `http://127.0.0.1:5173/login/callback` is a different OAuth redirect URI and will fail with `redirect_uri_mismatch` unless it is also registered.
 When a local user opens the app through a local alias such as `127.0.0.1`, the login page redirects back to the configured local OAuth origin before starting Google OAuth so the saved OAuth `state` and callback origin stay aligned.
+The frontend stores OAuth `state` by nonce with a short-lived session storage map. This allows repeated attempts or parallel login tabs without overwriting the previous in-flight state. Google error callbacks such as `access_denied` are handled on the callback page and must not call the backend token exchange endpoint.
 
 ### 요청
 

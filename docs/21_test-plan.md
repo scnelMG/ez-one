@@ -111,3 +111,6 @@
 - `TC-MYPAGE-ONBOARDING-001`: Onboarding page saves recommendation preferences from chip-style controls.
 - `TC-MYPAGE-SUPPORT-001`: QnA, 1:1 inquiry, partnership inquiry, and terms routes render as independent mypage support pages.
 - `TC-AUTH-SWITCH-ENTRY-001`: Default `/login` hides account switching, while `/login?switch=account` renders the account-switch callout and starts Google OAuth with `prompt=select_account`.
+- `TC-AUTH-OAUTH-STATE-001`: OAuth state is stored by nonce so parallel login tabs or retries do not overwrite each other.
+- `TC-AUTH-OAUTH-CANCEL-001`: Google OAuth error callbacks such as `access_denied` show a clear retry message without calling the backend token exchange.
+- `TC-AUTH-REFRESH-FAIL-001`: A revoked or expired refresh token clears the local session after a protected API returns 401.

@@ -1,25 +1,25 @@
 const OAUTH_STATE_KEY = 'ezone.oauthState';
+const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 
 export function createOAuthState(redirectPath) {
     const nonce = crypto.randomUUID();
-    const state = {
-        nonce,
-        redirectPath: normalizeRedirectPath(redirectPath)
+    const store = loadOAuthStateStore();
+    store[nonce] = {
+        redirectPath: normalizeRedirectPath(redirectPath),
+        createdAt: Date.now()
     };
-    sessionStorage.setItem(OAUTH_STATE_KEY, JSON.stringify(state));
+    saveOAuthStateStore(store);
     return nonce;
 }
 
 export function consumeOAuthState(nonce) {
-    const rawState = sessionStorage.getItem(OAUTH_STATE_KEY);
-    sessionStorage.removeItem(OAUTH_STATE_KEY);
-    if (!rawState) {
+    const store = loadOAuthStateStore();
+    const state = store[nonce];
+    if (!state) {
         throw new Error('로그인 상태 값을 찾을 수 없습니다. 다시 로그인해 주세요.');
     }
-    const state = JSON.parse(rawState);
-    if (state.nonce !== nonce) {
-        throw new Error('로그인 상태 값이 일치하지 않습니다. 다시 로그인해 주세요.');
-    }
+    delete store[nonce];
+    saveOAuthStateStore(store);
     return normalizeRedirectPath(state.redirectPath);
 }
 
@@ -53,4 +53,39 @@ function normalizeRedirectPath(path) {
         return '/';
     }
     return path;
+}
+
+function loadOAuthStateStore() {
+    const rawState = sessionStorage.getItem(OAUTH_STATE_KEY);
+    if (!rawState) {
+        return {};
+    }
+    try {
+        const parsed = JSON.parse(rawState);
+        if (parsed?.nonce && parsed?.redirectPath) {
+            return {
+                [parsed.nonce]: {
+                    redirectPath: parsed.redirectPath,
+                    createdAt: Date.now()
+                }
+            };
+        }
+        const now = Date.now();
+        return Object.fromEntries(
+            Object.entries(parsed ?? {}).filter(([, state]) => {
+                return state?.redirectPath && now - Number(state.createdAt ?? 0) <= OAUTH_STATE_TTL_MS;
+            })
+        );
+    } catch {
+        sessionStorage.removeItem(OAUTH_STATE_KEY);
+        return {};
+    }
+}
+
+function saveOAuthStateStore(store) {
+    if (Object.keys(store).length === 0) {
+        sessionStorage.removeItem(OAUTH_STATE_KEY);
+        return;
+    }
+    sessionStorage.setItem(OAUTH_STATE_KEY, JSON.stringify(store));
 }

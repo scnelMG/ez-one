@@ -22,6 +22,17 @@ describe('googleOAuth', () => {
         expect(url.searchParams.has('prompt')).toBe(false);
         expect(consumeOAuthState('state-123')).toBe('/basket');
     });
+    it('AUTH-001: stores OAuth states by nonce so parallel login tabs do not overwrite each other', () => {
+        vi.spyOn(crypto, 'randomUUID')
+            .mockReturnValueOnce('state-a')
+            .mockReturnValueOnce('state-b');
+
+        expect(createOAuthState('/basket')).toBe('state-a');
+        expect(createOAuthState('/recommendations')).toBe('state-b');
+
+        expect(consumeOAuthState('state-a')).toBe('/basket');
+        expect(consumeOAuthState('state-b')).toBe('/recommendations');
+    });
     it('AUTH-004: asks Google to show account selection only for explicit account switching', () => {
         const url = buildGoogleOAuthUrl({
             clientId: 'google-client-id',

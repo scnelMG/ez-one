@@ -85,4 +85,17 @@ describe('LoginCallbackPage', () => {
         await new Promise((resolve) => setTimeout(resolve));
         expect(router.currentRoute.value.fullPath).toBe('/');
     });
+    it('AUTH-001: shows a clear message when Google returns an OAuth error', async () => {
+        const router = makeRouter();
+        router.push('/login/callback?error=access_denied&state=state-123');
+        await router.isReady();
+        const wrapper = mount(LoginCallbackPage, {
+            global: {
+                plugins: [router]
+            }
+        });
+        await new Promise((resolve) => setTimeout(resolve));
+        expect(wrapper.text()).toContain('Google 로그인이 취소되었거나 승인되지 않았습니다.');
+        expect(mocks.loginWithGoogle).not.toHaveBeenCalled();
+    });
 });
