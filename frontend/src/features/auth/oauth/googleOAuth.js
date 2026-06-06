@@ -42,6 +42,9 @@ export function getGoogleClientId() {
 }
 
 export function getGoogleRedirectUri() {
+    if (import.meta.env.VITE_GOOGLE_REDIRECT_URI) {
+        return import.meta.env.VITE_GOOGLE_REDIRECT_URI;
+    }
     return `${window.location.origin}/login/callback`;
 }
 

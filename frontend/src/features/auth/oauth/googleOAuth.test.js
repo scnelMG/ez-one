@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { buildGoogleOAuthUrl, consumeOAuthState, createOAuthState } from './googleOAuth';
+import { buildGoogleOAuthUrl, consumeOAuthState, createOAuthState, getGoogleRedirectUri } from './googleOAuth';
 describe('googleOAuth', () => {
     beforeEach(() => {
         sessionStorage.clear();
@@ -30,5 +30,9 @@ describe('googleOAuth', () => {
             selectAccount: true
         });
         expect(url.searchParams.get('prompt')).toBe('select_account');
+    });
+    it('AUTH-001: uses an explicit redirect URI when configured', () => {
+        vi.stubEnv('VITE_GOOGLE_REDIRECT_URI', 'http://localhost:5173/login/callback');
+        expect(getGoogleRedirectUri()).toBe('http://localhost:5173/login/callback');
     });
 });
