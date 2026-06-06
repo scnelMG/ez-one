@@ -153,7 +153,7 @@ if (Test-HttpReady $frontendUrl) {
     Write-Host "[start] frontend"
     Start-Process `
         -FilePath "npm.cmd" `
-        -ArgumentList "run", "dev", "--", "--host", "localhost", "--port", "5173" `
+        -ArgumentList "run", "dev:vite", "--", "--host", "localhost", "--port", "5173" `
         -WorkingDirectory $frontendDir `
         -WindowStyle Hidden `
         -RedirectStandardOutput (Join-Path $frontendDir "frontend-server.log") `
