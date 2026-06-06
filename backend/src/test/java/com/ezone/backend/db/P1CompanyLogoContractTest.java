@@ -32,6 +32,16 @@ class P1CompanyLogoContractTest {
     }
 
     @Test
+    void followUpMigrationRepairsLocalDatabasesWithNullableCompanyDomain() throws IOException {
+        String migration = readResource("/db/migration/V8__backfill_company_domain_not_null.sql")
+            .toLowerCase(Locale.ROOT);
+
+        assertThat(migration).contains("update companies");
+        assertThat(migration).contains("set domain = 'unknown'");
+        assertThat(migration).contains("modify column domain varchar(255) not null");
+    }
+
+    @Test
     void mapperOnlySetsLogoUpdatedAtWhenLogoCandidateExists() throws IOException {
         String mapperXml = readResource("/mapper/P1WorkspaceMapper.xml");
 
