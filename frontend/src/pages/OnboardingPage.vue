@@ -1,136 +1,159 @@
 <template>
-  <AppLayout>
-    <section class="wire-page onboarding-wire">
-      <div class="modal-scrim">
-        <section class="onboarding-dialog" aria-label="온보딩 입력 모달">
-          <div class="dialog-header">
-            <div>
-              <p class="section-kicker">ONB-001</p>
-              <h1>선호 조건을 알려주세요</h1>
-              <p>추천 공고와 메인 대시보드에 사용할 기본 선호 정보를 저장합니다.</p>
-            </div>
-            <span class="status-chip">{{ statusLabel }}</span>
-          </div>
+  <div class="onboarding-modal-backdrop" role="presentation">
+    <section
+      class="onboarding-dialog"
+      data-testid="onboarding-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="onboarding-title"
+    >
+      <header class="onboarding-modal-header">
+        <div>
+          <h2 id="onboarding-title">맞춤 공고 추천 정보 입력</h2>
+          <p>입력한 정보로 나에게 맞는 공고를 추천해드려요.</p>
+        </div>
+        <button class="icon-button" type="button" aria-label="온보딩 닫기" @click="skipOnboarding">×</button>
+      </header>
 
-          <StatePanel
-            v-if="profileStore.status === 'error'"
-            id="onboarding-error"
-            tone="navy"
-            title="온보딩 오류"
-            :body="profileStore.errorMessage"
-          />
+      <div class="onboarding-modal-body">
+        <StatePanel
+          v-if="profileStore.status === 'error'"
+          id="onboarding-error"
+          tone="navy"
+          title="온보딩 오류"
+          :body="profileStore.errorMessage"
+        />
 
-          <section class="tag-section" aria-label="선호 직무">
-            <strong>선호 직무</strong>
-            <div class="tag-list">
-              <button
-                v-for="role in roleOptions"
-                :key="role"
-                class="filter-chip"
-                :class="{ active: form.desiredRoles.includes(role) }"
-                type="button"
-                @click="toggleListValue(form.desiredRoles, role)"
-              >
-                {{ role }}
-              </button>
-            </div>
-          </section>
-
-          <section class="tag-section" aria-label="선호 기업 유형">
-            <strong>선호 기업 유형</strong>
-            <div class="tag-list">
-              <button
-                v-for="companyType in companyTypeOptions"
-                :key="companyType"
-                class="filter-chip"
-                :class="{ active: form.companyTypes.includes(companyType) }"
-                type="button"
-                @click="toggleListValue(form.companyTypes, companyType)"
-              >
-                {{ companyType }}
-              </button>
-            </div>
-          </section>
-
-          <section class="tag-section" aria-label="기술 스택">
-            <strong>기술 스택</strong>
-            <div class="tag-list">
-              <button
-                v-for="skill in skillOptions"
-                :key="skill"
-                class="filter-chip"
-                :class="{ active: form.skills.includes(skill) }"
-                type="button"
-                @click="toggleListValue(form.skills, skill)"
-              >
-                {{ skill }}
-              </button>
-            </div>
-          </section>
-
-          <section class="form-shell compact" aria-label="추가 선호 정보">
-            <label>
-              근무 지역
-              <input v-model="regionInput" data-testid="onboarding-region" autocomplete="address-level1" />
-            </label>
-            <label>
-              관심 산업
-              <input v-model="industryInput" data-testid="onboarding-industry" autocomplete="organization-title" />
-            </label>
-            <label>
-              SSAFY 여부
-              <select v-model="form.ssafy" data-testid="onboarding-ssafy">
-                <option :value="false">아니오</option>
-                <option :value="true">예</option>
-              </select>
-            </label>
-          </section>
-
-          <div class="dialog-actions">
-            <button class="ghost-button" type="button" data-testid="skip-onboarding" @click="skipOnboarding">건너뛰기</button>
+        <section class="onboarding-field-group" aria-label="희망 직무">
+          <strong>희망 직무</strong>
+          <div class="onboarding-chip-list">
             <button
-              class="primary-button"
+              v-for="role in roleOptions"
+              :key="role"
+              class="filter-chip"
+              :class="{ active: form.desiredRoles.includes(role) }"
               type="button"
-              :disabled="profileStore.status === 'saving'"
-              data-testid="save-onboarding"
-              @click="saveOnboarding"
+              @click="toggleListValue(form.desiredRoles, role)"
             >
-              {{ saveButtonLabel }}
+              {{ role }}
             </button>
           </div>
         </section>
+
+        <section class="onboarding-field-group" aria-label="희망 기업 유형">
+          <strong>희망 기업 유형</strong>
+          <div class="onboarding-chip-list">
+            <button
+              v-for="companyType in companyTypeOptions"
+              :key="companyType"
+              class="filter-chip"
+              :class="{ active: form.companyTypes.includes(companyType) }"
+              type="button"
+              @click="toggleListValue(form.companyTypes, companyType)"
+            >
+              {{ companyType }}
+            </button>
+          </div>
+        </section>
+
+        <section class="onboarding-field-group" aria-label="계열 및 업종">
+          <strong>계열 / 업종</strong>
+          <div class="onboarding-chip-list">
+            <button
+              v-for="industry in industryOptions"
+              :key="industry"
+              class="filter-chip"
+              :class="{ active: form.industries.includes(industry) }"
+              type="button"
+              @click="toggleListValue(form.industries, industry)"
+            >
+              {{ industry }}
+            </button>
+          </div>
+        </section>
+
+        <section class="onboarding-field-group" aria-label="희망 근무 지역">
+          <strong>희망 근무 지역</strong>
+          <div class="onboarding-chip-list">
+            <button
+              v-for="region in regionOptions"
+              :key="region"
+              class="filter-chip"
+              :class="{ active: form.regions.includes(region) }"
+              type="button"
+              @click="toggleListValue(form.regions, region)"
+            >
+              {{ region }}
+            </button>
+          </div>
+        </section>
+
+        <section class="onboarding-field-group" aria-label="보유 스킬">
+          <strong>보유 스킬</strong>
+          <div class="skill-input-shell">
+            <span v-for="skill in form.skills" :key="skill" class="skill-token">
+              {{ skill }}
+              <button type="button" :aria-label="`${skill} 삭제`" @click="removeSkill(skill)">×</button>
+            </span>
+            <input
+              v-model="skillInput"
+              data-testid="onboarding-skill-input"
+              type="text"
+              placeholder="스킬 입력 후 Enter"
+              @keyup.enter="addSkill"
+            />
+          </div>
+        </section>
+
+        <section class="onboarding-field-group" aria-label="SSAFY 교육생 여부">
+          <strong>SSAFY 교육생이신가요?</strong>
+          <div class="segmented-control">
+            <button type="button" :class="{ active: form.ssafy }" @click="form.ssafy = true">예</button>
+            <button type="button" :class="{ active: !form.ssafy }" @click="form.ssafy = false">아니오</button>
+          </div>
+          <p class="onboarding-helper">'예' 선택 시 Mattermost 추천 공고가 함께 표시돼요.</p>
+        </section>
       </div>
+
+      <footer class="onboarding-modal-actions">
+        <span>나중에 마이페이지에서 수정할 수 있어요</span>
+        <div>
+          <button class="ghost-button" type="button" data-testid="skip-onboarding" @click="skipOnboarding">건너뛰기</button>
+          <button
+            class="primary-button"
+            type="button"
+            :disabled="profileStore.status === 'saving'"
+            data-testid="save-onboarding"
+            @click="saveOnboarding"
+          >
+            {{ profileStore.status === 'saving' ? '저장 중' : '시작하기' }}
+          </button>
+        </div>
+      </footer>
     </section>
-  </AppLayout>
+  </div>
 </template>
 
 <script setup>
-import AppLayout from '@/shared/AppLayout.vue';
 import StatePanel from '@/shared/StatePanel.vue';
-import { computed, onMounted, reactive, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { onMounted, reactive, ref } from 'vue';
 import { useProfileStore } from '@/stores/profileStore';
 
-const router = useRouter();
+const emit = defineEmits(['completed']);
 const profileStore = useProfileStore();
 const form = reactive({
-    desiredRoles: ['백엔드 개발자'],
-    companyTypes: ['스타트업'],
-    skills: ['Java', 'Spring Boot'],
-    ssafy: false
+    desiredRoles: ['프론트엔드', '백엔드'],
+    companyTypes: ['중견기업', '스타트업'],
+    industries: ['IT/플랫폼'],
+    regions: ['서울', '경기', '원격(재택)'],
+    skills: ['React', 'TypeScript', 'Node.js'],
+    ssafy: true
 });
-const regionInput = ref('서울');
-const industryInput = ref('커머스');
-const roleOptions = ['백엔드 개발자', '서버 개발자', '플랫폼 엔지니어'];
-const companyTypeOptions = ['대기업', '스타트업', '공공기관'];
-const skillOptions = ['Java', 'Spring Boot', 'MyBatis', 'MySQL'];
-const statusLabel = computed(() => {
-    if (profileStore.status === 'saving') {
-        return '저장 중';
-    }
-    return profileStore.profile?.completed ? '저장됨' : '첫 로그인';
-});
-const saveButtonLabel = computed(() => (profileStore.status === 'saving' ? '저장 중' : '저장하고 시작'));
+const skillInput = ref('');
+const roleOptions = ['프론트엔드', '백엔드', '데이터 엔지니어', 'AI/ML', '모바일', 'DevOps', 'PM', '디자인', 'QA', '기타'];
+const companyTypeOptions = ['대기업', '공공기관', '중견기업', '중소기업', '스타트업', '기타'];
+const industryOptions = ['IT/플랫폼', '제조', '금융', '커머스', '게임', '바이오/헬스', '미디어', '기타'];
+const regionOptions = ['서울', '경기', '인천', '대전', '부산', '대구', '광주', '제주', '원격(재택)'];
 
 onMounted(() => {
     void profileStore.loadProfile();
@@ -145,17 +168,32 @@ function toggleListValue(values, value) {
     values.push(value);
 }
 
+function addSkill() {
+    const nextSkill = skillInput.value.trim();
+    if (nextSkill && !form.skills.includes(nextSkill)) {
+        form.skills.push(nextSkill);
+    }
+    skillInput.value = '';
+}
+
+function removeSkill(skill) {
+    const index = form.skills.indexOf(skill);
+    if (index >= 0) {
+        form.skills.splice(index, 1);
+    }
+}
+
 async function saveOnboarding() {
     await profileStore.saveProfile({
         desiredRoles: form.desiredRoles,
         companyTypes: form.companyTypes,
-        industries: splitCsv(industryInput.value),
-        regions: splitCsv(regionInput.value),
+        industries: form.industries,
+        regions: form.regions,
         skills: form.skills,
         ssafy: form.ssafy
     });
     if (profileStore.status === 'ready') {
-        await router.push('/');
+        emit('completed');
     }
 }
 
@@ -169,11 +207,7 @@ async function skipOnboarding() {
         ssafy: false
     });
     if (profileStore.status === 'ready') {
-        await router.push('/');
+        emit('completed');
     }
-}
-
-function splitCsv(value) {
-    return value.split(',').map((item) => item.trim()).filter(Boolean);
 }
 </script>

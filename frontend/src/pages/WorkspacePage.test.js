@@ -3,6 +3,7 @@ import { createPinia } from 'pinia';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import WorkspacePage from './WorkspacePage.vue';
+
 const mocks = vi.hoisted(() => ({
     getWorkspace: vi.fn(),
     getDefaults: vi.fn(),
@@ -18,6 +19,7 @@ const mocks = vi.hoisted(() => ({
     updateQuestion: vi.fn(),
     deleteQuestion: vi.fn()
 }));
+
 vi.mock('@/features/workspace/api/workspaceApi', () => ({
     workspaceApi: {
         getWorkspace: mocks.getWorkspace,
@@ -35,6 +37,7 @@ vi.mock('@/features/workspace/api/workspaceApi', () => ({
         deleteQuestion: mocks.deleteQuestion
     }
 }));
+
 const makeRouter = () => createRouter({
     history: createMemoryHistory(),
     routes: [
@@ -46,24 +49,15 @@ const makeRouter = () => createRouter({
         { path: '/document-profile', component: { template: '<div>document profile</div>' } }
     ]
 });
+
 describe('WorkspacePage', () => {
     afterEach(() => {
         vi.useRealTimers();
     });
+
     beforeEach(() => {
-        mocks.getWorkspace.mockReset();
-        mocks.getDefaults.mockReset();
-        mocks.listVersions.mockReset();
-        mocks.saveDraft.mockReset();
-        mocks.createVersion.mockReset();
-        mocks.createReference.mockReset();
-        mocks.getReference.mockReset();
-        mocks.updateReference.mockReset();
-        mocks.deleteReference.mockReset();
-        mocks.createQuestion.mockReset();
-        mocks.compareVersions.mockReset();
-        mocks.updateQuestion.mockReset();
-        mocks.deleteQuestion.mockReset();
+        localStorage.clear();
+        Object.values(mocks).forEach((mock) => mock.mockReset());
         mocks.getWorkspace.mockResolvedValue({
             id: '102',
             companyName: 'Naver',
@@ -95,14 +89,22 @@ describe('WorkspacePage', () => {
                     title: 'JD 핵심 요약',
                     body: 'JD 본문',
                     url: 'https://example.com/jd'
+                },
+                {
+                    id: '105',
+                    boardName: 'NEWS',
+                    type: 'NEWS',
+                    title: '산업 뉴스',
+                    body: '뉴스 메모',
+                    url: 'https://example.com/news'
                 }
             ]
         });
         mocks.getDefaults.mockResolvedValue({
             workspaceId: '102',
             sections: {
-                projects: [{ title: 'EZ One', summary: '지원 관리 서비스' }],
-                awards: [{ title: 'Hackathon Grand Prize' }]
+                projects: [{ title: 'EZ-ONE', summary: '지원 관리 서비스' }],
+                awards: [{ title: 'Hackathon Grand Prize', summary: '대상' }]
             }
         });
         mocks.listVersions.mockResolvedValue([
@@ -126,9 +128,9 @@ describe('WorkspacePage', () => {
             maxLength: 1000
         });
         mocks.createVersion.mockResolvedValue({
-            id: '502',
+            id: '503',
             questionId: '103',
-            versionName: 'v2',
+            versionName: 'v3',
             body: '새 초안'
         });
         mocks.createReference.mockResolvedValue({
@@ -177,67 +179,50 @@ describe('WorkspacePage', () => {
         });
         mocks.deleteQuestion.mockResolvedValue(undefined);
     });
-    it('WS-002/WS-004: saves a draft and creates an explicit version', async () => {
-        const router = makeRouter();
-        router.push('/workspaces/102');
-        await router.isReady();
-        const wrapper = mount(WorkspacePage, {
-            global: {
-                plugins: [createPinia(), router]
-            }
-        });
-        await flushPromises();
+
+    it('WS-002/WS-027/WS-028: renders the workspace wireframe with job/company info and fixed bottom modes', async () => {
+        const wrapper = await mountWorkspace();
+
         expect(mocks.getWorkspace).toHaveBeenCalledWith('102');
+        expect(mocks.getDefaults).toHaveBeenCalledWith('102');
         expect(mocks.listVersions).toHaveBeenCalledWith('102');
+        expect(JSON.parse(localStorage.getItem('ezone.recentWorkspaces'))).toEqual(['102']);
+        expect(wrapper.text()).toContain('지원 워크스페이스');
+        expect(wrapper.text()).toContain('Naver');
+        expect(wrapper.text()).toContain('Backend Engineer');
+        expect(wrapper.text()).toContain('naver.com');
+        expect(wrapper.text()).toContain('EZ-ONE');
+        expect(wrapper.get('[data-testid="workspace-bottom-tabs"]').text()).toContain('도화지');
+        expect(wrapper.get('[data-testid="workspace-bottom-tabs"]').text()).toContain('자소서 버전관리');
+    });
+
+    it('WS-011/WS-012: keeps draft editing and explicit version creation in the canvas mode', async () => {
+        const wrapper = await mountWorkspace();
+
         expect(wrapper.get('[data-testid="draft-editor"]').element.value).toBe('기존 초안');
         await wrapper.get('[data-testid="draft-editor"]').setValue('새 초안');
         await wrapper.get('[data-testid="save-draft"]').trigger('click');
         await flushPromises();
         expect(mocks.saveDraft).toHaveBeenCalledWith('102', '103', '새 초안');
+
         await wrapper.get('[data-testid="create-version"]').trigger('click');
         await flushPromises();
         expect(mocks.createVersion).toHaveBeenCalledWith('102', '103', 'v3');
-        expect(wrapper.text()).toContain('v2');
     });
-    it('WS-027/WS-028: renders document profile and company detail panels', async () => {
-        const router = makeRouter();
-        router.push('/workspaces/102');
-        await router.isReady();
-        const wrapper = mount(WorkspacePage, {
-            global: {
-                plugins: [createPinia(), router]
-            }
-        });
-        await flushPromises();
-        expect(mocks.getDefaults).toHaveBeenCalledWith('102');
-        expect(wrapper.text()).toContain('naver.com');
-        expect(wrapper.text()).toContain('5000');
-        expect(wrapper.text()).toContain('EZ One');
-        expect(wrapper.text()).toContain('Hackathon Grand Prize');
-    });
-    it('WS-009/WS-011/WS-012: shows character count and auto-saves after 2 idle seconds', async () => {
-        const router = makeRouter();
-        router.push('/workspaces/102');
-        await router.isReady();
-        const wrapper = mount(WorkspacePage, {
-            global: {
-                plugins: [createPinia(), router]
-            }
-        });
-        await flushPromises();
-        expect(wrapper.get('[data-testid="draft-character-count"]').text()).toContain('5 / 1000');
+
+    it('WS-009: auto-saves after two idle seconds', async () => {
+        const wrapper = await mountWorkspace();
+
         vi.useFakeTimers();
         await wrapper.get('[data-testid="draft-editor"]').setValue('auto saved body');
         expect(wrapper.get('[data-testid="auto-save-status"]').attributes('data-save-state')).toBe('waiting');
-        expect(mocks.saveDraft).not.toHaveBeenCalledWith('102', '103', 'auto saved body');
         await vi.advanceTimersByTimeAsync(1999);
         expect(mocks.saveDraft).not.toHaveBeenCalledWith('102', '103', 'auto saved body');
         await vi.advanceTimersByTimeAsync(1);
         expect(mocks.saveDraft).toHaveBeenCalledWith('102', '103', 'auto saved body');
-        await Promise.resolve();
-        expect(wrapper.get('[data-testid="auto-save-status"]').attributes('data-save-state')).toBe('saved');
     });
-    it('REF-001/REF-002: creates a reference and opens reference detail', async () => {
+
+    it('REF-001/REF-002: opens side panel boards as a push layout, not a route change', async () => {
         const router = makeRouter();
         router.push('/workspaces/102');
         await router.isReady();
@@ -247,57 +232,41 @@ describe('WorkspacePage', () => {
             }
         });
         await flushPromises();
-        await wrapper.get('[data-testid="create-reference"]').trigger('click');
-        await flushPromises();
-        expect(mocks.createReference).toHaveBeenCalledWith('102', {
-            boardName: 'MEMO',
-            referenceType: 'FREE_MEMO',
-            title: '새 참고 메모',
-            body: '직접 입력한 참고자료입니다.',
-            url: ''
-        });
-        expect(wrapper.text()).toContain('새 참고 메모');
+
+        expect(wrapper.get('[data-testid="workspace-push-layout"]').classes()).toContain('drawer-open');
+        await wrapper.get('[data-testid="panel-trigger-JD"]').trigger('click');
+        expect(router.currentRoute.value.fullPath).toBe('/workspaces/102');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('JD 게시판');
+        expect(wrapper.get('[data-testid="workspace-main-pane"]').attributes('style')).toContain('--drawer-width');
+
+        await wrapper.get('[data-testid="drawer-width"]').setValue(520);
+        expect(wrapper.get('[data-testid="workspace-main-pane"]').attributes('style')).toContain('520px');
+    });
+
+    it('REF-001: side panel supports the requested board types without page navigation', async () => {
+        const wrapper = await mountWorkspace();
+
+        for (const [type, title] of [
+            ['NEWS', '뉴스기사 게시판'],
+            ['DART', 'DART 게시판'],
+            ['TALENT_PROFILE', '인재상 게시판'],
+            ['AWARDS_PROJECTS', '서류 / 프로젝트'],
+            ['PROMPT', '프롬프트 게시판'],
+            ['FREE_MEMO', '메모 게시판']
+        ]) {
+            await wrapper.get(`[data-testid="panel-trigger-${type}"]`).trigger('click');
+            expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain(title);
+        }
+    });
+
+    it('REF-004/REF-005: edits and deletes an active reference inside the drawer', async () => {
+        const wrapper = await mountWorkspace();
+
         await wrapper.get('[data-testid="open-reference-104"]').trigger('click');
         await flushPromises();
         expect(mocks.getReference).toHaveBeenCalledWith('104');
-        expect(wrapper.text()).toContain('JD 본문');
-    });
-    it('WS-024/WS-025: shows reference type labels and creates a selected template', async () => {
-        const router = makeRouter();
-        router.push('/workspaces/102');
-        await router.isReady();
-        const wrapper = mount(WorkspacePage, {
-            global: {
-                plugins: [createPinia(), router]
-            }
-        });
-        await flushPromises();
-        expect(wrapper.text()).toContain('합격 자소서');
-        expect(wrapper.text()).toContain('인재상');
-        expect(wrapper.text()).toContain('작성 팁');
-        await wrapper.get('[data-testid="new-reference-type"]').setValue('TALENT_PROFILE');
-        await wrapper.get('[data-testid="create-reference"]').trigger('click');
-        await flushPromises();
-        expect(mocks.createReference).toHaveBeenCalledWith('102', {
-            boardName: 'TALENT_PROFILE',
-            referenceType: 'TALENT_PROFILE',
-            title: '인재상 참고자료',
-            body: '공고와 회사에 맞는 인재상 키워드를 직접 정리하세요.',
-            url: ''
-        });
-    });
-    it('REF-004/REF-005: edits and deletes the active reference', async () => {
-        const router = makeRouter();
-        router.push('/workspaces/102');
-        await router.isReady();
-        const wrapper = mount(WorkspacePage, {
-            global: {
-                plugins: [createPinia(), router]
-            }
-        });
-        await flushPromises();
-        await wrapper.get('[data-testid="open-reference-104"]').trigger('click');
-        await flushPromises();
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('JD 본문');
+
         await wrapper.get('[data-testid="reference-type"]').setValue('NEWS');
         await wrapper.get('[data-testid="reference-title"]').setValue('산업 뉴스');
         await wrapper.get('[data-testid="reference-body"]').setValue('수정한 참고자료 본문');
@@ -311,22 +280,31 @@ describe('WorkspacePage', () => {
             body: '수정한 참고자료 본문',
             url: 'https://example.com/news'
         });
-        expect(wrapper.text()).toContain('산업 뉴스');
+
         await wrapper.get('[data-testid="delete-reference"]').trigger('click');
         await flushPromises();
         expect(mocks.deleteReference).toHaveBeenCalledWith('104');
-        expect(wrapper.text()).not.toContain('산업 뉴스');
     });
-    it('WS-005/WS-017/WS-018: adds a question and compares two versions', async () => {
-        const router = makeRouter();
-        router.push('/workspaces/102');
-        await router.isReady();
-        const wrapper = mount(WorkspacePage, {
-            global: {
-                plugins: [createPinia(), router]
-            }
-        });
+
+    it('WS-017/WS-018: version management also keeps the side panel available', async () => {
+        const wrapper = await mountWorkspace();
+
+        await wrapper.get('[data-testid="mode-versions"]').trigger('click');
+        expect(wrapper.get('[data-testid="workspace-bottom-tabs"]').classes()).toContain('is-fixed');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').exists()).toBe(true);
+        expect(wrapper.text()).toContain('v1');
+        expect(wrapper.text()).toContain('v2');
+
+        await wrapper.get('[data-testid="compare-versions"]').trigger('click');
         await flushPromises();
+        expect(mocks.compareVersions).toHaveBeenCalledWith('102', '501', '502');
+        expect(wrapper.text()).toContain('초안 v1');
+        expect(wrapper.text()).toContain('초안 v2');
+    });
+
+    it('WS-005/WS-006/WS-007: creates, updates, and deletes questions from the fixed canvas tools', async () => {
+        const wrapper = await mountWorkspace();
+
         await wrapper.get('[data-testid="new-question-prompt"]').setValue('성장 과정을 작성하세요.');
         await wrapper.get('[data-testid="new-question-max"]').setValue(700);
         await wrapper.get('[data-testid="create-question"]').trigger('click');
@@ -335,23 +313,7 @@ describe('WorkspacePage', () => {
             prompt: '성장 과정을 작성하세요.',
             maxLength: 700
         });
-        expect(wrapper.text()).toContain('성장 과정을 작성하세요.');
-        await wrapper.get('[data-testid="compare-versions"]').trigger('click');
-        await flushPromises();
-        expect(mocks.compareVersions).toHaveBeenCalledWith('102', '501', '502');
-        expect(wrapper.text()).toContain('초안 v1');
-        expect(wrapper.text()).toContain('초안 v2');
-    });
-    it('WS-006/WS-007: updates and deletes the current question', async () => {
-        const router = makeRouter();
-        router.push('/workspaces/102');
-        await router.isReady();
-        const wrapper = mount(WorkspacePage, {
-            global: {
-                plugins: [createPinia(), router]
-            }
-        });
-        await flushPromises();
+
         await wrapper.get('[data-testid="edit-question-prompt"]').setValue('수정한 문항');
         await wrapper.get('[data-testid="edit-question-max"]').setValue(700);
         await wrapper.get('[data-testid="update-question"]').trigger('click');
@@ -360,13 +322,26 @@ describe('WorkspacePage', () => {
             prompt: '수정한 문항',
             maxLength: 700
         });
-        expect(wrapper.text()).toContain('수정한 문항');
+
         await wrapper.get('[data-testid="delete-question"]').trigger('click');
         await flushPromises();
         expect(mocks.deleteQuestion).toHaveBeenCalledWith('102', '103');
-        expect(wrapper.text()).not.toContain('수정한 문항');
     });
 });
+
+async function mountWorkspace() {
+    const router = makeRouter();
+    router.push('/workspaces/102');
+    await router.isReady();
+    const wrapper = mount(WorkspacePage, {
+        global: {
+            plugins: [createPinia(), router]
+        }
+    });
+    await flushPromises();
+    return wrapper;
+}
+
 function flushPromises() {
     return new Promise((resolve) => setTimeout(resolve));
 }

@@ -7,14 +7,20 @@ describe('router', () => {
         const routeNames = router.getRoutes().map((route) => route.name);
         expect(routeNames).toContain('login');
         expect(routeNames).toContain('extension-connect');
-        expect(routeNames).toContain('onboarding');
+        expect(routeNames).not.toContain('onboarding');
         expect(routeNames).toContain('main');
         expect(routeNames).toContain('basket');
         expect(routeNames).toContain('basket-detail');
         expect(routeNames).toContain('workspace');
         expect(routeNames).toContain('document-profile');
         expect(routeNames).toContain('recommendations');
-        expect(routeNames).toContain('notion-settings');
+        expect(routeNames).toContain('mypage-account');
+        expect(routeNames).toContain('mypage-notion');
+        expect(routeNames).toContain('mypage-onboarding');
+        expect(routeNames).toContain('mypage-qna');
+        expect(routeNames).toContain('mypage-inquiry');
+        expect(routeNames).toContain('mypage-partnership');
+        expect(routeNames).toContain('mypage-terms');
     });
     it('uses / as the authenticated dashboard and /login as the public login page', () => {
         const routes = router.getRoutes();
@@ -40,7 +46,7 @@ describe('router', () => {
         await router.push('/basket');
         expect(router.currentRoute.value.name).toBe('basket');
     });
-    it('redirects first-login users to onboarding before protected work pages', async () => {
+    it('redirects first-login users to the main page so onboarding can open as a modal', async () => {
         localStorage.setItem('ezone.accessToken', 'test-token');
         localStorage.setItem('ezone.currentUser', JSON.stringify({
             id: 1,
@@ -50,9 +56,9 @@ describe('router', () => {
             profileCompleted: false
         }));
         await router.push('/document-profile');
-        expect(router.currentRoute.value.name).toBe('onboarding');
+        expect(router.currentRoute.value.name).toBe('main');
     });
-    it('sends authenticated first-login users from login to onboarding', async () => {
+    it('sends authenticated first-login users from login to the main page modal host', async () => {
         localStorage.setItem('ezone.accessToken', 'test-token');
         localStorage.setItem('ezone.currentUser', JSON.stringify({
             id: 1,
@@ -62,7 +68,7 @@ describe('router', () => {
             profileCompleted: false
         }));
         await router.push('/login');
-        expect(router.currentRoute.value.name).toBe('onboarding');
+        expect(router.currentRoute.value.name).toBe('main');
     });
     it('sends authenticated users from extension login redirect to the extension connect page', async () => {
         localStorage.setItem('ezone.accessToken', 'test-token');

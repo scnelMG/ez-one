@@ -1,6 +1,6 @@
-# EZ One Backend
+# EZ-ONE Backend
 
-Spring Boot 기반의 EZ One REST API 서버입니다.
+Spring Boot 기반의 EZ-ONE REST API 서버입니다.
 
 ## 역할
 
@@ -35,7 +35,7 @@ GET /api/health
 
 ## AUTH-001 Google 로그인 구현
 
-EZ One은 프론트엔드에서 Google OAuth authorization code를 받고, 백엔드가 그 code를 Google에 교환하는 방식으로 로그인합니다.
+EZ-ONE은 프론트엔드에서 Google OAuth authorization code를 받고, 백엔드가 그 code를 Google에 교환하는 방식으로 로그인합니다.
 
 흐름:
 

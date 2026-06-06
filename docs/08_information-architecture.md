@@ -1,14 +1,14 @@
 # 08. Information Architecture
 
-이 문서는 사용자가 제공한 전체 IA 이미지를 기준으로 EZ One의 정보구조를 정리한 canonical 문서다. P1 구현 범위와 완료 기준은 `docs/04_requirements.md`와 `docs/23_traceability.md`를 우선한다. P2/IA-only 항목은 화면 구조에는 남기되 명시 승인 전 활성 구현하지 않는다.
+이 문서는 사용자가 제공한 전체 IA 이미지를 기준으로 EZ-ONE의 정보구조를 정리한 canonical 문서다. P1 구현 범위와 완료 기준은 `docs/04_requirements.md`와 `docs/23_traceability.md`를 우선한다. P2/IA-only 항목은 화면 구조에는 남기되 명시 승인 전 활성 구현하지 않는다.
 
 ## 기준 이미지
 
-- 기준 원본: 사용자가 제공한 EZ One 전체 IA 이미지 `MVP IA.svg`
+- 기준 원본: 사용자가 제공한 EZ-ONE 전체 IA 이미지 `MVP IA.svg`
 - 범위: 웹 서비스 로그인 영역, 비로그인 영역, Chrome Extension 브라우저 사이드 패널
 - 목적: 전체 제품 메뉴 구조와 하위 기능 설명을 한 문서에서 확인한다.
 
-![EZ One MVP IA](assets/ia/mvp-ia.svg)
+![EZ-ONE MVP IA](assets/ia/mvp-ia.svg)
 
 ## 전체 IA 사이트맵
 

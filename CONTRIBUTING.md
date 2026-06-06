@@ -1,6 +1,6 @@
 # Contributing
 
-This document defines how people contribute code and docs to EZ One. Agent-specific rules live in `AGENTS.md`.
+This document defines how people contribute code and docs to EZ-ONE. Agent-specific rules live in `AGENTS.md`.
 
 ## Before You Start
 

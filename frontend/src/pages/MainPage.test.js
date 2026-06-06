@@ -2,13 +2,77 @@ import { mount } from '@vue/test-utils';
 import { createPinia } from 'pinia';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { basketApi } from '@/features/basket/api/basketApi';
 import { dashboardApi } from '@/features/dashboard/api/dashboardApi';
+import { profileApi } from '@/features/profile/api/profileApi';
+import { recommendationApi } from '@/features/recommendations/api/recommendationApi';
 import MainPage from './MainPage.vue';
+
+vi.mock('@/features/basket/api/basketApi', () => ({
+    basketApi: {
+        listJobs: vi.fn()
+    }
+}));
+
 vi.mock('@/features/dashboard/api/dashboardApi', () => ({
     dashboardApi: {
         getSummary: vi.fn()
     }
 }));
+
+vi.mock('@/features/profile/api/profileApi', () => ({
+    profileApi: {
+        getUserProfile: vi.fn(),
+        saveUserProfile: vi.fn()
+    }
+}));
+
+vi.mock('@/features/recommendations/api/recommendationApi', () => ({
+    recommendationApi: {
+        listJobs: vi.fn(),
+        saveJob: vi.fn()
+    }
+}));
+
+const defaultBasketJobs = [
+    {
+        id: '101',
+        companyName: 'Naver',
+        positionTitle: 'Backend Engineer',
+        status: 'IN_PROGRESS',
+        statusLabel: '진행 중',
+        deadlineLabel: '2026.06.07',
+        deadlineDate: '2026-06-07',
+        deadlineSoon: true,
+        workspaceId: '102',
+        sourceUrl: 'https://www.jasoseol.com/'
+    },
+    {
+        id: '104',
+        companyName: 'KakaoPay',
+        positionTitle: 'Server Developer',
+        status: 'NOT_STARTED',
+        statusLabel: '지원 전',
+        deadlineLabel: '2026.06.12',
+        deadlineDate: '2026-06-12',
+        deadlineSoon: true,
+        workspaceId: '105',
+        sourceUrl: 'https://www.jasoseol.com/'
+    },
+    {
+        id: '106',
+        companyName: 'Line',
+        positionTitle: 'Frontend Engineer',
+        status: 'NOT_APPLIED',
+        statusLabel: '미지원',
+        deadlineLabel: '2026.06.20',
+        deadlineDate: '2026-06-20',
+        deadlineSoon: false,
+        workspaceId: '108',
+        sourceUrl: 'https://www.jasoseol.com/'
+    }
+];
+
 const defaultDashboardResponse = {
     summary: {
         totalApplications: 3,
@@ -16,41 +80,87 @@ const defaultDashboardResponse = {
         notStarted: 1,
         deadlineSoon: 2
     },
-    todayJobs: [
-        {
-            companyName: '네이버',
-            positionTitle: 'Backend Engineer',
-            deadlineLabel: '2026.06.06',
-            workspaceId: '102'
-        },
-        {
-            companyName: 'Future Corp',
-            positionTitle: 'Platform Engineer',
-            deadlineLabel: '2026.06.20',
-            workspaceId: '108'
-        }
-    ]
+    todayJobs: []
 };
+
+const defaultRecommendationJobs = [
+    {
+        id: 'r-1',
+        companyName: 'Toss',
+        positionTitle: 'Frontend Developer',
+        deadlineLabel: 'D-3',
+        workspaceId: null
+    },
+    {
+        id: 'r-2',
+        companyName: 'Danggeun',
+        positionTitle: 'Server Engineer',
+        deadlineLabel: 'D-5',
+        workspaceId: null
+    },
+    {
+        id: 'r-3',
+        companyName: 'Coupang',
+        positionTitle: 'Platform Engineer',
+        deadlineLabel: 'D-7',
+        workspaceId: null
+    },
+    {
+        id: 'r-4',
+        companyName: 'Woowa Bros',
+        positionTitle: 'Product Engineer',
+        deadlineLabel: 'D-9',
+        workspaceId: null
+    }
+];
+
 const makeRouter = () => createRouter({
     history: createMemoryHistory(),
     routes: [
         { path: '/main', component: MainPage },
-        { path: '/login', component: { template: '<div>로그인</div>' } },
-        { path: '/basket', component: { template: '<div>공고 장바구니</div>' } },
-        { path: '/mypage', component: { template: '<div>마이페이지</div>' } },
-        { path: '/workspaces/:workspaceId', component: { template: '<div>워크스페이스</div>' } },
-        { path: '/recommendations', component: { template: '<div>추천 공고</div>' } },
-        { path: '/document-profile', component: { template: '<div>서류 정보</div>' } },
-        { path: '/mypage/notion', component: { template: '<div>Notion</div>' } }
+        { path: '/login', component: { template: '<div>login</div>' } },
+        { path: '/basket', component: { template: '<div>basket</div>' } },
+        { path: '/mypage', component: { template: '<div>mypage</div>' } },
+        { path: '/workspaces/:workspaceId', component: { template: '<div>workspace</div>' } },
+        { path: '/recommendations', component: { template: '<div>recommendations</div>' } },
+        { path: '/document-profile', component: { template: '<div>document profile</div>' } },
+        { path: '/mypage/notion', component: { template: '<div>notion</div>' } }
     ]
 });
+
 describe('MainPage', () => {
     beforeEach(() => {
         localStorage.clear();
+        vi.mocked(basketApi.listJobs).mockReset();
+        vi.mocked(basketApi.listJobs).mockResolvedValue(defaultBasketJobs);
         vi.mocked(dashboardApi.getSummary).mockReset();
         vi.mocked(dashboardApi.getSummary).mockResolvedValue(defaultDashboardResponse);
+        vi.mocked(profileApi.getUserProfile).mockReset();
+        vi.mocked(profileApi.getUserProfile).mockResolvedValue({
+            desiredRoles: [],
+            companyTypes: [],
+            industries: [],
+            regions: [],
+            skills: [],
+            ssafy: false,
+            completed: false
+        });
+        vi.mocked(profileApi.saveUserProfile).mockReset();
+        vi.mocked(profileApi.saveUserProfile).mockResolvedValue({
+            desiredRoles: ['프론트엔드'],
+            companyTypes: ['중견기업'],
+            industries: ['IT/플랫폼'],
+            regions: ['서울'],
+            skills: ['React'],
+            ssafy: false,
+            completed: true
+        });
+        vi.mocked(recommendationApi.listJobs).mockReset();
+        vi.mocked(recommendationApi.listJobs).mockResolvedValue(defaultRecommendationJobs);
+        vi.mocked(recommendationApi.saveJob).mockReset();
     });
-    it('DASH-001: renders the Korean P1 dashboard route shell with core flow links', async () => {
+
+    it('DASH-001/MAIN-013: renders the wireframe dashboard without the left rail or top filters', async () => {
         localStorage.setItem('ezone.currentUser', JSON.stringify({
             id: 1,
             email: 'user@example.com',
@@ -58,114 +168,120 @@ describe('MainPage', () => {
             nickname: '길동',
             profileCompleted: true
         }));
-        const router = makeRouter();
-        router.push('/main');
-        await router.isReady();
-        const wrapper = mount(MainPage, {
-            global: {
-                plugins: [createPinia(), router]
-            }
-        });
-        await new Promise((resolve) => setTimeout(resolve));
+        const wrapper = await mountMain();
+
         expect(wrapper.text()).toContain('오늘의 지원 흐름');
-        expect(wrapper.text()).toContain('오늘 마감');
         expect(wrapper.text()).toContain('공고 장바구니');
-        expect(wrapper.text()).not.toMatch(/DASH-|JOB-|REC-/);
+        expect(wrapper.text()).toContain('추천공고');
+        expect(wrapper.find('.dashboard-rail').exists()).toBe(false);
+        expect(wrapper.find('.filter-bar').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="member-chip"]').exists()).toBe(false);
+        expect(wrapper.text()).not.toContain('오늘 챙겨볼 공고');
+        expect(wrapper.text()).not.toContain('이번 주 마감 공고');
+        expect(wrapper.text()).not.toContain('진행 상황 요약');
+        expect(wrapper.text()).not.toContain('마감 관리');
+        expect(wrapper.text()).not.toContain('프로필 기반');
+
         const links = wrapper.findAll('a').map((link) => link.attributes('href'));
         expect(links).toContain('/basket');
-        expect(links).toContain('/basket?status=IN_PROGRESS');
         expect(links).toContain('/basket?sort=deadline');
+        expect(links).not.toContain('/basket?status=IN_PROGRESS');
         expect(links).toContain('/workspaces/102');
     });
-    it('AUTH-013: shows the signed-in member chip with nickname before name', async () => {
-        localStorage.setItem('ezone.currentUser', JSON.stringify({
-            id: 1,
-            email: 'user@example.com',
-            name: '홍길동',
-            nickname: '길동',
-            profileCompleted: true
-        }));
-        const router = makeRouter();
-        router.push('/main');
-        await router.isReady();
-        const wrapper = mount(MainPage, {
-            global: {
-                plugins: [createPinia(), router]
-            }
-        });
-        expect(wrapper.get('[data-testid="member-chip"]').text()).toContain('길동');
-        expect(wrapper.get('[data-testid="member-avatar"]').text()).toBe('길');
-        expect(wrapper.get('[data-testid="member-chip"]').attributes('href')).toBe('/mypage');
+
+    it('MAIN-006/MAIN-007: fixes the main basket preview to nearest deadlines and marks recent workspaces', async () => {
+        localStorage.setItem('ezone.recentWorkspaces', JSON.stringify(['102']));
+        const wrapper = await mountMain();
+
+        const rows = wrapper.findAll('[data-testid="main-basket-preview-job"]');
+        expect(rows).toHaveLength(3);
+        expect(rows.map((row) => row.text())).toEqual([
+            'NaverBackend Engineer진행 중2026.06.07최근 방문',
+            'KakaoPayServer Developer지원 전2026.06.12',
+            'LineFrontend Engineer미지원2026.06.20'
+        ]);
     });
-    it('AUTH-013: falls back to the Google account name when nickname is empty', async () => {
+
+    it('REC-001/DASH-001: previews a few jobs from the recommendation page data', async () => {
+        const wrapper = await mountMain();
+
+        expect(recommendationApi.listJobs).toHaveBeenCalled();
+        const cards = wrapper.findAll('[data-testid="main-recommendation-preview-job"]');
+        expect(cards).toHaveLength(4);
+        expect(cards.map((card) => card.text())).toEqual([
+            'D-3TossFrontend Developer',
+            'D-5DanggeunServer Engineer',
+            'D-7CoupangPlatform Engineer',
+            'D-9Woowa BrosProduct Engineer'
+        ]);
+        expect(wrapper.text()).not.toContain('지원 현황');
+        expect(wrapper.text()).not.toContain('오늘 마감');
+        expect(wrapper.text()).not.toContain('프로필 기반');
+    });
+
+    it('DASH-001: shows dummy-backed dashboard statistics from the API summary', async () => {
+        const wrapper = await mountMain();
+
+        expect(wrapper.get('[data-testid="metric-total"]').text()).toContain('3');
+        expect(wrapper.get('[data-testid="metric-deadline"]').text()).toContain('2');
+        expect(wrapper.get('[data-testid="metric-progress"]').text()).toContain('1');
+        expect(wrapper.get('[data-testid="metric-not-started"]').text()).toContain('1');
+    });
+
+    it('ONB-001: opens onboarding as a floating modal only for first-login users', async () => {
         localStorage.setItem('ezone.currentUser', JSON.stringify({
             id: 1,
-            email: 'user@example.com',
-            name: 'Hong Gil Dong',
+            email: 'first@example.com',
+            name: 'First User',
+            nickname: '',
+            profileCompleted: false
+        }));
+        const wrapper = await mountMain();
+
+        const modal = wrapper.get('[data-testid="onboarding-modal"]');
+        expect(modal.text()).toContain('맞춤 공고 추천 정보 입력');
+        expect(modal.text()).toContain('희망 직무');
+        expect(modal.text()).toContain('보유 스킬');
+        expect(wrapper.find('.onboarding-modal-backdrop').exists()).toBe(true);
+        await wrapper.get('[data-testid="onboarding-skill-input"]').setValue('React');
+        await wrapper.get('[data-testid="onboarding-skill-input"]').trigger('keyup.enter');
+        await wrapper.get('[data-testid="save-onboarding"]').trigger('click');
+        await flushPromises();
+        expect(profileApi.saveUserProfile).toHaveBeenCalledWith(expect.objectContaining({
+            desiredRoles: expect.arrayContaining(['프론트엔드']),
+            skills: expect.arrayContaining(['React'])
+        }));
+        expect(wrapper.find('[data-testid="onboarding-modal"]').exists()).toBe(false);
+    });
+
+    it('ONB-001: does not show onboarding after the profile is completed', async () => {
+        localStorage.setItem('ezone.currentUser', JSON.stringify({
+            id: 1,
+            email: 'done@example.com',
+            name: 'Done User',
             nickname: '',
             profileCompleted: true
         }));
-        const router = makeRouter();
-        router.push('/main');
-        await router.isReady();
-        const wrapper = mount(MainPage, {
-            global: {
-                plugins: [createPinia(), router]
-            }
-        });
-        expect(wrapper.get('[data-testid="member-chip"]').text()).toContain('Hong Gil Dong');
-        expect(wrapper.get('[data-testid="member-avatar"]').text()).toBe('H');
-    });
-    it('MAIN-014/MAIN-015: shows this week deadline jobs and links them to workspaces', async () => {
-        const router = makeRouter();
-        router.push('/main');
-        await router.isReady();
-        const wrapper = mount(MainPage, {
-            global: {
-                plugins: [createPinia(), router]
-            }
-        });
-        await new Promise((resolve) => setTimeout(resolve));
-        const calendar = wrapper.get('[data-testid="main-weekly-calendar"]');
-        expect(calendar.text()).toContain('네이버');
-        expect(calendar.text()).not.toContain('Future Corp');
-        expect(wrapper.get('[data-testid="weekly-calendar-job-102"]').attributes('href')).toBe('/workspaces/102');
-    });
-    it('MAIN-006/MAIN-007: shows five nearest deadline jobs and highlights jobs due within a week', async () => {
-        vi.mocked(dashboardApi.getSummary).mockResolvedValueOnce({
-            summary: {
-                totalApplications: 6,
-                inProgress: 2,
-                notStarted: 4,
-                deadlineSoon: 4
-            },
-            todayJobs: [
-                { companyName: 'D9 Corp', positionTitle: 'Backend', deadlineLabel: 'D-9', workspaceId: '109' },
-                { companyName: 'D1 Corp', positionTitle: 'Backend', deadlineLabel: 'D-1', workspaceId: '101' },
-                { companyName: 'D10 Corp', positionTitle: 'Backend', deadlineLabel: 'D-10', workspaceId: '110' },
-                { companyName: 'D3 Corp', positionTitle: 'Backend', deadlineLabel: 'D-3', workspaceId: '103' },
-                { companyName: 'D7 Corp', positionTitle: 'Backend', deadlineLabel: 'D-7', workspaceId: '107' },
-                { companyName: 'D2 Corp', positionTitle: 'Backend', deadlineLabel: 'D-2', workspaceId: '102' }
-            ]
-        });
-        const router = makeRouter();
-        router.push('/main');
-        await router.isReady();
-        const wrapper = mount(MainPage, {
-            global: {
-                plugins: [createPinia(), router]
-            }
-        });
-        await new Promise((resolve) => setTimeout(resolve));
-        const rows = wrapper.findAll('[data-testid="deadline-summary-job"]');
-        expect(rows).toHaveLength(5);
-        expect(rows.map((row) => row.text())).toEqual([
-            'D1 CorpBackendD-1',
-            'D2 CorpBackendD-2',
-            'D3 CorpBackendD-3',
-            'D7 CorpBackendD-7',
-            'D9 CorpBackendD-9'
-        ]);
-        expect(rows.filter((row) => row.classes('is-deadline-soon'))).toHaveLength(4);
+        const wrapper = await mountMain();
+
+        expect(wrapper.find('[data-testid="onboarding-modal"]').exists()).toBe(false);
+        expect(profileApi.getUserProfile).not.toHaveBeenCalled();
     });
 });
+
+async function mountMain() {
+    const router = makeRouter();
+    router.push('/main');
+    await router.isReady();
+    const wrapper = mount(MainPage, {
+        global: {
+            plugins: [createPinia(), router]
+        }
+    });
+    await flushPromises();
+    return wrapper;
+}
+
+function flushPromises() {
+    return new Promise((resolve) => setTimeout(resolve));
+}

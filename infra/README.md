@@ -1,4 +1,4 @@
-# EZ One Infra
+# EZ-ONE Infra
 
 배포와 운영 자산을 관리하는 디렉터리다.
 

@@ -1,6 +1,6 @@
 # 30. 2인 팀 협업 규칙
 
-이 문서는 EZ One을 2명이 함께 개발할 때의 작업 약속을 정의한다.
+이 문서는 EZ-ONE을 2명이 함께 개발할 때의 작업 약속을 정의한다.
 
 `CONTRIBUTING.md`, `AGENTS.md`, `docs/23_traceability.md`와 함께 사용한다.
 

@@ -9,7 +9,7 @@
 - 최종 와이어프레임 PDF: `docs/assets/wireframes/ez_one_wireframe_final.pdf`
 - 최종 반영본: 사용자가 전달한 `EZ-ONE 와이어프레임 (8).pdf`를 `2026-06-04`에 위 경로로 교체했다.
 - 최종 PDF SHA-256: `BA4FF007D1078C0CF8969DFE1E0D6566FBBA5626D4CAD9D7D09FF2AA508FF43D`
-- Figma: [EZ One](https://www.figma.com/design/gmDOGDBDih2eqBJ6LzZDL5/EZ-One?node-id=0-1&p=f&m=draw)
+- Figma: [EZ-ONE](https://www.figma.com/design/gmDOGDBDih2eqBJ6LzZDL5/EZ-ONE?node-id=0-1&p=f&m=draw)
 - UI 포인트 색상은 로고의 보라 계열 `#6D4DFF`, `#7A5CFF`를 기준으로 한다. 와이어프레임의 정보구조와 요소 수를 우선하고, 색상은 CTA, 포커스, 선택 상태에만 제한적으로 적용한다.
 - P1 핵심 흐름: `공고 저장 -> 장바구니 -> 지원 워크스페이스 -> 참고자료/자소서 작성 -> 서류 입력 정보 재사용`
 - 전체 IA 원본은 `docs/08_information-architecture.md`를 기준으로 한다.
@@ -17,7 +17,7 @@
 
 ## 최종 와이어프레임
 
-![EZ One final wireframe](assets/wireframes/ez_one_wireframe_final.png)
+![EZ-ONE final wireframe](assets/wireframes/ez_one_wireframe_final.png)
 
 ## IA 기준 Navigation Map
 
@@ -27,7 +27,7 @@
 | --- | --- | --- | --- | --- | --- |
 | 비로그인 영역 | 서비스 소개 / 로그인 Google | `/login` | `LoginPage` | Yes | 공개 랜딩에서 서비스 소개 후 Google OAuth 로그인 |
 | 비로그인 영역 | 회원가입 | `/login` | `GoogleLoginButton` | Yes | 별도 회원가입 form 없이 `Google로 시작하기`로 진입 |
-| 웹 서비스 | 온보딩 모달 | `/onboarding` 또는 modal | `OnboardingPage`, `PreferenceForm` | Yes | 최초 로그인 시 표시, 마이페이지에서 수정 |
+| 웹 서비스 | 온보딩 모달 | `/` modal | `OnboardingPage`, `PreferenceForm` | Yes | 최초 로그인 시 메인 위 floating modal로 표시, 마이페이지에서 수정 |
 | 웹 서비스 | 메인 페이지 | `/` | `MainPage` | Yes | 대시보드/장바구니/추천/서류 입력 정보 진입 |
 | 메인 페이지 | 지원 현황 대시보드 | `/` | `DashboardSummaryCards` | Yes | 지원완료, 마감임박, 진행중, 지원 전, 유저 대비 상위% |
 | 메인 페이지 | 공고 장바구니 미리보기 | `/` | `BasketPreview` | Yes | 마감순, D-7 강조 |
@@ -35,15 +35,15 @@
 | 공고 장바구니 | 공고 목록 | `/basket` | `BasketPage`, `BasketJobTable` | Yes | 회사, 직무, 상태, 마감, 링크 |
 | 공고 장바구니 | 캘린더 / 주간 일정 | `/basket` 상단 section | `BasketCalendarPanel` | Yes | 최종 와이어프레임 기준으로 장바구니 화면에 노출. 별도 알림/외부 캘린더 연동은 P2 |
 | 공고 장바구니 | 노션 자동 동기화 | `/mypage/notion` 또는 save side effect | `NotionSettingsPage`, `SyncLogList` | Yes | P1은 공고 저장 `JOB_ONLY` |
-| 지원 워크스페이스 | 도화지 | `/workspaces/:workspaceId?tab=canvas` | `CanvasTab` | Yes | 마크다운, 문항별 작성, 글자 수 |
-| 지원 워크스페이스 | 자소서 버전관리 | `/workspaces/:workspaceId?tab=versions` | `VersionsTab` | Yes | V1/V2 비교, 변경 이력 |
-| 지원 워크스페이스 | 참고자료 | `/workspaces/:workspaceId?tab=references` | `ReferencesTab`, `ReferenceSidePanel` | Yes | 게시판별 수동 입력/열람 |
+| 지원 워크스페이스 | 도화지 | `/workspaces/:workspaceId` inline mode | `CanvasTab` | Yes | 마크다운, 문항별 작성, 글자 수. 하단 고정 모드 전환 |
+| 지원 워크스페이스 | 자소서 버전관리 | `/workspaces/:workspaceId` inline mode | `VersionsTab` | Yes | V1/V2 비교, 변경 이력. 하단 고정 모드 전환 |
+| 지원 워크스페이스 | 참고자료 | `/workspaces/:workspaceId` push drawer | `ReferenceSidePanel` | Yes | 게시판별 수동 입력/열람. 개별 페이지 이동 없이 inline drawer로 열림 |
 | 참고자료 | JD 게시판 | workspace tab | `ReferenceBoardList`, type `JD` | Yes | 이미지/마크다운/항목 정리 |
 | 참고자료 | DART 게시판 | workspace tab | `ReferenceBoardList`, type `DART` | Yes | 확인 경로/자유 작성 메모 |
-| 참고자료 | 인재상 게시판 | workspace tab | `ReferenceBoardList`, type `PERSONA` | Yes | 키워드 정리/내 경험 매칭 |
+| 참고자료 | 인재상 게시판 | workspace drawer | `ReferenceBoardList`, type `TALENT_PROFILE` | Yes | 키워드 정리/내 경험 매칭 |
 | 참고자료 | 뉴스기사 게시판 | workspace tab | `ReferenceBoardList`, type `NEWS` | Yes | 링크 수집/지원동기/포부 |
 | 참고자료 | 프롬프트 게시판 | workspace tab | `ReferenceBoardList`, type `PROMPT` | Yes | 프롬프트 저장/복사 |
-| 참고자료 | 메모 게시판 | workspace tab | `ReferenceBoardList`, type `MEMO` | Yes | 자유 메모 |
+| 참고자료 | 메모 게시판 | workspace drawer | `ReferenceBoardList`, type `FREE_MEMO` | Yes | 자유 메모 |
 | 추천 공고 | 채용 플랫폼 추천 | `/recommendations` | `RecommendationPage` | Yes | 온보딩 기반, 별표로 장바구니 저장 |
 | 추천 공고 | Mattermost 추천 | `/recommendations?source=mattermost` | `MattermostRecommendationSection` | No | P2/IA. SSAFY 교육생만 노출 후보 |
 | 서류 입력 정보 | 서류 항목 입력 | `/document-profile` | `DocumentProfilePage`, `ProfileSectionForm` | Yes | 학력, 어학, 자격증, 수상, 경력 등 |
@@ -67,7 +67,7 @@
 | Wireframe | Frontend 진입점 | Page / Shell | Feature module | Store | API |
 | --- | --- | --- | --- | --- | --- |
 | `01_extension_job_save.png` | Chrome Extension popup | `extension/popup` | `extension/job-save` | extension local state | `/api/extension/jobs/extract`, `/api/extension/jobs/save` |
-| `02_onboarding.png` | `/onboarding` | `OnboardingPage` | `features/auth`, `features/profile` | `authStore`, `profileStore` | `GET/PUT /api/me/profile` |
+| `02_onboarding.png` | `/` modal | `OnboardingPage` | `features/auth`, `features/profile` | `profileStore` | `GET/PUT /api/me/profile` |
 | `03_main_dashboard_recommendation.png` | `/` | `MainPage` | `features/dashboard`, `features/recommendations`, `features/basket` | `dashboardStore`, `recommendationStore`, `basketStore` | `GET /api/dashboard/summary`, `GET /api/recommendations/jobs` |
 | `04_mypage_notion_alerts.png` | `/mypage`, `/mypage/notion` | `MyPage`, `NotionSettingsPage` | `features/profile`, `features/notion` | `profileStore`, `notionStore` | `/api/me`, `/api/me/profile`, `/api/integrations/notion/*` |
 | `05_basket_workspace.png` | `/basket`, `/workspaces/:workspaceId` | `BasketPage`, `WorkspacePage` | `features/basket`, `features/workspace` | `basketStore`, `workspaceStore` | `GET /api/basket/jobs`, `GET /api/workspaces/{workspaceId}` |
@@ -192,6 +192,7 @@ frontend/src/features/workspace/
 - 장바구니는 전체, 진행중, 지원 전, 마감 임박 필터를 제공한다.
 - 공고 row 클릭은 해당 workspace로 이동한다.
 - workspace 상단 지원/기업 정보는 하단 탭 전환 중 유지된다.
+- workspace 참고자료는 overlay가 아니라 persistent/inline drawer 방식으로 열린다. drawer가 열리면 main content가 drawer 너비만큼 축소되고 화면 비율에 맞게 reflow된다.
 - 없는 workspace는 404, 다른 사용자의 workspace는 403 상태로 처리한다.
 
 ### 06. Reference Boards / Side Panel
@@ -241,7 +242,7 @@ frontend/src/features/document-profile/
 | Route | Page | P1 | Entry | Primary API |
 | --- | --- | --- | --- | --- |
 | `/login` | LoginPage | Yes | 비로그인 진입 | `POST /api/auth/signup`, `POST /api/auth/login`, `POST /api/auth/google` |
-| `/onboarding` | OnboardingPage 또는 modal | Yes | 최초 로그인 | `GET/PUT /api/me/profile` |
+| `/` modal | OnboardingPage | Yes | 최초 로그인 | `GET/PUT /api/me/profile` |
 | `/` | MainPage | Yes | 로그인 후 기본 | `GET /api/dashboard/summary`, `GET /api/recommendations/jobs` |
 | `/basket` | BasketPage | Yes | 대시보드 카드, nav | `GET /api/basket/jobs` |
 | `/basket/:basketJobId` | BasketDetailPage 또는 side detail | Yes | 장바구니 row | `GET /api/basket/jobs/{basketJobId}` |
@@ -262,7 +263,7 @@ frontend/src/features/document-profile/
 | AppShell | `AppLayout` | 로그인 이후 공통 layout. 상단 nav와 사용자 메뉴를 가진다. |
 | Header | `GlobalHeader` | 로고, 장바구니, 추천, 서류 입력 정보, 마이페이지 진입을 제공한다. |
 | Auth Guard | `RequireAuth` | access token이 없으면 `/login`으로 보낸다. |
-| Onboarding Guard | `RequireOnboardingCheck` | 최초 로그인 사용자는 온보딩으로 보낸다. 건너뛰기는 허용한다. |
+| Onboarding Guard | `RequireOnboardingCheck` | 최초 로그인 사용자는 메인으로 보내고 온보딩 모달을 띄운다. 건너뛰기는 허용한다. |
 | Toast | `ToastHost` | 저장 성공, 실패, 중복, 외부 연동 실패를 표시한다. |
 | Loading/Error | `PageState` | 주요 페이지는 loading, empty, error 상태를 가진다. |
 
@@ -274,7 +275,7 @@ frontend/src/features/document-profile/
 | --- | --- |
 | 목적 | Google 로그인 시작 |
 | 주요 컴포넌트 | `GoogleLoginButton`, `AuthErrorMessage` |
-| 성공 흐름 | 최초 사용자는 `/onboarding`, 기존 사용자는 `/` |
+| 성공 흐름 | 최초 사용자는 `/`에서 온보딩 모달 표시, 기존 사용자는 `/` |
 | 실패 상태 | OAuth 취소/실패 메시지 표시 |
 | 공개 진입 | 서비스 소개, P1 핵심 기능, Google 시작/로그인 CTA를 같은 화면에서 제공한다. |
 
@@ -323,7 +324,8 @@ frontend/src/features/document-profile/
 | --- | --- |
 | 목적 | 공고별 작성 공간 |
 | 상단 고정 | `WorkspaceHeader`, `SupportInfoPanel`, `CompanyInfoPanel` |
-| 하단 탭 | `CanvasTab`, `VersionsTab`, `ReferencesTab` |
+| 하단 탭 | `CanvasTab`, `VersionsTab`. 두 모드는 하단 고정 컨트롤로 전환한다. |
+| 사이드 패널 | `JD`, `NEWS`, `DART`, `TALENT_PROFILE`, `AWARDS_PROJECTS`, `PROMPT`, `FREE_MEMO` 게시판을 오른쪽 push drawer에서 연다. drawer는 사용자가 너비를 조절할 수 있고 라우트 이동을 만들지 않는다. |
 | 기본값 | 서류 입력 정보가 있으면 workspace defaults로 반영하고 없으면 빈 값으로 둔다. |
 | 자동 저장 | dirty 표시, 저장 중, 저장 완료, 실패 상태를 표시한다. |
 | 권한 오류 | 403은 접근 불가 화면, 404는 존재하지 않는 워크스페이스 화면을 표시한다. |
@@ -465,3 +467,21 @@ frontend/src/
 - 각 page는 필요한 API와 store 책임을 알 수 있다.
 - P2 화면이 P1 구현 범위처럼 보이지 않는다.
 - 와이어프레임 캡처와 route/component 기준이 충돌하지 않는다.
+## MVP 화면 반영 메모
+
+- `MAIN-013`: 공통 상단바는 `메인`, `공고 장바구니`, `서류 입력 정보`, `추천 공고`, `과거 지원 내역`을 넓게 배치한다. 로그아웃과 다른 계정 로그인은 별도 외부 버튼이 아니라 마이페이지 프로필 드롭다운 안에 둔다.
+- `MAIN-013/AUTH-008`: 마이페이지 트리거는 로그인 계정의 프로필 사진과 표시 이름을 보여준다. 사진이 없으면 이름 첫 글자 아바타를 사용한다.
+- `DASH-001`: 메인 페이지는 왼쪽 사이드바와 상단 필터를 제거하고, 대시보드 통계 카드 다음에 장바구니 썸네일과 추천공고 썸네일을 배치한다.
+- `MAIN-006/MAIN-007`: 메인 장바구니 미리보기는 마감 임박순 상위 공고만 보여준다. 워크스페이스에 최근 진입한 공고는 메인 미리보기와 장바구니 목록 모두에서 `최근 방문` 태그를 표시한다.
+- `DASH-001`: `이번 주 마감 공고`, `오늘 챙겨볼 공고`, 기존 설명형 추천 카드 3개는 메인 페이지에서 제거한다.
+- `JOB-005/JOB-014`: 장바구니 페이지는 대시보드 요약을 유지하고, `공고 캘린더`를 공고 목록 위에 배치한다. 캘린더에는 사용자가 담은 공고의 마감 일정만 표시하며, 각 일정 카드는 회사명/직무/지원 상태를 보여주고 워크스페이스로 이동한다.
+- `JOB-004/JOB-012`: 별도 `공고 등록` 사이드 패널은 제거하고, 장바구니 테이블 마지막 행에서 회사명/직무/마감일/URL을 직접 입력해 공고를 추가한다.
+- `JOB-014`: 장바구니 목록은 상태 필터와 `마감일순`, `담은 순` 정렬을 제공한다.
+- `WS-002/WS-004/WS-017/WS-018/REF-001/REF-002`: 지원 워크스페이스는 도화지와 자소서 버전관리를 하단 고정 모드로 제공하고, 참고자료는 오른쪽 persistent push drawer로 연다. drawer의 JD/뉴스/DART/인재상/서류·프로젝트/프롬프트/메모 게시판은 라우트 이동 없이 같은 워크스페이스 안에서 전환된다.
+- `REC-001`: 추천 공고 페이지는 필터링 UI 없이 마감일이 가까운 순서로 공고를 보여준다. 저장 CTA는 별표가 아니라 `담기` 워딩을 사용하고, 성공 시 `공고를 담았습니다` 알림과 `워크스페이스 열기` 버튼을 표시한다. 백엔드가 `companyLogoUrl` 또는 `logoUrl`을 제공하면 기업 로고를 노출하고, 없으면 회사명 이니셜 아바타를 사용한다.
+- `PROFILE-001/PROFILE-024`: 서류 입력 정보 페이지는 오른쪽 보조 패널을 제거하고 확장프로그램 options 화면처럼 좌측 섹션 목록과 넓은 입력 영역에 집중한다. 섹션별 저장 버튼은 제거하고 상단의 단일 `저장` 버튼으로 현재 편집 섹션을 저장한다. 입력 변경은 2초 유휴 후 자동 저장되며, 사용자의 불안감을 줄이기 위해 자동저장 상태와 수동 저장 버튼을 함께 표시한다.
+- `MY-001/MY-002/MY-003/NOTION-001/SUPPORT`: 상단 마이페이지 프로필 트리거는 hover/click 드롭다운으로 동작한다. 드롭다운은 내 계정, 노션 연동 관리, 온보딩 정보, QnA, 1:1 문의, 제휴 문의, 이용약관을 각각 독립 페이지로 연결한다. 각 마이페이지 화면은 기존 왼쪽 게시판 목록을 제거하고 섹션별 본문에 집중한다.
+- `MY-001`: 내 계정 화면은 프로필 이름 수정, Google 로그인 계정, 노션 연동 계정과 EZ-ONE 로그인 계정이 다를 수 있다는 안내, 로그아웃/회원 탈퇴 동선을 제공한다.
+- `NOTION-001`: 노션 연동 관리 화면은 Google 로그인 계정과 연결된 Notion 계정을 분리해 보여주고, 공고 정보/자소서·도화지/과거 지원 내역 자동 동기화 토글과 대상 위치를 제공한다.
+- `MY-003/REC-001`: 온보딩 정보 화면은 맞춤 추천 입력값을 칩 기반 편집 UI로 제공하고, 직무/기업 유형/업종/지역/스킬/SSAFY 값을 추천 공고 입력값으로 저장한다.
+- `SUPPORT`: QnA, 1:1 문의, 제휴 문의, 이용약관은 마이페이지 하위의 독립 지원 페이지로 제공한다.

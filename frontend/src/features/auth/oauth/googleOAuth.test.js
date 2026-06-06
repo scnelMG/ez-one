@@ -19,6 +19,16 @@ describe('googleOAuth', () => {
         expect(url.searchParams.get('response_type')).toBe('code');
         expect(url.searchParams.get('scope')).toContain('openid');
         expect(url.searchParams.get('state')).toBe('state-123');
+        expect(url.searchParams.has('prompt')).toBe(false);
         expect(consumeOAuthState('state-123')).toBe('/basket');
+    });
+    it('AUTH-004: asks Google to show account selection only for explicit account switching', () => {
+        const url = buildGoogleOAuthUrl({
+            clientId: 'google-client-id',
+            redirectUri: 'http://localhost:5173/login/callback',
+            state: 'state-123',
+            selectAccount: true
+        });
+        expect(url.searchParams.get('prompt')).toBe('select_account');
     });
 });

@@ -13,7 +13,7 @@ flowchart LR
     Notion["Notion"]
     JobSite["외부 채용 공고 페이지"]
 
-    subgraph System["EZ One MVP"]
+    subgraph System["EZ-ONE MVP"]
         UC01(["UC-01<br/>Google 로그인"])
         UC02(["UC-02<br/>온보딩 입력/건너뛰기"])
         UC03(["UC-03<br/>메인 페이지 조회"])
@@ -74,7 +74,7 @@ flowchart LR
 ## 다이어그램 참고사항
 
 - GitHub/Notion Mermaid 호환을 위해 `flowchart` 문법으로 UML 유즈케이스 다이어그램 형태를 표현한다.
-- 사각형은 액터/외부 시스템, 큰 박스는 EZ One 시스템 경계, 타원은 유즈케이스를 뜻한다.
+- 사각형은 액터/외부 시스템, 큰 박스는 EZ-ONE 시스템 경계, 타원은 유즈케이스를 뜻한다.
 - P1 구현 판단은 [04. 요구사항 정의서](04_requirements.md)와 [23. 요구사항 추적표](23_traceability.md)를 우선한다.
 - UC-13, UC-14, UC-16은 IA에는 유지하지만 P1 완료 기준이 아니다.
 - 아래 UC 상세 명세는 API, 화면, 테스트 설계 시 흐름 기준으로 사용한다.

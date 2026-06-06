@@ -1,4 +1,4 @@
-# EZ One Frontend
+# EZ-ONE Frontend
 
 Vue 3 기반 웹 애플리케이션이다.
 
@@ -17,7 +17,7 @@ Vue 3 기반 웹 애플리케이션이다.
 | Route | 화면 | P1 상태 |
 | --- | --- | --- |
 | `/login` | Google 로그인 | 활성 shell |
-| `/onboarding` | 온보딩 | 활성 shell |
+| `/` | 온보딩 모달 | 최초 로그인 사용자에게만 메인 위 floating modal |
 | `/` | 지원 현황 대시보드 | 활성 shell |
 | `/basket` | 공고함 | 활성 shell |
 | `/workspaces/:workspaceId` | 지원 워크스페이스 | 활성 shell |
@@ -59,7 +59,7 @@ npm run test
 
 프론트 시작점:
 
-- `/onboarding`
+- 최초 로그인 온보딩은 별도 `/onboarding` 페이지가 아니라 `/` 메인 위 모달로 표시
 - `/mypage`
 - 프로필 API client
 - 프로필 store
