@@ -45,6 +45,7 @@ function toBasketJob(dto) {
         deadlineLabel: dto.deadlineLabel,
         deadlineDate: dto.deadlineDate,
         deadlineSoon: dto.deadlineSoon,
+        companyLogoUrl: dto.companyLogoUrl ?? null,
         workspaceId: String(dto.workspaceId),
         sourceUrl: dto.sourceUrl,
         applicationMemo: dto.applicationMemo ?? ''

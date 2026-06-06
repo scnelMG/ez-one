@@ -77,6 +77,7 @@ describe('extensionJobApi', () => {
             positionTitle: 'Backend Developer',
             deadlineLabel: 'D-26',
             sourceUrl: 'https://www.jasoseol.com/recruit/1',
+            logoUrl: 'https://static.example.com/naver.png',
             selectedRoles: ['Backend', 'Platform'],
             essayQuestions: [{ prompt: '지원동기를 작성해 주세요.', maxLength: 1000 }]
         });
@@ -86,6 +87,7 @@ describe('extensionJobApi', () => {
             positionTitle: 'Backend Developer',
             deadlineLabel: 'D-26',
             sourceUrl: 'https://www.jasoseol.com/recruit/1',
+            logoUrl: 'https://static.example.com/naver.png',
             selectedRoles: ['Backend', 'Platform'],
             essayQuestions: [{ prompt: '지원동기를 작성해 주세요.', maxLength: 1000 }]
         });

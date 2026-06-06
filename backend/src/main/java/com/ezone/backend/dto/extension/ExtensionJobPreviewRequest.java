@@ -4,6 +4,7 @@ public record ExtensionJobPreviewRequest(
     String companyName,
     String positionTitle,
     String deadlineLabel,
-    String sourceUrl
+    String sourceUrl,
+    String logoUrl
 ) {
 }

@@ -6,6 +6,7 @@ public record ExtensionJobPreviewResponse(
     String positionTitle,
     String deadlineLabel,
     String sourceUrl,
+    String logoUrl,
     String message
 ) {
 }

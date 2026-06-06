@@ -15,6 +15,7 @@ public class WorkspaceRow {
     private String companyDomain;
     private String companyType;
     private String companySize;
+    private String companyLogoUrl;
     private BigDecimal companyRating;
     private Integer companyStartingSalary;
     private String companyFinancialStatus;
@@ -41,6 +42,8 @@ public class WorkspaceRow {
     public void setCompanyType(String companyType) { this.companyType = companyType; }
     public String getCompanySize() { return companySize; }
     public void setCompanySize(String companySize) { this.companySize = companySize; }
+    public String getCompanyLogoUrl() { return companyLogoUrl; }
+    public void setCompanyLogoUrl(String companyLogoUrl) { this.companyLogoUrl = companyLogoUrl; }
     public BigDecimal getCompanyRating() { return companyRating; }
     public void setCompanyRating(BigDecimal companyRating) { this.companyRating = companyRating; }
     public Integer getCompanyStartingSalary() { return companyStartingSalary; }

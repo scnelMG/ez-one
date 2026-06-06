@@ -6,6 +6,7 @@ export function extractJobPosting(documentRef = document, sourceUrl = documentRe
         positionTitle: title,
         deadlineLabel: extractDeadlineLabel(documentRef, jasoseolData),
         sourceUrl,
+        logoUrl: extractLogoUrl(documentRef, sourceUrl),
         roleOptions: extractRoleOptions(documentRef, jasoseolData),
         essayQuestions: extractEssayQuestions(documentRef)
     };
@@ -55,6 +56,33 @@ function extractEssayQuestions(documentRef) {
                 maxLength: extractMaxLength(cleanText(item.textContent))
             }];
     });
+}
+function extractLogoUrl(documentRef, sourceUrl) {
+    const explicit = documentRef.querySelector('[data-ezone-logo]');
+    const explicitValue = explicit?.getAttribute('src') || explicit?.getAttribute('content') || explicit?.getAttribute('href');
+    const ogImage = documentRef.querySelector('meta[property="og:image"], meta[name="og:image"]')?.getAttribute('content');
+    const logoImage = Array.from(documentRef.querySelectorAll('img')).find((image) => {
+        const text = [
+            image.getAttribute('alt'),
+            image.getAttribute('title'),
+            image.getAttribute('class'),
+            image.getAttribute('src')
+        ].filter(Boolean).join(' ').toLowerCase();
+        return text.includes('logo') || text.includes('로고');
+    })?.getAttribute('src');
+    return absoluteHttpUrl(explicitValue || logoImage || ogImage, sourceUrl);
+}
+function absoluteHttpUrl(value, sourceUrl) {
+    if (!value) {
+        return null;
+    }
+    try {
+        const url = new URL(value, sourceUrl);
+        return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : null;
+    }
+    catch {
+        return null;
+    }
 }
 function findSection(documentRef, labels) {
     const candidates = Array.isArray(labels) ? labels : [labels];

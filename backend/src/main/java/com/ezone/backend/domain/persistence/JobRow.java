@@ -7,6 +7,9 @@ public class JobRow {
     private String companyDomain;
     private String companyType;
     private String companySize;
+    private String companyLogoUrl;
+    private String logoSourceUrl;
+    private String logoStatus;
     private String positionTitle;
     private String deadlineLabel;
     private String sourceUrl;
@@ -23,6 +26,12 @@ public class JobRow {
     public void setCompanyType(String companyType) { this.companyType = companyType; }
     public String getCompanySize() { return companySize; }
     public void setCompanySize(String companySize) { this.companySize = companySize; }
+    public String getCompanyLogoUrl() { return companyLogoUrl; }
+    public void setCompanyLogoUrl(String companyLogoUrl) { this.companyLogoUrl = companyLogoUrl; }
+    public String getLogoSourceUrl() { return logoSourceUrl; }
+    public void setLogoSourceUrl(String logoSourceUrl) { this.logoSourceUrl = logoSourceUrl; }
+    public String getLogoStatus() { return logoStatus; }
+    public void setLogoStatus(String logoStatus) { this.logoStatus = logoStatus; }
     public String getPositionTitle() { return positionTitle; }
     public void setPositionTitle(String positionTitle) { this.positionTitle = positionTitle; }
     public String getDeadlineLabel() { return deadlineLabel; }

@@ -7,6 +7,7 @@ public record ExtensionJobSaveRequest(
     String positionTitle,
     String deadlineLabel,
     String sourceUrl,
+    String logoUrl,
     List<String> selectedRoles,
     List<ExtensionEssayQuestionRequest> essayQuestions
 ) {
