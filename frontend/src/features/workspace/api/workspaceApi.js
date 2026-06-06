@@ -1,4 +1,4 @@
-﻿import { defaultHttpClient, unwrapApiData } from '@/shared/apiClient';
+import { defaultHttpClient, unwrapApiData } from '@/shared/apiClient';
 import { mockWorkspaces } from './mockWorkspaceData';
 export function createWorkspaceApi(httpClient = defaultHttpClient) {
     return {

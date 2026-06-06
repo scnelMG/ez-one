@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <main class="landing-page">
     <header class="landing-nav">
       <RouterLink class="landing-brand" to="/" aria-label="EZ One">

@@ -1,4 +1,4 @@
-﻿import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createProfileApi } from './profileApi';
 describe('profileApi', () => {
     it('ONB-001: loads the current onboarding profile', async () => {

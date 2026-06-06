@@ -1,4 +1,4 @@
-﻿import { defaultHttpClient, unwrapApiData } from '@/shared/apiClient';
+import { defaultHttpClient, unwrapApiData } from '@/shared/apiClient';
 import { mockBasketJobs } from '@/features/basket/api/mockBasketData';
 export function createRecommendationApi(httpClient = defaultHttpClient) {
     return {

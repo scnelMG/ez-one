@@ -1,4 +1,4 @@
-﻿import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createNotionApi } from './notionApi';
 describe('notionApi', () => {
     it('NOTION-001: loads the current Notion connection', async () => {

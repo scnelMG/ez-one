@@ -1,4 +1,4 @@
-﻿export const mockBasketJobs = [
+export const mockBasketJobs = [
     {
         id: '101',
         companyName: '네이버',

@@ -1,4 +1,4 @@
-﻿import { defineStore } from 'pinia';
+import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { dashboardApi } from '@/features/dashboard/api/dashboardApi';
 import { messageFromError } from '@/shared/errorMessage';
