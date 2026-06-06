@@ -156,10 +156,12 @@ class P1ApiContractTest {
                       "positionTitle": "Backend Developer",
                       "deadlineLabel": "D-5",
                       "sourceUrl": "https://careers.example.com/jobs/backend",
+                      "logoUrl": "https://static.example.com/example-logo.png",
                       "savedSource": "DIRECT"
                     }
                     """))
             .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.companyLogoUrl").value("https://static.example.com/example-logo.png"))
             .andReturn()
             .getResponse()
             .getContentAsString();
@@ -169,6 +171,7 @@ class P1ApiContractTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.companyName").value("Example Labs"))
             .andExpect(jsonPath("$.data.companyDetails.domain").value("careers.example.com"))
+            .andExpect(jsonPath("$.data.companyDetails.logoUrl").value("https://static.example.com/example-logo.png"))
             .andExpect(jsonPath("$.data.companyDetails.companyType").value("미확인"))
             .andExpect(jsonPath("$.data.companyDetails.size").value("미확인"))
             .andExpect(jsonPath("$.data.companyDetails.financialStatus").value("unverified"));

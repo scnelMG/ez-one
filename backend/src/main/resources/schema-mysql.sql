@@ -26,14 +26,18 @@ CREATE TABLE IF NOT EXISTS user_sessions (
 CREATE TABLE IF NOT EXISTS companies (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   name VARCHAR(255) NOT NULL,
-  domain VARCHAR(255) NULL,
+  domain VARCHAR(255) NOT NULL,
   company_type VARCHAR(64) NULL,
   size VARCHAR(64) NULL,
+  logo_url VARCHAR(1024) NULL,
+  logo_source_url VARCHAR(1024) NULL,
+  logo_status VARCHAR(32) NULL,
+  logo_updated_at TIMESTAMP NULL,
   rating DECIMAL(4, 2) NULL,
   starting_salary INT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  UNIQUE KEY uk_companies_name (name)
+  UNIQUE KEY uk_companies_name_domain (name, domain)
 );
 
 CREATE TABLE IF NOT EXISTS company_info_sources (
@@ -41,12 +45,13 @@ CREATE TABLE IF NOT EXISTS company_info_sources (
   company_id BIGINT NOT NULL,
   source_name VARCHAR(64) NOT NULL,
   source_url VARCHAR(1024) NOT NULL,
+  source_url_hash BINARY(32) GENERATED ALWAYS AS (UNHEX(SHA2(source_url, 256))) STORED,
   status VARCHAR(32) NOT NULL,
   collected_at TIMESTAMP NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_company_info_sources_company FOREIGN KEY (company_id) REFERENCES companies(id),
-  UNIQUE KEY uk_company_info_sources_url (company_id, source_url)
+  UNIQUE KEY uk_company_info_sources_url (company_id, source_url_hash)
 );
 
 CREATE TABLE IF NOT EXISTS jobs (

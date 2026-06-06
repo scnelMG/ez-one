@@ -109,6 +109,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         JobRow job = new JobRow();
         job.setCompanyName(request.companyName());
         applyCompanyDetailDefaults(job, request.sourceUrl());
+        applyCompanyLogoCandidate(job, request.sourceUrl(), request.logoUrl());
         job.setPositionTitle(request.positionTitle());
         job.setDeadlineLabel(normalizeDeadline(request.deadlineLabel()));
         job.setSourceUrl(request.sourceUrl());
@@ -173,6 +174,16 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         job.setCompanySize(CompanyDetailDefaults.UNKNOWN_KO);
     }
 
+    private void applyCompanyLogoCandidate(JobRow job, String sourceUrl, String logoUrl) {
+        String normalizedLogoUrl = normalizeLogoUrl(logoUrl);
+        job.setCompanyLogoUrl(normalizedLogoUrl);
+        if (normalizedLogoUrl == null) {
+            return;
+        }
+        job.setLogoSourceUrl(sourceUrl);
+        job.setLogoStatus("DISCOVERED");
+    }
+
     private void recordUnverifiedCompanyInfoSource(JobRow job) {
         mapper.recordCompanyInfoSource(
             job.getCompanyId(),
@@ -195,6 +206,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         job.setId(current.getJobId());
         job.setCompanyName(request.companyName());
         applyCompanyDetailDefaults(job, request.sourceUrl());
+        applyCompanyLogoCandidate(job, request.sourceUrl(), null);
         job.setPositionTitle(request.positionTitle());
         job.setDeadlineLabel(normalizeDeadline(request.deadlineLabel()));
         job.setSourceUrl(request.sourceUrl());
@@ -413,6 +425,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
                 "Commerce Backend Developer",
                 "D-10",
                 "https://www.jasoseol.com/",
+                null,
                 "RECOMMENDATION"
             ));
         }
@@ -422,6 +435,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
             "Server Platform Engineer",
             "D-7",
             "https://www.jasoseol.com/",
+            null,
             "RECOMMENDATION"
         ));
     }
@@ -488,6 +502,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
             statusLabel(status),
             row.getDeadlineLabel(),
             row.isDeadlineSoon(),
+            row.getCompanyLogoUrl(),
             row.getSourceUrl(),
             normalizeMemo(row.getApplicationMemo())
         );
@@ -529,6 +544,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
                 row.getCompanyDomain(),
                 row.getCompanyType(),
                 row.getCompanySize(),
+                row.getCompanyLogoUrl(),
                 row.getCompanyRating(),
                 row.getCompanyStartingSalary(),
                 row.getCompanyFinancialStatus()
@@ -609,6 +625,14 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
 
     private String normalizeMemo(String applicationMemo) {
         return applicationMemo == null ? "" : applicationMemo;
+    }
+
+    private String normalizeLogoUrl(String logoUrl) {
+        if (logoUrl == null || logoUrl.isBlank()) {
+            return null;
+        }
+        String trimmed = logoUrl.trim();
+        return trimmed.matches("^https?://\\S+$") ? trimmed : null;
     }
 
     private boolean isPresent(String value) {

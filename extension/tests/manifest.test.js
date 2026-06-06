@@ -9,4 +9,9 @@ describe('extension manifest', () => {
             'http://127.0.0.1:8080/*'
         ]));
     });
+    it('EXT-013: uses click-triggered scripting without broad always-on content scripts', () => {
+        expect(manifest.permissions).toEqual(expect.arrayContaining(['activeTab', 'storage', 'scripting']));
+        expect(manifest.host_permissions).not.toContain('<all_urls>');
+        expect(manifest.content_scripts.flatMap((item) => item.matches)).not.toContain('<all_urls>');
+    });
 });

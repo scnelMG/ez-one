@@ -71,3 +71,10 @@ erDiagram
 - 자동 저장은 최신 draft row를 갱신하고 version row를 자동 생성하지 않는다.
 - 외부 연동 실패는 `sync_logs`에 기록하되 basket/workspace 저장을 롤백하지 않는다.
 - 마감 경과 상태 변경은 scheduler 또는 dashboard/basket read guard 중 구현 방식 확정 후 문서에 반영한다.
+## 2026-06-06 Company Logo Update
+
+- `companies` now owns reusable company logo metadata: `logo_url`, `logo_source_url`, `logo_status`, `logo_updated_at`.
+- Jobs continue to reference companies through `jobs.company_id`; saved jobs continue to reference jobs through `basket_jobs.job_id`.
+- Company deduplication should prefer `name + domain` over company name alone. New schema and migration use `uk_companies_name_domain (name, domain)`.
+- P1 overwrite policy: when a save request includes a valid optional `logoUrl`, the server stores it only if `companies.logo_url` is empty. Existing company logos are preserved.
+- Basket and workspace API responses expose the company logo as `companyLogoUrl` and `companyDetails.logoUrl`; clients should fall back to an initials badge when the URL is missing or broken.

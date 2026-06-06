@@ -16,6 +16,8 @@ class P1CompanyInfoSourceContractTest {
         assertThat(schema).contains("create table if not exists company_info_sources");
         assertThat(schema).contains("company_id bigint not null");
         assertThat(schema).contains("source_url varchar(1024) not null");
+        assertThat(schema).contains("source_url_hash binary(32) generated always as");
+        assertThat(schema).contains("unique key uk_company_info_sources_url (company_id, source_url_hash)");
         assertThat(schema).contains("status varchar(32) not null");
     }
 

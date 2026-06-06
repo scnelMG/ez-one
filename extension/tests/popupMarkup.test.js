@@ -1,11 +1,14 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+
 describe('extension popup markup', () => {
     const markup = readFileSync(resolve(__dirname, '../popup.html'), 'utf-8');
+
     it('keeps login before feature selection in the popup flow', () => {
         const loginPanel = markup.match(/<section id="login-panel"[\s\S]*?<\/section>/)?.[0] ?? '';
         const featurePanel = markup.match(/<section id="feature-panel"[\s\S]*?<\/section>/)?.[0] ?? '';
+
         expect(loginPanel).toContain('로그인이 필요합니다');
         expect(loginPanel).toContain('Google로 로그인');
         expect(loginPanel).not.toContain('mode-card');
@@ -13,15 +16,24 @@ describe('extension popup markup', () => {
         expect(featurePanel).toContain('공고 저장하기');
         expect(featurePanel).toContain('서류 정보 입력하기');
         expect(featurePanel).toContain('id="job-save-mode-button"');
+        expect(featurePanel).toContain('id="document-input-mode-button"');
+        expect(featurePanel).not.toContain('disabled aria-disabled="true"');
     });
+
     it('uses the P1 job-save wireframe copy without corrupted Korean text', () => {
         expect(markup).toContain('회사');
         expect(markup).toContain('공고');
         expect(markup).toContain('마감');
         expect(markup).toContain('선택한 공고 장바구니에 담기');
         expect(markup).toContain('장바구니에 담았습니다');
-        expect(markup).not.toContain('濡');
-        expect(markup).not.toContain('怨');
-        expect(markup).not.toContain('�');
+        expect(markup).not.toContain('嚥');
+        expect(markup).not.toContain('占');
+    });
+
+    it('EXT-022/EXT-023: renders document autofill result lists', () => {
+        expect(markup).toContain('id="document-result-panel"');
+        expect(markup).toContain('id="autofill-filled-list"');
+        expect(markup).toContain('id="autofill-failed-list"');
+        expect(markup).toContain('id="autofill-copy-list"');
     });
 });

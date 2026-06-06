@@ -50,8 +50,17 @@
 
       <section v-if="workspaceStore.workspace?.companyDetails" class="wire-panel" aria-label="기업 세부 정보">
         <div class="section-heading">
-          <div>
+          <div class="company-heading">
             <p class="section-kicker">기업 정보</p>
+            <span class="company-logo-badge company-logo-badge-large" aria-hidden="true">
+              <img
+                v-if="workspaceStore.workspace.companyDetails.logoUrl"
+                :src="workspaceStore.workspace.companyDetails.logoUrl"
+                :alt="`${workspaceStore.workspace.companyName} logo`"
+                @error="workspaceStore.workspace.companyDetails.logoUrl = null"
+              />
+              <span v-else>{{ companyInitial(workspaceStore.workspace.companyName) }}</span>
+            </span>
             <h2>{{ workspaceStore.workspace.companyName }}</h2>
           </div>
         </div>
@@ -401,6 +410,9 @@ function sectionItems(sectionName, label) {
 }
 function isRecord(value) {
     return typeof value === 'object' && value !== null;
+}
+function companyInitial(companyName) {
+    return (companyName ?? '?').trim().charAt(0).toUpperCase() || '?';
 }
 async function saveDraft() {
     if (!currentQuestion.value) {

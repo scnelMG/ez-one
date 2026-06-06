@@ -13,6 +13,7 @@
     <result property="applicationStatus" column="application_status"/>
     <result property="deadlineLabel" column="deadline_label"/>
     <result property="deadlineSoon" column="deadline_soon"/>
+    <result property="companyLogoUrl" column="company_logo_url"/>
     <result property="sourceUrl" column="source_url"/>
     <result property="applicationMemo" column="application_memo"/>
   </resultMap>
@@ -29,6 +30,7 @@
     <result property="companyDomain" column="company_domain"/>
     <result property="companyType" column="company_type"/>
     <result property="companySize" column="company_size"/>
+    <result property="companyLogoUrl" column="company_logo_url"/>
     <result property="companyRating" column="company_rating"/>
     <result property="companyStartingSalary" column="company_starting_salary"/>
     <result property="companyFinancialStatus" column="company_financial_status"/>
@@ -63,13 +65,27 @@
   </resultMap>
 
   <insert id="upsertCompany" useGeneratedKeys="true" keyProperty="companyId">
-    INSERT INTO companies (name, domain, company_type, size, created_at)
-    VALUES (#{companyName}, #{companyDomain}, #{companyType}, #{companySize}, CURRENT_TIMESTAMP)
+    INSERT INTO companies (name, domain, company_type, size, logo_url, logo_source_url, logo_status, logo_updated_at, created_at)
+    VALUES (
+      #{companyName},
+      #{companyDomain},
+      #{companyType},
+      #{companySize},
+      #{companyLogoUrl},
+      #{logoSourceUrl},
+      #{logoStatus},
+      CASE WHEN #{companyLogoUrl} IS NULL THEN NULL ELSE CURRENT_TIMESTAMP END,
+      CURRENT_TIMESTAMP
+    )
     ON DUPLICATE KEY UPDATE
       id = LAST_INSERT_ID(id),
       domain = COALESCE(domain, VALUES(domain)),
       company_type = COALESCE(company_type, VALUES(company_type)),
-      size = COALESCE(size, VALUES(size))
+      size = COALESCE(size, VALUES(size)),
+      logo_source_url = IF(logo_url IS NULL AND VALUES(logo_url) IS NOT NULL, VALUES(logo_source_url), logo_source_url),
+      logo_status = IF(logo_url IS NULL AND VALUES(logo_url) IS NOT NULL, VALUES(logo_status), logo_status),
+      logo_updated_at = IF(logo_url IS NULL AND VALUES(logo_url) IS NOT NULL, CURRENT_TIMESTAMP, logo_updated_at),
+      logo_url = IF(logo_url IS NULL, VALUES(logo_url), logo_url)
   </insert>
 
   <insert id="recordCompanyInfoSource">
@@ -99,6 +115,7 @@
     SELECT bj.id, bj.user_id, bj.job_id, w.id AS workspace_id, c.name AS company_name,
            j.title AS position_title, bj.application_status, j.deadline_label,
            CASE WHEN j.deadline_label LIKE '오늘%' OR j.deadline_label LIKE 'D-%' THEN TRUE ELSE FALSE END AS deadline_soon,
+           c.logo_url AS company_logo_url,
            j.url AS source_url, bj.application_memo
     FROM basket_jobs bj
     JOIN jobs j ON j.id = bj.job_id
@@ -140,6 +157,7 @@
     SELECT bj.id, bj.user_id, bj.job_id, w.id AS workspace_id, c.name AS company_name,
            j.title AS position_title, bj.application_status, j.deadline_label,
            CASE WHEN j.deadline_label LIKE '오늘%' OR j.deadline_label LIKE 'D-%' THEN TRUE ELSE FALSE END AS deadline_soon,
+           c.logo_url AS company_logo_url,
            j.url AS source_url, bj.application_memo
     FROM basket_jobs bj
     JOIN jobs j ON j.id = bj.job_id
@@ -159,6 +177,7 @@
     SELECT bj.id, bj.user_id, bj.job_id, w.id AS workspace_id, c.name AS company_name,
            j.title AS position_title, bj.application_status, j.deadline_label,
            CASE WHEN j.deadline_label LIKE '오늘%' OR j.deadline_label LIKE 'D-%' THEN TRUE ELSE FALSE END AS deadline_soon,
+           c.logo_url AS company_logo_url,
            j.url AS source_url, bj.application_memo
     FROM basket_jobs bj
     JOIN jobs j ON j.id = bj.job_id
@@ -220,7 +239,7 @@
   <select id="findWorkspace" resultMap="workspaceRowMap">
     SELECT w.id, w.user_id, w.basket_job_id, c.name AS company_name, j.title AS position_title,
            j.deadline_label, bj.application_status, j.url AS source_url,
-           c.domain AS company_domain, c.company_type, c.size AS company_size,
+           c.domain AS company_domain, c.company_type, c.size AS company_size, c.logo_url AS company_logo_url,
            c.rating AS company_rating, c.starting_salary AS company_starting_salary,
            'unverified' AS company_financial_status
     FROM workspaces w

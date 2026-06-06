@@ -40,6 +40,7 @@ public class ExtensionJobController {
             request.positionTitle(),
             request.deadlineLabel(),
             request.sourceUrl(),
+            request.logoUrl(),
             saveable ? "저장 가능한 공고입니다." : "회사명, 직무, 원문 URL은 필수입니다."
         ));
     }
@@ -79,6 +80,7 @@ public class ExtensionJobController {
                     role,
                     request.deadlineLabel(),
                     request.sourceUrl(),
+                    request.logoUrl(),
                     "EXTENSION"
                 ),
                 questions

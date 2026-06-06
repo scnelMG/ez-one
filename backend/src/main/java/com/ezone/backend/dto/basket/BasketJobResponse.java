@@ -11,6 +11,7 @@ public record BasketJobResponse(
     String statusLabel,
     String deadlineLabel,
     boolean deadlineSoon,
+    String companyLogoUrl,
     String sourceUrl,
     String applicationMemo
 ) {

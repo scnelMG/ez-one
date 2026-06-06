@@ -119,6 +119,7 @@ describe('extractJobPosting', () => {
             positionTitle: 'Backend Developer',
             deadlineLabel: 'D-26',
             sourceUrl: 'https://www.jasoseol.com/recruit/1',
+            logoUrl: null,
             roleOptions: ['Backend', 'Platform'],
             essayQuestions: [
                 { prompt: '지원동기를 작성해 주세요.', maxLength: 1000 },
@@ -136,6 +137,20 @@ describe('extractJobPosting', () => {
             sourceUrl: 'https://example.com/page',
             roleOptions: [],
             essayQuestions: []
+        });
+    });
+    it('EXT-008: extracts an absolute company logo candidate for save reuse', () => {
+        const doc = document.implementation.createHTMLDocument('posting');
+        doc.body.innerHTML = `
+      <main>
+        <h1>Backend Developer</h1>
+        <a href="/company/naver">Naver</a>
+        <img alt="Naver logo" src="/assets/naver-logo.png" />
+      </main>
+    `;
+        expect(extractJobPosting(doc, 'https://www.jasoseol.com/recruit/1')).toMatchObject({
+            companyName: 'Naver',
+            logoUrl: 'https://www.jasoseol.com/assets/naver-logo.png'
         });
     });
 });

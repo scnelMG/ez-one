@@ -48,3 +48,10 @@
 | --- | --- |
 | 장바구니 캘린더/주간 일정 | P2 후보. 요구사항 확정 전 구현 제외 |
 | 고객지원 | P2 후보. 운영 범위 확정 전 구현 제외 |
+## 2026-06-06 Traceability Addendum
+
+| Requirement | Use Case | Surface | API | DB | Tests |
+| --- | --- | --- | --- | --- | --- |
+| EXT-008, JOB-021 | UC-06 | Chrome Extension job save | `POST /api/extension/jobs/preview`, `POST /api/extension/jobs/save` | `companies.logo_url`, `jobs`, `basket_jobs` | `extension/tests/jobExtractor.test.js`, `extension/tests/extensionJobApi.test.js`, `P1ApiContractTest` |
+| JOB-016 | UC-08 | Basket and workspace company display | `GET /api/basket/jobs`, `GET /api/workspaces/{id}` | `companies.logo_url`, `companies.logo_source_url`, `companies.logo_status`, `companies.logo_updated_at` | `MyBatisP1WorkspaceServiceTest`, `P1ApiContractTest` |
+| EXT-013, EXT-021, EXT-022, EXT-023, PROFILE-026 | UC-12, UC-13 | Extension document auto-fill | `GET /api/extension/document-profile` | `document_profile_sections`, `document_custom_fields` | `applicationAutoFill.test.js`, `extensionDocumentProfileApi.test.js`, `P1ApiContractTest` |

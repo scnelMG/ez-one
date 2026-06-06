@@ -128,3 +128,12 @@
 | GET | `/api/basket/calendar` | 장바구니 마감 캘린더/주간 일정 |
 
 > AUTH-001 상세 계약은 `docs/32_auth-google-api-contract.md`를 기준으로 한다.
+## 2026-06-06 P1 Extension Logo Contract
+
+- `POST /api/extension/jobs/preview` accepts optional `logoUrl` and echoes it in the preview response.
+- `POST /api/extension/jobs/save` accepts optional `logoUrl` with the extracted posting payload.
+- `POST /api/basket/jobs` also accepts optional `logoUrl` for manually or externally created saved jobs.
+- `BasketJobResponse` includes `companyLogoUrl`.
+- `GET /api/workspaces/{workspaceId}` includes `companyDetails.logoUrl`.
+- Invalid or missing `logoUrl` values must not fail the core job save flow; the server ignores invalid logo candidates.
+- `GET /api/extension/document-profile` is part of the approved P1 extension auto-fill scope. It uses the existing Bearer token and returns the current user's document profile for the active-tab injection flow.

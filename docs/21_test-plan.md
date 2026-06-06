@@ -51,7 +51,6 @@
 | TC-REC-P2 | Recommendation | hover 기업 정보 |
 | TC-MM-P2 | Mattermost | raw 저장과 후보 공고 승인 |
 | TC-REF-AUTO-P2 | References | 자동 JD/news/DART/인재상 수집 |
-| TC-EXT-DOC-P2 | Extension | 서류 자동 입력 보조 |
 | TC-NOTION-SCOPE-P2 | Notion | job+essay, job+essay+canvas 동기화 |
 
 ## 검증 규칙
@@ -59,3 +58,11 @@
 - 모든 P1 요구사항은 화면, API, DB, 테스트 연결을 가진다.
 - P2 기능은 P1 필수 테스트처럼 보이지 않도록 분리한다.
 - 권한, token refresh/revoke, 중복, 외부 연동 실패, 마감 경과 상태는 대표 실패 케이스로 테스트한다.
+## 2026-06-06 Added P1 Tests
+
+- `TC-EXT-LOGO-001`: Extension extractor returns an absolute `logoUrl` candidate from explicit logo images or metadata.
+- `TC-JOB-LOGO-001`: Backend stores a valid optional job `logoUrl` on the linked company record only when the company has no logo.
+- `TC-JOB-LOGO-002`: Basket responses expose `companyLogoUrl`; workspace responses expose `companyDetails.logoUrl`.
+- `TC-EXT-DOC-AUTOFILL-001`: Extension parser fills basic/document/custom fields from labels, placeholders, name/id, tables, and nearby text.
+- `TC-EXT-DOC-AUTOFILL-002`: Essay and long-form textarea fields are excluded from automatic input and reported for manual review.
+- Real company application pages remain manual smoke-test territory because login, personal data, and accidental submission risk make automated E2E unsafe.

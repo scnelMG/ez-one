@@ -42,6 +42,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
     private final Map<Long, WorkspaceRecord> workspaces = new LinkedHashMap<>();
     private final Map<Long, ReferenceRecord> references = new LinkedHashMap<>();
     private final Map<Long, VersionRecord> versions = new LinkedHashMap<>();
+    private final Map<String, String> companyLogos = new LinkedHashMap<>();
 
     public InMemoryP1WorkspaceService() {
         seed(1L, "네이버", "Backend Engineer", "오늘 18:00", true, ApplicationStatus.IN_PROGRESS);
@@ -106,6 +107,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
 
         long basketJobId = idGenerator.incrementAndGet();
         long workspaceId = idGenerator.incrementAndGet();
+        String companyLogoUrl = companyLogoFor(request.companyName(), request.sourceUrl(), request.logoUrl());
         BasketRecord basketJob = new BasketRecord(
             basketJobId,
             userId,
@@ -115,6 +117,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             ApplicationStatus.READY,
             normalizeDeadline(request.deadlineLabel()),
             isDeadlineSoon(request.deadlineLabel()),
+            companyLogoUrl,
             request.sourceUrl(),
             "",
             false
@@ -145,6 +148,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             status,
             normalizeDeadline(request.deadlineLabel()),
             isDeadlineSoon(request.deadlineLabel()),
+            current.companyLogoUrl(),
             request.sourceUrl(),
             normalizeMemo(request.applicationMemo()),
             current.deleted()
@@ -161,6 +165,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
                 updated.positionTitle(),
                 updated.deadlineLabel(),
                 statusLabel(updated.applicationStatus()),
+                updated.companyLogoUrl(),
                 updated.sourceUrl(),
                 workspace.questions()
             ));
@@ -181,6 +186,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             status,
             current.deadlineLabel(),
             current.deadlineSoon(),
+            current.companyLogoUrl(),
             current.sourceUrl(),
             current.applicationMemo(),
             current.deleted()
@@ -201,6 +207,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             current.applicationStatus(),
             current.deadlineLabel(),
             current.deadlineSoon(),
+            current.companyLogoUrl(),
             current.sourceUrl(),
             current.applicationMemo(),
             true
@@ -426,6 +433,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
                 "Commerce Backend Developer",
                 "D-10",
                 "https://www.jasoseol.com/",
+                null,
                 "RECOMMENDATION"
             ));
         }
@@ -435,6 +443,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             "Server Platform Engineer",
             "D-7",
             "https://www.jasoseol.com/",
+            null,
             "RECOMMENDATION"
         ));
     }
@@ -458,6 +467,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             status,
             deadlineLabel,
             deadlineSoon,
+            null,
             "https://www.jasoseol.com/",
             "",
             false
@@ -491,6 +501,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             basketJob.positionTitle(),
             basketJob.deadlineLabel(),
             statusLabel(basketJob.applicationStatus()),
+            basketJob.companyLogoUrl(),
             basketJob.sourceUrl(),
             questions
         );
@@ -585,6 +596,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             statusLabel(status),
             record.deadlineLabel(),
             record.deadlineSoon(),
+            record.companyLogoUrl(),
             record.sourceUrl(),
             record.applicationMemo()
         );
@@ -613,6 +625,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
                 CompanyDetailDefaults.domainFromUrl(record.sourceUrl()),
                 CompanyDetailDefaults.UNKNOWN_KO,
                 CompanyDetailDefaults.UNKNOWN_KO,
+                record.companyLogoUrl(),
                 null,
                 null,
                 CompanyDetailDefaults.UNVERIFIED
@@ -691,6 +704,23 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
         return applicationMemo == null ? "" : applicationMemo;
     }
 
+    private String companyLogoFor(String companyName, String sourceUrl, String logoUrl) {
+        String key = "%s|%s".formatted(companyName, CompanyDetailDefaults.domainFromUrl(sourceUrl));
+        String normalizedLogoUrl = normalizeLogoUrl(logoUrl);
+        if (normalizedLogoUrl != null) {
+            companyLogos.putIfAbsent(key, normalizedLogoUrl);
+        }
+        return companyLogos.get(key);
+    }
+
+    private String normalizeLogoUrl(String logoUrl) {
+        if (logoUrl == null || logoUrl.isBlank()) {
+            return null;
+        }
+        String trimmed = logoUrl.trim();
+        return trimmed.matches("^https?://\\S+$") ? trimmed : null;
+    }
+
     private boolean isPresent(String value) {
         return value != null && !value.isBlank();
     }
@@ -713,6 +743,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             status,
             current.deadlineLabel(),
             current.deadlineSoon(),
+            current.companyLogoUrl(),
             current.sourceUrl(),
             current.applicationMemo(),
             current.deleted()
@@ -726,6 +757,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             workspace.positionTitle(),
             workspace.deadlineLabel(),
             statusLabel(status),
+            workspace.companyLogoUrl(),
             workspace.sourceUrl(),
             workspace.questions()
         ));
@@ -756,6 +788,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
         ApplicationStatus applicationStatus,
         String deadlineLabel,
         boolean deadlineSoon,
+        String companyLogoUrl,
         String sourceUrl,
         String applicationMemo,
         boolean deleted
@@ -770,6 +803,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
         String positionTitle,
         String deadlineLabel,
         String statusLabel,
+        String companyLogoUrl,
         String sourceUrl,
         List<EssayQuestionRecord> questions
     ) {

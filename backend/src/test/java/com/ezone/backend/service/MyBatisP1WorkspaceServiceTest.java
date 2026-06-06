@@ -1,5 +1,6 @@
 package com.ezone.backend.service;
 
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -61,9 +62,15 @@ class MyBatisP1WorkspaceServiceTest {
             "Backend Developer",
             "D-5",
             sourceUrl,
+            "https://static.example.com/example-logo.png",
             "DIRECT"
         ));
 
+        verify(mapper).upsertCompany(argThat(row ->
+            "https://static.example.com/example-logo.png".equals(row.getCompanyLogoUrl())
+                && sourceUrl.equals(row.getLogoSourceUrl())
+                && "DISCOVERED".equals(row.getLogoStatus())
+        ));
         verify(mapper).recordCompanyInfoSource(10L, "SAVED_JOB_URL", sourceUrl, "UNVERIFIED");
     }
 }

@@ -87,7 +87,16 @@
               <span>관리</span>
             </div>
             <article v-for="job in pagedJobs" :key="job.id" class="basket-data-row">
-              <RouterLink class="job-main-link" :to="`/workspaces/${job.workspaceId}`">
+              <RouterLink class="job-main-link company-cell" :to="`/workspaces/${job.workspaceId}`">
+                <span class="company-logo-badge" aria-hidden="true">
+                  <img
+                    v-if="job.companyLogoUrl"
+                    :src="job.companyLogoUrl"
+                    :alt="`${job.companyName} logo`"
+                    @error="job.companyLogoUrl = null"
+                  />
+                  <span v-else>{{ companyInitial(job.companyName) }}</span>
+                </span>
                 <strong>{{ job.companyName }}</strong>
               </RouterLink>
               <RouterLink class="job-main-link" :to="`/workspaces/${job.workspaceId}`">
@@ -343,6 +352,9 @@ async function createManualJob() {
 }
 function changeStatus(jobId, nextStatus) {
     void basketStore.updateStatus(jobId, nextStatus);
+}
+function companyInitial(companyName) {
+    return (companyName ?? '?').trim().charAt(0).toUpperCase() || '?';
 }
 function archiveJob(jobId) {
     const job = basketStore.jobs.find((basketJob) => basketJob.id === jobId);
