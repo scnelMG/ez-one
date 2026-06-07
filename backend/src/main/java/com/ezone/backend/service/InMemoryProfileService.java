@@ -6,6 +6,7 @@ import com.ezone.backend.dto.profile.DocumentProfileResponse;
 import com.ezone.backend.dto.profile.UpsertDocumentSectionRequest;
 import com.ezone.backend.dto.profile.UserProfileRequest;
 import com.ezone.backend.dto.profile.UserProfileResponse;
+import com.ezone.backend.mapper.UserAccountMapper;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -17,13 +18,15 @@ import org.springframework.stereotype.Service;
 @Service
 public class InMemoryProfileService implements ProfileService {
 
+    private final UserAccountMapper userAccountMapper;
     private final AtomicLong idGenerator = new AtomicLong(300);
     private final Map<Long, UserProfileResponse> userProfiles = new LinkedHashMap<>();
     private final Map<Long, Map<String, Object>> documentSections = new LinkedHashMap<>();
     private final Map<Long, List<DocumentCustomFieldResponse>> customFields = new LinkedHashMap<>();
     private final Map<Long, String> documentProfileLastSavedAt = new LinkedHashMap<>();
 
-    public InMemoryProfileService() {
+    public InMemoryProfileService(UserAccountMapper userAccountMapper) {
+        this.userAccountMapper = userAccountMapper;
         userProfiles.put(1L, new UserProfileResponse(
             List.of("백엔드 개발자"),
             List.of("대기업", "스타트업"),
@@ -56,6 +59,7 @@ public class InMemoryProfileService implements ProfileService {
 
     @Override
     public UserProfileResponse updateUserProfile(Long userId, UserProfileRequest request) {
+        userAccountMapper.markProfileCompleted(userId);
         UserProfileResponse response = new UserProfileResponse(
             safeList(request.desiredRoles()),
             safeList(request.companyTypes()),

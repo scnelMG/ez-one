@@ -137,4 +137,11 @@ public interface UserAccountMapper {
         WHERE id = #{userId}
         """)
     void updateNickname(@Param("userId") Long userId, @Param("nickname") String nickname);
+
+    @Update("""
+        UPDATE users
+        SET profile_completed = TRUE
+        WHERE id = #{userId}
+        """)
+    void markProfileCompleted(@Param("userId") Long userId);
 }

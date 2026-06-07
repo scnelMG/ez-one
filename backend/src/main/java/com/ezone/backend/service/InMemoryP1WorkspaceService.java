@@ -453,33 +453,33 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
                 9003L,
                 "토스",
                 "Frontend Developer",
-                "D-3",
-                "https://toss.im/career",
+                "상시",
+                "https://www.wanted.co.kr/wd/204081",
                 "https://www.google.com/s2/favicons?domain=toss.im&sz=128"
             ),
             new RecommendationSample(
                 9001L,
-                "LINE",
-                "Server Platform Engineer",
-                "D-7",
-                "https://line.me/career",
-                "https://www.google.com/s2/favicons?domain=line.me&sz=128"
+                "서브원",
+                "Frontend Developer",
+                "상시",
+                "https://www.wanted.co.kr/wd/355373",
+                "https://www.google.com/s2/favicons?domain=serveone.co.kr&sz=128"
             ),
             new RecommendationSample(
                 9002L,
-                "오늘의집",
-                "Commerce Backend Developer",
-                "D-10",
-                "https://ohou.se/careers",
-                "https://www.google.com/s2/favicons?domain=ohou.se&sz=128"
+                "퍼플독",
+                "시니어 Java 백엔드 엔지니어 (신규서비스)",
+                "상시",
+                "https://www.wanted.co.kr/wd/101761",
+                "https://www.google.com/s2/favicons?domain=purpledog.co.kr&sz=128"
             ),
             new RecommendationSample(
                 9004L,
-                "쿠팡",
-                "Platform Engineer",
-                "D-12",
-                "https://www.coupang.com/np/jobs",
-                "https://www.google.com/s2/favicons?domain=coupang.com&sz=128"
+                "플랜핏",
+                "Frontend Developer",
+                "상시",
+                "https://www.wanted.co.kr/wd/279145",
+                "https://www.google.com/s2/favicons?domain=planfit.ai&sz=128"
             )
         );
     }

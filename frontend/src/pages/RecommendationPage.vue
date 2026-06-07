@@ -26,7 +26,7 @@
             class="recommendation-card recommendation-job-card"
             data-testid="recommendation-card"
           >
-            <div class="recommendation-company-row">
+            <div class="recommendation-card-header">
               <span class="recommendation-logo" aria-hidden="true">
                 <img
                   v-if="item.companyLogoUrl"
@@ -36,10 +36,12 @@
                 />
                 <span v-else>{{ companyInitial(item.companyName) }}</span>
               </span>
+              <div class="recommendation-card-copy">
+                <h3>{{ item.companyName }}</h3>
+                <p>{{ item.positionTitle }}</p>
+              </div>
               <span class="shell-card-kicker">{{ item.deadlineLabel }}</span>
             </div>
-            <h3>{{ item.companyName }}</h3>
-            <p>{{ item.positionTitle }}</p>
             <button
               class="primary-button compact-action"
               type="button"

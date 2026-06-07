@@ -35,37 +35,37 @@ describe('RecommendationPage', () => {
         mocks.listJobs.mockResolvedValue([
             {
                 id: '9002',
-                companyName: '오늘의집',
-                positionTitle: 'Commerce Backend Developer',
-                deadlineLabel: 'D-10',
-                deadlineDate: '2026-06-16',
-                companyLogoUrl: 'https://www.google.com/s2/favicons?domain=ohou.se&sz=128',
+                companyName: '퍼플독',
+                positionTitle: '시니어 Java 백엔드 엔지니어 (신규서비스)',
+                deadlineLabel: '상시',
+                deadlineDate: null,
+                companyLogoUrl: 'https://www.google.com/s2/favicons?domain=purpledog.co.kr&sz=128',
                 workspaceId: null
             },
             {
                 id: '9001',
-                companyName: 'LINE',
-                positionTitle: 'Server Platform Engineer',
-                deadlineLabel: 'D-7',
-                deadlineDate: '2026-06-13',
-                companyLogoUrl: 'https://www.google.com/s2/favicons?domain=line.me&sz=128',
+                companyName: '서브원',
+                positionTitle: 'Frontend Developer',
+                deadlineLabel: '상시',
+                deadlineDate: null,
+                companyLogoUrl: 'https://www.google.com/s2/favicons?domain=serveone.co.kr&sz=128',
                 workspaceId: null
             },
             {
                 id: '9004',
-                companyName: '쿠팡',
-                positionTitle: 'Platform Engineer',
-                deadlineLabel: 'D-12',
-                deadlineDate: '2026-06-18',
-                companyLogoUrl: 'https://www.google.com/s2/favicons?domain=coupang.com&sz=128',
+                companyName: '플랜핏',
+                positionTitle: 'Frontend Developer',
+                deadlineLabel: '상시',
+                deadlineDate: null,
+                companyLogoUrl: 'https://www.google.com/s2/favicons?domain=planfit.ai&sz=128',
                 workspaceId: null
             },
             {
                 id: '9003',
                 companyName: '토스',
                 positionTitle: 'Frontend Developer',
-                deadlineLabel: 'D-3',
-                deadlineDate: '2026-06-09',
+                deadlineLabel: '상시',
+                deadlineDate: null,
                 companyLogoUrl: 'https://www.google.com/s2/favicons?domain=toss.im&sz=128',
                 workspaceId: null
             }
@@ -73,8 +73,8 @@ describe('RecommendationPage', () => {
         mocks.saveJob.mockResolvedValue({
             basketJobId: '101',
             workspaceId: '102',
-            companyName: 'LINE',
-            positionTitle: 'Server Platform Engineer'
+            companyName: '서브원',
+            positionTitle: 'Frontend Developer'
         });
     });
 
@@ -91,9 +91,11 @@ describe('RecommendationPage', () => {
 
         const cards = wrapper.findAll('[data-testid="recommendation-card"]');
         expect(cards).toHaveLength(4);
-        expect(cards.map((card) => card.find('h3').text())).toEqual(['토스', 'LINE', '오늘의집', '쿠팡']);
-        expect(cards[0].find('img').attributes('src')).toBe('https://www.google.com/s2/favicons?domain=toss.im&sz=128');
-        expect(cards[1].find('img').attributes('src')).toBe('https://www.google.com/s2/favicons?domain=line.me&sz=128');
+        expect(cards[0].find('.recommendation-card-header').exists()).toBe(true);
+        expect(cards[0].find('.recommendation-card-copy').exists()).toBe(true);
+        expect(cards.map((card) => card.find('h3').text())).toEqual(['퍼플독', '서브원', '플랜핏', '토스']);
+        expect(cards[0].find('img').attributes('src')).toBe('https://www.google.com/s2/favicons?domain=purpledog.co.kr&sz=128');
+        expect(cards[1].find('img').attributes('src')).toBe('https://www.google.com/s2/favicons?domain=serveone.co.kr&sz=128');
         const disclaimer = wrapper.get('[data-testid="recommendation-trademark-disclaimer"]');
         expect(disclaimer.text()).toContain('채용공고 식별 목적');
         expect(disclaimer.text()).toContain('제휴 또는 후원');
@@ -102,7 +104,7 @@ describe('RecommendationPage', () => {
         await flushPromises();
         expect(mocks.saveJob).toHaveBeenCalledWith('9001');
         expect(wrapper.text()).toContain('공고를 담았습니다');
-        expect(wrapper.text()).toContain('LINE Server Platform Engineer 워크스페이스가 준비됐습니다.');
+        expect(wrapper.text()).toContain('서브원 Frontend Developer 워크스페이스가 준비됐습니다.');
         expect(wrapper.get('[data-testid="saved-workspace-link"]').text()).toContain('워크스페이스 열기');
         expect(wrapper.get('[data-testid="saved-workspace-link"]').attributes('href')).toBe('/workspaces/102');
     });
