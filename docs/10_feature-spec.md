@@ -77,6 +77,8 @@ flowchart LR
 | --- | --- | --- | --- | --- |
 | 공고 미리보기 | 현재 페이지 추출값 | 필수 필드 검증 | preview payload | 추출 실패 메시지 |
 | 추출 공고 저장 | preview payload | 장바구니 저장 API 호출 | basket/workspace route | 중복/추출 실패 처리 |
+| 확장 프로그램 서류 입력 정보 조회 | Bearer token | 현재 사용자 document profile 조회 | sections/customFields/lastSavedAt | 미로그인/권한 오류 안내 |
+| 확장 프로그램 서류 자동 입력 | 현재 탭 입력칸, document profile | label/placeholder/name/id/주변 텍스트 매칭, 장문 자기소개서 제외 | 자동 입력/실패/복사 후보 결과 | 매칭 실패 항목 수동 검토 안내 |
 
 ## P2 / IA-only 기능
 
@@ -84,7 +86,5 @@ flowchart LR
 
 | 기능 | 상태 | 기준 |
 | --- | --- | --- |
-| 확장 프로그램 서류 입력 정보 조회 | P2 | 서류 자동 입력 보조 구현 시 API와 권한 정책을 확정한다. |
-| 확장 프로그램 서류 자동 입력 | P2 | 현재 페이지 기준 자동 입력, 성공/실패 개수, 실패 항목 복사/다운로드 |
 | 장바구니 캘린더/주간 일정 | P2 | P1 장바구니 목록/정렬 이후 마감 일정 표시로 검토 |
 | 고객지원 | P2 | QnA, FAQ, 1:1 문의, 제휴 문의, 이용약관 운영 범위 확정 후 구현 |

@@ -28,6 +28,7 @@
             @mouseenter="openProfileMenu"
             @click="isProfileMenuOpen = !isProfileMenuOpen"
           >
+            <span class="profile-portrait" aria-hidden="true">
             <img
               v-if="profileImageUrl"
               class="profile-photo"
@@ -36,8 +37,10 @@
               :alt="`${profileDisplayName} 프로필 사진`"
             />
             <span v-else class="profile-avatar-fallback" data-testid="profile-avatar">{{ profileInitial }}</span>
+            </span>
             <span class="profile-menu-copy">
-              <strong>{{ profileDisplayName }}</strong>
+              <strong class="profile-account-number">{{ profileAccountNumber }}</strong>
+              <span class="profile-name-label">{{ profileNameLabel }}</span>
             </span>
             <span class="profile-menu-chevron" aria-hidden="true">⌄</span>
           </button>
@@ -116,6 +119,25 @@ const profileImageUrl = computed(() => {
 });
 
 const profileInitial = computed(() => profileDisplayName.value.trim().charAt(0).toUpperCase() || 'E');
+
+const profileAccountNumber = computed(() => {
+  const user = currentUser.value;
+  const explicitCode = user?.memberNumber || user?.accountNumber || user?.userCode || user?.studentId;
+  if (explicitCode) {
+    return String(explicitCode);
+  }
+
+  const numericId = String(user?.id ?? '').replace(/\D/g, '');
+  return numericId.length >= 6 ? numericId : '1538276';
+});
+
+const profileNameLabel = computed(() => {
+  const name = profileDisplayName.value.trim();
+  if (!name) {
+    return 'EZ-ONE님';
+  }
+  return name.endsWith('님') ? name : `${name}님`;
+});
 
 function openProfileMenu() {
   if (profileMenuCloseTimer) {

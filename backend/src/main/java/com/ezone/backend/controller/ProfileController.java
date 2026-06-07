@@ -43,6 +43,11 @@ public class ProfileController {
         return ApiResponse.success(profileService.getDocumentProfile(CurrentUserSupport.currentUserId()));
     }
 
+    @GetMapping("/api/extension/document-profile")
+    public ApiResponse<DocumentProfileResponse> getExtensionDocumentProfile() {
+        return ApiResponse.success(profileService.getDocumentProfile(CurrentUserSupport.currentUserId()));
+    }
+
     @PutMapping("/api/document-profile/sections/{sectionType}")
     public ApiResponse<DocumentProfileResponse> upsertSection(
         @PathVariable String sectionType,

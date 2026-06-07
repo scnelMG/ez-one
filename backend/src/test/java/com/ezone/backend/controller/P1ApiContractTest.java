@@ -403,6 +403,11 @@ class P1ApiContractTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.sections.basicInfo", notNullValue()));
 
+        mockMvc.perform(get("/api/extension/document-profile"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.sections.basicInfo", notNullValue()))
+            .andExpect(jsonPath("$.data.customFields", notNullValue()));
+
         mockMvc.perform(put("/api/document-profile/sections/basicInfo")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""

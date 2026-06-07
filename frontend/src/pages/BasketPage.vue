@@ -81,15 +81,21 @@
           />
         </div>
 
-        <p v-if="basketStore.status === 'loading'" class="basket-loading">공고 목록을 불러오는 중입니다.</p>
+        <p v-if="basketStore.status === 'loading' && !basketStore.hasJobs" class="basket-loading">공고 목록을 불러오는 중입니다.</p>
         <StatePanel
-          v-else-if="basketStore.status === 'error'"
+          v-else-if="basketStore.status === 'error' && !basketStore.hasJobs"
           id="basket-error"
           tone="navy"
           title="공고 목록 처리 실패"
           :body="basketStore.errorMessage"
         />
         <div v-else class="basket-data-table">
+          <p v-if="basketStore.status === 'loading'" class="basket-refreshing" data-testid="basket-refreshing">
+            공고 목록을 갱신하는 중입니다.
+          </p>
+          <p v-else-if="basketStore.status === 'error'" class="basket-inline-error" role="alert">
+            {{ basketStore.errorMessage }}
+          </p>
           <div class="basket-data-head">
             <span>중요</span>
             <span>회사명</span>
@@ -127,19 +133,39 @@
             <RouterLink class="job-main-link" :to="`/workspaces/${job.workspaceId}`">
               {{ job.positionTitle }}
             </RouterLink>
-            <select
-              class="status-select status-tag"
-              :class="statusClass(job.status)"
-              :value="job.status"
-              :aria-label="`${job.companyName} ${job.positionTitle} 지원 상태 변경`"
-              :data-testid="`status-${job.id}`"
-              @change="changeStatus(job.id, $event.target.value)"
-            >
-              <option value="NOT_STARTED">지원 전</option>
-              <option value="IN_PROGRESS">진행 중</option>
-              <option value="SUBMITTED">지원완료</option>
-              <option value="NOT_APPLIED">미지원</option>
-            </select>
+            <div class="status-menu">
+              <button
+                class="status-select status-tag"
+                type="button"
+                :class="statusClass(job.status)"
+                :aria-label="`${job.companyName} ${job.positionTitle} 지원 상태 변경`"
+                :aria-expanded="openStatusJobId === job.id ? 'true' : 'false'"
+                :data-testid="`status-${job.id}`"
+                @click="toggleStatusMenu(job.id)"
+              >
+                {{ statusLabel(job.status) }}
+              </button>
+              <div
+                v-if="openStatusJobId === job.id"
+                class="status-option-list"
+                role="listbox"
+                :aria-label="`${job.companyName} 지원 상태 선택`"
+              >
+                <button
+                  v-for="option in statusOptions"
+                  :key="option.value"
+                  class="status-option status-tag"
+                  type="button"
+                  role="option"
+                  :class="statusClass(option.value)"
+                  :aria-selected="job.status === option.value ? 'true' : 'false'"
+                  :data-testid="`status-${job.id}-option-${option.value}`"
+                  @click="changeStatus(job.id, option.value)"
+                >
+                  {{ option.label }}
+                </button>
+              </div>
+            </div>
             <RouterLink class="job-main-link" :to="`/workspaces/${job.workspaceId}`">
               <span class="deadline-pill" :class="{ urgent: isDeadlineSoon(job) }">{{ job.deadlineLabel }}</span>
             </RouterLink>
@@ -237,11 +263,9 @@
 
       <section class="deadline-panel basket-calendar-panel" data-testid="basket-calendar" aria-label="공고 캘린더">
         <div class="section-heading">
-          <div>
-            <div class="calendar-title-row">
-              <h2>공고 캘린더</h2>
-              <p data-testid="basket-calendar-note">공고별 마감 날짜가 캘린더에 표시됩니다.</p>
-            </div>
+          <div class="calendar-title-row">
+            <h2>공고 캘린더</h2>
+            <p data-testid="basket-calendar-note">공고별 마감 날짜가 캘린더에 표시됩니다.</p>
           </div>
           <select v-model="selectedMonthKey" data-testid="calendar-month-picker" aria-label="캘린더 월 선택">
             <option v-for="month in selectableMonths" :key="month.key" :value="month.key">{{ month.label }}</option>
@@ -268,7 +292,7 @@
             >
               <strong>{{ job.companyName }}</strong>
               <small>{{ job.positionTitle }}</small>
-              <em class="status-tag" :class="statusClass(job.status)">{{ job.statusLabel }}</em>
+              <em class="status-tag" :class="statusClass(job.status)">{{ statusLabel(job.status) }}</em>
             </RouterLink>
           </div>
         </div>
@@ -294,6 +318,13 @@ const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
 const today = startOfToday();
 const selectedMonthKey = ref(toMonthKey(today));
 const priorityJobIds = ref(new Set());
+const openStatusJobId = ref(null);
+const statusOptions = [
+    { value: 'NOT_STARTED', label: '지원 전' },
+    { value: 'NOT_APPLIED', label: '미지원' },
+    { value: 'IN_PROGRESS', label: '진행중' },
+    { value: 'SUBMITTED', label: '지원완료' }
+];
 const selectableMonths = computed(() => {
     const months = new Map();
     for (let offset = -1; offset <= 5; offset += 1) {
@@ -340,7 +371,7 @@ const manualForm = reactive({
 const statusFilters = [
     { label: '전체', value: undefined },
     { label: '지원 전', value: 'NOT_STARTED' },
-    { label: '진행 중', value: 'IN_PROGRESS' },
+    { label: '진행중', value: 'IN_PROGRESS' },
     { label: '지원완료', value: 'SUBMITTED' },
     { label: '미지원', value: 'NOT_APPLIED' }
 ];
@@ -477,6 +508,12 @@ function statusClass(status) {
         'status-not-applied': status === 'NOT_APPLIED'
     };
 }
+function statusLabel(status) {
+    return statusOptions.find((option) => option.value === status)?.label ?? '미지원';
+}
+function toggleStatusMenu(jobId) {
+    openStatusJobId.value = openStatusJobId.value === jobId ? null : jobId;
+}
 function isPriorityJob(job) {
     return priorityJobIds.value.has(job.id) || job.priority === true;
 }
@@ -504,6 +541,7 @@ async function createManualJob() {
     manualForm.sourceUrl = '';
 }
 function changeStatus(jobId, nextStatus) {
+    openStatusJobId.value = null;
     void basketStore.updateStatus(jobId, nextStatus);
 }
 function companyInitial(companyName) {

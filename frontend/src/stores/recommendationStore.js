@@ -15,7 +15,9 @@ export const useRecommendationStore = defineStore('recommendation', () => {
             status.value = 'ready';
         }
         catch (error) {
-            jobs.value = [];
+            if (jobs.value.length === 0) {
+                jobs.value = [];
+            }
             status.value = 'error';
             errorMessage.value = messageFromError(error, '추천 공고를 불러오지 못했습니다.');
         }

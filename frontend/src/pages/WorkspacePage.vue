@@ -481,7 +481,6 @@ watch(() => workspaceStore.activeReference, (reference) => {
 }, { immediate: true });
 
 function loadCurrentWorkspace() {
-  rememberRecentWorkspace(workspaceId.value);
   void workspaceStore.loadWorkspace(workspaceId.value);
 }
 
@@ -511,6 +510,7 @@ async function saveDraft() {
   clearAutoSaveTimer();
   autoSaveStatus.value = 'saving';
   await workspaceStore.saveDraft(workspaceId.value, currentQuestion.value.id, draftBody.value);
+  rememberCurrentWorkspaceIfSaved();
   autoSaveStatus.value = workspaceStore.status === 'error' ? 'failed' : 'saved';
 }
 
@@ -529,32 +529,36 @@ function clearAutoSaveTimer() {
   autoSaveTimer = null;
 }
 
-function createQuestion() {
+async function createQuestion() {
   if (!newQuestion.prompt.trim()) return;
-  void workspaceStore.createQuestion(workspaceId.value, {
+  await workspaceStore.createQuestion(workspaceId.value, {
     prompt: newQuestion.prompt,
     maxLength: newQuestion.maxLength
   });
+  rememberCurrentWorkspaceIfSaved();
   newQuestion.prompt = '';
   newQuestion.maxLength = 1000;
 }
 
-function updateQuestion() {
+async function updateQuestion() {
   if (!currentQuestion.value || !editQuestion.prompt.trim()) return;
-  void workspaceStore.updateQuestion(workspaceId.value, currentQuestion.value.id, {
+  await workspaceStore.updateQuestion(workspaceId.value, currentQuestion.value.id, {
     prompt: editQuestion.prompt,
     maxLength: editQuestion.maxLength
   });
+  rememberCurrentWorkspaceIfSaved();
 }
 
-function deleteQuestion() {
+async function deleteQuestion() {
   if (!currentQuestion.value) return;
-  void workspaceStore.deleteQuestion(workspaceId.value, currentQuestion.value.id);
+  await workspaceStore.deleteQuestion(workspaceId.value, currentQuestion.value.id);
+  rememberCurrentWorkspaceIfSaved();
 }
 
-function createVersion() {
+async function createVersion() {
   if (!currentQuestion.value) return;
-  void workspaceStore.createVersion(workspaceId.value, currentQuestion.value.id, `v${workspaceStore.versions.length + 1}`);
+  await workspaceStore.createVersion(workspaceId.value, currentQuestion.value.id, `v${workspaceStore.versions.length + 1}`);
+  rememberCurrentWorkspaceIfSaved();
 }
 
 function compareVersions() {
@@ -568,16 +572,17 @@ function openBoard(type) {
   drawerOpen.value = true;
 }
 
-function createReference() {
+async function createReference() {
   const type = activeBoard.value === 'AWARDS_PROJECTS' ? 'AWARDS_PROJECTS' : activeBoard.value;
   const template = referenceTemplate(type);
-  void workspaceStore.createReference(workspaceId.value, {
+  await workspaceStore.createReference(workspaceId.value, {
     boardName: type,
     referenceType: type,
     title: template.title,
     body: template.body,
     url: ''
   });
+  rememberCurrentWorkspaceIfSaved();
 }
 
 function openReference(referenceId) {
@@ -589,22 +594,30 @@ function openReference(referenceId) {
   void workspaceStore.openReference(referenceId);
 }
 
-function saveReference() {
+async function saveReference() {
   const reference = workspaceStore.activeReference;
   if (!reference) return;
-  void workspaceStore.updateReference(reference.id, {
+  await workspaceStore.updateReference(reference.id, {
     boardName: referenceForm.referenceType,
     referenceType: referenceForm.referenceType,
     title: referenceForm.title,
     body: referenceForm.body,
     url: referenceForm.url
   });
+  rememberCurrentWorkspaceIfSaved();
 }
 
-function deleteReference() {
+async function deleteReference() {
   const reference = workspaceStore.activeReference;
   if (!reference) return;
-  void workspaceStore.deleteReference(reference.id);
+  await workspaceStore.deleteReference(reference.id);
+  rememberCurrentWorkspaceIfSaved();
+}
+
+function rememberCurrentWorkspaceIfSaved() {
+  if (workspaceStore.status !== 'error') {
+    rememberRecentWorkspace(workspaceId.value);
+  }
 }
 
 function referenceTypeLabel(type) {

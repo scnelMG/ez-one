@@ -27,6 +27,8 @@
 | TC-EXT-002 | Extension | 추출 실패 | 미지원 페이지 또는 추출 실패 시 오류 안내, 잘못된 저장 없음 |
 | TC-EXT-003 | Extension | 저장 전 수집 데이터 수정 | 회사명, 공고명, 마감일 수정값이 저장 API payload에 반영됨 |
 | TC-EXT-004 | Extension | 확장 설치 안내 | 웹 랜딩에서 Chrome 확장프로그램 로컬 설치 안내와 `dist` 경로 제공 |
+| TC-EXT-DOC-AUTOFILL-001 | Extension | 서류 정보 자동 입력 보조 | label, placeholder, name/id, table, nearby text 기반 기본/문서/커스텀 항목 입력 |
+| TC-EXT-DOC-AUTOFILL-002 | Extension | 자기소개서/장문 입력 제외 | essay/long-form textarea는 자동 입력하지 않고 수동 검토 대상으로 표시 |
 | TC-REC-001 | Recommendation | 추천 공고 별표 저장 | 장바구니 저장, 중복 처리 |
 | TC-PROFILE-001 | Document Profile | 표준 섹션 저장 | 사용자별 데이터 저장 |
 | TC-PROFILE-CUSTOM-001 | Document Profile | 커스텀 항목 추가 | 재사용 가능한 항목 생성 |

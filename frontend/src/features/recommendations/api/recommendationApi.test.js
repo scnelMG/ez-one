@@ -38,6 +38,37 @@ describe('recommendationApi', () => {
         ]);
     });
 
+    it('REC-001: resolves missing logos from backend company domain or known company name', async () => {
+        const get = vi.fn().mockResolvedValue({
+            data: {
+                success: true,
+                data: [
+                    {
+                        basketJobId: 9002,
+                        companyName: 'SK하이닉스',
+                        positionTitle: '청년 Hy-Five 15기',
+                        deadlineLabel: 'D-4',
+                        deadlineDate: '2026-06-11'
+                    },
+                    {
+                        basketJobId: 9003,
+                        companyName: '새회사',
+                        positionTitle: '경영지원',
+                        deadlineLabel: 'D-2',
+                        deadlineDate: '2026-06-09',
+                        companyDomain: 'example-careers.co.kr'
+                    }
+                ],
+                error: null
+            }
+        });
+        const api = createRecommendationApi({ get, post: vi.fn() });
+        const jobs = await api.listJobs();
+
+        expect(jobs[0].companyLogoUrl).toBe('https://www.google.com/s2/favicons?domain=skhynix.com&sz=128');
+        expect(jobs[1].companyLogoUrl).toBe('https://www.google.com/s2/favicons?domain=example-careers.co.kr&sz=128');
+    });
+
     it('REC-001: saves a recommendation and returns the basket workspace path', async () => {
         const post = vi.fn().mockResolvedValue({
             data: {

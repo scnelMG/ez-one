@@ -58,7 +58,7 @@
 | 마이페이지 | 고객지원 | `/mypage/support` | `SupportPage` | No | P2. 문의/FAQ/약관/제휴 |
 | 알림 | 알림 드롭다운 | app header | `AlertDropdown` | No | P2. 마감/상태 변경/추천/저장 |
 | 확장 프로그램 | 공고 저장하기 | Chrome popup | `JobSavePopup` | Yes | 현재 페이지 감지, 직무 다중 선택, 저장 |
-| 확장 프로그램 | 서류 정보 입력하기 | Chrome side panel | `DocumentInputPanel` | No | P2. 자동 입력, 실패 항목 처리 |
+| 확장 프로그램 | 서류 정보 입력하기 | Chrome popup | `DocumentInputPanel` | Yes | 입력 보조, 자기소개서 자동 입력 제외, 실패/복사 후보 표시 |
 
 ## 와이어프레임 기준 프론트 구조
 
@@ -213,12 +213,14 @@ frontend/src/features/references/
 
 ### 07. Extension Document Input
 
-P2 화면이다. P1에서는 공고 저장 extension과 분리하고 구현하지 않는다.
+P1 확장 프로그램 팝업의 기능 선택 흐름에 포함한다. 공고 저장과 같은 로그인 세션을 사용하되,
+현재 탭에 click-triggered script를 주입하는 입력 보조 기능으로만 제공한다.
 
-예약 기준:
-- 서류 입력 정보 기반 자동 입력 보조
-- 실패 항목 복사 또는 파일 다운로드
-- 사이트별 selector 변경 대응
+완료 기준:
+- `/api/extension/document-profile`로 현재 사용자의 서류 입력 정보를 조회한다.
+- 기본정보, 표준 섹션, 커스텀 항목을 현재 페이지 입력칸 label/placeholder/name/id/주변 텍스트와 매칭한다.
+- 자기소개서와 장문 textarea는 자동 입력하지 않고 수동 검토 대상에 표시한다.
+- 자동 입력, 실패 항목, 복사 후보를 결과 패널에 표시하고 제출 전 직접 검토를 안내한다.
 
 ### 08. Document Profile / Auto Input
 
@@ -394,7 +396,7 @@ frontend/src/features/document-profile/
 | 로그인, 온보딩, 메인, 장바구니, 워크스페이스, 서류 입력 정보, 추천 저장, Notion JOB_ONLY | P1 |
 | 마이페이지 내 온보딩 수정, Notion 계정 확인 | P1 보조 |
 | Mattermost 추천 후보, 과거 지원 내역, 알림, 추천 hover 기업 정보 | P2/IA only |
-| 확장 프로그램 서류 자동 입력 보조 | P2. 공고 저장 extension과 분리 |
+| 확장 프로그램 서류 자동 입력 보조 | P1. 제출 자동화 없이 입력 보조와 수동 검토만 제공 |
 
 ## UI 상태 기준
 
@@ -415,7 +417,7 @@ frontend/src/features/document-profile/
 | 공고 저장 popup | Yes | 현재 페이지 공고 감지, 직무 복수 선택, 미리보기, 저장 |
 | 저장 완료 | Yes | 장바구니/워크스페이스 이동 링크 제공 |
 | 추출 실패 | Yes | 실패 안내와 수동 입력 대안 제공 |
-| 서류 자동 입력 | No | P2. 실패 항목 복사/파일 다운로드 흐름은 IA만 유지 |
+| 서류 자동 입력 | Yes | 기본/문서/커스텀 항목 입력 보조, 자기소개서 자동 입력 제외, 실패/복사 후보 표시 |
 
 ## 화면 동작 원칙
 

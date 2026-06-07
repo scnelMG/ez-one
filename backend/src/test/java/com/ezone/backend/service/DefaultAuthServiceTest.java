@@ -1,6 +1,8 @@
 package com.ezone.backend.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -20,6 +22,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -37,6 +42,9 @@ class DefaultAuthServiceTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private AuthenticationManager authenticationManager;
 
     @InjectMocks
     private DefaultAuthService authService;
@@ -78,6 +86,51 @@ class DefaultAuthServiceTest {
         assertThat(response.user().email()).isEqualTo("user@example.com");
         assertThat(response.user().profileCompleted()).isFalse();
         verify(userAccountMapper).createFromGoogleProfile(profile);
+    }
+
+    @Test
+    void loginWithGoogleLinksExistingEmailWhenSubjectIsMissing() {
+        GoogleLoginRequest request = new GoogleLoginRequest(
+            "google-oauth-code",
+            "http://localhost:5173/login/callback"
+        );
+        GoogleUserProfile profile = new GoogleUserProfile(
+            "new-google-subject",
+            "user@example.com",
+            "User",
+            "User"
+        );
+        UserAccount existingUser = new UserAccount(
+            1L,
+            null,
+            "user@example.com",
+            "User",
+            "User",
+            true
+        );
+        UserAccount linkedUser = new UserAccount(
+            1L,
+            "new-google-subject",
+            "user@example.com",
+            "User",
+            "User",
+            true
+        );
+
+        when(googleOAuthClient.verifyAuthorizationCode(request)).thenReturn(profile);
+        when(userAccountMapper.findByGoogleSubject("new-google-subject"))
+            .thenReturn(Optional.empty())
+            .thenReturn(Optional.of(linkedUser));
+        when(userAccountMapper.findByEmail("user@example.com")).thenReturn(Optional.of(existingUser));
+        when(authTokenIssuer.issueFor(linkedUser)).thenReturn(
+            new IssuedTokenPair("access-token", "refresh-token", 3600)
+        );
+
+        AuthTokenResponse response = authService.loginWithGoogle(request);
+
+        assertThat(response.accessToken()).isEqualTo("access-token");
+        assertThat(response.user().profileCompleted()).isTrue();
+        verify(userAccountMapper).linkGoogleProfile(profile);
     }
 
     @Test
@@ -128,18 +181,8 @@ class DefaultAuthServiceTest {
     @Test
     void emailLoginRejectsInvalidPassword() {
         EmailLoginRequest request = new EmailLoginRequest("local@example.com", "wrong-password");
-        when(userAccountMapper.findByEmail("local@example.com")).thenReturn(Optional.of(
-            new UserAccount(
-                2L,
-                null,
-                "local@example.com",
-                "Local User",
-                "Local User",
-                false
-            )
-        ));
-        when(userAccountMapper.findPasswordHashByEmail("local@example.com")).thenReturn(Optional.of("bcrypt-hash"));
-        when(passwordEncoder.matches("wrong-password", "bcrypt-hash")).thenReturn(false);
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+            .thenThrow(new BadCredentialsException("Bad credentials"));
 
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> authService.loginWithEmail(request))
             .isInstanceOf(ResponseStatusException.class)
@@ -158,14 +201,18 @@ class DefaultAuthServiceTest {
             true
         );
 
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+            .thenReturn(new UsernamePasswordAuthenticationToken("local@example.com", null));
         when(userAccountMapper.findByEmail("local@example.com")).thenReturn(Optional.of(user));
-        when(userAccountMapper.findPasswordHashByEmail("local@example.com")).thenReturn(Optional.of("bcrypt-hash"));
-        when(passwordEncoder.matches("password123!", "bcrypt-hash")).thenReturn(true);
         when(authTokenIssuer.issueFor(user)).thenReturn(new IssuedTokenPair("access-token", "refresh-token", 3600));
 
         AuthTokenResponse response = authService.loginWithEmail(request);
 
         assertThat(response.accessToken()).isEqualTo("access-token");
         assertThat(response.user().profileCompleted()).isTrue();
+        verify(authenticationManager).authenticate(argThat(authentication ->
+            "local@example.com".equals(authentication.getPrincipal())
+                && "password123!".equals(authentication.getCredentials())
+        ));
     }
 }

@@ -1,4 +1,5 @@
 import { defaultHttpClient, unwrapApiData } from '@/shared/apiClient';
+import { logoUrlFor, resolveCompanyLogoUrl } from '@/features/jobs/companyLogo';
 export function createRecommendationApi(httpClient = defaultHttpClient) {
     return {
         async listJobs() {
@@ -28,7 +29,7 @@ function toRecommendationJob(dto) {
         positionTitle: dto.positionTitle,
         deadlineLabel: dto.deadlineLabel,
         deadlineDate: dto.deadlineDate ?? null,
-        companyLogoUrl: dto.companyLogoUrl ?? dto.logoUrl ?? null,
+        companyLogoUrl: resolveCompanyLogoUrl(dto),
         participantCount: dto.participantCount ?? dto.applicantCount ?? 0,
         workspaceId: dto.workspaceId == null ? null : String(dto.workspaceId)
     };
@@ -120,8 +121,3 @@ const mockRecommendationJobs = [
         workspaceId: null
     }
 ];
-
-function logoUrlFor(domain) {
-    return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
-}
-

@@ -186,7 +186,7 @@ describe('WorkspacePage', () => {
         expect(mocks.getWorkspace).toHaveBeenCalledWith('102');
         expect(mocks.getDefaults).toHaveBeenCalledWith('102');
         expect(mocks.listVersions).toHaveBeenCalledWith('102');
-        expect(JSON.parse(localStorage.getItem('ezone.recentWorkspaces'))).toEqual(['102']);
+        expect(localStorage.getItem('ezone.recentWorkspaces')).toBeNull();
         expect(wrapper.text()).toContain('지원 워크스페이스');
         expect(wrapper.text()).toContain('Naver');
         expect(wrapper.text()).toContain('Backend Engineer');
@@ -204,10 +204,12 @@ describe('WorkspacePage', () => {
         await wrapper.get('[data-testid="save-draft"]').trigger('click');
         await flushPromises();
         expect(mocks.saveDraft).toHaveBeenCalledWith('102', '103', '새 초안');
+        expect(JSON.parse(localStorage.getItem('ezone.recentWorkspaces'))).toEqual(['102']);
 
         await wrapper.get('[data-testid="create-version"]').trigger('click');
         await flushPromises();
         expect(mocks.createVersion).toHaveBeenCalledWith('102', '103', 'v3');
+        expect(JSON.parse(localStorage.getItem('ezone.recentWorkspaces'))).toEqual(['102']);
     });
 
     it('WS-009: auto-saves after two idle seconds', async () => {
@@ -280,10 +282,12 @@ describe('WorkspacePage', () => {
             body: '수정한 참고자료 본문',
             url: 'https://example.com/news'
         });
+        expect(JSON.parse(localStorage.getItem('ezone.recentWorkspaces'))).toEqual(['102']);
 
         await wrapper.get('[data-testid="delete-reference"]').trigger('click');
         await flushPromises();
         expect(mocks.deleteReference).toHaveBeenCalledWith('104');
+        expect(JSON.parse(localStorage.getItem('ezone.recentWorkspaces'))).toEqual(['102']);
     });
 
     it('WS-017/WS-018: version management also keeps the side panel available', async () => {
@@ -313,6 +317,8 @@ describe('WorkspacePage', () => {
             prompt: '성장 과정을 작성하세요.',
             maxLength: 700
         });
+        expect(JSON.parse(localStorage.getItem('ezone.recentWorkspaces'))).toEqual(['102']);
+        localStorage.setItem('ezone.recentWorkspaces', JSON.stringify(['999']));
 
         await wrapper.get('[data-testid="edit-question-prompt"]').setValue('수정한 문항');
         await wrapper.get('[data-testid="edit-question-max"]').setValue(700);
@@ -322,10 +328,12 @@ describe('WorkspacePage', () => {
             prompt: '수정한 문항',
             maxLength: 700
         });
+        expect(JSON.parse(localStorage.getItem('ezone.recentWorkspaces'))).toEqual(['102']);
 
         await wrapper.get('[data-testid="delete-question"]').trigger('click');
         await flushPromises();
         expect(mocks.deleteQuestion).toHaveBeenCalledWith('102', '103');
+        expect(JSON.parse(localStorage.getItem('ezone.recentWorkspaces'))).toEqual(['102']);
     });
 });
 

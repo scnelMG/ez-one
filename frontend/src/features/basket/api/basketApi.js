@@ -1,5 +1,6 @@
 import { defaultHttpClient, unwrapApiData } from '@/shared/apiClient';
 import { mockBasketJobs } from './mockBasketData';
+import { resolveCompanyLogoUrl } from '@/features/jobs/companyLogo';
 export function createBasketApi(httpClient = defaultHttpClient) {
     return {
         async listJobs(status) {
@@ -45,7 +46,7 @@ function toBasketJob(dto) {
         deadlineLabel: dto.deadlineLabel,
         deadlineDate: dto.deadlineDate,
         deadlineSoon: dto.deadlineSoon,
-        companyLogoUrl: dto.companyLogoUrl ?? null,
+        companyLogoUrl: resolveCompanyLogoUrl(dto),
         workspaceId: String(dto.workspaceId),
         sourceUrl: dto.sourceUrl,
         applicationMemo: dto.applicationMemo ?? ''

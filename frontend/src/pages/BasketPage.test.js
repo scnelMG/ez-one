@@ -149,7 +149,7 @@ describe('BasketPage', () => {
 
         const calendarJobs = wrapper.findAll('[data-testid="calendar-job"]');
         expect(calendarJobs).toHaveLength(4);
-        expect(calendarJobs.map((job) => job.text())).toContain('NaverBackend Engineer진행 중');
+        expect(calendarJobs.map((job) => job.text())).toContain('NaverBackend Engineer진행중');
         expect(calendarJobs.map((job) => job.attributes('href'))).toContain('/workspaces/102');
         expect(wrapper.find('[data-testid="calendar-today"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="calendar-month-picker"]').exists()).toBe(true);
@@ -169,7 +169,7 @@ describe('BasketPage', () => {
         expect(savedWrapper.findAll('[data-testid^="basket-filter-"]').map((item) => item.text())).toEqual([
             '전체',
             '지원 전',
-            '진행 중',
+            '진행중',
             '지원완료',
             '미지원',
             '중요'
@@ -201,7 +201,8 @@ describe('BasketPage', () => {
         });
         expect(wrapper.text()).toContain('Line');
 
-        await wrapper.get('[data-testid="status-101"]').setValue('SUBMITTED');
+        await wrapper.get('[data-testid="status-101"]').trigger('click');
+        await wrapper.get('[data-testid="status-101-option-SUBMITTED"]').trigger('click');
         await flushPromises();
         expect(mocks.updateStatus).toHaveBeenCalledWith('101', 'SUBMITTED');
         expect(wrapper.text()).toContain('지원완료');
@@ -210,11 +211,12 @@ describe('BasketPage', () => {
         expect(wrapper.find('[data-testid="basket-management-head"]').exists()).toBe(false);
         expect(wrapper.get('[data-testid="recent-work-101"]').text()).toBe('최근 작업');
         expect(wrapper.get('[data-testid="status-101"]').classes()).toEqual(expect.arrayContaining(['status-select', 'status-tag']));
-        expect(wrapper.get('[data-testid="status-101"]').findAll('option').map((option) => option.text())).toEqual([
+        await wrapper.get('[data-testid="status-101"]').trigger('click');
+        expect(wrapper.findAll('[data-testid^="status-101-option-"]').map((option) => option.text())).toEqual([
             '지원 전',
-            '진행 중',
+            '미지원',
+            '진행중',
             '지원완료',
-            '미지원'
         ]);
 
         await wrapper.get('[data-testid="priority-101"]').trigger('click');
@@ -225,6 +227,30 @@ describe('BasketPage', () => {
         expect(window.confirm).toHaveBeenCalledWith('Naver Backend Engineer 공고를 삭제하시겠습니까?');
         expect(mocks.archiveJob).toHaveBeenCalledWith('101');
         expect(wrapper.text()).not.toContain('Naver');
+    });
+
+    it('JOB-005/JOB-010: keeps the current basket list visible while a status update is pending', async () => {
+        let resolveStatusUpdate;
+        const wrapper = await mountBasket('/basket');
+        mocks.updateStatus.mockImplementationOnce(() => new Promise((resolve) => {
+            resolveStatusUpdate = resolve;
+        }));
+
+        await wrapper.get('[data-testid="status-101"]').trigger('click');
+        await wrapper.get('[data-testid="status-101-option-SUBMITTED"]').trigger('click');
+
+        expect(mocks.updateStatus).toHaveBeenCalledWith('101', 'SUBMITTED');
+        expect(rowCompanies(wrapper)).toContain('Naver');
+        expect(wrapper.find('[data-testid="basket-refreshing"]').exists()).toBe(true);
+        expect(wrapper.find('.basket-loading').exists()).toBe(false);
+
+        resolveStatusUpdate({
+            ...defaultJobs[0],
+            status: 'SUBMITTED',
+            statusLabel: '지원완료'
+        });
+        await flushPromises();
+        expect(wrapper.text()).toContain('지원완료');
     });
 
     it('JOB-014: filters priority basket jobs', async () => {

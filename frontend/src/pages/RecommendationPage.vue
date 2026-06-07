@@ -3,7 +3,7 @@
     <section class="wire-page recommendation-page">
       <PageHeader
         title="추천 공고"
-        description="관심 직무와 입력한 정보를 바탕으로 지금 확인할 만한 공고를 모아 보여드립니다. 마음에 드는 공고는 바로 담아 지원 준비를 이어갈 수 있습니다."
+        description="마감이 있는 공고를 빠른 순서로 정리했습니다. 관심 있는 공고는 담아서 지원 워크스페이스로 이어갈 수 있습니다."
       />
 
       <StatePanel
@@ -15,9 +15,21 @@
       />
 
       <section class="wire-section" aria-label="추천 공고 목록">
-        <p v-if="recommendationStore.status === 'loading'">추천 공고를 불러오는 중입니다.</p>
+        <div class="recommendation-list-header">
+          <div>
+            <h2>추천 공고 {{ sortedJobs.length }}건</h2>
+            <p>마감 임박순으로 제공됩니다.</p>
+          </div>
+          <span>로고가 확인된 공고만 표시됩니다.</span>
+        </div>
+        <p v-if="recommendationStore.status === 'loading' && sortedJobs.length === 0" class="recommendation-loading">
+          추천 공고를 불러오는 중입니다.
+        </p>
+        <p v-else-if="recommendationStore.status === 'loading'" class="recommendation-refreshing" data-testid="recommendation-refreshing">
+          추천 공고를 갱신하는 중입니다.
+        </p>
         <div
-          v-if="recommendationStore.status !== 'loading' && sortedJobs.length > 0"
+          v-if="sortedJobs.length > 0"
           class="recommendation-grid recommendation-page-grid"
         >
           <article
@@ -27,6 +39,11 @@
             data-testid="recommendation-card"
           >
             <div class="recommendation-card-header">
+              <div class="recommendation-card-copy">
+                <h3>{{ item.companyName }}</h3>
+                <p>{{ item.positionTitle }}</p>
+                <span>{{ item.deadlineLabel }} · {{ formatParticipantCount(item.participantCount) }}명 작성</span>
+              </div>
               <span class="recommendation-logo" aria-hidden="true">
                 <img
                   v-if="item.companyLogoUrl"
@@ -36,14 +53,9 @@
                 />
                 <span v-else>{{ companyInitial(item.companyName) }}</span>
               </span>
-              <div class="recommendation-card-copy">
-                <h3>{{ item.companyName }}</h3>
-                <p>{{ item.positionTitle }}</p>
-              </div>
-              <span class="shell-card-kicker">{{ item.deadlineLabel }}</span>
             </div>
             <button
-              class="primary-button compact-action"
+              class="recommendation-save-button"
               type="button"
               :disabled="recommendationStore.status === 'saving'"
               :data-testid="`save-recommendation-${item.id}`"
@@ -56,7 +68,7 @@
         <StatePanel
           v-if="recommendationStore.status !== 'loading' && sortedJobs.length === 0"
           id="recommendation-empty"
-          tone="green"
+          tone="navy"
           title="추천 공고가 없습니다"
           body="온보딩 선호 조건을 저장하면 추천 후보를 다시 확인할 수 있습니다."
         />
@@ -131,5 +143,10 @@ function deadlineRank(job) {
 
 function companyInitial(companyName) {
   return (companyName ?? '?').trim().charAt(0).toUpperCase() || '?';
+}
+
+function formatParticipantCount(value) {
+  const count = Number(value);
+  return Number.isFinite(count) ? count.toLocaleString('ko-KR') : '0';
 }
 </script>
