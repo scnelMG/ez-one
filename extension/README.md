@@ -29,6 +29,7 @@ npm run build
 6. 자소설닷컴 공고 페이지에서 `EZ-ONE Job Saver` 아이콘을 누른다.
 
 실제 저장까지 확인하려면 EZ-ONE 웹은 `http://localhost:5173`, API는 `http://localhost:8080/api`에서 실행되어야 한다.
+로컬 unpacked 확장 ID는 manifest key로 고정되어 있으며 `ikpeibohnopmikegoogggmdipmhmiadi`다. 프론트엔드는 `VITE_EXTENSION_ID`가 비어 있어도 이 ID를 기본값으로 사용해 로그인 세션을 확장프로그램에 전달한다.
 
 ## Zip 패키지 생성
 

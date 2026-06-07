@@ -11,8 +11,11 @@
   </main>
 </template>
 
-<script setup>import { computed, onMounted, ref } from 'vue';
+<script setup>
+import { computed, onMounted, ref } from 'vue';
 import { getAccessToken, getCurrentUser, getRefreshToken } from '@/features/auth/session/authSession';
+
+const DEFAULT_LOCAL_EXTENSION_ID = 'ikpeibohnopmikegoogggmdipmhmiadi';
 const errorMessage = ref('');
 const completed = ref(false);
 const hasError = computed(() => Boolean(errorMessage.value));
@@ -25,7 +28,7 @@ const statusMessage = computed(() => {
         : '로그인 세션을 확장프로그램에 연결하고 있습니다.';
 });
 onMounted(async () => {
-    const extensionId = import.meta.env.VITE_EXTENSION_ID;
+    const extensionId = import.meta.env.VITE_EXTENSION_ID || DEFAULT_LOCAL_EXTENSION_ID;
     const accessToken = getAccessToken();
     const refreshToken = getRefreshToken();
     const user = getCurrentUser();

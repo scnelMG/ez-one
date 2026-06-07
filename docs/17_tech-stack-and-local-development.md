@@ -70,6 +70,8 @@
 | Extension env | `extension/.env.example` |
 | DB schema source | [12. ERD](./12_erd.md) |
 
+Local Chrome extension testing uses the fixed unpacked extension ID `ikpeibohnopmikegoogggmdipmhmiadi`, derived from `extension/public/manifest.json` `key`. `frontend/.env.example` includes the same value, and `/extension/connect` falls back to it when `VITE_EXTENSION_ID` is not provided.
+
 ## 초기 명령어 기준
 
 앱 scaffolding 이후 각 앱 README에 실제 명령어를 확정한다.

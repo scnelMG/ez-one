@@ -44,6 +44,34 @@ describe('ExtensionConnectPage', () => {
         }, expect.any(Function));
         expect(wrapper.text()).toContain('확장프로그램 연결이 완료되었습니다.');
     });
+    it('EXT-003: uses the local unpacked extension id when VITE_EXTENSION_ID is not set', async () => {
+        const sendMessage = vi.fn((_extensionId, _message, callback) => callback({ accepted: true }));
+        vi.stubGlobal('chrome', {
+            runtime: {
+                sendMessage
+            }
+        });
+        localStorage.setItem('ezone.accessToken', 'access-token');
+        localStorage.setItem('ezone.refreshToken', 'refresh-token');
+        localStorage.setItem('ezone.currentUser', JSON.stringify({
+            id: 1,
+            email: 'user@example.com',
+            name: 'Hong Gil Dong',
+            nickname: 'Gil Dong',
+            profileCompleted: true
+        }));
+        mount(ExtensionConnectPage, {
+            global: {
+                stubs: ['RouterLink']
+            }
+        });
+        await new Promise((resolve) => setTimeout(resolve));
+        expect(sendMessage).toHaveBeenCalledWith('ikpeibohnopmikegoogggmdipmhmiadi', expect.objectContaining({
+            type: 'EZONE_EXTENSION_AUTH_SESSION',
+            accessToken: 'access-token',
+            refreshToken: 'refresh-token'
+        }), expect.any(Function));
+    });
     it('EXT-003: asks the user to log in again when web tokens are missing', async () => {
         vi.stubEnv('VITE_EXTENSION_ID', 'extension-id');
         const wrapper = mount(ExtensionConnectPage, {
