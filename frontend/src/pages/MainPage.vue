@@ -115,7 +115,7 @@ import { computed, onMounted, ref } from 'vue';
 import AppLayout from '@/shared/AppLayout.vue';
 import StatePanel from '@/shared/StatePanel.vue';
 import OnboardingPage from '@/pages/OnboardingPage.vue';
-import { getCurrentUser } from '@/features/auth/session/authSession';
+import { requiresOnboarding } from '@/features/auth/session/authSession';
 import { isRecentWorkspace } from '@/features/basket/recentWorkspaces';
 import { useBasketStore } from '@/stores/basketStore';
 import { useDashboardStore } from '@/stores/dashboardStore';
@@ -124,7 +124,7 @@ import { useRecommendationStore } from '@/stores/recommendationStore';
 const dashboardStore = useDashboardStore();
 const basketStore = useBasketStore();
 const recommendationStore = useRecommendationStore();
-const showOnboardingModal = ref(getCurrentUser()?.profileCompleted === false);
+const showOnboardingModal = ref(requiresOnboarding());
 
 const basketPreviewJobs = computed(() => [...basketStore.jobs]
     .sort((left, right) => deadlineRank(left) - deadlineRank(right))

@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach } from 'vitest';
-import { clearAuthSession, getAccessToken, getCurrentUser, getRefreshToken, saveAuthSession, saveCurrentUser } from './authSession';
+import { clearAuthSession, getAccessToken, getCurrentUser, getRefreshToken, requiresOnboarding, saveAuthSession, saveCurrentUser } from './authSession';
 describe('authSession', () => {
     beforeEach(() => {
         localStorage.clear();
@@ -15,12 +15,14 @@ describe('authSession', () => {
                 email: 'user@example.com',
                 name: '홍길동',
                 nickname: '길동',
-                profileCompleted: true
+                profileCompleted: false,
+                onboardingRequired: true
             }
         });
         expect(getAccessToken()).toBe('access-token');
         expect(getRefreshToken()).toBe('refresh-token');
         expect(getCurrentUser()?.email).toBe('user@example.com');
+        expect(requiresOnboarding()).toBe(true);
         clearAuthSession();
         expect(getAccessToken()).toBeNull();
         expect(getRefreshToken()).toBeNull();
@@ -37,7 +39,8 @@ describe('authSession', () => {
                 email: 'user@example.com',
                 name: 'Hong Gil Dong',
                 nickname: 'Gil Dong',
-                profileCompleted: true
+                profileCompleted: true,
+                onboardingRequired: false
             }
         });
         saveCurrentUser({
@@ -45,7 +48,8 @@ describe('authSession', () => {
             email: 'user@example.com',
             name: 'Hong Gil Dong',
             nickname: '길동',
-            profileCompleted: true
+            profileCompleted: true,
+            onboardingRequired: false
         });
         expect(getAccessToken()).toBe('access-token');
         expect(getRefreshToken()).toBe('refresh-token');

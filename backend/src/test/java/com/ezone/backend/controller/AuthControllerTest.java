@@ -59,7 +59,8 @@ class AuthControllerTest {
                     "user@example.com",
                     "Hong Gil Dong",
                     "Gil Dong",
-                    false
+                    false,
+                    true
                 )
             )
         );
@@ -80,6 +81,7 @@ class AuthControllerTest {
             .andExpect(jsonPath("$.data.expiresIn").value(3600))
             .andExpect(jsonPath("$.data.user.email").value("user@example.com"))
             .andExpect(jsonPath("$.data.user.profileCompleted").value(false))
+            .andExpect(jsonPath("$.data.user.onboardingRequired").value(true))
             .andExpect(jsonPath("$.error").doesNotExist());
     }
 
@@ -96,7 +98,8 @@ class AuthControllerTest {
                     "local@example.com",
                     "Local User",
                     "Local User",
-                    false
+                    false,
+                    true
                 )
             )
         );
@@ -115,7 +118,8 @@ class AuthControllerTest {
             .andExpect(jsonPath("$.data.accessToken").value("access-token"))
             .andExpect(jsonPath("$.data.refreshToken").value("refresh-token"))
             .andExpect(jsonPath("$.data.user.email").value("local@example.com"))
-            .andExpect(jsonPath("$.data.user.profileCompleted").value(false));
+            .andExpect(jsonPath("$.data.user.profileCompleted").value(false))
+            .andExpect(jsonPath("$.data.user.onboardingRequired").value(true));
     }
 
     @Test
@@ -131,7 +135,8 @@ class AuthControllerTest {
                     "local@example.com",
                     "Local User",
                     "Local User",
-                    true
+                    true,
+                    false
                 )
             )
         );
@@ -149,7 +154,8 @@ class AuthControllerTest {
             .andExpect(jsonPath("$.data.accessToken").value("access-token"))
             .andExpect(jsonPath("$.data.refreshToken").value("refresh-token"))
             .andExpect(jsonPath("$.data.user.email").value("local@example.com"))
-            .andExpect(jsonPath("$.data.user.profileCompleted").value(true));
+            .andExpect(jsonPath("$.data.user.profileCompleted").value(true))
+            .andExpect(jsonPath("$.data.user.onboardingRequired").value(false));
     }
 
     @Test
@@ -209,6 +215,7 @@ class AuthControllerTest {
                     "user@example.com",
                     "Hong Gil Dong",
                     "Gil Dong",
+                    false,
                     false
                 )
             )

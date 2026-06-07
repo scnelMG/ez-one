@@ -12,7 +12,8 @@ const successEnvelope = {
             email: 'user@example.com',
             name: 'Hong Gil Dong',
             nickname: 'Gil Dong',
-            profileCompleted: false
+            profileCompleted: false,
+            onboardingRequired: true
         }
     },
     error: null
@@ -33,6 +34,7 @@ describe('authApi', () => {
         expect(response.accessToken).toBe('access-token');
         expect(response.refreshToken).toBe('refresh-token');
         expect(response.user.profileCompleted).toBe(false);
+        expect(response.user.onboardingRequired).toBe(true);
     });
     it('AUTH-001: logs out with the refresh token', async () => {
         const get = vi.fn();

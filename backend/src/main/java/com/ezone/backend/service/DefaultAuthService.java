@@ -13,6 +13,7 @@ import com.ezone.backend.mapper.UserAccountMapper;
 import com.ezone.backend.security.AuthTokenIssuer;
 import com.ezone.backend.security.IssuedTokenPair;
 import java.util.Locale;
+import java.util.Optional;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -52,7 +53,7 @@ public class DefaultAuthService implements AuthService {
             passwordEncoder.encode(request.password())
         );
 
-        return toAuthTokenResponse(authTokenIssuer.issueFor(user), user);
+        return toAuthTokenResponse(authTokenIssuer.issueFor(user), user, true);
     }
 
     @Override
@@ -67,29 +68,18 @@ public class DefaultAuthService implements AuthService {
             throw invalidEmailLogin();
         }
 
-        return toAuthTokenResponse(authTokenIssuer.issueFor(user), user);
+        return toAuthTokenResponse(authTokenIssuer.issueFor(user), user, false);
     }
 
     @Override
     public AuthTokenResponse loginWithGoogle(GoogleLoginRequest request) {
         GoogleUserProfile profile = googleOAuthClient.verifyAuthorizationCode(request);
-        UserAccount user = userAccountMapper.findByGoogleSubject(profile.subject())
-            .orElseGet(() -> userAccountMapper.createFromGoogleProfile(profile));
+        Optional<UserAccount> existingUser = userAccountMapper.findByGoogleSubject(profile.subject());
+        boolean onboardingRequired = existingUser.isEmpty();
+        UserAccount user = existingUser.orElseGet(() -> userAccountMapper.createFromGoogleProfile(profile));
         IssuedTokenPair tokens = authTokenIssuer.issueFor(user);
 
-        return new AuthTokenResponse(
-            tokens.accessToken(),
-            tokens.refreshToken(),
-            "Bearer",
-            tokens.expiresIn(),
-            new CurrentUserResponse(
-                user.id(),
-                user.email(),
-                user.name(),
-                user.nickname(),
-                user.profileCompleted()
-            )
-        );
+        return toAuthTokenResponse(tokens, user, onboardingRequired);
     }
 
     @Override
@@ -98,7 +88,7 @@ public class DefaultAuthService implements AuthService {
         UserAccount user = userAccountMapper.findById(extractUserId(tokens.accessToken()))
             .orElseThrow(() -> new IllegalStateException("Issued access token user could not be loaded."));
 
-        return toAuthTokenResponse(tokens, user);
+        return toAuthTokenResponse(tokens, user, false);
     }
 
     @Override
@@ -106,7 +96,7 @@ public class DefaultAuthService implements AuthService {
         authTokenIssuer.revoke(request.refreshToken());
     }
 
-    private AuthTokenResponse toAuthTokenResponse(IssuedTokenPair tokens, UserAccount user) {
+    private AuthTokenResponse toAuthTokenResponse(IssuedTokenPair tokens, UserAccount user, boolean onboardingRequired) {
         return new AuthTokenResponse(
             tokens.accessToken(),
             tokens.refreshToken(),
@@ -117,7 +107,8 @@ public class DefaultAuthService implements AuthService {
                 user.email(),
                 user.name(),
                 user.nickname(),
-                user.profileCompleted()
+                user.profileCompleted(),
+                onboardingRequired
             )
         );
     }

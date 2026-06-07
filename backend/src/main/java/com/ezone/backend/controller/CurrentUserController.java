@@ -44,7 +44,8 @@ public class CurrentUserController {
             user.email(),
             user.name(),
             user.nickname(),
-            user.profileCompleted()
+            user.profileCompleted(),
+            false
         );
     }
 }

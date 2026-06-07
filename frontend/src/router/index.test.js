@@ -41,22 +41,38 @@ describe('router', () => {
             email: 'user@example.com',
             name: 'Hong Gil Dong',
             nickname: 'Gil Dong',
-            profileCompleted: true
+            profileCompleted: true,
+            onboardingRequired: false
         }));
         await router.push('/basket');
         expect(router.currentRoute.value.name).toBe('basket');
     });
-    it('redirects first-login users to the main page so onboarding can open as a modal', async () => {
+    it('redirects users with a new-account onboarding prompt to the main page modal host', async () => {
         localStorage.setItem('ezone.accessToken', 'test-token');
         localStorage.setItem('ezone.currentUser', JSON.stringify({
             id: 1,
             email: 'user@example.com',
             name: 'Hong Gil Dong',
             nickname: 'Gil Dong',
-            profileCompleted: false
+            profileCompleted: false,
+            onboardingRequired: true
         }));
         await router.push('/document-profile');
         expect(router.currentRoute.value.name).toBe('main');
+    });
+
+    it('allows returning users with incomplete preferences to use protected P1 pages', async () => {
+        localStorage.setItem('ezone.accessToken', 'test-token');
+        localStorage.setItem('ezone.currentUser', JSON.stringify({
+            id: 1,
+            email: 'user@example.com',
+            name: 'Hong Gil Dong',
+            nickname: 'Gil Dong',
+            profileCompleted: false,
+            onboardingRequired: false
+        }));
+        await router.push('/document-profile');
+        expect(router.currentRoute.value.name).toBe('document-profile');
     });
     it('sends authenticated first-login users from login to the main page modal host', async () => {
         localStorage.setItem('ezone.accessToken', 'test-token');
@@ -65,7 +81,8 @@ describe('router', () => {
             email: 'user@example.com',
             name: 'Hong Gil Dong',
             nickname: 'Gil Dong',
-            profileCompleted: false
+            profileCompleted: false,
+            onboardingRequired: true
         }));
         await router.push('/login');
         expect(router.currentRoute.value.name).toBe('main');
@@ -77,7 +94,8 @@ describe('router', () => {
             email: 'user@example.com',
             name: 'Hong Gil Dong',
             nickname: 'Gil Dong',
-            profileCompleted: true
+            profileCompleted: true,
+            onboardingRequired: false
         }));
         await router.push('/?redirect=/extension/connect?sourceUrl=https%3A%2F%2Fwww.jasoseol.com%2Frecruit%2F1');
         expect(router.currentRoute.value.name).toBe('extension-connect');

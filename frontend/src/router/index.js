@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import BasketPage from '@/pages/BasketPage.vue';
 import BasketDetailPage from '@/pages/BasketDetailPage.vue';
 import DocumentProfilePage from '@/pages/DocumentProfilePage.vue';
-import { getCurrentUser, isAuthenticated } from '@/features/auth/session/authSession';
+import { isAuthenticated, requiresOnboarding } from '@/features/auth/session/authSession';
 import LoginPage from '@/pages/LoginPage.vue';
 import LoginCallbackPage from '@/pages/LoginCallbackPage.vue';
 import ExtensionConnectPage from '@/pages/ExtensionConnectPage.vue';
@@ -125,7 +125,7 @@ router.beforeEach((to) => {
         return true;
     }
     if (hasAccessToken()) {
-        if (to.name !== 'main' && getCurrentUser()?.profileCompleted === false) {
+        if (to.name !== 'main' && requiresOnboarding()) {
             return '/';
         }
         return true;
@@ -141,7 +141,7 @@ function hasAccessToken() {
     return isAuthenticated();
 }
 function getAuthenticatedHomePath(redirect = undefined) {
-    if (getCurrentUser()?.profileCompleted === false) {
+    if (requiresOnboarding()) {
         return '/';
     }
     return typeof redirect === 'string' && isSafeRedirectPath(redirect) ? redirect : '/';

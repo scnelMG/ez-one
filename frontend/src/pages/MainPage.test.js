@@ -240,7 +240,8 @@ describe('MainPage', () => {
             email: 'first@example.com',
             name: 'First User',
             nickname: '',
-            profileCompleted: false
+            profileCompleted: false,
+            onboardingRequired: true
         }));
         const wrapper = await mountMain();
 
@@ -267,6 +268,21 @@ describe('MainPage', () => {
             name: 'Done User',
             nickname: '',
             profileCompleted: true
+        }));
+        const wrapper = await mountMain();
+
+        expect(wrapper.find('[data-testid="onboarding-modal"]').exists()).toBe(false);
+        expect(profileApi.getUserProfile).not.toHaveBeenCalled();
+    });
+
+    it('ONB-001: does not reopen onboarding for existing users who have not filled preferences', async () => {
+        localStorage.setItem('ezone.currentUser', JSON.stringify({
+            id: 1,
+            email: 'returning@example.com',
+            name: 'Returning User',
+            nickname: '',
+            profileCompleted: false,
+            onboardingRequired: false
         }));
         const wrapper = await mountMain();
 

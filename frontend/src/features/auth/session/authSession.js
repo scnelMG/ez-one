@@ -33,6 +33,9 @@ export function getCurrentUser() {
         return null;
     }
 }
+export function requiresOnboarding() {
+    return getCurrentUser()?.onboardingRequired === true;
+}
 export function isAuthenticated() {
     return Boolean(getAccessToken());
 }

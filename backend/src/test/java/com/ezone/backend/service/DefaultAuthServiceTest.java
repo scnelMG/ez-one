@@ -77,7 +77,41 @@ class DefaultAuthServiceTest {
         assertThat(response.expiresIn()).isEqualTo(3600);
         assertThat(response.user().email()).isEqualTo("user@example.com");
         assertThat(response.user().profileCompleted()).isFalse();
+        assertThat(response.user().onboardingRequired()).isTrue();
         verify(userAccountMapper).createFromGoogleProfile(profile);
+    }
+
+    @Test
+    void loginWithGoogleDoesNotRequireOnboardingForExistingIncompleteUser() {
+        GoogleLoginRequest request = new GoogleLoginRequest(
+            "google-oauth-code",
+            "http://localhost:5173/login/callback"
+        );
+        GoogleUserProfile profile = new GoogleUserProfile(
+            "google-subject",
+            "user@example.com",
+            "Hong Gil Dong",
+            "Gil Dong"
+        );
+        UserAccount existingUser = new UserAccount(
+            1L,
+            "google-subject",
+            "user@example.com",
+            "Hong Gil Dong",
+            "Gil Dong",
+            false
+        );
+
+        when(googleOAuthClient.verifyAuthorizationCode(request)).thenReturn(profile);
+        when(userAccountMapper.findByGoogleSubject("google-subject")).thenReturn(Optional.of(existingUser));
+        when(authTokenIssuer.issueFor(existingUser)).thenReturn(
+            new IssuedTokenPair("access-token", "refresh-token", 3600)
+        );
+
+        AuthTokenResponse response = authService.loginWithGoogle(request);
+
+        assertThat(response.user().profileCompleted()).isFalse();
+        assertThat(response.user().onboardingRequired()).isFalse();
     }
 
     @Test
@@ -122,6 +156,7 @@ class DefaultAuthServiceTest {
 
         assertThat(response.accessToken()).isEqualTo("access-token");
         assertThat(response.user().email()).isEqualTo("local@example.com");
+        assertThat(response.user().onboardingRequired()).isTrue();
         verify(userAccountMapper).createLocalUser("local@example.com", "Local User", "bcrypt-hash");
     }
 
@@ -167,5 +202,6 @@ class DefaultAuthServiceTest {
 
         assertThat(response.accessToken()).isEqualTo("access-token");
         assertThat(response.user().profileCompleted()).isTrue();
+        assertThat(response.user().onboardingRequired()).isFalse();
     }
 }
