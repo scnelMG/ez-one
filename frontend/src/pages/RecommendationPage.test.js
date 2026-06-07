@@ -39,7 +39,7 @@ describe('RecommendationPage', () => {
                 positionTitle: 'Commerce Backend Developer',
                 deadlineLabel: 'D-10',
                 deadlineDate: '2026-06-16',
-                companyLogoUrl: 'https://logo.clearbit.com/ohou.se',
+                companyLogoUrl: 'https://www.google.com/s2/favicons?domain=ohou.se&sz=128',
                 workspaceId: null
             },
             {
@@ -48,7 +48,7 @@ describe('RecommendationPage', () => {
                 positionTitle: 'Server Platform Engineer',
                 deadlineLabel: 'D-7',
                 deadlineDate: '2026-06-13',
-                companyLogoUrl: 'https://logo.clearbit.com/line.me',
+                companyLogoUrl: 'https://www.google.com/s2/favicons?domain=line.me&sz=128',
                 workspaceId: null
             },
             {
@@ -57,7 +57,7 @@ describe('RecommendationPage', () => {
                 positionTitle: 'Platform Engineer',
                 deadlineLabel: 'D-12',
                 deadlineDate: '2026-06-18',
-                companyLogoUrl: 'https://logo.clearbit.com/coupang.com',
+                companyLogoUrl: 'https://www.google.com/s2/favicons?domain=coupang.com&sz=128',
                 workspaceId: null
             },
             {
@@ -66,7 +66,7 @@ describe('RecommendationPage', () => {
                 positionTitle: 'Frontend Developer',
                 deadlineLabel: 'D-3',
                 deadlineDate: '2026-06-09',
-                companyLogoUrl: 'https://logo.clearbit.com/toss.im',
+                companyLogoUrl: 'https://www.google.com/s2/favicons?domain=toss.im&sz=128',
                 workspaceId: null
             }
         ]);
@@ -92,8 +92,8 @@ describe('RecommendationPage', () => {
         const cards = wrapper.findAll('[data-testid="recommendation-card"]');
         expect(cards).toHaveLength(4);
         expect(cards.map((card) => card.find('h3').text())).toEqual(['토스', 'LINE', '오늘의집', '쿠팡']);
-        expect(cards[0].find('img').attributes('src')).toBe('https://logo.clearbit.com/toss.im');
-        expect(cards[1].find('img').attributes('src')).toBe('https://logo.clearbit.com/line.me');
+        expect(cards[0].find('img').attributes('src')).toBe('https://www.google.com/s2/favicons?domain=toss.im&sz=128');
+        expect(cards[1].find('img').attributes('src')).toBe('https://www.google.com/s2/favicons?domain=line.me&sz=128');
 
         await wrapper.get('[data-testid="save-recommendation-9001"]').trigger('click');
         await flushPromises();

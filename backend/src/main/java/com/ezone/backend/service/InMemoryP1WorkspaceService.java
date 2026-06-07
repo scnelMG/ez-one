@@ -455,7 +455,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
                 "Frontend Developer",
                 "D-3",
                 "https://toss.im/career",
-                "https://logo.clearbit.com/toss.im"
+                "https://www.google.com/s2/favicons?domain=toss.im&sz=128"
             ),
             new RecommendationSample(
                 9001L,
@@ -463,7 +463,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
                 "Server Platform Engineer",
                 "D-7",
                 "https://line.me/career",
-                "https://logo.clearbit.com/line.me"
+                "https://www.google.com/s2/favicons?domain=line.me&sz=128"
             ),
             new RecommendationSample(
                 9002L,
@@ -471,7 +471,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
                 "Commerce Backend Developer",
                 "D-10",
                 "https://ohou.se/careers",
-                "https://logo.clearbit.com/ohou.se"
+                "https://www.google.com/s2/favicons?domain=ohou.se&sz=128"
             ),
             new RecommendationSample(
                 9004L,
@@ -479,7 +479,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
                 "Platform Engineer",
                 "D-12",
                 "https://www.coupang.com/np/jobs",
-                "https://logo.clearbit.com/coupang.com"
+                "https://www.google.com/s2/favicons?domain=coupang.com&sz=128"
             )
         );
     }

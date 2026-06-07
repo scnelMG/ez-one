@@ -3,13 +3,13 @@ VALUES (1, 'demo@ez-one.local', 'Demo User', '민규', 'LOCAL', 'ez-one-demo-use
 
 INSERT INTO companies (name, domain, company_type, size, logo_url, logo_source_url, logo_status, logo_updated_at, created_at)
 VALUES
-  ('LINE', 'line.me', '대기업', '대기업', 'https://logo.clearbit.com/line.me', 'https://line.me', 'SEEDED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-  ('오늘의집', 'ohou.se', '스타트업', '중견기업', 'https://logo.clearbit.com/ohou.se', 'https://ohou.se', 'SEEDED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-  ('토스', 'toss.im', '스타트업', '대기업', 'https://logo.clearbit.com/toss.im', 'https://toss.im', 'SEEDED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-  ('쿠팡', 'coupang.com', '대기업', '대기업', 'https://logo.clearbit.com/coupang.com', 'https://www.coupang.com', 'SEEDED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-  ('네이버', 'navercorp.com', '대기업', '대기업', 'https://logo.clearbit.com/navercorp.com', 'https://www.navercorp.com', 'SEEDED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-  ('카카오페이', 'kakaopay.com', '대기업', '대기업', 'https://logo.clearbit.com/kakaopay.com', 'https://www.kakaopay.com', 'SEEDED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-  ('당근', 'daangn.com', '스타트업', '중견기업', 'https://logo.clearbit.com/daangn.com', 'https://www.daangn.com', 'SEEDED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+  ('LINE', 'line.me', '대기업', '대기업', 'https://www.google.com/s2/favicons?domain=line.me&sz=128', 'https://line.me', 'SEEDED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('오늘의집', 'ohou.se', '스타트업', '중견기업', 'https://www.google.com/s2/favicons?domain=ohou.se&sz=128', 'https://ohou.se', 'SEEDED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('토스', 'toss.im', '스타트업', '대기업', 'https://www.google.com/s2/favicons?domain=toss.im&sz=128', 'https://toss.im', 'SEEDED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('쿠팡', 'coupang.com', '대기업', '대기업', 'https://www.google.com/s2/favicons?domain=coupang.com&sz=128', 'https://www.coupang.com', 'SEEDED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('네이버', 'navercorp.com', '대기업', '대기업', 'https://www.google.com/s2/favicons?domain=navercorp.com&sz=128', 'https://www.navercorp.com', 'SEEDED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('카카오페이', 'kakaopay.com', '대기업', '대기업', 'https://www.google.com/s2/favicons?domain=kakaopay.com&sz=128', 'https://www.kakaopay.com', 'SEEDED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('당근', 'daangn.com', '스타트업', '중견기업', 'https://www.google.com/s2/favicons?domain=daangn.com&sz=128', 'https://www.daangn.com', 'SEEDED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON DUPLICATE KEY UPDATE
   logo_url = COALESCE(logo_url, VALUES(logo_url)),
   logo_source_url = COALESCE(logo_source_url, VALUES(logo_source_url)),

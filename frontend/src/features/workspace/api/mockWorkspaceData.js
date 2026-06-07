@@ -22,6 +22,49 @@ const workspaceDefaults = {
     ]
 };
 
+const companyDetails = {
+    naver: {
+        domain: 'navercorp.com',
+        companyType: '대기업',
+        size: '대기업',
+        rating: null,
+        startingSalary: null,
+        logoUrl: logoUrlFor('navercorp.com')
+    },
+    kakaopay: {
+        domain: 'kakaopay.com',
+        companyType: '대기업',
+        size: '대기업',
+        rating: null,
+        startingSalary: null,
+        logoUrl: logoUrlFor('kakaopay.com')
+    },
+    toss: {
+        domain: 'toss.im',
+        companyType: '스타트업',
+        size: '대기업',
+        rating: null,
+        startingSalary: null,
+        logoUrl: logoUrlFor('toss.im')
+    },
+    line: {
+        domain: 'line.me',
+        companyType: '대기업',
+        size: '대기업',
+        rating: null,
+        startingSalary: null,
+        logoUrl: logoUrlFor('line.me')
+    },
+    daangn: {
+        domain: 'daangn.com',
+        companyType: '스타트업',
+        size: '중견기업',
+        rating: null,
+        startingSalary: null,
+        logoUrl: logoUrlFor('daangn.com')
+    }
+};
+
 export const mockWorkspaces = {
     '102': {
         id: '102',
@@ -29,6 +72,7 @@ export const mockWorkspaces = {
         positionTitle: '백엔드 개발자',
         deadlineLabel: '2026.06.11',
         statusLabel: '진행 중',
+        companyDetails: companyDetails.naver,
         ...workspaceDefaults
     },
     '105': {
@@ -37,30 +81,38 @@ export const mockWorkspaces = {
         positionTitle: '서버 개발자',
         deadlineLabel: '2026.06.20',
         statusLabel: '지원 전',
+        companyDetails: companyDetails.kakaopay,
         ...workspaceDefaults
     },
     '108': {
         id: '108',
         companyName: '토스',
-        positionTitle: '플랫폼 엔지니어',
+        positionTitle: '프론트엔드 엔지니어',
         deadlineLabel: '2026.06.23',
         statusLabel: '지원 완료',
+        companyDetails: companyDetails.toss,
         ...workspaceDefaults
     },
     '111': {
         id: '111',
-        companyName: '라인플러스',
-        positionTitle: '프론트엔드 개발자',
+        companyName: 'LINE',
+        positionTitle: '플랫폼 엔지니어',
         deadlineLabel: '2026.06.28',
         statusLabel: '지원 전',
+        companyDetails: companyDetails.line,
         ...workspaceDefaults
     },
     '114': {
         id: '114',
-        companyName: '우아한형제들',
+        companyName: '당근',
         positionTitle: '프로덕트 백엔드 개발자',
         deadlineLabel: '2026.06.30',
         statusLabel: '진행 중',
+        companyDetails: companyDetails.daangn,
         ...workspaceDefaults
     }
 };
+
+function logoUrlFor(domain) {
+    return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+}

@@ -89,7 +89,7 @@ const defaultRecommendationJobs = [
         companyName: 'Toss',
         positionTitle: 'Frontend Developer',
         deadlineLabel: 'D-3',
-        companyLogoUrl: 'https://logo.clearbit.com/toss.im',
+        companyLogoUrl: 'https://www.google.com/s2/favicons?domain=toss.im&sz=128',
         workspaceId: null
     },
     {
@@ -97,7 +97,7 @@ const defaultRecommendationJobs = [
         companyName: 'Danggeun',
         positionTitle: 'Server Engineer',
         deadlineLabel: 'D-5',
-        companyLogoUrl: 'https://logo.clearbit.com/daangn.com',
+        companyLogoUrl: 'https://www.google.com/s2/favicons?domain=daangn.com&sz=128',
         workspaceId: null
     },
     {
@@ -105,7 +105,7 @@ const defaultRecommendationJobs = [
         companyName: 'Coupang',
         positionTitle: 'Platform Engineer',
         deadlineLabel: 'D-7',
-        companyLogoUrl: 'https://logo.clearbit.com/coupang.com',
+        companyLogoUrl: 'https://www.google.com/s2/favicons?domain=coupang.com&sz=128',
         workspaceId: null
     },
     {
@@ -113,7 +113,7 @@ const defaultRecommendationJobs = [
         companyName: 'Woowa Bros',
         positionTitle: 'Product Engineer',
         deadlineLabel: 'D-9',
-        companyLogoUrl: 'https://logo.clearbit.com/woowahan.com',
+        companyLogoUrl: 'https://www.google.com/s2/favicons?domain=woowahan.com&sz=128',
         workspaceId: null
     }
 ];
