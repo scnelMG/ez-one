@@ -94,6 +94,9 @@ describe('RecommendationPage', () => {
         expect(cards.map((card) => card.find('h3').text())).toEqual(['토스', 'LINE', '오늘의집', '쿠팡']);
         expect(cards[0].find('img').attributes('src')).toBe('https://www.google.com/s2/favicons?domain=toss.im&sz=128');
         expect(cards[1].find('img').attributes('src')).toBe('https://www.google.com/s2/favicons?domain=line.me&sz=128');
+        const disclaimer = wrapper.get('[data-testid="recommendation-trademark-disclaimer"]');
+        expect(disclaimer.text()).toContain('채용공고 식별 목적');
+        expect(disclaimer.text()).toContain('제휴 또는 후원');
 
         await wrapper.get('[data-testid="save-recommendation-9001"]').trigger('click');
         await flushPromises();

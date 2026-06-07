@@ -16,7 +16,10 @@
 
       <section class="wire-section" aria-label="추천 공고 목록">
         <p v-if="recommendationStore.status === 'loading'">추천 공고를 불러오는 중입니다.</p>
-        <div v-else-if="sortedJobs.length > 0" class="recommendation-grid recommendation-page-grid">
+        <div
+          v-if="recommendationStore.status !== 'loading' && sortedJobs.length > 0"
+          class="recommendation-grid recommendation-page-grid"
+        >
           <article
             v-for="item in sortedJobs"
             :key="item.id"
@@ -48,8 +51,15 @@
             </button>
           </article>
         </div>
+        <p
+          v-if="recommendationStore.status !== 'loading' && sortedJobs.length > 0"
+          class="trademark-disclaimer"
+          data-testid="recommendation-trademark-disclaimer"
+        >
+          표시된 회사명 및 로고는 채용공고 식별 목적으로만 사용되며, 각 상표는 해당 소유자의 자산입니다. EZ-ONE은 표시된 기업과 제휴 또는 후원을 의미하지 않습니다.
+        </p>
         <StatePanel
-          v-else
+          v-if="recommendationStore.status !== 'loading' && sortedJobs.length === 0"
           id="recommendation-empty"
           tone="green"
           title="추천 공고가 없습니다"

@@ -119,6 +119,9 @@ describe('BasketPage', () => {
         const listIndex = wrapper.html().indexOf('data-testid="basket-list-panel"');
         expect(calendarIndex).toBeGreaterThan(-1);
         expect(listIndex).toBeGreaterThan(calendarIndex);
+        const disclaimer = wrapper.get('[data-testid="basket-trademark-disclaimer"]');
+        expect(disclaimer.text()).toContain('채용공고 식별 목적');
+        expect(disclaimer.text()).toContain('제휴 또는 후원');
     });
 
     it('JOB-014: renders only saved job deadlines on the calendar with company, position, status, and workspace links', async () => {
