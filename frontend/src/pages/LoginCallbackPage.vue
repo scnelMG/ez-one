@@ -44,7 +44,7 @@ onMounted(async () => {
             redirectUri: getGoogleRedirectUri()
         });
         saveAuthSession(authSession);
-        await router.replace(authSession.user.profileCompleted ? redirectPath : '/');
+        await router.replace(authSession.user.onboardingRequired ? '/' : redirectPath);
     }
     catch (error) {
         errorMessage.value = error instanceof Error ? error.message : 'Google 로그인 처리에 실패했습니다.';

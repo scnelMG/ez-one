@@ -75,7 +75,8 @@ GoogleLoginRequest
       "email": "user@example.com",
       "name": "홍길동",
       "nickname": "홍길동",
-      "profileCompleted": false
+      "profileCompleted": false,
+      "onboardingRequired": true
     }
   },
   "error": null
@@ -98,6 +99,7 @@ CurrentUserResponse
 - name: string
 - nickname: string
 - profileCompleted: boolean
+- onboardingRequired: boolean
 ```
 
 ### 오류
@@ -217,7 +219,8 @@ Authorization: Bearer <access-token>
     "email": "user@example.com",
     "name": "홍길동",
     "nickname": "홍길동",
-    "profileCompleted": false
+    "profileCompleted": false,
+    "onboardingRequired": false
   },
   "error": null
 }
@@ -264,7 +267,8 @@ UpdateCurrentUserRequest
     "email": "user@example.com",
     "name": "Hong Gil Dong",
     "nickname": "길동",
-    "profileCompleted": true
+    "profileCompleted": true,
+    "onboardingRequired": false
   },
   "error": null
 }
@@ -287,7 +291,7 @@ UpdateCurrentUserRequest
 | 인증됨 | access token 유효 | 원래 요청 화면 유지 |
 | access token 만료 | refresh token 있음 | refresh 후 재시도 |
 | refresh 실패 | refresh token 만료/폐기 | 토큰 삭제 후 `/login` 이동 |
-| 온보딩 미완료 | `profileCompleted=false` | `/` 이동 후 온보딩 모달 표시 |
+| 신규 계정 온보딩 | `onboardingRequired=true` | `/` 이동 후 온보딩 모달 표시 |
 
 ## 테스트 기준
 

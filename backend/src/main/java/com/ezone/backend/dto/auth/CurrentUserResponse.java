@@ -5,6 +5,7 @@ public record CurrentUserResponse(
     String email,
     String name,
     String nickname,
-    boolean profileCompleted
+    boolean profileCompleted,
+    boolean onboardingRequired
 ) {
 }

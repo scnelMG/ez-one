@@ -27,7 +27,7 @@ export const useProfileStore = defineStore('profile', () => {
             profile.value = await profileApi.saveUserProfile(payload);
             const currentUser = getCurrentUser();
             if (currentUser) {
-                saveCurrentUser({ ...currentUser, profileCompleted: profile.value.completed });
+                saveCurrentUser({ ...currentUser, profileCompleted: profile.value.completed, onboardingRequired: false });
             }
             status.value = 'ready';
         }

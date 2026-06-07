@@ -41,7 +41,8 @@ describe('LoginCallbackPage', () => {
                 email: 'user@example.com',
                 name: 'Hong Gil Dong',
                 nickname: 'Gil Dong',
-                profileCompleted: true
+                profileCompleted: false,
+                onboardingRequired: false
             }
         });
         const router = makeRouter();
@@ -60,7 +61,7 @@ describe('LoginCallbackPage', () => {
         expect(getAccessToken()).toBe('access-token');
         expect(router.currentRoute.value.fullPath).toBe('/basket');
     });
-    it('ONB-001: sends first-login users to the main page where onboarding opens as a modal', async () => {
+    it('ONB-001: sends new-account onboarding prompts to the main page modal host', async () => {
         mocks.loginWithGoogle.mockResolvedValue({
             accessToken: 'access-token',
             refreshToken: 'refresh-token',
@@ -71,7 +72,8 @@ describe('LoginCallbackPage', () => {
                 email: 'user@example.com',
                 name: 'Hong Gil Dong',
                 nickname: 'Gil Dong',
-                profileCompleted: false
+                profileCompleted: false,
+                onboardingRequired: true
             }
         });
         const router = makeRouter();
