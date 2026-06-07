@@ -32,6 +32,7 @@ describe('recommendationApi', () => {
                 deadlineLabel: 'D-7',
                 deadlineDate: '2026-06-13',
                 companyLogoUrl: 'https://example.com/line.png',
+                participantCount: 0,
                 workspaceId: null
             }
         ]);

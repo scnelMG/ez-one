@@ -112,7 +112,9 @@ describe('DocumentProfilePage', () => {
 
         expect(mocks.getDocumentProfile).toHaveBeenCalled();
         expect(wrapper.get('h1').text()).toBe('정보 입력');
-        expect(wrapper.text()).toContain('마지막 저장: 2026-06-05T12:00:00Z');
+        const savedAt = wrapper.get('.last-saved-at').text();
+        expect(savedAt).toContain('마지막 저장: 2026년 06월 05일');
+        expect(savedAt).not.toContain('T12:00:00Z');
         expect(wrapper.text()).not.toContain('PROFILE-001');
         expect(wrapper.text()).not.toContain('자동 저장');
         expect(wrapper.find('[data-testid="document-autosave-status"]').exists()).toBe(false);
@@ -133,11 +135,7 @@ describe('DocumentProfilePage', () => {
             '경력',
             '자격증 / 어학',
             '자소서',
-            '프로젝트',
-            '인턴 / 알바',
-            '수상경력',
-            '교육이수사항',
-            '학내외 활동',
+            '기타',
             '커스텀 필드'
         ]);
     });
@@ -161,17 +159,19 @@ describe('DocumentProfilePage', () => {
             addressDetail: 'Gangnam-gu'
         });
 
-        await wrapper.get('[data-testid="section-projects"]').trigger('click');
-        await wrapper.get('[data-testid="section-title"]').setValue('EZ-ONE Renewal');
-        await wrapper.get('[data-testid="section-summary"]').setValue('Workspace and profile integration');
+        await wrapper.get('[data-testid="section-career"]').trigger('click');
+        await wrapper.get('[data-testid="projects-0-projectName"]').setValue('EZ-ONE Renewal');
+        await wrapper.get('[data-testid="projects-0-contribution"]').setValue('Workspace and profile integration');
         await wrapper.get('[data-testid="save-document-profile"]').trigger('click');
         await flushPromises();
-        expect(mocks.saveSection).toHaveBeenLastCalledWith('projects', [
-            {
-                title: 'EZ-ONE Renewal',
-                summary: 'Workspace and profile integration'
-            }
-        ]);
+        expect(mocks.saveSection).toHaveBeenLastCalledWith('career', expect.objectContaining({
+            projects: [
+                expect.objectContaining({
+                    projectName: 'EZ-ONE Renewal',
+                    contribution: 'Workspace and profile integration'
+                })
+            ]
+        }));
     });
 
     it('PROFILE-001: still auto-saves the active section without showing autosave text', async () => {
@@ -187,19 +187,22 @@ describe('DocumentProfilePage', () => {
     it('PROFILE-024: adds and deletes repeatable items before using the global save button', async () => {
         const wrapper = await mountPage();
 
-        await wrapper.get('[data-testid="section-projects"]').trigger('click');
-        await wrapper.get('[data-testid="add-reusable-item"]').trigger('click');
-        await wrapper.get('[data-testid="section-title"]').setValue('Second Project');
-        await wrapper.get('[data-testid="section-summary"]').setValue('Second project summary');
-        await wrapper.get('[data-testid="delete-reusable-0"]').trigger('click');
+        await wrapper.get('[data-testid="section-career"]').trigger('click');
+        await wrapper.get('[data-testid="projects-0-projectName"]').setValue('First Project');
+        await wrapper.get('[data-testid="add-projects"]').trigger('click');
+        await wrapper.get('[data-testid="projects-1-projectName"]').setValue('Second Project');
+        await wrapper.get('[data-testid="projects-1-summary"]').setValue('Second project summary');
+        await wrapper.get('[data-testid="delete-projects-0"]').trigger('click');
         await wrapper.get('[data-testid="save-document-profile"]').trigger('click');
         await flushPromises();
-        expect(mocks.saveSection).toHaveBeenLastCalledWith('projects', [
-            {
-                title: 'Second Project',
-                summary: 'Second project summary'
-            }
-        ]);
+        expect(mocks.saveSection).toHaveBeenLastCalledWith('career', expect.objectContaining({
+            projects: [
+                expect.objectContaining({
+                    projectName: 'Second Project',
+                    summary: 'Second project summary'
+                })
+            ]
+        }));
     });
 
     it('PROFILE-001/PROFILE-006: creates, updates, and deletes custom fields', async () => {

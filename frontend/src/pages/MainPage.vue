@@ -30,8 +30,10 @@
       <section class="dashboard-panel main-basket-preview" aria-label="공고 장바구니 미리보기">
         <div class="section-heading">
           <div>
-            <h2>공고 장바구니</h2>
-            <p class="main-preview-note">마감 임박순으로 제공됩니다.</p>
+            <div class="main-basket-title-row">
+              <h2>공고 장바구니</h2>
+              <p class="main-preview-note">마감 임박순으로 제공됩니다.</p>
+            </div>
           </div>
           <RouterLink class="text-button" to="/basket?sort=deadline">전체 보기</RouterLink>
         </div>
@@ -50,20 +52,42 @@
             <span>직무</span>
             <span>상태</span>
             <span>마감일</span>
+            <span>지원</span>
+            <span>최근 작업</span>
           </div>
-          <RouterLink
+          <div
             v-for="job in basketPreviewJobs"
             :key="job.id"
             class="main-basket-row"
             data-testid="main-basket-preview-job"
-            :to="`/workspaces/${job.workspaceId}`"
           >
-            <strong>{{ job.companyName }}</strong>
-            <span>{{ job.positionTitle }}</span>
-            <span>{{ job.statusLabel }}</span>
+            <RouterLink
+              class="main-workspace-link"
+              data-testid="main-basket-company"
+              :to="`/workspaces/${job.workspaceId}`"
+            >
+              {{ job.companyName }}
+            </RouterLink>
+            <span class="main-basket-position">{{ job.positionTitle }}</span>
+            <span
+              class="status-tag"
+              :class="statusClass(job.status)"
+              data-testid="main-basket-status"
+            >
+              {{ job.statusLabel }}
+            </span>
             <span class="deadline-pill" :class="{ urgent: job.deadlineSoon }">{{ job.deadlineLabel }}</span>
-            <span v-if="isRecentWorkspace(job.workspaceId)" class="recent-visit-badge">최근 방문</span>
-          </RouterLink>
+            <a
+              class="main-apply-link"
+              data-testid="main-basket-apply-link"
+              :href="job.sourceUrl"
+              target="_blank"
+              rel="noreferrer"
+            >
+              바로가기
+            </a>
+            <span v-if="isRecentWorkspace(job.workspaceId)" class="recent-visit-badge">최근 작업</span>
+          </div>
         </div>
       </section>
 
@@ -91,17 +115,25 @@
           >
             <div class="recommendation-thumbnail-logo" aria-hidden="true">
               <img
-                v-if="item.companyLogoUrl"
+                data-testid="main-recommendation-logo"
                 :src="item.companyLogoUrl"
                 :alt="`${item.companyName} logo`"
               />
-              <span v-else>{{ companyInitial(item.companyName) }}</span>
-            </div>
-            <div class="recommendation-thumbnail-meta">
-              <span>{{ item.deadlineLabel }}</span>
             </div>
             <strong>{{ item.companyName }}</strong>
             <span>{{ item.positionTitle }}</span>
+            <p class="recommendation-thumbnail-meta">
+              {{ item.deadlineLabel }} · {{ item.participantCount }}명 작성
+            </p>
+            <button
+              class="recommendation-save-button"
+              type="button"
+              :disabled="recommendationStore.status === 'saving'"
+              :data-testid="`main-save-recommendation-${item.id}`"
+              @click="saveRecommendation(item.id)"
+            >
+              담기
+            </button>
           </article>
         </div>
       </section>
@@ -130,7 +162,9 @@ const basketPreviewJobs = computed(() => [...basketStore.jobs]
     .sort((left, right) => deadlineRank(left) - deadlineRank(right))
     .slice(0, 5));
 
-const recommendationPreviewItems = computed(() => recommendationStore.jobs.slice(0, 4));
+const recommendationPreviewItems = computed(() => recommendationStore.jobs
+    .filter((item) => item.companyLogoUrl && item.deadlineDate && item.deadlineLabel !== '상시')
+    .slice(0, 8));
 
 onMounted(() => {
     void dashboardStore.loadSummary();
@@ -148,7 +182,16 @@ function deadlineRank(job) {
     return dDay ? Number(dDay[1]) : Number.MAX_SAFE_INTEGER;
 }
 
-function companyInitial(companyName) {
-    return (companyName ?? '?').trim().charAt(0).toUpperCase() || '?';
+function saveRecommendation(recommendationId) {
+    void recommendationStore.saveRecommendation(recommendationId);
+}
+
+function statusClass(status) {
+    return {
+        NOT_STARTED: 'status-not-started',
+        IN_PROGRESS: 'status-in-progress',
+        SUBMITTED: 'status-submitted',
+        NOT_APPLIED: 'status-not-applied'
+    }[status] ?? 'status-not-applied';
 }
 </script>

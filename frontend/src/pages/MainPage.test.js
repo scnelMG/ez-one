@@ -70,6 +70,42 @@ const defaultBasketJobs = [
         deadlineSoon: false,
         workspaceId: '108',
         sourceUrl: 'https://www.jasoseol.com/'
+    },
+    {
+        id: '107',
+        companyName: 'Toss',
+        positionTitle: 'Frontend Developer',
+        status: 'SUBMITTED',
+        statusLabel: '지원완료',
+        deadlineLabel: '2026.06.25',
+        deadlineDate: '2026-06-25',
+        deadlineSoon: false,
+        workspaceId: '109',
+        sourceUrl: 'https://www.jasoseol.com/recruit/107'
+    },
+    {
+        id: '108',
+        companyName: 'Planet',
+        positionTitle: 'Frontend Developer',
+        status: 'NOT_STARTED',
+        statusLabel: '지원 전',
+        deadlineLabel: '2026.06.27',
+        deadlineDate: '2026-06-27',
+        deadlineSoon: false,
+        workspaceId: '110',
+        sourceUrl: 'https://www.jasoseol.com/recruit/108'
+    },
+    {
+        id: '109',
+        companyName: 'Overflow',
+        positionTitle: 'Java Backend Engineer',
+        status: 'IN_PROGRESS',
+        statusLabel: '진행 중',
+        deadlineLabel: '2026.06.30',
+        deadlineDate: '2026-06-30',
+        deadlineSoon: false,
+        workspaceId: '111',
+        sourceUrl: 'https://www.jasoseol.com/recruit/109'
     }
 ];
 
@@ -86,34 +122,92 @@ const defaultDashboardResponse = {
 const defaultRecommendationJobs = [
     {
         id: 'r-1',
-        companyName: 'Toss',
-        positionTitle: 'Frontend Developer',
-        deadlineLabel: 'D-3',
-        companyLogoUrl: 'https://www.google.com/s2/favicons?domain=toss.im&sz=128',
+        companyName: '우리은행',
+        positionTitle: '일반 (하계 체험형)',
+        deadlineLabel: '22시간 남음',
+        deadlineDate: '2026-06-08',
+        participantCount: 2135,
+        companyLogoUrl: 'https://www.google.com/s2/favicons?domain=wooribank.com&sz=128',
         workspaceId: null
     },
     {
         id: 'r-2',
-        companyName: 'Danggeun',
-        positionTitle: 'Server Engineer',
-        deadlineLabel: 'D-5',
-        companyLogoUrl: 'https://www.google.com/s2/favicons?domain=daangn.com&sz=128',
+        companyName: 'SK하이닉스',
+        positionTitle: '청년 Hy-Five 15기',
+        deadlineLabel: '4일 남음',
+        deadlineDate: '2026-06-11',
+        participantCount: 485,
+        companyLogoUrl: 'https://www.google.com/s2/favicons?domain=skhynix.com&sz=128',
         workspaceId: null
     },
     {
         id: 'r-3',
-        companyName: 'Coupang',
-        positionTitle: 'Platform Engineer',
-        deadlineLabel: 'D-7',
-        companyLogoUrl: 'https://www.google.com/s2/favicons?domain=coupang.com&sz=128',
+        companyName: '손해보험협회',
+        positionTitle: '일반사무',
+        deadlineLabel: '8시간 남음',
+        deadlineDate: '2026-06-08',
+        participantCount: 544,
+        companyLogoUrl: 'https://www.google.com/s2/favicons?domain=knia.or.kr&sz=128',
         workspaceId: null
     },
     {
         id: 'r-4',
-        companyName: 'Woowa Bros',
-        positionTitle: 'Product Engineer',
-        deadlineLabel: 'D-9',
-        companyLogoUrl: 'https://www.google.com/s2/favicons?domain=woowahan.com&sz=128',
+        companyName: '아이마켓코리아',
+        positionTitle: '경영지원',
+        deadlineLabel: '8시간 남음',
+        deadlineDate: '2026-06-08',
+        participantCount: 488,
+        companyLogoUrl: 'https://www.google.com/s2/favicons?domain=imarketkorea.com&sz=128',
+        workspaceId: null
+    },
+    {
+        id: 'r-5',
+        companyName: '롯데그룹',
+        positionTitle: '[롯데월드] HR',
+        deadlineLabel: '8일 남음',
+        deadlineDate: '2026-06-15',
+        participantCount: 1485,
+        companyLogoUrl: 'https://www.google.com/s2/favicons?domain=lotte.co.kr&sz=128',
+        workspaceId: null
+    },
+    {
+        id: 'r-6',
+        companyName: '홍익대학교',
+        positionTitle: '일반행정 사무직(8급)',
+        deadlineLabel: '8시간 남음',
+        deadlineDate: '2026-06-08',
+        participantCount: 150,
+        companyLogoUrl: 'https://www.google.com/s2/favicons?domain=hongik.ac.kr&sz=128',
+        workspaceId: null
+    },
+    {
+        id: 'r-7',
+        companyName: '인천공항시설관리',
+        positionTitle: '정규직(신입)_경영지원',
+        deadlineLabel: '2일 남음',
+        deadlineDate: '2026-06-09',
+        participantCount: 362,
+        companyLogoUrl: 'https://www.google.com/s2/favicons?domain=airportfc.co.kr&sz=128',
+        workspaceId: null
+    },
+    {
+        id: 'r-8',
+        companyName: '국가보안기술연구소',
+        positionTitle: '행정직',
+        deadlineLabel: '10일 남음',
+        deadlineDate: '2026-06-17',
+        participantCount: 194,
+        companyLogoUrl: 'https://www.google.com/s2/favicons?domain=nsr.re.kr&sz=128',
+        workspaceId: null
+    },
+    {
+        id: 'r-no-logo',
+        companyName: '로고없는회사',
+        positionTitle: '상시 채용',
+        deadlineLabel: '상시',
+        deadlineDate: null,
+        participantCount: 0,
+        companyLogoUrl: '',
         workspaceId: null
     }
 ];
@@ -162,6 +256,12 @@ describe('MainPage', () => {
         vi.mocked(recommendationApi.listJobs).mockReset();
         vi.mocked(recommendationApi.listJobs).mockResolvedValue(defaultRecommendationJobs);
         vi.mocked(recommendationApi.saveJob).mockReset();
+        vi.mocked(recommendationApi.saveJob).mockResolvedValue({
+            basketJobId: 'r-1',
+            workspaceId: '201',
+            companyName: '우리은행',
+            positionTitle: '일반 (하계 체험형)'
+        });
     });
 
     it('DASH-001/MAIN-013: renders the wireframe dashboard without the left rail or top filters', async () => {
@@ -197,28 +297,61 @@ describe('MainPage', () => {
         localStorage.setItem('ezone.recentWorkspaces', JSON.stringify(['102']));
         const wrapper = await mountMain();
 
-        expect(wrapper.text()).toContain('마감 임박순으로 제공됩니다');
-        const rows = wrapper.findAll('[data-testid="main-basket-preview-job"]');
-        expect(rows).toHaveLength(3);
-        expect(rows.map((row) => row.text())).toEqual([
-            'NaverBackend Engineer진행 중2026.06.07최근 방문',
-            'KakaoPayServer Developer지원 전2026.06.12',
-            'LineFrontend Engineer미지원2026.06.20'
+        expect(wrapper.get('.main-basket-title-row').text()).toBe('공고 장바구니마감 임박순으로 제공됩니다.');
+        expect(wrapper.findAll('.main-basket-head span').map((cell) => cell.text())).toEqual([
+            '회사명',
+            '직무',
+            '상태',
+            '마감일',
+            '지원',
+            '최근 작업'
         ]);
+        const rows = wrapper.findAll('[data-testid="main-basket-preview-job"]');
+        expect(rows).toHaveLength(5);
+        expect(rows.map((row) => row.get('[data-testid="main-basket-company"]').text())).toEqual([
+            'Naver',
+            'KakaoPay',
+            'Line',
+            'Toss',
+            'Planet'
+        ]);
+        expect(wrapper.text()).not.toContain('Overflow');
+        expect(rows.map((row) => row.get('[data-testid="main-basket-status"]').classes())).toEqual([
+            expect.arrayContaining(['status-tag', 'status-in-progress']),
+            expect.arrayContaining(['status-tag', 'status-not-started']),
+            expect.arrayContaining(['status-tag', 'status-not-applied']),
+            expect.arrayContaining(['status-tag', 'status-submitted']),
+            expect.arrayContaining(['status-tag', 'status-not-started'])
+        ]);
+        expect(rows[0].get('[data-testid="main-basket-apply-link"]').attributes('href')).toBe('https://www.jasoseol.com/');
+        expect(rows[0].get('[data-testid="main-basket-apply-link"]').attributes('target')).toBe('_blank');
+        expect(rows[0].text()).toContain('최근 작업');
+        expect(wrapper.text()).not.toContain('최근 방문');
     });
 
-    it('REC-001/DASH-001: previews a few jobs from the recommendation page data', async () => {
+    it('REC-001/DASH-001/JOB-005: renders eight logo-backed recommendation jobs and saves from main', async () => {
         const wrapper = await mountMain();
 
         expect(recommendationApi.listJobs).toHaveBeenCalled();
         const cards = wrapper.findAll('[data-testid="main-recommendation-preview-job"]');
-        expect(cards).toHaveLength(4);
+        expect(cards).toHaveLength(8);
         expect(cards.map((card) => card.text())).toEqual([
-            'D-3TossFrontend Developer',
-            'D-5DanggeunServer Engineer',
-            'D-7CoupangPlatform Engineer',
-            'D-9Woowa BrosProduct Engineer'
+            '우리은행일반 (하계 체험형)22시간 남음 · 2135명 작성  담기',
+            'SK하이닉스청년 Hy-Five 15기4일 남음 · 485명 작성  담기',
+            '손해보험협회일반사무8시간 남음 · 544명 작성  담기',
+            '아이마켓코리아경영지원8시간 남음 · 488명 작성  담기',
+            '롯데그룹[롯데월드] HR8일 남음 · 1485명 작성  담기',
+            '홍익대학교일반행정 사무직(8급)8시간 남음 · 150명 작성  담기',
+            '인천공항시설관리정규직(신입)_경영지원2일 남음 · 362명 작성  담기',
+            '국가보안기술연구소행정직10일 남음 · 194명 작성  담기'
         ]);
+        expect(wrapper.text()).not.toContain('상시');
+        expect(wrapper.text()).not.toContain('로고없는회사');
+        expect(wrapper.findAll('[data-testid="main-recommendation-logo"]')).toHaveLength(8);
+
+        await wrapper.get('[data-testid="main-save-recommendation-r-1"]').trigger('click');
+        await flushPromises();
+        expect(recommendationApi.saveJob).toHaveBeenCalledWith('r-1');
         expect(wrapper.text()).not.toContain('지원 현황');
         expect(wrapper.text()).not.toContain('오늘 마감');
         expect(wrapper.text()).not.toContain('프로필 기반');

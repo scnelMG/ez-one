@@ -19,12 +19,14 @@ vi.mock('@/features/recommendations/api/recommendationApi', () => ({
 const makeRouter = () => createRouter({
     history: createMemoryHistory(),
     routes: [
+        { path: '/', component: { template: '<div>main</div>' } },
         { path: '/recommendations', component: RecommendationPage },
         { path: '/workspaces/:workspaceId', component: { template: '<div>workspace</div>' } },
         { path: '/main', component: { template: '<div>main</div>' } },
         { path: '/basket', component: { template: '<div>basket</div>' } },
         { path: '/mypage', component: { template: '<div>mypage</div>' } },
-        { path: '/document-profile', component: { template: '<div>document profile</div>' } }
+        { path: '/document-profile', component: { template: '<div>document profile</div>' } },
+        { path: '/mypage/terms', component: { template: '<div>terms</div>' } }
     ]
 });
 
@@ -96,9 +98,10 @@ describe('RecommendationPage', () => {
         expect(cards.map((card) => card.find('h3').text())).toEqual(['퍼플독', '서브원', '플랜핏', '토스']);
         expect(cards[0].find('img').attributes('src')).toBe('https://www.google.com/s2/favicons?domain=purpledog.co.kr&sz=128');
         expect(cards[1].find('img').attributes('src')).toBe('https://www.google.com/s2/favicons?domain=serveone.co.kr&sz=128');
-        const disclaimer = wrapper.get('[data-testid="recommendation-trademark-disclaimer"]');
-        expect(disclaimer.text()).toContain('채용공고 식별 목적');
-        expect(disclaimer.text()).toContain('제휴 또는 후원');
+        expect(wrapper.find('[data-testid="recommendation-trademark-disclaimer"]').exists()).toBe(false);
+        const globalNotice = wrapper.get('[data-testid="global-trademark-notice"]');
+        expect(globalNotice.text()).toContain('채용공고 식별 목적');
+        expect(globalNotice.text()).toContain('제휴 또는 후원');
 
         await wrapper.get('[data-testid="save-recommendation-9001"]').trigger('click');
         await flushPromises();

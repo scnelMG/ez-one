@@ -3,11 +3,9 @@
     <section class="basket-page">
       <header class="basket-hero">
         <div>
-          <p class="section-kicker">공고 관리</p>
           <h1>공고 장바구니</h1>
-          <p>담아둔 공고의 마감 일정과 지원 상태를 한 화면에서 확인하고 바로 워크스페이스로 이동합니다.</p>
+          <p>담아둔 공고의 마감일과 지원 상태를 한 화면에서 확인하고 바로 워크스페이스로 이동합니다.</p>
         </div>
-        <RouterLink class="primary-button" to="/recommendations">추천 공고 보기</RouterLink>
       </header>
 
       <section class="basket-metrics" aria-label="장바구니 요약">
@@ -15,13 +13,13 @@
           <span>전체 공고</span>
           <strong>{{ basketStore.jobs.length }}</strong>
         </div>
-        <div data-testid="metric-progress">
-          <span>진행 중</span>
-          <strong>{{ statusCounts.IN_PROGRESS }}</strong>
-        </div>
         <div data-testid="metric-not-started">
           <span>지원 전</span>
           <strong>{{ statusCounts.NOT_STARTED }}</strong>
+        </div>
+        <div data-testid="metric-progress">
+          <span>진행 중</span>
+          <strong>{{ statusCounts.IN_PROGRESS }}</strong>
         </div>
         <div data-testid="metric-deadline">
           <span>마감 임박</span>
@@ -29,39 +27,9 @@
         </div>
       </section>
 
-      <section class="deadline-panel basket-calendar-panel" data-testid="basket-calendar" aria-label="공고 캘린더">
-        <div class="section-heading">
-          <div>
-            <p class="section-kicker">마감 일정</p>
-            <h2>공고 캘린더</h2>
-          </div>
-          <span>{{ calendarMonthLabel }}</span>
-        </div>
-
-        <div class="deadline-calendar job-calendar" :aria-label="`${calendarMonthLabel} 공고 캘린더`">
-          <span v-for="weekday in weekdays" :key="weekday" class="weekday">{{ weekday }}</span>
-          <div v-for="offset in firstDayOffset" :key="`offset-${offset}`" aria-hidden="true"></div>
-          <div v-for="day in monthDays" :key="day" class="deadline-day job-calendar-day">
-            <span>{{ day }}</span>
-            <RouterLink
-              v-for="job in jobsByDay[day] ?? []"
-              :key="job.id"
-              class="calendar-job-card"
-              data-testid="calendar-job"
-              :to="`/workspaces/${job.workspaceId}`"
-            >
-              <strong>{{ job.companyName }}</strong>
-              <small>{{ job.positionTitle }}</small>
-              <em>{{ job.statusLabel }}</em>
-            </RouterLink>
-          </div>
-        </div>
-      </section>
-
       <section class="basket-list-panel" data-testid="basket-list-panel" aria-label="저장한 공고 목록">
         <div class="basket-title-row">
           <div>
-            <p class="section-kicker">저장한 공고</p>
             <h2>공고 장바구니</h2>
           </div>
           <div class="basket-tools" aria-label="장바구니 정렬">
@@ -90,18 +58,18 @@
             :key="filter.label"
             :data-testid="`basket-filter-${filter.value ?? 'ALL'}`"
             class="filter-chip"
-            :class="{ active: selectedStatus === filter.value && !isOverdueFilter }"
-            :to="queryLink({ status: filter.value, overdue: undefined })"
+            :class="{ active: selectedStatus === filter.value && !isPriorityFilter }"
+            :to="queryLink({ status: filter.value, priority: undefined })"
           >
             {{ filter.label }}
           </RouterLink>
           <RouterLink
             class="filter-chip"
-            :class="{ active: isOverdueFilter }"
-            data-testid="basket-filter-overdue"
-            :to="queryLink({ overdue: 'true', status: undefined })"
+            :class="{ active: isPriorityFilter }"
+            data-testid="basket-filter-priority"
+            :to="queryLink({ priority: 'true', status: undefined })"
           >
-            기한 지남
+            중요
           </RouterLink>
           <input
             v-model="searchQuery"
@@ -123,15 +91,27 @@
         />
         <div v-else class="basket-data-table">
           <div class="basket-data-head">
+            <span>중요</span>
             <span>회사명</span>
             <span>직무</span>
             <span>상태</span>
             <span>마감일</span>
             <span>채용 사이트 링크</span>
-            <span>관리</span>
+            <span>최근 작업</span>
+            <span aria-label="삭제"></span>
           </div>
 
           <article v-for="job in pagedJobs" :key="job.id" class="basket-data-row" data-testid="basket-job-row">
+            <button
+              class="priority-heart"
+              type="button"
+              :class="{ active: isPriorityJob(job) }"
+              :aria-label="`${job.companyName} 중요 공고 표시`"
+              :data-testid="`priority-${job.id}`"
+              @click="togglePriority(job.id)"
+            >
+              ♥
+            </button>
             <RouterLink class="job-main-link company-cell" :to="`/workspaces/${job.workspaceId}`">
               <span class="company-logo-badge" aria-hidden="true">
                 <img
@@ -143,41 +123,55 @@
                 <span v-else>{{ companyInitial(job.companyName) }}</span>
               </span>
               <strong data-testid="basket-row-company">{{ job.companyName }}</strong>
-              <span v-if="isRecentWorkspace(job.workspaceId)" class="recent-visit-badge">최근 방문</span>
             </RouterLink>
             <RouterLink class="job-main-link" :to="`/workspaces/${job.workspaceId}`">
               {{ job.positionTitle }}
             </RouterLink>
             <select
-              class="status-select"
+              class="status-select status-tag"
+              :class="statusClass(job.status)"
               :value="job.status"
               :aria-label="`${job.companyName} ${job.positionTitle} 지원 상태 변경`"
               :data-testid="`status-${job.id}`"
               @change="changeStatus(job.id, $event.target.value)"
             >
               <option value="NOT_STARTED">지원 전</option>
-              <option value="NOT_APPLIED">미지원</option>
               <option value="IN_PROGRESS">진행 중</option>
               <option value="SUBMITTED">지원완료</option>
+              <option value="NOT_APPLIED">미지원</option>
             </select>
             <RouterLink class="job-main-link" :to="`/workspaces/${job.workspaceId}`">
-              <span class="deadline-pill" :class="{ urgent: job.deadlineSoon }">{{ job.deadlineLabel }}</span>
+              <span class="deadline-pill" :class="{ urgent: isDeadlineSoon(job) }">{{ job.deadlineLabel }}</span>
             </RouterLink>
-            <a class="source-link" :href="job.sourceUrl" target="_blank" rel="noreferrer">원문</a>
-            <div class="row-actions">
-              <RouterLink class="text-button" :to="`/basket/${job.id}`">상세</RouterLink>
-              <button
-                class="text-button danger"
-                type="button"
-                :data-testid="`archive-${job.id}`"
-                @click="archiveJob(job.id)"
-              >
-                보관
-              </button>
-            </div>
+            <a
+              class="source-link"
+              :href="normalizedSourceUrl(job.sourceUrl)"
+              target="_blank"
+              rel="noreferrer"
+              :data-testid="`source-${job.id}`"
+            >
+              바로가기
+            </a>
+            <span
+              v-if="isRecentWorkspace(job.workspaceId)"
+              class="recent-visit-badge"
+              :data-testid="`recent-work-${job.id}`"
+            >
+              최근 작업
+            </span>
+            <button
+              class="delete-job-button"
+              type="button"
+              :data-testid="`archive-${job.id}`"
+              aria-label="공고 삭제"
+              @click="archiveJob(job.id)"
+            >
+              ×
+            </button>
           </article>
 
           <form class="basket-data-row inline-create-row" data-testid="inline-create-row" @submit.prevent="createManualJob">
+            <span class="inline-placeholder">-</span>
             <input
               v-model="manualForm.companyName"
               data-testid="inline-company"
@@ -207,12 +201,13 @@
               v-model="manualForm.sourceUrl"
               data-testid="inline-source"
               name="sourceUrl"
-              type="url"
+              type="text"
               inputmode="url"
               autocomplete="off"
-              placeholder="https://example.com/jobs/123"
+              placeholder="jasoseol.com/jobs/123"
               required
             />
+            <span class="inline-placeholder"></span>
             <button class="text-button" type="submit">추가</button>
           </form>
 
@@ -238,13 +233,45 @@
             </button>
           </div>
         </div>
-        <p
-          v-if="basketStore.status !== 'loading' && basketStore.status !== 'error'"
-          class="trademark-disclaimer"
-          data-testid="basket-trademark-disclaimer"
-        >
-          표시된 회사명 및 로고는 채용공고 식별 목적으로만 사용되며, 각 상표는 해당 소유자의 자산입니다. EZ-ONE은 표시된 기업과 제휴 또는 후원을 의미하지 않습니다.
-        </p>
+      </section>
+
+      <section class="deadline-panel basket-calendar-panel" data-testid="basket-calendar" aria-label="공고 캘린더">
+        <div class="section-heading">
+          <div>
+            <div class="calendar-title-row">
+              <h2>공고 캘린더</h2>
+              <p data-testid="basket-calendar-note">공고별 마감 날짜가 캘린더에 표시됩니다.</p>
+            </div>
+          </div>
+          <select v-model="selectedMonthKey" data-testid="calendar-month-picker" aria-label="캘린더 월 선택">
+            <option v-for="month in selectableMonths" :key="month.key" :value="month.key">{{ month.label }}</option>
+          </select>
+        </div>
+
+        <div class="deadline-calendar job-calendar" :aria-label="`${calendarMonthLabel} 공고 캘린더`">
+          <span v-for="weekday in weekdays" :key="weekday" class="weekday">{{ weekday }}</span>
+          <div v-for="offset in firstDayOffset" :key="`offset-${offset}`" aria-hidden="true"></div>
+          <div
+            v-for="day in monthDays"
+            :key="day"
+            class="deadline-day job-calendar-day"
+            :class="{ today: isToday(day), weekend: isWeekend(day) }"
+            :data-testid="isToday(day) ? 'calendar-today' : (isWeekend(day) ? 'calendar-weekend' : undefined)"
+          >
+            <span>{{ day }}</span>
+            <RouterLink
+              v-for="job in jobsByDay[day] ?? []"
+              :key="job.id"
+              class="calendar-job-card"
+              data-testid="calendar-job"
+              :to="`/workspaces/${job.workspaceId}`"
+            >
+              <strong>{{ job.companyName }}</strong>
+              <small>{{ job.positionTitle }}</small>
+              <em class="status-tag" :class="statusClass(job.status)">{{ job.statusLabel }}</em>
+            </RouterLink>
+          </div>
+        </div>
       </section>
     </section>
   </AppLayout>
@@ -264,16 +291,46 @@ const searchQuery = ref(String(route.query.q ?? ''));
 const currentPage = ref(1);
 const pageSize = 10;
 const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
-const currentMonthDate = new Date();
-const monthDays = Array.from(
-    { length: new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() + 1, 0).getDate() },
+const today = startOfToday();
+const selectedMonthKey = ref(toMonthKey(today));
+const priorityJobIds = ref(new Set());
+const selectableMonths = computed(() => {
+    const months = new Map();
+    for (let offset = -1; offset <= 5; offset += 1) {
+        const monthDate = new Date(today.getFullYear(), today.getMonth() + offset, 1);
+        months.set(toMonthKey(monthDate), {
+            key: toMonthKey(monthDate),
+            label: new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long' }).format(monthDate)
+        });
+    }
+    basketStore.jobs.forEach((job) => {
+        const deadline = parseDeadlineDate(job);
+        if (deadline) {
+            months.set(toMonthKey(deadline), {
+                key: toMonthKey(deadline),
+                label: new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long' }).format(deadline)
+            });
+        }
+    });
+    return [...months.values()].sort((left, right) => left.key.localeCompare(right.key));
+});
+const currentMonthDate = computed(() => {
+    const [year, month] = selectedMonthKey.value.split('-').map(Number);
+    return new Date(year, month - 1, 1);
+});
+const monthDays = computed(() => Array.from(
+    { length: new Date(currentMonthDate.value.getFullYear(), currentMonthDate.value.getMonth() + 1, 0).getDate() },
     (_, index) => index + 1
-);
-const firstDayOffset = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth(), 1).getDay();
-const calendarMonthLabel = new Intl.DateTimeFormat('ko-KR', {
+));
+const firstDayOffset = computed(() => new Date(
+    currentMonthDate.value.getFullYear(),
+    currentMonthDate.value.getMonth(),
+    1
+).getDay());
+const calendarMonthLabel = computed(() => new Intl.DateTimeFormat('ko-KR', {
     year: 'numeric',
     month: 'long'
-}).format(currentMonthDate);
+}).format(currentMonthDate.value));
 const manualForm = reactive({
     companyName: '',
     positionTitle: '',
@@ -283,9 +340,9 @@ const manualForm = reactive({
 const statusFilters = [
     { label: '전체', value: undefined },
     { label: '지원 전', value: 'NOT_STARTED' },
-    { label: '미지원', value: 'NOT_APPLIED' },
     { label: '진행 중', value: 'IN_PROGRESS' },
-    { label: '지원완료', value: 'SUBMITTED' }
+    { label: '지원완료', value: 'SUBMITTED' },
+    { label: '미지원', value: 'NOT_APPLIED' }
 ];
 
 const selectedSort = computed(() => route.query.sort === 'saved' ? 'saved' : 'deadline');
@@ -295,10 +352,10 @@ const selectedStatus = computed(() => {
         ? status
         : undefined;
 });
-const isOverdueFilter = computed(() => route.query.overdue === 'true');
+const isPriorityFilter = computed(() => route.query.priority === 'true');
 const searchedJobs = computed(() => {
     const keyword = searchQuery.value.trim().toLowerCase();
-    const sourceJobs = isOverdueFilter.value ? basketStore.jobs.filter(isOverdueJob) : basketStore.jobs;
+    const sourceJobs = isPriorityFilter.value ? basketStore.jobs.filter(isPriorityJob) : basketStore.jobs;
     if (!keyword) {
         return sourceJobs;
     }
@@ -328,6 +385,9 @@ const jobsByDay = computed(() => {
         .sort((left, right) => deadlineRank(left) - deadlineRank(right))
         .reduce((groups, job) => {
             const day = deadlineDay(job);
+            if (!day) {
+                return groups;
+            }
             if (!groups[day]) {
                 groups[day] = [];
             }
@@ -352,7 +412,7 @@ function queryLink(nextQuery) {
 }
 function deadlineDay(job) {
     const date = parseDeadlineDate(job);
-    return date && date.getMonth() === currentMonthDate.getMonth() ? date.getDate() : 99;
+    return date && toMonthKey(date) === selectedMonthKey.value ? date.getDate() : null;
 }
 function deadlineRank(job) {
     const date = parseDeadlineDate(job);
@@ -367,10 +427,6 @@ function savedRank(job) {
     const rank = Number(job.id);
     return Number.isFinite(rank) ? rank : Number.MAX_SAFE_INTEGER;
 }
-function isOverdueJob(job) {
-    const date = parseDeadlineDate(job);
-    return date !== null && date < startOfToday();
-}
 function parseDeadlineDate(job) {
     const source = job.deadlineDate ?? job.deadlineLabel ?? '';
     const match = source.match(/(20\d{2})[-.](\d{1,2})[-.](\d{1,2})/);
@@ -383,12 +439,63 @@ function startOfToday() {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
+function toMonthKey(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+function normalizedSourceUrl(sourceUrl) {
+    const trimmed = String(sourceUrl ?? '').trim();
+    if (!trimmed) {
+        return '#';
+    }
+    return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+function daysUntilDeadline(job) {
+    const date = parseDeadlineDate(job);
+    if (!date) {
+        return null;
+    }
+    return Math.ceil((date.getTime() - today.getTime()) / 86400000);
+}
+function isDeadlineSoon(job) {
+    const daysLeft = daysUntilDeadline(job);
+    return daysLeft !== null && daysLeft >= 0 && daysLeft <= 7;
+}
+function isToday(day) {
+    return currentMonthDate.value.getFullYear() === today.getFullYear() &&
+        currentMonthDate.value.getMonth() === today.getMonth() &&
+        day === today.getDate();
+}
+function isWeekend(day) {
+    const weekDay = new Date(currentMonthDate.value.getFullYear(), currentMonthDate.value.getMonth(), day).getDay();
+    return weekDay === 0 || weekDay === 6;
+}
+function statusClass(status) {
+    return {
+        'status-not-started': status === 'NOT_STARTED',
+        'status-in-progress': status === 'IN_PROGRESS',
+        'status-submitted': status === 'SUBMITTED',
+        'status-not-applied': status === 'NOT_APPLIED'
+    };
+}
+function isPriorityJob(job) {
+    return priorityJobIds.value.has(job.id) || job.priority === true;
+}
+function togglePriority(jobId) {
+    const nextPriorityJobIds = new Set(priorityJobIds.value);
+    if (nextPriorityJobIds.has(jobId)) {
+        nextPriorityJobIds.delete(jobId);
+    }
+    else {
+        nextPriorityJobIds.add(jobId);
+    }
+    priorityJobIds.value = nextPriorityJobIds;
+}
 async function createManualJob() {
     await basketStore.createJob({
-        companyName: manualForm.companyName,
-        positionTitle: manualForm.positionTitle,
-        deadlineLabel: manualForm.deadlineLabel,
-        sourceUrl: manualForm.sourceUrl,
+        companyName: manualForm.companyName.trim(),
+        positionTitle: manualForm.positionTitle.trim(),
+        deadlineLabel: manualForm.deadlineLabel.trim(),
+        sourceUrl: normalizedSourceUrl(manualForm.sourceUrl),
         savedSource: 'MANUAL'
     });
     manualForm.companyName = '';
@@ -404,8 +511,8 @@ function companyInitial(companyName) {
 }
 function archiveJob(jobId) {
     const job = basketStore.jobs.find((basketJob) => basketJob.id === jobId);
-    const label = job ? `${job.companyName} ${job.positionTitle}` : '이 공고';
-    if (!window.confirm(`${label}를 보관하시겠습니까? 보관한 공고는 목록에서 숨겨집니다.`)) {
+    const label = job ? `${job.companyName} ${job.positionTitle}` : '공고';
+    if (!window.confirm(`${label} 공고를 삭제하시겠습니까?`)) {
         return;
     }
     void basketStore.archiveJob(jobId);
@@ -422,7 +529,7 @@ watch(() => route.query.q, (nextQuery) => {
     currentPage.value = 1;
     searchQuery.value = String(nextQuery ?? '');
 });
-watch([searchQuery, isOverdueFilter, selectedSort, sortedJobs], () => {
+watch([searchQuery, isPriorityFilter, selectedSort, sortedJobs], () => {
     currentPage.value = 1;
 });
 watch(totalPages, (nextTotalPages) => {

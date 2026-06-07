@@ -63,9 +63,6 @@
             <RouterLink data-testid="mypage-link-onboarding" role="menuitem" to="/mypage/onboarding" @click="isProfileMenuOpen = false">
               온보딩 정보
             </RouterLink>
-            <button type="button" role="menuitem" data-testid="account-switch" @click="switchAccount">
-              다른 계정으로 로그인
-            </button>
             <button type="button" role="menuitem" @click="logout">로그아웃</button>
           </div>
         </div>
@@ -76,8 +73,7 @@
           aria-label="알림"
           data-testid="reserved-alerts"
         >
-          <span class="bell-icon" aria-hidden="true"></span>
-          <small>알림</small>
+          <img class="bell-icon" data-testid="reserved-alerts-icon" :src="bellIconUrl" alt="" aria-hidden="true" />
         </span>
       </div>
     </header>
@@ -85,12 +81,21 @@
     <main class="app-main">
       <slot />
     </main>
+
+    <footer class="app-footer" aria-label="서비스 고지">
+      <p data-testid="global-trademark-notice">
+        표시된 회사명 및 로고는 채용공고 식별 목적으로만 사용되며, 각 상표는 해당 소유자의 자산입니다.
+        EZ-ONE은 표시된 기업과 제휴 또는 후원을 의미하지 않습니다.
+      </p>
+      <RouterLink to="/mypage/terms">이용약관</RouterLink>
+    </footer>
   </div>
 </template>
 
 <script setup>
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import bellIconUrl from '@/assets/bell.svg';
 import logoUrl from '@/assets/ez-one-logo.svg';
 import { authApi } from '@/features/auth/api/authApi';
 import { clearAuthSession, getCurrentUser, getRefreshToken } from '@/features/auth/session/authSession';
@@ -132,10 +137,6 @@ function scheduleProfileMenuClose() {
 
 async function logout() {
   await endCurrentSession('/login');
-}
-
-async function switchAccount() {
-  await endCurrentSession('/login?switch=account');
 }
 
 async function endCurrentSession(nextPath) {

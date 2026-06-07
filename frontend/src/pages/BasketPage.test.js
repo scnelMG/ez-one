@@ -31,7 +31,8 @@ const makeRouter = () => createRouter({
         { path: '/workspaces/:workspaceId', component: { template: '<div>workspace</div>' } },
         { path: '/recommendations', component: { template: '<div>recommendations</div>' } },
         { path: '/document-profile', component: { template: '<div>document profile</div>' } },
-        { path: '/mypage/notion', component: { template: '<div>notion</div>' } }
+        { path: '/mypage/notion', component: { template: '<div>notion</div>' } },
+        { path: '/mypage/terms', component: { template: '<div>terms</div>' } }
     ]
 });
 
@@ -71,6 +72,19 @@ const defaultJobs = [
         deadlineSoon: false,
         workspaceId: '107',
         sourceUrl: 'https://www.jasoseol.com/'
+    },
+    {
+        id: '107',
+        companyName: '서브원',
+        positionTitle: 'Frontend Developer',
+        status: 'SUBMITTED',
+        statusLabel: '지원완료',
+        deadlineLabel: '2026.06.18',
+        deadlineDate: '2026-06-18',
+        deadlineSoon: false,
+        workspaceId: '108',
+        sourceUrl: 'jasoseol.com/recruit/107',
+        priority: true
     }
 ];
 
@@ -103,64 +117,78 @@ describe('BasketPage', () => {
         mocks.archiveJob.mockResolvedValue(undefined);
     });
 
-    it('JOB-005/JOB-014: keeps dashboard metrics, moves the job calendar above the basket table, and removes weekly/manual panels', async () => {
+    it('JOB-005/JOB-014: keeps metrics, places the basket above the smaller calendar, and removes section kickers', async () => {
         const wrapper = await mountBasket('/basket?sort=deadline');
 
         expect(wrapper.find('img[alt="EZ-ONE"]').exists()).toBe(true);
-        expect(wrapper.get('[data-testid="metric-all"]').text()).toContain('3');
+        expect(wrapper.get('[data-testid="metric-all"]').text()).toContain('4');
         expect(wrapper.get('[data-testid="metric-progress"]').text()).toContain('1');
         expect(wrapper.get('[data-testid="metric-not-started"]').text()).toContain('1');
-        expect(wrapper.get('[data-testid="metric-deadline"]').text()).toContain('2');
+        expect(wrapper.get('[data-testid="metric-deadline"]').text()).toContain('1');
+        expect(wrapper.find('[data-testid="recommendation-cta"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="manual-create"]').exists()).toBe(false);
         expect(wrapper.text()).not.toContain('주간 일정');
+        expect(wrapper.text()).not.toContain('공고 관리');
+        expect(wrapper.text()).not.toContain('마감 일정');
+        expect(wrapper.text()).not.toContain('저장한 공고');
         expect(wrapper.text()).toContain('공고 캘린더');
+        expect(wrapper.get('[data-testid="basket-calendar-note"]').text()).toBe('공고별 마감 날짜가 캘린더에 표시됩니다.');
 
         const calendarIndex = wrapper.html().indexOf('data-testid="basket-calendar"');
         const listIndex = wrapper.html().indexOf('data-testid="basket-list-panel"');
         expect(calendarIndex).toBeGreaterThan(-1);
-        expect(listIndex).toBeGreaterThan(calendarIndex);
-        const disclaimer = wrapper.get('[data-testid="basket-trademark-disclaimer"]');
-        expect(disclaimer.text()).toContain('채용공고 식별 목적');
-        expect(disclaimer.text()).toContain('제휴 또는 후원');
+        expect(listIndex).toBeLessThan(calendarIndex);
+        expect(wrapper.find('[data-testid="basket-trademark-disclaimer"]').exists()).toBe(false);
+        const globalNotice = wrapper.get('[data-testid="global-trademark-notice"]');
+        expect(globalNotice.text()).toContain('채용공고 식별 목적');
+        expect(globalNotice.text()).toContain('제휴 또는 후원');
     });
 
     it('JOB-014: renders only saved job deadlines on the calendar with company, position, status, and workspace links', async () => {
         const wrapper = await mountBasket('/basket?sort=deadline');
 
         const calendarJobs = wrapper.findAll('[data-testid="calendar-job"]');
-        expect(calendarJobs).toHaveLength(3);
-        expect(calendarJobs.map((job) => job.text())).toEqual([
-            'Overdue IncPlatform Engineer미지원',
-            'NaverBackend Engineer진행 중',
-            'KakaoPayServer Developer지원 전'
-        ]);
-        expect(calendarJobs.map((job) => job.attributes('href'))).toEqual([
-            '/workspaces/107',
-            '/workspaces/102',
-            '/workspaces/105'
-        ]);
+        expect(calendarJobs).toHaveLength(4);
+        expect(calendarJobs.map((job) => job.text())).toContain('NaverBackend Engineer진행 중');
+        expect(calendarJobs.map((job) => job.attributes('href'))).toContain('/workspaces/102');
+        expect(wrapper.find('[data-testid="calendar-today"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="calendar-month-picker"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="calendar-weekend"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="calendar-job"] .status-tag').exists()).toBe(true);
     });
 
     it('JOB-005/JOB-012: filters jobs and switches between deadline and saved order', async () => {
         const deadlineWrapper = await mountBasket('/basket?sort=deadline');
         expect(deadlineWrapper.get('[data-testid="basket-sort-deadline"]').classes()).toContain('active');
-        expect(rowCompanies(deadlineWrapper)).toEqual(['Overdue Inc', 'Naver', 'KakaoPay']);
+        expect(rowCompanies(deadlineWrapper)).toEqual(['Overdue Inc', 'Naver', '서브원', 'KakaoPay']);
 
         const savedWrapper = await mountBasket('/basket?sort=saved');
         expect(savedWrapper.get('[data-testid="basket-sort-saved"]').classes()).toContain('active');
-        expect(rowCompanies(savedWrapper)).toEqual(['Naver', 'KakaoPay', 'Overdue Inc']);
+        expect(rowCompanies(savedWrapper)).toEqual(['Naver', 'KakaoPay', 'Overdue Inc', '서브원']);
+        expect(savedWrapper.find('[data-testid="basket-filter-overdue"]').exists()).toBe(false);
+        expect(savedWrapper.findAll('[data-testid^="basket-filter-"]').map((item) => item.text())).toEqual([
+            '전체',
+            '지원 전',
+            '진행 중',
+            '지원완료',
+            '미지원',
+            '중요'
+        ]);
 
         await savedWrapper.get('[data-testid="basket-search"]').setValue('server');
         expect(rowCompanies(savedWrapper)).toEqual(['KakaoPay']);
+        await savedWrapper.get('[data-testid="basket-search"]').setValue('서');
+        expect(rowCompanies(savedWrapper)).toEqual(['서브원']);
     });
 
     it('JOB-004/JOB-010/JOB-008: creates jobs from the inline table row, updates status, and archives jobs', async () => {
+        localStorage.setItem('ezone.recentWorkspaces', JSON.stringify(['102']));
         const wrapper = await mountBasket('/basket');
 
         await wrapper.get('[data-testid="inline-company"]').setValue('Line');
         await wrapper.get('[data-testid="inline-position"]').setValue('Frontend Engineer');
         await wrapper.get('[data-testid="inline-deadline"]').setValue('2026.06.28');
-        await wrapper.get('[data-testid="inline-source"]').setValue('https://www.jasoseol.com/');
+        await wrapper.get('[data-testid="inline-source"]').setValue('www.jasoseol.com/recruit/line');
         await wrapper.get('[data-testid="inline-create-row"]').trigger('submit');
         await flushPromises();
 
@@ -168,7 +196,7 @@ describe('BasketPage', () => {
             companyName: 'Line',
             positionTitle: 'Frontend Engineer',
             deadlineLabel: '2026.06.28',
-            sourceUrl: 'https://www.jasoseol.com/',
+            sourceUrl: 'https://www.jasoseol.com/recruit/line',
             savedSource: 'MANUAL'
         });
         expect(wrapper.text()).toContain('Line');
@@ -178,17 +206,32 @@ describe('BasketPage', () => {
         expect(mocks.updateStatus).toHaveBeenCalledWith('101', 'SUBMITTED');
         expect(wrapper.text()).toContain('지원완료');
 
+        expect(wrapper.get('[data-testid="source-101"]').text()).toBe('바로가기');
+        expect(wrapper.find('[data-testid="basket-management-head"]').exists()).toBe(false);
+        expect(wrapper.get('[data-testid="recent-work-101"]').text()).toBe('최근 작업');
+        expect(wrapper.get('[data-testid="status-101"]').classes()).toEqual(expect.arrayContaining(['status-select', 'status-tag']));
+        expect(wrapper.get('[data-testid="status-101"]').findAll('option').map((option) => option.text())).toEqual([
+            '지원 전',
+            '진행 중',
+            '지원완료',
+            '미지원'
+        ]);
+
+        await wrapper.get('[data-testid="priority-101"]').trigger('click');
+        expect(wrapper.get('[data-testid="priority-101"]').classes()).toContain('active');
+
         await wrapper.get('[data-testid="archive-101"]').trigger('click');
         await flushPromises();
+        expect(window.confirm).toHaveBeenCalledWith('Naver Backend Engineer 공고를 삭제하시겠습니까?');
         expect(mocks.archiveJob).toHaveBeenCalledWith('101');
         expect(wrapper.text()).not.toContain('Naver');
     });
 
-    it('JOB-014: filters overdue basket jobs', async () => {
-        const wrapper = await mountBasket('/basket?overdue=true');
+    it('JOB-014: filters priority basket jobs', async () => {
+        const wrapper = await mountBasket('/basket?priority=true');
 
-        expect(wrapper.get('[data-testid="basket-filter-overdue"]').classes()).toContain('active');
-        expect(rowCompanies(wrapper)).toEqual(['Overdue Inc']);
+        expect(wrapper.get('[data-testid="basket-filter-priority"]').classes()).toContain('active');
+        expect(rowCompanies(wrapper)).toEqual(['서브원']);
     });
 
     it('COMMON-001: paginates basket jobs after filtering and sorting', async () => {

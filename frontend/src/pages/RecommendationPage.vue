@@ -53,13 +53,6 @@
             </button>
           </article>
         </div>
-        <p
-          v-if="recommendationStore.status !== 'loading' && sortedJobs.length > 0"
-          class="trademark-disclaimer"
-          data-testid="recommendation-trademark-disclaimer"
-        >
-          표시된 회사명 및 로고는 채용공고 식별 목적으로만 사용되며, 각 상표는 해당 소유자의 자산입니다. EZ-ONE은 표시된 기업과 제휴 또는 후원을 의미하지 않습니다.
-        </p>
         <StatePanel
           v-if="recommendationStore.status !== 'loading' && sortedJobs.length === 0"
           id="recommendation-empty"
