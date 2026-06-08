@@ -5,7 +5,7 @@
       <p class="section-kicker">Chrome 확장 연결</p>
       <h1 id="extension-connect-title">확장프로그램 연결</h1>
       <p>{{ statusMessage }}</p>
-      <RouterLink v-if="hasError" class="primary-button" to="/">다시 로그인하기</RouterLink>
+      <RouterLink v-if="hasError" class="primary-button" to="/login">다시 로그인하기</RouterLink>
       <RouterLink v-else class="primary-button" to="/main">EZ-ONE 열기</RouterLink>
     </section>
   </main>
@@ -13,9 +13,12 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue';
-import { getAccessToken, getCurrentUser, getRefreshToken } from '@/features/auth/session/authSession';
+import { useRoute } from 'vue-router';
+import { authApi } from '@/features/auth/api/authApi';
+import { getAccessToken } from '@/features/auth/session/authSession';
 
 const DEFAULT_LOCAL_EXTENSION_ID = 'ikpeibohnopmikegoogggmdipmhmiadi';
+const route = useRoute();
 const errorMessage = ref('');
 const completed = ref(false);
 const hasError = computed(() => Boolean(errorMessage.value));
@@ -29,28 +32,32 @@ const statusMessage = computed(() => {
 });
 onMounted(async () => {
     const extensionId = import.meta.env.VITE_EXTENSION_ID || DEFAULT_LOCAL_EXTENSION_ID;
-    const accessToken = getAccessToken();
-    const refreshToken = getRefreshToken();
-    const user = getCurrentUser();
     if (!extensionId) {
         errorMessage.value = '확장프로그램 ID가 설정되지 않았습니다. VITE_EXTENSION_ID를 설정해 주세요.';
         return;
     }
-    if (!accessToken || !refreshToken || !user) {
+    if (!getAccessToken()) {
         errorMessage.value = '로그인 세션을 찾지 못했습니다. 다시 로그인해 주세요.';
         return;
     }
     try {
-        const response = await sendExtensionMessage(extensionId, {
+        const extensionSession = await authApi.issueExtensionSession();
+        const authMessage = {
             type: 'EZONE_EXTENSION_AUTH_SESSION',
-            accessToken,
-            refreshToken,
-            user
-        });
+            accessToken: extensionSession.accessToken,
+            refreshToken: extensionSession.refreshToken,
+            user: extensionSession.user
+        };
+        const sourceTabId = parseSourceTabId(route.query.sourceTabId);
+        if (sourceTabId !== null) {
+            authMessage.sourceTabId = sourceTabId;
+        }
+        const response = await sendExtensionMessage(extensionId, authMessage);
         if (!response?.accepted) {
             throw new Error(response?.message ?? '확장프로그램이 로그인 세션을 받지 못했습니다.');
         }
         completed.value = true;
+        returnToSourceUrl(route.query.sourceUrl);
     }
     catch (error) {
         errorMessage.value = error instanceof Error ? error.message : '확장프로그램 연결에 실패했습니다.';
@@ -72,5 +79,27 @@ function sendExtensionMessage(extensionId, message) {
             resolve(response);
         });
     });
+}
+function returnToSourceUrl(value) {
+    if (typeof value !== 'string') {
+        return;
+    }
+    try {
+        const url = new URL(value);
+        if (url.protocol === 'http:' || url.protocol === 'https:') {
+            globalThis.location.replace(url.href);
+        }
+    }
+    catch {
+        // Ignore malformed redirect targets and leave the user on the connection result.
+    }
+}
+
+function parseSourceTabId(value) {
+    if (typeof value !== 'string' || !/^\d+$/.test(value)) {
+        return null;
+    }
+    const parsed = Number(value);
+    return parsed > 0 ? parsed : null;
 }
 </script>

@@ -97,6 +97,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
     ) {
         BasketRecord duplicate = activeBasketJobs(userId).stream()
             .filter(job -> job.sourceUrl().equals(request.sourceUrl()))
+            .filter(job -> job.companyName().equals(request.companyName()))
             .filter(job -> job.positionTitle().equals(request.positionTitle()))
             .findFirst()
             .orElse(null);

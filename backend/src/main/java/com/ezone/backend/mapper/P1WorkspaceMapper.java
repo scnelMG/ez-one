@@ -30,6 +30,7 @@ public interface P1WorkspaceMapper {
 
     Optional<BasketJobRow> findDuplicateBasketJob(
         @Param("userId") Long userId,
+        @Param("companyName") String companyName,
         @Param("sourceUrl") String sourceUrl,
         @Param("positionTitle") String positionTitle
     );

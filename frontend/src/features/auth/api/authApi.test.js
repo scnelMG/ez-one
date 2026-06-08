@@ -43,6 +43,14 @@ describe('authApi', () => {
         await api.logout('refresh-token');
         expect(post).toHaveBeenCalledWith('/api/auth/logout', { refreshToken: 'refresh-token' });
     });
+    it('EXT-003: requests a separate extension auth session', async () => {
+        const post = vi.fn().mockResolvedValue({ data: successEnvelope });
+        const api = createAuthApi({ get: vi.fn(), post, patch: vi.fn(), delete: vi.fn() });
+        const response = await api.issueExtensionSession();
+        expect(post).toHaveBeenCalledWith('/api/auth/extension-session');
+        expect(response.accessToken).toBe('access-token');
+        expect(response.refreshToken).toBe('refresh-token');
+    });
     it('AUTH-002: signs up with email credentials and returns issued tokens', async () => {
         const post = vi.fn().mockResolvedValue({ data: successEnvelope });
         const api = createAuthApi({ get: vi.fn(), post, patch: vi.fn(), delete: vi.fn() });

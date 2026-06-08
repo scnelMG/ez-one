@@ -5,6 +5,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -43,6 +44,20 @@ class AuthControllerTest {
                 .header("Access-Control-Request-Headers", "content-type"))
             .andExpect(status().isOk())
             .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"))
+            .andExpect(header().string("Access-Control-Allow-Methods", Matchers.containsString("POST")));
+    }
+
+    @Test
+    void extensionApiAllowsLocalChromeExtensionCorsPreflight() throws Exception {
+        mockMvc.perform(options("/api/extension/jobs/save")
+                .header("Origin", "chrome-extension://ikpeibohnopmikegoogggmdipmhmiadi")
+                .header("Access-Control-Request-Method", "POST")
+                .header("Access-Control-Request-Headers", "authorization,content-type"))
+            .andExpect(status().isOk())
+            .andExpect(header().string(
+                "Access-Control-Allow-Origin",
+                "chrome-extension://ikpeibohnopmikegoogggmdipmhmiadi"
+            ))
             .andExpect(header().string("Access-Control-Allow-Methods", Matchers.containsString("POST")));
     }
 
@@ -240,5 +255,31 @@ class AuthControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data.revoked").value(true));
+    }
+
+    @Test
+    void extensionSessionIssuesSeparateTokenEnvelopeForAuthenticatedUser() throws Exception {
+        when(authService.issueExtensionSession(1L)).thenReturn(
+            new AuthTokenResponse(
+                "extension-access-token",
+                "extension-refresh-token",
+                "Bearer",
+                1800,
+                new CurrentUserResponse(
+                    1L,
+                    "user@example.com",
+                    "Hong Gil Dong",
+                    "Gil Dong",
+                    true,
+                    false
+                )
+            )
+        );
+
+        mockMvc.perform(post("/api/auth/extension-session").with(user("1")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.accessToken").value("extension-access-token"))
+            .andExpect(jsonPath("$.data.refreshToken").value("extension-refresh-token"));
     }
 }

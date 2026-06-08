@@ -36,4 +36,8 @@ describe('extension popup markup', () => {
         expect(markup).toContain('id="autofill-failed-list"');
         expect(markup).toContain('id="autofill-copy-list"');
     });
+
+    it('keeps internal requirement ids out of user-facing popup copy', () => {
+        expect(markup).not.toMatch(/>[^<]*(EXT|JOB|PROFILE)-\d+[^<]*</);
+    });
 });

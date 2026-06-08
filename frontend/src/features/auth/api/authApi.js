@@ -20,6 +20,10 @@ export function createAuthApi(httpClient = defaultHttpClient) {
             });
             return response.data.data;
         },
+        async issueExtensionSession() {
+            const response = await httpClient.post('/api/auth/extension-session');
+            return response.data.data;
+        },
         async logout(refreshToken) {
             await httpClient.post('/api/auth/logout', { refreshToken });
         },

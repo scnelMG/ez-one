@@ -32,7 +32,7 @@ class MyBatisP1WorkspaceServiceTest {
     @Test
     void createBasketJobRecordsUnverifiedCompanyInfoSourceFromSavedUrl() {
         String sourceUrl = "https://careers.example.com/jobs/backend";
-        when(mapper.findDuplicateBasketJob(1L, sourceUrl, "Backend Developer")).thenReturn(Optional.empty());
+        when(mapper.findDuplicateBasketJob(1L, "Example Labs", sourceUrl, "Backend Developer")).thenReturn(Optional.empty());
         doAnswer(invocation -> {
             JobRow row = invocation.getArgument(0);
             row.setCompanyId(10L);
@@ -121,6 +121,7 @@ class MyBatisP1WorkspaceServiceTest {
         when(mapper.findRecommendationJob(9001L)).thenReturn(Optional.of(recommendation));
         when(mapper.findDuplicateBasketJob(
             1L,
+            "LINE",
             "https://www.jasoseol.com/recruit/line-platform",
             "Server Platform Engineer"
         )).thenReturn(Optional.empty());

@@ -46,4 +46,37 @@ describe('extensionDocumentProfileApi', () => {
             }
         }));
     });
+
+    it('clears the extension session when refresh fails after an invalid access token', async () => {
+        const fetcher = vi.fn()
+            .mockResolvedValueOnce({
+                ok: false,
+                status: 401,
+                json: async () => ({
+                    success: false,
+                    data: null,
+                    error: { message: 'Invalid access token.' }
+                })
+            })
+            .mockResolvedValueOnce({
+                ok: false,
+                status: 401,
+                json: async () => ({
+                    success: false,
+                    data: null,
+                    error: { message: 'Refresh token is invalid.' }
+                })
+            });
+        const clearSession = vi.fn(async () => undefined);
+        const api = createExtensionDocumentProfileApi({
+            apiBaseUrl: 'http://localhost:8080/api',
+            getAccessToken: async () => 'stale-access-token',
+            getRefreshToken: async () => 'expired-refresh-token',
+            clearSession,
+            fetcher
+        });
+
+        await expect(api.getDocumentProfile()).rejects.toThrow('로그인이 만료되었습니다. 다시 로그인해 주세요.');
+        expect(clearSession).toHaveBeenCalled();
+    });
 });

@@ -1,10 +1,18 @@
 import { createExtensionJobApi } from '../shared/api/extensionJobApi';
 import { createExtensionDocumentProfileApi } from '../shared/api/extensionDocumentProfileApi';
-import { ACCESS_TOKEN_KEY, buildWebLoginUrl, getStoredSession } from '../shared/auth/extensionAuth';
+import {
+    ACCESS_TOKEN_KEY,
+    REFRESH_TOKEN_KEY,
+    buildWebLoginUrl,
+    clearStoredSession,
+    getStoredSession,
+    saveStoredSession
+} from '../shared/auth/extensionAuth';
 import './popup.css';
 
 const apiBaseUrl = import.meta.env.VITE_EXTENSION_API_BASE_URL ?? 'http://localhost:8080/api';
 const webAppUrl = import.meta.env.VITE_EXTENSION_WEB_APP_URL ?? 'http://localhost:5173';
+const AUTH_EXPIRED_MESSAGE = '\uB85C\uADF8\uC778\uC774 \uB9CC\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4';
 const statusPanel = requireElement('status-panel');
 const loginPanel = requireElement('login-panel');
 const featurePanel = requireElement('feature-panel');
@@ -30,11 +38,17 @@ let currentPosting = null;
 
 const jobApi = createExtensionJobApi({
     apiBaseUrl,
-    getAccessToken: getStoredAccessToken
+    getAccessToken: getStoredAccessToken,
+    getRefreshToken: getStoredRefreshToken,
+    saveSession: saveRefreshedSession,
+    clearSession: clearExtensionSession
 });
 const documentProfileApi = createExtensionDocumentProfileApi({
     apiBaseUrl,
-    getAccessToken: getStoredAccessToken
+    getAccessToken: getStoredAccessToken,
+    getRefreshToken: getStoredRefreshToken,
+    saveSession: saveRefreshedSession,
+    clearSession: clearExtensionSession
 });
 
 setStaticLinks();
@@ -42,7 +56,8 @@ loginButton.addEventListener('click', async () => {
     const tab = await getActiveTab();
     const loginUrl = buildWebLoginUrl({
         webAppUrl,
-        currentUrl: tab.url ?? ''
+        currentUrl: tab.url ?? '',
+        sourceTabId: tab.id
     });
     await chrome.tabs.create({ url: loginUrl.toString() });
     setStatus('로그인 완료 후 팝업을 다시 열어 주세요.');
@@ -82,6 +97,9 @@ saveButton.addEventListener('click', async () => {
         showPanel(resultPanel);
     }
     catch (error) {
+        if (await handleAuthExpired(error)) {
+            return;
+        }
         setStatus(error instanceof Error ? error.message : '저장에 실패했습니다.', true);
     }
     finally {
@@ -109,17 +127,33 @@ async function loadPreview() {
             setStatus('자소설닷컴 공고 페이지에서 사용할 수 있습니다.', true);
             return;
         }
-        const posting = await chrome.tabs.sendMessage(tab.id, {
-            type: 'EZONE_EXTRACT_JOB'
-        });
+        const posting = await extractCurrentTabPosting(tab.id);
         currentPosting = posting;
         await jobApi.preview(posting);
         renderPosting(posting);
         showPanel(previewPanel);
     }
     catch (error) {
+        if (await handleAuthExpired(error)) {
+            return;
+        }
         setStatus(error instanceof Error ? error.message : '공고 정보를 추출하지 못했습니다.', true);
     }
+}
+
+async function extractCurrentTabPosting(tabId) {
+    await chrome.scripting.executeScript({
+        target: { tabId },
+        files: ['assets/jobExtractor.js']
+    });
+    const [result] = await chrome.scripting.executeScript({
+        target: { tabId },
+        func: () => window.ezOneExtractJobPosting?.() ?? null
+    });
+    if (!result?.result) {
+        throw new Error('현재 페이지에서 공고 정보를 찾지 못했습니다.');
+    }
+    return result.result;
 }
 
 async function runDocumentAutoFill() {
@@ -143,6 +177,9 @@ async function runDocumentAutoFill() {
         showPanel(documentResultPanel);
     }
     catch (error) {
+        if (await handleAuthExpired(error)) {
+            return;
+        }
         setStatus(error instanceof Error ? error.message : '서류 정보 자동 입력에 실패했습니다.', true);
     }
 }
@@ -237,6 +274,33 @@ async function getStoredAccessToken() {
     const values = await chrome.storage.local.get([ACCESS_TOKEN_KEY]);
     const token = values[ACCESS_TOKEN_KEY];
     return typeof token === 'string' ? token : null;
+}
+
+async function getStoredRefreshToken() {
+    const values = await chrome.storage.local.get([REFRESH_TOKEN_KEY]);
+    const token = values[REFRESH_TOKEN_KEY];
+    return typeof token === 'string' ? token : null;
+}
+
+async function saveRefreshedSession(session) {
+    await saveStoredSession(chrome.storage.local, session);
+}
+
+async function clearExtensionSession() {
+    await clearStoredSession(chrome.storage.local);
+}
+
+async function handleAuthExpired(error) {
+    if (!isAuthExpiredError(error)) {
+        return false;
+    }
+    await clearExtensionSession();
+    showPanel(loginPanel);
+    return true;
+}
+
+function isAuthExpiredError(error) {
+    return error instanceof Error && error.message.includes(AUTH_EXPIRED_MESSAGE);
 }
 
 function showPanel(panel) {

@@ -127,6 +127,168 @@ describe('extractJobPosting', () => {
             ]
         });
     });
+    it('extracts a Jasoseol floating posting modal from the listing page', () => {
+        const doc = document.implementation.createHTMLDocument('jasoseol-listing-modal');
+        doc.body.innerHTML = `
+      <main>
+        <h1>찾아다니는 공고</h1>
+        <div role="dialog" aria-modal="true">
+          <header>
+            <img alt="BGF로지스" src="/logos/bgf.png" />
+            <strong>BGF로지스</strong>
+            <h1>2026년 하계 채용연계형 인턴 채용</h1>
+            <p>2026년 6월 2일 00:00 ~ 2026년 6월 15일 23:59 (7일 남음)</p>
+          </header>
+          <section>
+            <table>
+              <tbody>
+                <tr>
+                  <td>인턴</td>
+                  <td>물류센터 직군 - 지역거점 물류센터(RDC)</td>
+                  <td>47명 작성</td>
+                  <td><button>자기소개서 쓰기</button></td>
+                </tr>
+                <tr>
+                  <td>인턴</td>
+                  <td>물류센터 직군 - 자동화 물류센터(CDC)</td>
+                  <td>10명 작성</td>
+                  <td><button>자기소개서 쓰기</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+        </div>
+      </main>
+    `;
+        expect(extractJobPosting(doc, 'https://jasoseol.com/?campaignid=1')).toMatchObject({
+            companyName: 'BGF로지스',
+            positionTitle: '2026년 하계 채용연계형 인턴 채용',
+            sourceUrl: 'https://jasoseol.com/?campaignid=1',
+            deadlineLabel: '2026년 6월 2일 00:00 ~ 2026년 6월 15일 23:59',
+            roleOptions: [
+                '물류센터 직군 - 지역거점 물류센터(RDC)',
+                '물류센터 직군 - 자동화 물류센터(CDC)'
+            ]
+        });
+    });
+    it('uses the visible floating modal instead of background listing content when no dialog attributes exist', () => {
+        const doc = document.implementation.createHTMLDocument('jasoseol-visible-modal');
+        doc.body.innerHTML = `
+      <main>
+        <h1>찾아다니는 공고</h1>
+        <article>
+          <h2>한국미쓰이물산</h2>
+          <p>2026년 채용연계형 인턴</p>
+          <span>~6월 10일 23:59</span>
+        </article>
+        <article>
+          <h2>한화금융</h2>
+          <p>2026 신입사원 채용</p>
+          <span>~6월 20일 23:59</span>
+        </article>
+        <div class="floating-layer" style="position: fixed; z-index: 1000;">
+          <div class="white-panel">
+            <header>
+              <img alt="BGF로지스" src="/logos/bgf.png" />
+              <strong>BGF로지스</strong>
+              <h1>2026년 하계 채용연계형 인턴 채용</h1>
+              <p>2026년 6월 2일 00:00 ~ 2026년 6월 15일 23:59 (7일 남음)</p>
+            </header>
+            <table>
+              <tbody>
+                <tr>
+                  <td>인턴</td>
+                  <td>재무지원팀 - 회계</td>
+                  <td>68명 작성</td>
+                  <td>자기소개서 쓰기</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    `;
+
+        expect(extractJobPosting(doc, 'https://jasoseol.com/?campaignid=15830248521')).toMatchObject({
+            companyName: 'BGF로지스',
+            positionTitle: '2026년 하계 채용연계형 인턴 채용',
+            sourceUrl: 'https://jasoseol.com/?campaignid=15830248521',
+            roleOptions: ['재무지원팀 - 회계']
+        });
+    });
+    it('extracts only the selected Jasoseol recruit detail from a noisy recruit listing page', () => {
+        const doc = document.implementation.createHTMLDocument('jasoseol-recruit-selected');
+        doc.body.innerHTML = `
+      <main>
+        <h1>채용공고</h1>
+        <aside>
+          <button>채용 사이트</button>
+          <button>채용 공고 공유</button>
+        </aside>
+        <section>
+          <article>
+            <strong>LG CNS</strong>
+            <h2>2026년 상반기 신입사원 수시채용</h2>
+            <p>2026년 6월 6일 00:00 ~ 2026년 6월 16일 18:00</p>
+          </article>
+          <article>
+            <strong>국립보안기술연구소</strong>
+            <h2>2026년도 1차 정규직 채용</h2>
+            <p>2026년 6월 2일 14:00 ~ 2026년 6월 17일 16:00</p>
+          </article>
+          <article>
+            <strong>한국국제협력단(KOICA)</strong>
+            <h2>2026년 일반직 및 공무직 채용</h2>
+            <p>2026년 6월 8일 15:00 ~ 2026년 6월 23일 11:00</p>
+            <button>제출 서류 받기</button>
+            <section aria-label="모집 직무">
+              <table>
+                <tbody>
+                  <tr>
+                    <td>신입</td>
+                    <td>일반직 - 개발협력일반 (일반)</td>
+                    <td>43명 작성</td>
+                    <td><button>자기소개서 쓰기</button></td>
+                  </tr>
+                  <tr>
+                    <td>신입</td>
+                    <td>일반직 - 개발협력일반 (비수도권 지역인재)</td>
+                    <td>15명 작성</td>
+                    <td><button>자기소개서 쓰기</button></td>
+                  </tr>
+                  <tr>
+                    <td>경력</td>
+                    <td>공무직 - 기술지원(전산)</td>
+                    <td>2명 작성</td>
+                    <td><button>자기소개서 쓰기</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+          </article>
+          <article>
+            <strong>롯데그룹</strong>
+            <h2>예측가능한 채용</h2>
+            <p>2026년 6월 2일 10:00 ~ 2026년 6월 23일 23:00</p>
+          </article>
+        </section>
+        <section>
+          <h2>채팅방</h2>
+          <p>자소설닷컴 추천공고 한국미쓰이물산 SK하이닉스 LG CNS</p>
+        </section>
+      </main>
+    `;
+        expect(extractJobPosting(doc, 'https://jasoseol.com/recruit?ec=104470')).toMatchObject({
+            companyName: '한국국제협력단(KOICA)',
+            positionTitle: '2026년 일반직 및 공무직 채용',
+            deadlineLabel: '2026년 6월 8일 15:00 ~ 2026년 6월 23일 11:00',
+            roleOptions: [
+                '일반직 - 개발협력일반 (일반)',
+                '일반직 - 개발협력일반 (비수도권 지역인재)',
+                '공무직 - 기술지원(전산)'
+            ]
+        });
+    });
     it('marks unsupported pages without silently inventing required fields', () => {
         const doc = document.implementation.createHTMLDocument('unsupported');
         doc.body.innerHTML = '<h1>일반 페이지</h1>';

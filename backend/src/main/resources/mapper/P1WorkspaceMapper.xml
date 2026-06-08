@@ -136,6 +136,7 @@
     LEFT JOIN workspaces w ON w.basket_job_id = bj.id
     WHERE bj.user_id = #{userId}
       AND bj.deleted_at IS NULL
+      AND c.name = #{companyName}
       AND j.url = #{sourceUrl}
       AND j.title = #{positionTitle}
     LIMIT 1

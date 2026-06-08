@@ -112,6 +112,14 @@ public class DefaultAuthService implements AuthService {
     }
 
     @Override
+    public AuthTokenResponse issueExtensionSession(Long userId) {
+        UserAccount user = userAccountMapper.findById(userId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authenticated user could not be loaded."));
+
+        return toAuthTokenResponse(authTokenIssuer.issueFor(user), user, false);
+    }
+
+    @Override
     public void logout(RefreshTokenRequest request) {
         authTokenIssuer.revoke(request.refreshToken());
     }
