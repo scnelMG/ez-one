@@ -3,7 +3,7 @@
     <section class="wire-page recommendation-page">
       <PageHeader
         title="추천 공고"
-        description="마감이 있는 공고를 빠른 순서로 정리했습니다. 관심 있는 공고는 담아서 지원 워크스페이스로 이어갈 수 있습니다."
+        description="마감이 있는 공고를 빠른 순서로 정리했습니다. 관심 있는 공고를 담으면 장바구니와 워크스페이스로 이어집니다."
       />
 
       <StatePanel
@@ -14,13 +14,13 @@
         :body="recommendationStore.errorMessage"
       />
 
-      <section class="wire-section" aria-label="추천 공고 목록">
+      <section class="wire-section recommendation-board" aria-label="추천 공고 목록">
         <div class="recommendation-list-header">
           <div>
             <h2>추천 공고 {{ sortedJobs.length }}건</h2>
             <p>마감 임박순으로 제공됩니다.</p>
           </div>
-          <span>로고가 확인된 공고만 표시됩니다.</span>
+          <span>회사 로고와 지원자 작성 수를 함께 확인할 수 있습니다.</span>
         </div>
         <p v-if="recommendationStore.status === 'loading' && sortedJobs.length === 0" class="recommendation-loading">
           추천 공고를 불러오는 중입니다.
@@ -70,7 +70,7 @@
           id="recommendation-empty"
           tone="navy"
           title="추천 공고가 없습니다"
-          body="온보딩 선호 조건을 저장하면 추천 후보를 다시 확인할 수 있습니다."
+          body="선호 조건을 저장하면 추천 후보를 다시 확인할 수 있습니다."
         />
       </section>
 
@@ -86,7 +86,7 @@
           <p>
             {{ recommendationStore.savedJob.companyName }}
             {{ recommendationStore.savedJob.positionTitle }}
-            워크스페이스가 준비됐습니다.
+            워크스페이스가 준비되었습니다.
           </p>
         </div>
         <RouterLink

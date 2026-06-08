@@ -49,11 +49,14 @@
         <div v-else class="main-basket-table">
           <p v-if="basketStore.status === 'loading'" class="basket-refreshing">공고 목록을 갱신하는 중입니다.</p>
           <div class="main-basket-head">
+            <span>중요</span>
             <span>회사명</span>
             <span>직무</span>
             <span>상태</span>
             <span>마감일</span>
             <span>채용 사이트 링크</span>
+            <span>최근 작업</span>
+            <span aria-label="삭제"></span>
           </div>
           <div
             v-for="job in basketPreviewJobs"
@@ -61,13 +64,31 @@
             class="main-basket-row"
             data-testid="main-basket-preview-job"
           >
+            <button
+              class="priority-heart"
+              type="button"
+              :class="{ active: isPriorityJob(job) }"
+              :aria-label="`${job.companyName} 중요 공고 표시`"
+              :data-testid="`main-priority-${job.id}`"
+              @click="togglePriority(job.id)"
+            >
+              ♥
+            </button>
             <RouterLink
-              class="main-workspace-link"
+              class="main-workspace-link company-cell"
               data-testid="main-basket-company"
               :to="`/workspaces/${job.workspaceId}`"
             >
-              <span>{{ job.companyName }}</span>
-              <span v-if="isRecentWorkspace(job.workspaceId)" class="recent-visit-badge">최근 작업</span>
+              <span class="company-logo-badge" aria-hidden="true">
+                <img
+                  v-if="job.companyLogoUrl"
+                  :src="job.companyLogoUrl"
+                  :alt="`${job.companyName} logo`"
+                  @error="job.companyLogoUrl = null"
+                />
+                <span v-else>{{ companyInitial(job.companyName) }}</span>
+              </span>
+              <strong>{{ job.companyName }}</strong>
             </RouterLink>
             <span class="main-basket-position">{{ job.positionTitle }}</span>
             <span class="status-tag" :class="statusClass(job.status)" data-testid="main-basket-status">
@@ -83,6 +104,23 @@
             >
               바로가기
             </a>
+            <span
+              v-if="isRecentWorkspace(job.workspaceId)"
+              class="recent-visit-badge"
+              :data-testid="`main-recent-work-${job.id}`"
+            >
+              최근 작업
+            </span>
+            <span v-else class="recent-visit-empty" aria-hidden="true">-</span>
+            <button
+              class="delete-job-button"
+              type="button"
+              :data-testid="`main-archive-${job.id}`"
+              aria-label="공고 삭제"
+              @click="archiveJob(job.id)"
+            >
+              ×
+            </button>
           </div>
         </div>
       </section>
@@ -91,7 +129,7 @@
         <div class="section-heading">
           <div>
             <h2>추천 공고</h2>
-            <p>추천 공고 페이지의 마감 임박 공고 일부입니다.</p>
+            <p>마감일과 지원자 관심도를 기준으로 정리한 추천 공고입니다.</p>
           </div>
           <RouterLink class="text-button" to="/recommendations">추천 더보기</RouterLink>
         </div>
@@ -166,6 +204,7 @@ const dashboardStore = useDashboardStore();
 const basketStore = useBasketStore();
 const recommendationStore = useRecommendationStore();
 const showOnboardingModal = ref(requiresOnboarding());
+const priorityJobIds = ref(new Set());
 
 const basketPreviewJobs = computed(() => [...basketStore.jobs]
     .sort((left, right) => deadlineRank(left) - deadlineRank(right))
@@ -239,5 +278,24 @@ function companyInitial(companyName) {
 function formatParticipantCount(value) {
     const count = Number(value);
     return Number.isFinite(count) ? count.toLocaleString('ko-KR') : '0';
+}
+
+function isPriorityJob(job) {
+    return priorityJobIds.value.has(job.id) || job.priority === true;
+}
+
+function togglePriority(jobId) {
+    const nextPriorityJobIds = new Set(priorityJobIds.value);
+    if (nextPriorityJobIds.has(jobId)) {
+        nextPriorityJobIds.delete(jobId);
+    }
+    else {
+        nextPriorityJobIds.add(jobId);
+    }
+    priorityJobIds.value = nextPriorityJobIds;
+}
+
+function archiveJob(jobId) {
+    void basketStore.archiveJob(jobId);
 }
 </script>

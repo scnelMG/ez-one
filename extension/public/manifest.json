@@ -4,8 +4,20 @@
   "version": "0.0.1",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuHiQsSxwXA0i1a9xFwO6BJ+KLZNibQGuXQh+FRoNlCoxc4Z4saGyRbIHiHZusw3+sNCVsZKOk2CFgFTWkQP2jWBiwlfpVxmIB0bn4LQmKvmiUThLr4eBMWrcbkAn5S+cSzMP3T4jZgw9Q/aSESqNzHtjOpA66VjbCauNKVD+1huWuqK0zZrYVsnXinn7qVmupQMhHh6alTsdighKbPTGX5IDBo9xqhlOaJ7zaSedoVMYCym/x6Xnb0kWNM9T9rxEZYiVk2SMBHnwewQ/cXcbKMWcAOpMEqmz89v9/SbJjrGH09BAxi5SGklKa51GFl65FeU5uXNc9WKawV2sE2DG8wIDAQAB",
   "description": "Preview and save supported job postings to EZ-ONE.",
+  "icons": {
+    "16": "icon-16.png",
+    "32": "icon-32.png",
+    "48": "icon-48.png",
+    "128": "icon-128.png"
+  },
   "action": {
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon-16.png",
+      "32": "icon-32.png",
+      "48": "icon-48.png",
+      "128": "icon-128.png"
+    }
   },
   "permissions": ["activeTab", "storage", "scripting"],
   "host_permissions": [

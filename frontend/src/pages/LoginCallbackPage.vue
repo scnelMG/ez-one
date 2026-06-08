@@ -1,7 +1,7 @@
 <template>
   <main class="auth-page">
     <section class="auth-panel" aria-labelledby="callback-title">
-      <img class="auth-logo" src="../assets/ez-one-logo.svg" alt="EZ-ONE" />
+      <img class="auth-logo" src="../assets/ez-one-logo-final.png" alt="EZ-ONE" />
       <p class="section-kicker">Google 로그인</p>
       <h1 id="callback-title">Google 로그인을 처리하고 있습니다</h1>
       <p>{{ statusMessage }}</p>

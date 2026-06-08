@@ -74,9 +74,10 @@ a {
 }
 
 .brand-mark {
-  width: 30px;
-  height: 30px;
+  width: 96px;
+  height: auto;
   flex: 0 0 auto;
+  object-fit: contain;
 }
 
 .brand-lockup strong {

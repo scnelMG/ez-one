@@ -5982,3 +5982,326 @@ li {
     border-bottom: 1px solid var(--color-border);
   }
 }
+
+/* Final P1 polish: brand/profile, basket tables, and recommendation cards. */
+.brand-mark-final {
+  width: clamp(132px, 14vw, 220px);
+  height: auto;
+  max-height: 58px;
+  object-fit: contain;
+}
+
+.app-shell-nav .brand-lockup {
+  min-width: clamp(132px, 14vw, 220px);
+}
+
+.landing-brand-hero img {
+  width: min(360px, 72vw);
+  height: auto;
+  object-fit: contain;
+}
+
+.landing-brand-hero strong {
+  display: none;
+}
+
+.auth-logo {
+  width: min(280px, 76vw);
+  height: auto;
+  object-fit: contain;
+}
+
+.profile-menu-trigger {
+  min-width: 214px;
+  gap: 12px;
+}
+
+.profile-menu-copy {
+  max-width: 132px;
+}
+
+.profile-name-label,
+.profile-email-label {
+  display: block;
+  max-width: 132px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-name-label {
+  color: #1677ff;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.profile-email-label {
+  color: #6b7280;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.profile-account-number {
+  display: none;
+}
+
+.profile-menu-chevron {
+  width: 13px;
+  height: 13px;
+  border-right: 3px solid #374151;
+  border-bottom: 3px solid #374151;
+  transform: rotate(45deg);
+  transition: transform 0.16s ease;
+}
+
+.profile-menu-trigger[aria-expanded='true'] .profile-menu-chevron {
+  transform: rotate(225deg);
+}
+
+.basket-list-panel,
+.basket-data-table,
+.main-basket-table {
+  overflow: visible;
+}
+
+.basket-data-table,
+.main-basket-table {
+  position: relative;
+}
+
+.basket-data-head,
+.basket-data-row,
+.main-basket-head,
+.main-basket-row {
+  grid-template-columns:
+    52px
+    minmax(170px, 1.12fr)
+    minmax(170px, 1.2fr)
+    minmax(116px, 0.72fr)
+    minmax(112px, 0.72fr)
+    minmax(126px, 0.74fr)
+    minmax(108px, 0.62fr)
+    44px;
+}
+
+.basket-data-row,
+.main-basket-row {
+  position: relative;
+}
+
+.basket-data-head span:nth-child(n+6),
+.basket-data-row > :nth-child(n+6),
+.main-basket-head span:nth-child(n+6),
+.main-basket-row > :nth-child(n+6) {
+  justify-self: center;
+  text-align: center;
+}
+
+.main-workspace-link.company-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.main-workspace-link strong,
+.main-basket-position {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-visit-empty {
+  justify-self: center;
+  color: #c4cbd6;
+  font-weight: 900;
+}
+
+.status-tag {
+  border-radius: 999px;
+  min-height: 32px;
+  padding: 0 12px;
+  box-shadow: none;
+}
+
+.status-not-started {
+  border-color: #c9d8ff;
+  background: #eef4ff;
+  color: #315f9f;
+}
+
+.status-in-progress {
+  border-color: #d6ccff;
+  background: #f1efff;
+  color: #5b3bea;
+}
+
+.status-submitted {
+  border-color: #b9e5d6;
+  background: #edfdf7;
+  color: #0f766e;
+}
+
+.status-not-applied {
+  border-color: #d8dee8;
+  background: #f5f6f9;
+  color: #667085;
+}
+
+.status-select.status-tag {
+  min-width: 104px;
+  padding-inline: 14px;
+}
+
+.status-select.status-tag::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  margin-left: 10px;
+  transform: rotate(45deg) translateY(-2px);
+  opacity: 0.9;
+}
+
+.status-select.status-tag[aria-expanded='true']::after {
+  transform: rotate(225deg) translate(-2px, -1px);
+}
+
+.status-menu {
+  z-index: 3;
+}
+
+.status-menu:has(.status-option-list) {
+  z-index: 60;
+}
+
+.status-option-list {
+  z-index: 70;
+  width: 144px;
+}
+
+.delete-job-button {
+  justify-self: end;
+  color: #98a2b3;
+  font-size: 1.18rem;
+}
+
+.recommendation-thumbnail-grid,
+.recommendation-page-grid {
+  align-items: stretch;
+}
+
+.recommendation-thumbnail-card,
+.recommendation-job-card {
+  border: 1px solid #e4e8f0;
+  background: #ffffff;
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.06);
+}
+
+.recommendation-thumbnail-card {
+  position: relative;
+  grid-template-columns: 52px minmax(0, 1fr);
+  grid-template-rows: auto;
+  align-items: start;
+  min-height: 154px;
+  gap: 14px;
+  padding: 20px;
+}
+
+.recommendation-thumbnail-logo {
+  position: static;
+  width: 46px;
+  height: 46px;
+  border: 1px solid #e7ebf1;
+  border-radius: 8px;
+  background: #fbfcff;
+}
+
+.recommendation-thumbnail-logo img {
+  max-width: 34px;
+  max-height: 34px;
+}
+
+.recommendation-thumbnail-logo span {
+  color: #5b3bea;
+  font-weight: 900;
+}
+
+.recommendation-thumbnail-copy {
+  padding-right: 58px;
+}
+
+.recommendation-thumbnail-copy strong {
+  color: #111827;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.recommendation-thumbnail-copy span {
+  color: #344054;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.recommendation-thumbnail-copy p {
+  color: #667085;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.recommendation-card-header {
+  align-items: start;
+}
+
+.recommendation-job-card {
+  min-height: 174px;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.recommendation-card-copy h3 {
+  color: #111827;
+}
+
+.recommendation-card-copy p {
+  color: #344054;
+}
+
+.recommendation-card-copy span {
+  color: #667085;
+}
+
+.recommendation-save-button {
+  border-color: #d8dee9;
+  background: #ffffff;
+  color: #344054;
+}
+
+.recommendation-save-button:hover {
+  border-color: #c9bfff;
+  background: #f5f3ff;
+  color: #5b3bea;
+}
+
+@media (max-width: 900px) {
+  .brand-mark-final {
+    width: min(190px, 62vw);
+  }
+
+  .basket-data-head,
+  .basket-data-row,
+  .main-basket-head,
+  .main-basket-row {
+    grid-template-columns: 1fr;
+  }
+
+  .basket-data-head span:nth-child(n+6),
+  .basket-data-row > :nth-child(n+6),
+  .main-basket-head span:nth-child(n+6),
+  .main-basket-row > :nth-child(n+6),
+  .delete-job-button {
+    justify-self: start;
+    text-align: left;
+  }
+}

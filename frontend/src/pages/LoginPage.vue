@@ -3,8 +3,7 @@
     <section class="landing-hero" aria-labelledby="login-title">
       <div class="landing-hero-copy">
         <RouterLink class="landing-brand landing-brand-hero" to="/" aria-label="EZ-ONE">
-          <img src="../assets/ez-one-logo.svg" alt="" />
-          <strong>EZ-ONE</strong>
+          <img src="../assets/ez-one-logo-final.png" alt="" />
         </RouterLink>
 
         <p class="landing-eyebrow">지원 준비 워크스페이스</p>

@@ -185,6 +185,7 @@
             >
               최근 작업
             </span>
+            <span v-else class="recent-visit-empty" aria-hidden="true">-</span>
             <button
               class="delete-job-button"
               type="button"

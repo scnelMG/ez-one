@@ -146,18 +146,21 @@ describe('MainPage', () => {
 
         expect(wrapper.get('.main-basket-title-row').text()).toBe('공고 장바구니마감 임박순으로 제공됩니다.');
         expect(wrapper.findAll('.main-basket-head span').map((cell) => cell.text())).toEqual([
+            '중요',
             '회사명',
             '직무',
             '상태',
             '마감일',
-            '채용 사이트 링크'
+            '채용 사이트 링크',
+            '최근 작업',
+            ''
         ]);
         const rows = wrapper.findAll('[data-testid="main-basket-preview-job"]');
         expect(rows).toHaveLength(5);
         expect(rows[0].get('[data-testid="main-basket-company"]').text()).toContain('Naver');
-        expect(rows[0].get('[data-testid="main-basket-company"]').text()).toContain('최근 작업');
+        expect(rows[0].get('[data-testid="main-recent-work-101"]').text()).toBe('최근 작업');
         expect(rows[0].get('[data-testid="main-basket-apply-link"]').text()).toBe('바로가기');
-        expect(wrapper.findAll('.main-basket-head span').map((cell) => cell.text())).not.toContain('최근 작업');
+        expect(wrapper.find('[data-testid="main-archive-101"]').exists()).toBe(true);
     });
 
     it('renders four recommendation page preview cards and saves from main', async () => {
