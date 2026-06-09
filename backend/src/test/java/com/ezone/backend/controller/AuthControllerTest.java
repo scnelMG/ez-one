@@ -5,6 +5,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -47,6 +48,20 @@ class AuthControllerTest {
     }
 
     @Test
+    void extensionApiAllowsLocalChromeExtensionCorsPreflight() throws Exception {
+        mockMvc.perform(options("/api/extension/jobs/save")
+                .header("Origin", "chrome-extension://ikpeibohnopmikegoogggmdipmhmiadi")
+                .header("Access-Control-Request-Method", "POST")
+                .header("Access-Control-Request-Headers", "authorization,content-type"))
+            .andExpect(status().isOk())
+            .andExpect(header().string(
+                "Access-Control-Allow-Origin",
+                "chrome-extension://ikpeibohnopmikegoogggmdipmhmiadi"
+            ))
+            .andExpect(header().string("Access-Control-Allow-Methods", Matchers.containsString("POST")));
+    }
+
+    @Test
     void googleLoginReturnsTokenEnvelope() throws Exception {
         when(authService.loginWithGoogle(any())).thenReturn(
             new AuthTokenResponse(
@@ -59,7 +74,8 @@ class AuthControllerTest {
                     "user@example.com",
                     "Hong Gil Dong",
                     "Gil Dong",
-                    false
+                    false,
+                    true
                 )
             )
         );
@@ -80,6 +96,7 @@ class AuthControllerTest {
             .andExpect(jsonPath("$.data.expiresIn").value(3600))
             .andExpect(jsonPath("$.data.user.email").value("user@example.com"))
             .andExpect(jsonPath("$.data.user.profileCompleted").value(false))
+            .andExpect(jsonPath("$.data.user.onboardingRequired").value(true))
             .andExpect(jsonPath("$.error").doesNotExist());
     }
 
@@ -96,7 +113,8 @@ class AuthControllerTest {
                     "local@example.com",
                     "Local User",
                     "Local User",
-                    false
+                    false,
+                    true
                 )
             )
         );
@@ -115,7 +133,8 @@ class AuthControllerTest {
             .andExpect(jsonPath("$.data.accessToken").value("access-token"))
             .andExpect(jsonPath("$.data.refreshToken").value("refresh-token"))
             .andExpect(jsonPath("$.data.user.email").value("local@example.com"))
-            .andExpect(jsonPath("$.data.user.profileCompleted").value(false));
+            .andExpect(jsonPath("$.data.user.profileCompleted").value(false))
+            .andExpect(jsonPath("$.data.user.onboardingRequired").value(true));
     }
 
     @Test
@@ -131,7 +150,8 @@ class AuthControllerTest {
                     "local@example.com",
                     "Local User",
                     "Local User",
-                    true
+                    true,
+                    false
                 )
             )
         );
@@ -149,7 +169,8 @@ class AuthControllerTest {
             .andExpect(jsonPath("$.data.accessToken").value("access-token"))
             .andExpect(jsonPath("$.data.refreshToken").value("refresh-token"))
             .andExpect(jsonPath("$.data.user.email").value("local@example.com"))
-            .andExpect(jsonPath("$.data.user.profileCompleted").value(true));
+            .andExpect(jsonPath("$.data.user.profileCompleted").value(true))
+            .andExpect(jsonPath("$.data.user.onboardingRequired").value(false));
     }
 
     @Test
@@ -209,6 +230,7 @@ class AuthControllerTest {
                     "user@example.com",
                     "Hong Gil Dong",
                     "Gil Dong",
+                    false,
                     false
                 )
             )
@@ -233,5 +255,31 @@ class AuthControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data.revoked").value(true));
+    }
+
+    @Test
+    void extensionSessionIssuesSeparateTokenEnvelopeForAuthenticatedUser() throws Exception {
+        when(authService.issueExtensionSession(1L)).thenReturn(
+            new AuthTokenResponse(
+                "extension-access-token",
+                "extension-refresh-token",
+                "Bearer",
+                1800,
+                new CurrentUserResponse(
+                    1L,
+                    "user@example.com",
+                    "Hong Gil Dong",
+                    "Gil Dong",
+                    true,
+                    false
+                )
+            )
+        );
+
+        mockMvc.perform(post("/api/auth/extension-session").with(user("1")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.accessToken").value("extension-access-token"))
+            .andExpect(jsonPath("$.data.refreshToken").value("extension-refresh-token"));
     }
 }

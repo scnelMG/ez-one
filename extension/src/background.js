@@ -1,6 +1,9 @@
 import { handleExternalAuthMessage } from './shared/auth/extensionAuth';
-chrome.runtime.onMessageExternal.addListener((message, _sender, sendResponse) => {
-    handleExternalAuthMessage(chrome.storage.local, message)
+chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
+    handleExternalAuthMessage(chrome.storage.local, message, {
+        tabs: chrome.tabs,
+        senderTabId: sender.tab?.id
+    })
         .then((accepted) => sendResponse({ accepted }))
         .catch((error) => sendResponse({
         accepted: false,

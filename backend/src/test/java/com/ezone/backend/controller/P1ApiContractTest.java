@@ -231,7 +231,7 @@ class P1ApiContractTest {
     }
 
     @Test
-    void duplicateBasketJobUsesSourceUrlAndPositionRegardlessOfCompanyName() throws Exception {
+    void duplicateBasketJobUsesCompanyNameSourceUrlAndPosition() throws Exception {
         String firstBody = mockMvc.perform(post("/api/basket/jobs")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -254,7 +254,7 @@ class P1ApiContractTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {
-                      "companyName": "Renamed Duplicate Company",
+                      "companyName": "Duplicate Company",
                       "positionTitle": "Backend Developer",
                       "deadlineLabel": "D-3",
                       "sourceUrl": "https://example.com/jobs/duplicate-url",
@@ -402,6 +402,11 @@ class P1ApiContractTest {
         mockMvc.perform(get("/api/document-profile"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.sections.basicInfo", notNullValue()));
+
+        mockMvc.perform(get("/api/extension/document-profile"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.sections.basicInfo", notNullValue()))
+            .andExpect(jsonPath("$.data.customFields", notNullValue()));
 
         mockMvc.perform(put("/api/document-profile/sections/basicInfo")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -692,6 +697,41 @@ class P1ApiContractTest {
             .andExpect(jsonPath("$.data[0].positionTitle").value("iOS 개발자"))
             .andExpect(jsonPath("$.data[6].workspaceId", notNullValue()))
             .andExpect(jsonPath("$.data[6].positionTitle").value("CXO(Customer eXperience Operator)"));
+    }
+
+    @Test
+    void extensionSaveDoesNotTreatDifferentCompaniesAsDuplicatesForSameUrlAndRole() throws Exception {
+        mockMvc.perform(post("/api/extension/jobs/save")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "companyName": "BGF로지스",
+                      "positionTitle": "2026년 하계 채용연계형 인턴 채용",
+                      "deadlineLabel": "2026년 6월 15일 23:59",
+                      "sourceUrl": "https://jasoseol.com/?campaignid=15830248521",
+                      "selectedRoles": ["재무지원팀 - 회계"],
+                      "essayQuestions": []
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data[0].companyName").value("BGF로지스"))
+            .andExpect(jsonPath("$.data[0].positionTitle").value("재무지원팀 - 회계"));
+
+        mockMvc.perform(post("/api/extension/jobs/save")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "companyName": "다른회사",
+                      "positionTitle": "2026년 하계 채용연계형 인턴 채용",
+                      "deadlineLabel": "2026년 6월 20일 23:59",
+                      "sourceUrl": "https://jasoseol.com/?campaignid=15830248521",
+                      "selectedRoles": ["재무지원팀 - 회계"],
+                      "essayQuestions": []
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data[0].companyName").value("다른회사"))
+            .andExpect(jsonPath("$.data[0].positionTitle").value("재무지원팀 - 회계"));
     }
 
     @Test

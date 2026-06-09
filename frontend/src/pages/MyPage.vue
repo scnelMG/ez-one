@@ -60,38 +60,115 @@
           <small>추천 공고에 반영돼요 · 언제든 수정 가능</small>
         </div>
         <div class="preference-chip-form">
-          <PreferenceGroup title="희망 직무" :items="roleChips" />
-          <PreferenceGroup title="희망 기업 유형" :items="companyTypeChips" />
-          <PreferenceGroup title="계열 / 업종" :items="industryChips" />
-          <PreferenceGroup title="희망 근무 지역" :items="regionChips" />
-          <label>
-            보유 스킬
-            <input v-model="profileForm.skills" data-testid="profile-skills" />
-          </label>
-          <label>
-            희망 직무
-            <input v-model="profileForm.desiredRoles" data-testid="profile-desired-roles" />
-          </label>
-          <label>
-            희망 기업 유형
-            <input v-model="profileForm.companyTypes" data-testid="profile-company-types" />
-          </label>
-          <label>
-            계열/업종
-            <input v-model="profileForm.industries" data-testid="profile-industries" />
-          </label>
-          <label>
-            희망 근무 지역
-            <input v-model="profileForm.regions" data-testid="profile-regions" />
-          </label>
-          <label>
-            SSAFY 교육생 여부
-            <select v-model="profileForm.ssafy" data-testid="profile-ssafy">
-              <option value="true">예</option>
-              <option value="false">아니오</option>
-            </select>
-          </label>
-          <p class="mattermost-note">‘예’ 선택 시 추천 공고에 Mattermost 공고가 함께 표시돼요.</p>
+          <section class="onboarding-field-group" aria-label="희망 직무">
+            <strong>희망 직무</strong>
+            <div class="onboarding-chip-list">
+              <button
+                v-for="role in roleOptions"
+                :key="role"
+                class="filter-chip"
+                :class="{ active: profileForm.desiredRoles.includes(role) }"
+                type="button"
+                :data-testid="`profile-role-option-${role}`"
+                @click="toggleListValue(profileForm.desiredRoles, role)"
+              >
+                {{ role }}
+              </button>
+            </div>
+          </section>
+          <section class="onboarding-field-group" aria-label="희망 기업 유형">
+            <strong>희망 기업 유형</strong>
+            <div class="onboarding-chip-list">
+              <button
+                v-for="companyType in companyTypeOptions"
+                :key="companyType"
+                class="filter-chip"
+                :class="{ active: profileForm.companyTypes.includes(companyType) }"
+                type="button"
+                :data-testid="`profile-company-option-${companyType}`"
+                @click="toggleListValue(profileForm.companyTypes, companyType)"
+              >
+                {{ companyType }}
+              </button>
+            </div>
+          </section>
+          <section class="onboarding-field-group" aria-label="계열 및 업종">
+            <strong>계열 / 업종</strong>
+            <div class="onboarding-chip-list">
+              <button
+                v-for="industry in industryOptions"
+                :key="industry"
+                class="filter-chip"
+                :class="{ active: profileForm.industries.includes(industry) }"
+                type="button"
+                :data-testid="`profile-industry-option-${industry}`"
+                @click="toggleListValue(profileForm.industries, industry)"
+              >
+                {{ industry }}
+              </button>
+            </div>
+          </section>
+          <section class="onboarding-field-group" aria-label="희망 근무 지역">
+            <strong>희망 근무 지역</strong>
+            <div class="onboarding-chip-list">
+              <button
+                v-for="region in regionOptions"
+                :key="region"
+                class="filter-chip"
+                :class="{ active: profileForm.regions.includes(region) }"
+                type="button"
+                :data-testid="`profile-region-option-${region}`"
+                @click="toggleListValue(profileForm.regions, region)"
+              >
+                {{ region }}
+              </button>
+            </div>
+          </section>
+          <section class="onboarding-field-group" aria-label="보유 스킬">
+            <strong>보유 스킬</strong>
+            <div class="skill-input-shell">
+              <span v-for="skill in profileForm.skills" :key="skill" class="skill-token">
+                {{ skill }}
+                <button
+                  type="button"
+                  :aria-label="`${skill} 삭제`"
+                  :data-testid="`profile-skill-remove-${skill}`"
+                  @click="removePreferenceSkill(skill)"
+                >
+                  ×
+                </button>
+              </span>
+              <input
+                v-model="skillInput"
+                data-testid="profile-skill-input"
+                type="text"
+                placeholder="React, Java, Spring 입력 후 Enter"
+                @keyup.enter="addPreferenceSkill"
+              />
+            </div>
+          </section>
+          <section class="onboarding-field-group" aria-label="SSAFY 교육생 여부">
+            <strong>SSAFY 교육생이신가요?</strong>
+            <div class="segmented-control">
+              <button
+                type="button"
+                :class="{ active: profileForm.ssafy }"
+                data-testid="profile-ssafy-true"
+                @click="profileForm.ssafy = true"
+              >
+                예
+              </button>
+              <button
+                type="button"
+                :class="{ active: !profileForm.ssafy }"
+                data-testid="profile-ssafy-false"
+                @click="profileForm.ssafy = false"
+              >
+                아니오
+              </button>
+            </div>
+          </section>
+          <p class="mattermost-note">'예' 선택 시 추천 공고에 Mattermost 공고가 함께 표시돼요.</p>
         </div>
         <div class="form-actions">
           <p v-if="preferenceStatusMessage" class="form-status" role="status">{{ preferenceStatusMessage }}</p>
@@ -196,6 +273,8 @@
           <p>본 약관은 EZ-ONE이 제공하는 공고 관리, 서류 입력 정보, 워크스페이스 서비스를 이용함에 있어 필요한 사항을 정합니다.</p>
           <h3>제2조 정의</h3>
           <p>회원, 공고, 워크스페이스, 외부 연동의 의미와 서비스 이용 범위를 정의합니다.</p>
+          <h3>제3조 상표 및 로고 표시</h3>
+          <p>서비스에 표시되는 회사명 및 로고는 채용공고 식별 목적으로만 사용되며, 각 상표와 로고는 해당 소유자의 자산입니다. EZ-ONE은 표시된 기업과 제휴 또는 후원을 의미하지 않습니다.</p>
         </article>
       </section>
     </section>
@@ -203,7 +282,7 @@
 </template>
 
 <script setup>
-import { computed, defineComponent, h, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import AppLayout from '@/shared/AppLayout.vue';
 import PageHeader from '@/shared/PageHeader.vue';
@@ -218,14 +297,19 @@ const nickname = ref(currentUser.value?.nickname || currentUser.value?.name || '
 const saving = ref(false);
 const statusMessage = ref('');
 const preferenceStatusMessage = ref('');
+const roleOptions = ['프론트엔드', '백엔드', '데이터 엔지니어', 'AI/ML', '모바일', 'DevOps', 'PM', '디자인', 'QA', '기타'];
+const companyTypeOptions = ['대기업', '공공기관', '중견기업', '중소기업', '스타트업', '기타'];
+const industryOptions = ['IT/플랫폼', '제조', '금융', '커머스', '게임', '바이오/헬스', '미디어', '기타'];
+const regionOptions = ['서울', '경기', '인천', '대전', '부산', '대구', '광주', '제주', '원격(재택)'];
 const profileForm = reactive({
-  desiredRoles: '',
-  companyTypes: '',
-  industries: '',
-  regions: '',
-  skills: '',
-  ssafy: 'false'
+  desiredRoles: [roleOptions[0]],
+  companyTypes: [companyTypeOptions[0]],
+  industries: [industryOptions[0]],
+  regions: [regionOptions[0]],
+  skills: [],
+  ssafy: false
 });
+const skillInput = ref('');
 
 const pageCopy = {
   account: {
@@ -258,10 +342,6 @@ const activeSection = computed(() => route.meta.mypageSection ?? 'account');
 const pageTitle = computed(() => pageCopy[activeSection.value]?.title ?? pageCopy.account.title);
 const pageDescription = computed(() => pageCopy[activeSection.value]?.description ?? pageCopy.account.description);
 const profileInitial = computed(() => (nickname.value || currentUser.value?.email || 'E').trim().charAt(0).toUpperCase());
-const roleChips = computed(() => splitCsv(profileForm.desiredRoles));
-const companyTypeChips = computed(() => splitCsv(profileForm.companyTypes));
-const industryChips = computed(() => splitCsv(profileForm.industries));
-const regionChips = computed(() => splitCsv(profileForm.regions));
 
 const faqItems = [
   { q: '노션 이메일이 로그인 이메일과 달라도 되나요?', a: '네. 로그인 계정과 노션 연동 계정은 다를 수 있고, 내 계정에서 차이를 안내합니다.' },
@@ -269,20 +349,6 @@ const faqItems = [
   { q: '공고별로 첨부한 자료는 어디서 보나요?', a: '워크스페이스 오른쪽 참고자료 패널에서 JD, 뉴스, DART, 메모를 확인합니다.' },
   { q: '추천 공고는 어떤 기준으로 보여지나요?', a: '온보딩에서 입력한 선호 직무와 기술 스택을 바탕으로 마감순 공고를 제안합니다.' }
 ];
-
-const PreferenceGroup = defineComponent({
-  name: 'PreferenceGroup',
-  props: {
-    title: { type: String, required: true },
-    items: { type: Array, required: true }
-  },
-  setup(props) {
-    return () => h('div', { class: 'preference-group' }, [
-      h('strong', props.title),
-      h('div', { class: 'keyword-row' }, props.items.map((item) => h('span', String(item))))
-    ]);
-  }
-});
 
 onMounted(async () => {
   await profileStore.loadProfile();
@@ -314,12 +380,12 @@ async function saveProfile() {
 
 async function savePreferences() {
   await profileStore.saveProfile({
-    desiredRoles: splitCsv(profileForm.desiredRoles),
-    companyTypes: splitCsv(profileForm.companyTypes),
-    industries: splitCsv(profileForm.industries),
-    regions: splitCsv(profileForm.regions),
-    skills: splitCsv(profileForm.skills),
-    ssafy: profileForm.ssafy === 'true'
+    desiredRoles: [...profileForm.desiredRoles],
+    companyTypes: [...profileForm.companyTypes],
+    industries: [...profileForm.industries],
+    regions: [...profileForm.regions],
+    skills: [...profileForm.skills],
+    ssafy: profileForm.ssafy
   });
   if (profileStore.status === 'ready' && profileStore.profile) {
     syncProfileForm();
@@ -332,15 +398,39 @@ async function savePreferences() {
 function syncProfileForm() {
   const profile = profileStore.profile;
   if (!profile) return;
-  profileForm.desiredRoles = profile.desiredRoles.join(', ');
-  profileForm.companyTypes = profile.companyTypes.join(', ');
-  profileForm.industries = profile.industries.join(', ');
-  profileForm.regions = profile.regions.join(', ');
-  profileForm.skills = profile.skills.join(', ');
-  profileForm.ssafy = String(profile.ssafy);
+  profileForm.desiredRoles = selectedOrDefault(profile.desiredRoles, roleOptions);
+  profileForm.companyTypes = selectedOrDefault(profile.companyTypes, companyTypeOptions);
+  profileForm.industries = selectedOrDefault(profile.industries, industryOptions);
+  profileForm.regions = selectedOrDefault(profile.regions, regionOptions);
+  profileForm.skills = [...profile.skills];
+  profileForm.ssafy = profile.ssafy;
 }
 
-function splitCsv(value) {
-  return value.split(',').map((item) => item.trim()).filter(Boolean);
+function selectedOrDefault(values, options) {
+  return values.length > 0 ? [...values] : [options[0]];
+}
+
+function toggleListValue(values, value) {
+  const index = values.indexOf(value);
+  if (index >= 0) {
+    values.splice(index, 1);
+    return;
+  }
+  values.push(value);
+}
+
+function addPreferenceSkill() {
+  const nextSkill = skillInput.value.trim();
+  if (nextSkill && !profileForm.skills.includes(nextSkill)) {
+    profileForm.skills.push(nextSkill);
+  }
+  skillInput.value = '';
+}
+
+function removePreferenceSkill(skill) {
+  const index = profileForm.skills.indexOf(skill);
+  if (index >= 0) {
+    profileForm.skills.splice(index, 1);
+  }
 }
 </script>

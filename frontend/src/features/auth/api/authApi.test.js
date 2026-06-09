@@ -12,7 +12,8 @@ const successEnvelope = {
             email: 'user@example.com',
             name: 'Hong Gil Dong',
             nickname: 'Gil Dong',
-            profileCompleted: false
+            profileCompleted: false,
+            onboardingRequired: true
         }
     },
     error: null
@@ -33,6 +34,7 @@ describe('authApi', () => {
         expect(response.accessToken).toBe('access-token');
         expect(response.refreshToken).toBe('refresh-token');
         expect(response.user.profileCompleted).toBe(false);
+        expect(response.user.onboardingRequired).toBe(true);
     });
     it('AUTH-001: logs out with the refresh token', async () => {
         const get = vi.fn();
@@ -40,6 +42,14 @@ describe('authApi', () => {
         const api = createAuthApi({ get, post, patch: vi.fn(), delete: vi.fn() });
         await api.logout('refresh-token');
         expect(post).toHaveBeenCalledWith('/api/auth/logout', { refreshToken: 'refresh-token' });
+    });
+    it('EXT-003: requests a separate extension auth session', async () => {
+        const post = vi.fn().mockResolvedValue({ data: successEnvelope });
+        const api = createAuthApi({ get: vi.fn(), post, patch: vi.fn(), delete: vi.fn() });
+        const response = await api.issueExtensionSession();
+        expect(post).toHaveBeenCalledWith('/api/auth/extension-session');
+        expect(response.accessToken).toBe('access-token');
+        expect(response.refreshToken).toBe('refresh-token');
     });
     it('AUTH-002: signs up with email credentials and returns issued tokens', async () => {
         const post = vi.fn().mockResolvedValue({ data: successEnvelope });

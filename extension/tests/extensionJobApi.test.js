@@ -92,4 +92,112 @@ describe('extensionJobApi', () => {
             essayQuestions: [{ prompt: '지원동기를 작성해 주세요.', maxLength: 1000 }]
         });
     });
+    it('refreshes an invalid access token and retries the extension save request once', async () => {
+        const savePayload = {
+            companyName: 'Naver',
+            positionTitle: 'Backend Developer',
+            deadlineLabel: 'D-26',
+            sourceUrl: 'https://www.jasoseol.com/recruit/1',
+            selectedRoles: ['Backend'],
+            essayQuestions: []
+        };
+        const saveUnauthorized = {
+            ok: false,
+            status: 401,
+            json: async () => ({
+                success: false,
+                data: null,
+                error: { message: 'Invalid access token.' }
+            })
+        };
+        const refreshOk = {
+            ok: true,
+            status: 200,
+            json: async () => ({
+                success: true,
+                data: {
+                    accessToken: 'fresh-access-token',
+                    refreshToken: 'fresh-refresh-token',
+                    user: { id: 1, email: 'user@example.com' }
+                },
+                error: null
+            })
+        };
+        const saveOk = {
+            ok: true,
+            status: 200,
+            json: async () => ({
+                success: true,
+                data: [{ basketJobId: 10, workspaceId: 20, companyName: 'Naver', positionTitle: 'Backend' }],
+                error: null
+            })
+        };
+        const fetcher = vi.fn()
+            .mockResolvedValueOnce(saveUnauthorized)
+            .mockResolvedValueOnce(refreshOk)
+            .mockResolvedValueOnce(saveOk);
+        const saveSession = vi.fn(async () => undefined);
+        const api = createExtensionJobApi({
+            apiBaseUrl: 'http://localhost:8080/api',
+            getAccessToken: vi.fn()
+                .mockResolvedValueOnce('stale-access-token')
+                .mockResolvedValueOnce('fresh-access-token'),
+            getRefreshToken: async () => 'refresh-token',
+            saveSession,
+            fetcher
+        });
+
+        await expect(api.save(savePayload)).resolves.toHaveLength(1);
+
+        expect(fetcher).toHaveBeenNthCalledWith(2, 'http://localhost:8080/api/auth/refresh', expect.objectContaining({
+            method: 'POST',
+            body: JSON.stringify({ refreshToken: 'refresh-token' })
+        }));
+        expect(saveSession).toHaveBeenCalledWith(expect.objectContaining({
+            accessToken: 'fresh-access-token',
+            refreshToken: 'fresh-refresh-token'
+        }));
+        expect(fetcher.mock.calls[2][1].headers.Authorization).toBe('Bearer fresh-access-token');
+    });
+    it('does not call the default fetch implementation as a bound client method', async () => {
+        const originalFetch = globalThis.fetch;
+        const fetcher = vi.fn(function () {
+            if (this && this !== globalThis) {
+                throw new TypeError('Illegal invocation');
+            }
+            return Promise.resolve({
+                ok: true,
+                status: 200,
+                json: async () => ({
+                    success: true,
+                    data: {
+                        saveable: true,
+                        companyName: 'Naver',
+                        positionTitle: 'Backend Developer',
+                        deadlineLabel: 'D-26',
+                        sourceUrl: 'https://www.jasoseol.com/recruit/1'
+                    },
+                    error: null
+                })
+            });
+        });
+        globalThis.fetch = fetcher;
+        try {
+            const api = createExtensionJobApi({
+                apiBaseUrl: 'http://localhost:8080/api',
+                getAccessToken: async () => 'access-token'
+            });
+            await expect(api.preview({
+                companyName: 'Naver',
+                positionTitle: 'Backend Developer',
+                deadlineLabel: 'D-26',
+                sourceUrl: 'https://www.jasoseol.com/recruit/1',
+                roleOptions: ['Backend'],
+                essayQuestions: []
+            })).resolves.toBeTruthy();
+        }
+        finally {
+            globalThis.fetch = originalFetch;
+        }
+    });
 });

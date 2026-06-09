@@ -117,6 +117,7 @@
 | --- | --- | --- |
 | POST | `/api/extension/jobs/preview` | 현재 페이지 공고 추출 미리보기 |
 | POST | `/api/extension/jobs/save` | 추출 공고 장바구니 저장 |
+| GET | `/api/extension/document-profile` | 확장 프로그램 서류 자동 입력 보조용 서류 입력 정보 조회 |
 
 ## P2 / 예약 API
 
@@ -124,7 +125,6 @@
 
 | 메서드 | 경로 | 목적 |
 | --- | --- | --- |
-| GET | `/api/extension/document-profile` | 확장 프로그램 서류 자동 입력 보조용 서류 입력 정보 조회 |
 | GET | `/api/basket/calendar` | 장바구니 마감 캘린더/주간 일정 |
 
 > AUTH-001 상세 계약은 `docs/32_auth-google-api-contract.md`를 기준으로 한다.

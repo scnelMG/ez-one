@@ -106,12 +106,27 @@ describe('MyPage', () => {
         expect(wrapper.text()).toContain('프론트엔드');
         expect(wrapper.text()).toContain('Mattermost 공고');
 
-        await wrapper.get('[data-testid="profile-desired-roles"]').setValue('AI/ML');
-        await wrapper.get('[data-testid="profile-company-types"]').setValue('대기업');
-        await wrapper.get('[data-testid="profile-industries"]').setValue('금융');
-        await wrapper.get('[data-testid="profile-regions"]').setValue('서울');
-        await wrapper.get('[data-testid="profile-skills"]').setValue('Python');
-        await wrapper.get('[data-testid="profile-ssafy"]').setValue('false');
+        expect(wrapper.find('[data-testid="profile-desired-roles"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="profile-company-types"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="profile-industries"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="profile-regions"]').exists()).toBe(false);
+
+        await wrapper.get('[data-testid="profile-role-option-프론트엔드"]').trigger('click');
+        await wrapper.get('[data-testid="profile-role-option-백엔드"]').trigger('click');
+        await wrapper.get('[data-testid="profile-role-option-AI/ML"]').trigger('click');
+        await wrapper.get('[data-testid="profile-company-option-중견기업"]').trigger('click');
+        await wrapper.get('[data-testid="profile-company-option-스타트업"]').trigger('click');
+        await wrapper.get('[data-testid="profile-company-option-대기업"]').trigger('click');
+        await wrapper.get('[data-testid="profile-industry-option-IT/플랫폼"]').trigger('click');
+        await wrapper.get('[data-testid="profile-industry-option-금융"]').trigger('click');
+        await wrapper.get('[data-testid="profile-region-option-경기"]').trigger('click');
+        await wrapper.get('[data-testid="profile-region-option-원격(재택)"]').trigger('click');
+        await wrapper.get('[data-testid="profile-skill-remove-React"]').trigger('click');
+        await wrapper.get('[data-testid="profile-skill-remove-TypeScript"]').trigger('click');
+        await wrapper.get('[data-testid="profile-skill-remove-Node.js"]').trigger('click');
+        await wrapper.get('[data-testid="profile-skill-input"]').setValue('Python');
+        await wrapper.get('[data-testid="profile-skill-input"]').trigger('keyup.enter');
+        await wrapper.get('[data-testid="profile-ssafy-false"]').trigger('click');
         await wrapper.get('[data-testid="save-onboarding-profile"]').trigger('click');
         await flushPromises();
 
@@ -129,7 +144,10 @@ describe('MyPage', () => {
         expect((await mountPage('/mypage/qna')).text()).toContain('공고별로 첨부한 자료는 어디서 보나요?');
         expect((await mountPage('/mypage/inquiry')).text()).toContain('1:1 문의 작성');
         expect((await mountPage('/mypage/partnership')).text()).toContain('제휴 문의');
-        expect((await mountPage('/mypage/terms')).text()).toContain('서비스 이용약관');
+        const terms = await mountPage('/mypage/terms');
+        expect(terms.text()).toContain('서비스 이용약관');
+        expect(terms.text()).toContain('상표 및 로고 표시');
+        expect(terms.text()).toContain('제휴 또는 후원');
     });
 });
 

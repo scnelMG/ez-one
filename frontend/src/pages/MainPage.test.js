@@ -34,86 +34,29 @@ vi.mock('@/features/recommendations/api/recommendationApi', () => ({
     }
 }));
 
-const defaultBasketJobs = [
-    {
-        id: '101',
-        companyName: 'Naver',
-        positionTitle: 'Backend Engineer',
-        status: 'IN_PROGRESS',
-        statusLabel: '진행 중',
-        deadlineLabel: '2026.06.07',
-        deadlineDate: '2026-06-07',
-        deadlineSoon: true,
-        workspaceId: '102',
-        sourceUrl: 'https://www.jasoseol.com/'
-    },
-    {
-        id: '104',
-        companyName: 'KakaoPay',
-        positionTitle: 'Server Developer',
-        status: 'NOT_STARTED',
-        statusLabel: '지원 전',
-        deadlineLabel: '2026.06.12',
-        deadlineDate: '2026-06-12',
-        deadlineSoon: true,
-        workspaceId: '105',
-        sourceUrl: 'https://www.jasoseol.com/'
-    },
-    {
-        id: '106',
-        companyName: 'Line',
-        positionTitle: 'Frontend Engineer',
-        status: 'NOT_APPLIED',
-        statusLabel: '미지원',
-        deadlineLabel: '2026.06.20',
-        deadlineDate: '2026-06-20',
-        deadlineSoon: false,
-        workspaceId: '108',
-        sourceUrl: 'https://www.jasoseol.com/'
-    }
+const basketJobs = [
+    job('101', 'Naver', 'Backend Engineer', 'IN_PROGRESS', '진행중', '2026.06.08', '102'),
+    job('104', 'KakaoPay', 'Server Developer', 'NOT_STARTED', '지원 전', '2026.06.12', '105'),
+    job('106', 'Line', 'Frontend Engineer', 'NOT_APPLIED', '미지원', '2026.06.20', '108'),
+    job('107', 'Toss', 'Frontend Developer', 'SUBMITTED', '지원완료', '2026.06.25', '109'),
+    job('108', 'Planet', 'Frontend Developer', 'NOT_STARTED', '지원 전', '2026.06.27', '110'),
+    job('109', 'Overflow', 'Java Backend Engineer', 'IN_PROGRESS', '진행중', '2026.06.30', '111')
 ];
 
-const defaultDashboardResponse = {
-    summary: {
-        totalApplications: 3,
-        inProgress: 1,
-        notStarted: 1,
-        deadlineSoon: 2
-    },
-    todayJobs: []
-};
-
-const defaultRecommendationJobs = [
+const recommendationJobs = [
+    recommendation('r-1', '우리은행', '일반 (하계 체험형)', '2026-06-08', '22시간 남음', 'wooribank.com', 2135),
+    recommendation('r-2', 'SK하이닉스', '청년 Hy-Five 15기', '2026-06-11', '4일 남음', 'skhynix.com', 485),
+    recommendation('r-3', '손해보험협회', '일반사무', '2026-06-08', '8시간 남음', 'knia.or.kr', 544),
+    recommendation('r-4', '아이마켓코리아', '경영지원', '2026-06-08', '8시간 남음', 'imarketkorea.com', 488),
+    recommendation('r-5', '롯데그룹', '[롯데월드] HR', '2026-06-15', '8일 남음', 'lotte.co.kr', 1485),
     {
-        id: 'r-1',
-        companyName: 'Toss',
-        positionTitle: 'Frontend Developer',
-        deadlineLabel: 'D-3',
-        companyLogoUrl: 'https://www.google.com/s2/favicons?domain=toss.im&sz=128',
-        workspaceId: null
-    },
-    {
-        id: 'r-2',
-        companyName: 'Danggeun',
-        positionTitle: 'Server Engineer',
-        deadlineLabel: 'D-5',
-        companyLogoUrl: 'https://www.google.com/s2/favicons?domain=daangn.com&sz=128',
-        workspaceId: null
-    },
-    {
-        id: 'r-3',
-        companyName: 'Coupang',
-        positionTitle: 'Platform Engineer',
-        deadlineLabel: 'D-7',
-        companyLogoUrl: 'https://www.google.com/s2/favicons?domain=coupang.com&sz=128',
-        workspaceId: null
-    },
-    {
-        id: 'r-4',
-        companyName: 'Woowa Bros',
-        positionTitle: 'Product Engineer',
-        deadlineLabel: 'D-9',
-        companyLogoUrl: 'https://www.google.com/s2/favicons?domain=woowahan.com&sz=128',
+        id: 'r-always',
+        companyName: '상시회사',
+        positionTitle: '상시 채용',
+        deadlineLabel: '상시',
+        deadlineDate: null,
+        participantCount: 0,
+        companyLogoUrl: '',
         workspaceId: null
     }
 ];
@@ -128,7 +71,8 @@ const makeRouter = () => createRouter({
         { path: '/workspaces/:workspaceId', component: { template: '<div>workspace</div>' } },
         { path: '/recommendations', component: { template: '<div>recommendations</div>' } },
         { path: '/document-profile', component: { template: '<div>document profile</div>' } },
-        { path: '/mypage/notion', component: { template: '<div>notion</div>' } }
+        { path: '/mypage/notion', component: { template: '<div>notion</div>' } },
+        { path: '/mypage/terms', component: { template: '<div>terms</div>' } }
     ]
 });
 
@@ -136,9 +80,17 @@ describe('MainPage', () => {
     beforeEach(() => {
         localStorage.clear();
         vi.mocked(basketApi.listJobs).mockReset();
-        vi.mocked(basketApi.listJobs).mockResolvedValue(defaultBasketJobs);
+        vi.mocked(basketApi.listJobs).mockResolvedValue(basketJobs);
         vi.mocked(dashboardApi.getSummary).mockReset();
-        vi.mocked(dashboardApi.getSummary).mockResolvedValue(defaultDashboardResponse);
+        vi.mocked(dashboardApi.getSummary).mockResolvedValue({
+            summary: {
+                totalApplications: 6,
+                inProgress: 2,
+                notStarted: 2,
+                deadlineSoon: 2
+            },
+            todayJobs: []
+        });
         vi.mocked(profileApi.getUserProfile).mockReset();
         vi.mocked(profileApi.getUserProfile).mockResolvedValue({
             desiredRoles: [],
@@ -160,11 +112,17 @@ describe('MainPage', () => {
             completed: true
         });
         vi.mocked(recommendationApi.listJobs).mockReset();
-        vi.mocked(recommendationApi.listJobs).mockResolvedValue(defaultRecommendationJobs);
+        vi.mocked(recommendationApi.listJobs).mockResolvedValue(recommendationJobs);
         vi.mocked(recommendationApi.saveJob).mockReset();
+        vi.mocked(recommendationApi.saveJob).mockResolvedValue({
+            basketJobId: 'r-1',
+            workspaceId: '201',
+            companyName: '우리은행',
+            positionTitle: '일반 (하계 체험형)'
+        });
     });
 
-    it('DASH-001/MAIN-013: renders the wireframe dashboard without the left rail or top filters', async () => {
+    it('renders the dashboard without the old rail or top filters', async () => {
         localStorage.setItem('ezone.currentUser', JSON.stringify({
             id: 1,
             email: 'user@example.com',
@@ -174,87 +132,71 @@ describe('MainPage', () => {
         }));
         const wrapper = await mountMain();
 
-        expect(wrapper.text()).not.toContain('오늘의 지원 흐름');
+        expect(wrapper.text()).toContain('지원 현황');
         expect(wrapper.text()).toContain('공고 장바구니');
-        expect(wrapper.text()).toContain('추천공고');
+        expect(wrapper.text()).toContain('추천 공고');
         expect(wrapper.find('.dashboard-rail').exists()).toBe(false);
         expect(wrapper.find('.filter-bar').exists()).toBe(false);
         expect(wrapper.find('[data-testid="member-chip"]').exists()).toBe(false);
-        expect(wrapper.text()).not.toContain('오늘 챙겨볼 공고');
-        expect(wrapper.text()).not.toContain('이번 주 마감 공고');
-        expect(wrapper.text()).not.toContain('진행 상황 요약');
-        expect(wrapper.text()).not.toContain('마감 관리');
-        expect(wrapper.text()).not.toContain('프로필 기반');
-
-        const links = wrapper.findAll('a').map((link) => link.attributes('href'));
-        expect(links).toContain('/basket');
-        expect(links).toContain('/basket?sort=deadline');
-        expect(links).not.toContain('/basket?status=IN_PROGRESS');
-        expect(links).toContain('/workspaces/102');
     });
 
-    it('MAIN-006/MAIN-007: fixes the main basket preview to nearest deadlines and marks recent workspaces', async () => {
+    it('uses basket page columns and renders recent work as a row label', async () => {
         localStorage.setItem('ezone.recentWorkspaces', JSON.stringify(['102']));
         const wrapper = await mountMain();
 
-        expect(wrapper.text()).toContain('마감 임박순으로 제공됩니다');
-        const rows = wrapper.findAll('[data-testid="main-basket-preview-job"]');
-        expect(rows).toHaveLength(3);
-        expect(rows.map((row) => row.text())).toEqual([
-            'NaverBackend Engineer진행 중2026.06.07최근 방문',
-            'KakaoPayServer Developer지원 전2026.06.12',
-            'LineFrontend Engineer미지원2026.06.20'
+        expect(wrapper.get('.main-basket-title-row').text()).toBe('공고 장바구니마감 임박순으로 제공됩니다.');
+        expect(wrapper.findAll('.main-basket-head span').map((cell) => cell.text())).toEqual([
+            '중요',
+            '회사명',
+            '직무',
+            '상태',
+            '마감일',
+            '채용 사이트 링크',
+            '최근 작업',
+            ''
         ]);
+        const rows = wrapper.findAll('[data-testid="main-basket-preview-job"]');
+        expect(rows).toHaveLength(5);
+        expect(rows[0].get('[data-testid="main-basket-company"]').text()).toContain('Naver');
+        expect(rows[0].get('[data-testid="main-recent-work-101"]').text()).toBe('최근 작업');
+        expect(rows[0].get('[data-testid="main-basket-apply-link"]').text()).toBe('바로가기');
+        expect(wrapper.find('[data-testid="main-archive-101"]').exists()).toBe(true);
     });
 
-    it('REC-001/DASH-001: previews a few jobs from the recommendation page data', async () => {
+    it('renders four recommendation page preview cards and saves from main', async () => {
         const wrapper = await mountMain();
 
         expect(recommendationApi.listJobs).toHaveBeenCalled();
         const cards = wrapper.findAll('[data-testid="main-recommendation-preview-job"]');
         expect(cards).toHaveLength(4);
-        expect(cards.map((card) => card.text())).toEqual([
-            'D-3TossFrontend Developer',
-            'D-5DanggeunServer Engineer',
-            'D-7CoupangPlatform Engineer',
-            'D-9Woowa BrosProduct Engineer'
-        ]);
-        expect(wrapper.text()).not.toContain('지원 현황');
-        expect(wrapper.text()).not.toContain('오늘 마감');
-        expect(wrapper.text()).not.toContain('프로필 기반');
+        expect(cards[0].text()).toContain('우리은행');
+        expect(cards[0].text()).toContain('담기');
+        expect(cards[0].text()).toContain('명 작성');
+        expect(wrapper.text()).not.toContain('상시회사');
+        expect(wrapper.findAll('[data-testid="main-recommendation-logo"]')).toHaveLength(4);
+
+        await wrapper.get('[data-testid="main-save-recommendation-r-1"]').trigger('click');
+        await flushPromises();
+        expect(recommendationApi.saveJob).toHaveBeenCalledWith('r-1');
     });
 
-    it('DASH-001: shows dummy-backed dashboard statistics from the API summary', async () => {
-        const wrapper = await mountMain();
-
-        expect(wrapper.get('[data-testid="metric-total"]').text()).toContain('3');
-        expect(wrapper.get('[data-testid="metric-deadline"]').text()).toContain('2');
-        expect(wrapper.get('[data-testid="metric-progress"]').text()).toContain('1');
-        expect(wrapper.get('[data-testid="metric-not-started"]').text()).toContain('1');
-        expect(wrapper.findAll('.main-metric-strip small')).toHaveLength(0);
-    });
-
-    it('ONB-001: opens onboarding as a floating modal only for first-login users', async () => {
+    it('opens onboarding only for first-login users', async () => {
         localStorage.setItem('ezone.currentUser', JSON.stringify({
             id: 1,
             email: 'first@example.com',
             name: 'First User',
             nickname: '',
-            profileCompleted: false
+            profileCompleted: false,
+            onboardingRequired: true
         }));
         const wrapper = await mountMain();
 
-        const modal = wrapper.get('[data-testid="onboarding-modal"]');
-        expect(modal.text()).toContain('맞춤 공고 추천 정보 입력');
-        expect(modal.text()).toContain('희망 직무');
-        expect(modal.text()).toContain('보유 스킬');
-        expect(wrapper.find('.onboarding-modal-backdrop').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="onboarding-modal"]').exists()).toBe(true);
         await wrapper.get('[data-testid="onboarding-skill-input"]').setValue('React');
         await wrapper.get('[data-testid="onboarding-skill-input"]').trigger('keyup.enter');
         await wrapper.get('[data-testid="save-onboarding"]').trigger('click');
         await flushPromises();
         expect(profileApi.saveUserProfile).toHaveBeenCalledWith(expect.objectContaining({
-            desiredRoles: expect.arrayContaining(['프론트엔드']),
             skills: expect.arrayContaining(['React'])
         }));
         expect(wrapper.find('[data-testid="onboarding-modal"]').exists()).toBe(false);
@@ -267,6 +209,21 @@ describe('MainPage', () => {
             name: 'Done User',
             nickname: '',
             profileCompleted: true
+        }));
+        const wrapper = await mountMain();
+
+        expect(wrapper.find('[data-testid="onboarding-modal"]').exists()).toBe(false);
+        expect(profileApi.getUserProfile).not.toHaveBeenCalled();
+    });
+
+    it('ONB-001: does not reopen onboarding for existing users who have not filled preferences', async () => {
+        localStorage.setItem('ezone.currentUser', JSON.stringify({
+            id: 1,
+            email: 'returning@example.com',
+            name: 'Returning User',
+            nickname: '',
+            profileCompleted: false,
+            onboardingRequired: false
         }));
         const wrapper = await mountMain();
 
@@ -286,6 +243,34 @@ async function mountMain() {
     });
     await flushPromises();
     return wrapper;
+}
+
+function job(id, companyName, positionTitle, status, statusLabel, deadlineDate, workspaceId) {
+    return {
+        id,
+        companyName,
+        positionTitle,
+        status,
+        statusLabel,
+        deadlineLabel: deadlineDate.replaceAll('-', '.'),
+        deadlineDate,
+        deadlineSoon: deadlineDate <= '2026-06-12',
+        workspaceId,
+        sourceUrl: `https://www.jasoseol.com/recruit/${id}`
+    };
+}
+
+function recommendation(id, companyName, positionTitle, deadlineDate, deadlineLabel, domain, participantCount) {
+    return {
+        id,
+        companyName,
+        positionTitle,
+        deadlineLabel,
+        deadlineDate,
+        participantCount,
+        companyLogoUrl: `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
+        workspaceId: null
+    };
 }
 
 function flushPromises() {

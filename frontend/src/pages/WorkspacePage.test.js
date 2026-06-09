@@ -186,7 +186,7 @@ describe('WorkspacePage', () => {
         expect(mocks.getWorkspace).toHaveBeenCalledWith('102');
         expect(mocks.getDefaults).toHaveBeenCalledWith('102');
         expect(mocks.listVersions).toHaveBeenCalledWith('102');
-        expect(JSON.parse(localStorage.getItem('ezone.recentWorkspaces'))).toEqual(['102']);
+        expect(localStorage.getItem('ezone.recentWorkspaces')).toBeNull();
         expect(wrapper.text()).toContain('지원 워크스페이스');
         expect(wrapper.text()).toContain('Naver');
         expect(wrapper.text()).toContain('Backend Engineer');
@@ -312,10 +312,12 @@ describe('WorkspacePage', () => {
             body: '수정한 참고자료 본문',
             url: 'https://example.com/news'
         });
+        expect(JSON.parse(localStorage.getItem('ezone.recentWorkspaces'))).toEqual(['102']);
 
         await wrapper.get('[data-testid="delete-reference"]').trigger('click');
         await flushPromises();
         expect(mocks.deleteReference).toHaveBeenCalledWith('104');
+        expect(JSON.parse(localStorage.getItem('ezone.recentWorkspaces'))).toEqual(['102']);
     });
 
     it('WS-017/WS-018: version management also keeps the side panel available', async () => {
@@ -387,6 +389,7 @@ describe('WorkspacePage', () => {
             prompt: '수정한 문항',
             maxLength: 700
         });
+        expect(JSON.parse(localStorage.getItem('ezone.recentWorkspaces'))).toEqual(['102']);
     });
 
     it('WS-005/WS-006/WS-007: keeps three default canvas questions and adds local question tabs', async () => {
@@ -408,6 +411,7 @@ describe('WorkspacePage', () => {
         expect(wrapper.get('.workspace-editor').text()).toContain('4번 문항');
         expect(mocks.createQuestion).not.toHaveBeenCalled();
         expect(mocks.deleteQuestion).not.toHaveBeenCalled();
+        expect(JSON.parse(localStorage.getItem('ezone.recentWorkspaces'))).toEqual(['102']);
     });
 });
 

@@ -99,7 +99,7 @@
               v-model="skillInput"
               data-testid="onboarding-skill-input"
               type="text"
-              placeholder="스킬 입력 후 Enter"
+              placeholder="React, Java, Spring 입력 후 Enter"
               @keyup.enter="addSkill"
             />
           </div>
@@ -141,19 +141,19 @@ import { useProfileStore } from '@/stores/profileStore';
 
 const emit = defineEmits(['completed']);
 const profileStore = useProfileStore();
-const form = reactive({
-    desiredRoles: ['프론트엔드', '백엔드'],
-    companyTypes: ['중견기업', '스타트업'],
-    industries: ['IT/플랫폼'],
-    regions: ['서울', '경기', '원격(재택)'],
-    skills: ['React', 'TypeScript', 'Node.js'],
-    ssafy: true
-});
-const skillInput = ref('');
 const roleOptions = ['프론트엔드', '백엔드', '데이터 엔지니어', 'AI/ML', '모바일', 'DevOps', 'PM', '디자인', 'QA', '기타'];
 const companyTypeOptions = ['대기업', '공공기관', '중견기업', '중소기업', '스타트업', '기타'];
 const industryOptions = ['IT/플랫폼', '제조', '금융', '커머스', '게임', '바이오/헬스', '미디어', '기타'];
 const regionOptions = ['서울', '경기', '인천', '대전', '부산', '대구', '광주', '제주', '원격(재택)'];
+const form = reactive({
+    desiredRoles: [roleOptions[0]],
+    companyTypes: [companyTypeOptions[0]],
+    industries: [industryOptions[0]],
+    regions: [regionOptions[0]],
+    skills: [],
+    ssafy: true
+});
+const skillInput = ref('');
 
 onMounted(() => {
     void profileStore.loadProfile();

@@ -39,7 +39,8 @@ function makeRouter() {
             { path: '/recommendations', component: { template: '<div>recommendations</div>' } },
             { path: '/mypage', component: { template: '<div>mypage</div>' } },
             { path: '/mypage/notion', component: { template: '<div>notion</div>' } },
-            { path: '/mypage/onboarding', component: { template: '<div>onboarding</div>' } }
+            { path: '/mypage/onboarding', component: { template: '<div>onboarding</div>' } },
+            { path: '/mypage/terms', component: { template: '<div>terms</div>' } }
         ]
     });
 }
@@ -83,6 +84,8 @@ describe('AppLayout', () => {
             '/document-profile',
             '/recommendations'
         ]);
+        expect(wrapper.get('[data-testid="global-trademark-notice"]').text()).toContain('채용공고 식별 목적');
+        expect(wrapper.get('.app-footer a').attributes('href')).toBe('/mypage/terms');
     });
 
     it('MY-001: opens a compact mypage dropdown with the Google profile photo', async () => {
@@ -97,6 +100,8 @@ describe('AppLayout', () => {
         expect(dropdown.text()).toContain('내 계정');
         expect(dropdown.text()).toContain('노션 연동 관리');
         expect(dropdown.text()).toContain('온보딩 정보');
+        expect(dropdown.text()).not.toContain('다른 계정으로 로그인');
+        expect(wrapper.find('[data-testid="account-switch"]').exists()).toBe(false);
         expect(dropdown.text()).not.toContain('QnA');
         expect(dropdown.text()).not.toContain('1:1 문의');
         expect(dropdown.text()).not.toContain('제휴 문의');
@@ -119,16 +124,12 @@ describe('AppLayout', () => {
         expect(wrapper.find('[data-testid="mypage-dropdown"]').exists()).toBe(true);
     });
 
-    it('AUTH-004: lets signed-in users switch to another Google account from the mypage dropdown', async () => {
-        const { wrapper, router } = await mountLayoutWithRouter('/');
+    it('ALERT-001: renders the reserved alert as icon-only with the supplied bell asset', async () => {
+        const wrapper = await mountLayout('/');
+        const alertEntry = wrapper.get('[data-testid="reserved-alerts"]');
 
-        await wrapper.get('[data-testid="mypage-menu-trigger"]').trigger('click');
-        await wrapper.get('[data-testid="account-switch"]').trigger('click');
-        await new Promise((resolve) => setTimeout(resolve, 0));
-
-        expect(mocks.logout).toHaveBeenCalledWith('refresh-token');
-        expect(mocks.clearAuthSession).toHaveBeenCalled();
-        expect(router.currentRoute.value.fullPath).toBe('/login?switch=account');
+        expect(alertEntry.text()).toBe('');
+        expect(alertEntry.get('[data-testid="reserved-alerts-icon"]').attributes('src')).toContain('bell.svg');
     });
 });
 

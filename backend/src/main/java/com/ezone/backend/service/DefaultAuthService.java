@@ -13,7 +13,11 @@ import com.ezone.backend.mapper.UserAccountMapper;
 import com.ezone.backend.security.AuthTokenIssuer;
 import com.ezone.backend.security.IssuedTokenPair;
 import java.util.Locale;
+import java.util.Optional;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -25,17 +29,20 @@ public class DefaultAuthService implements AuthService {
     private final UserAccountMapper userAccountMapper;
     private final AuthTokenIssuer authTokenIssuer;
     private final PasswordEncoder passwordEncoder;
+    private final AuthenticationManager authenticationManager;
 
     public DefaultAuthService(
         GoogleOAuthClient googleOAuthClient,
         UserAccountMapper userAccountMapper,
         AuthTokenIssuer authTokenIssuer,
-        PasswordEncoder passwordEncoder
+        PasswordEncoder passwordEncoder,
+        AuthenticationManager authenticationManager
     ) {
         this.googleOAuthClient = googleOAuthClient;
         this.userAccountMapper = userAccountMapper;
         this.authTokenIssuer = authTokenIssuer;
         this.passwordEncoder = passwordEncoder;
+        this.authenticationManager = authenticationManager;
     }
 
     @Override
@@ -52,44 +59,47 @@ public class DefaultAuthService implements AuthService {
             passwordEncoder.encode(request.password())
         );
 
-        return toAuthTokenResponse(authTokenIssuer.issueFor(user), user);
+        return toAuthTokenResponse(authTokenIssuer.issueFor(user), user, true);
     }
 
     @Override
     public AuthTokenResponse loginWithEmail(EmailLoginRequest request) {
         String email = normalizeEmail(request.email());
-        UserAccount user = userAccountMapper.findByEmail(email)
-            .orElseThrow(DefaultAuthService::invalidEmailLogin);
-        String passwordHash = userAccountMapper.findPasswordHashByEmail(email)
-            .orElseThrow(DefaultAuthService::invalidEmailLogin);
-
-        if (!passwordEncoder.matches(request.password(), passwordHash)) {
+        try {
+            authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(email, request.password())
+            );
+        } catch (AuthenticationException exception) {
             throw invalidEmailLogin();
         }
 
-        return toAuthTokenResponse(authTokenIssuer.issueFor(user), user);
+        UserAccount user = userAccountMapper.findByEmail(email)
+            .orElseThrow(DefaultAuthService::invalidEmailLogin);
+
+        return toAuthTokenResponse(authTokenIssuer.issueFor(user), user, false);
     }
 
     @Override
     public AuthTokenResponse loginWithGoogle(GoogleLoginRequest request) {
         GoogleUserProfile profile = googleOAuthClient.verifyAuthorizationCode(request);
-        UserAccount user = userAccountMapper.findByGoogleSubject(profile.subject())
-            .orElseGet(() -> userAccountMapper.createFromGoogleProfile(profile));
+        Optional<UserAccount> existingUser = userAccountMapper.findByGoogleSubject(profile.subject());
+        boolean onboardingRequired = existingUser.isEmpty()
+            && userAccountMapper.findByEmail(normalizeEmail(profile.email())).isEmpty();
+        UserAccount user = existingUser.orElseGet(() -> findOrCreateGoogleUser(profile));
         IssuedTokenPair tokens = authTokenIssuer.issueFor(user);
 
-        return new AuthTokenResponse(
-            tokens.accessToken(),
-            tokens.refreshToken(),
-            "Bearer",
-            tokens.expiresIn(),
-            new CurrentUserResponse(
-                user.id(),
-                user.email(),
-                user.name(),
-                user.nickname(),
-                user.profileCompleted()
-            )
-        );
+        return toAuthTokenResponse(tokens, user, onboardingRequired);
+    }
+
+    private UserAccount findOrCreateGoogleUser(GoogleUserProfile profile) {
+        String email = normalizeEmail(profile.email());
+        if (userAccountMapper.findByEmail(email).isPresent()) {
+            userAccountMapper.linkGoogleProfile(profile);
+            return userAccountMapper.findByGoogleSubject(profile.subject())
+                .orElseThrow(() -> new IllegalStateException("Linked Google user could not be loaded."));
+        }
+
+        return userAccountMapper.createFromGoogleProfile(profile);
     }
 
     @Override
@@ -98,7 +108,15 @@ public class DefaultAuthService implements AuthService {
         UserAccount user = userAccountMapper.findById(extractUserId(tokens.accessToken()))
             .orElseThrow(() -> new IllegalStateException("Issued access token user could not be loaded."));
 
-        return toAuthTokenResponse(tokens, user);
+        return toAuthTokenResponse(tokens, user, false);
+    }
+
+    @Override
+    public AuthTokenResponse issueExtensionSession(Long userId) {
+        UserAccount user = userAccountMapper.findById(userId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authenticated user could not be loaded."));
+
+        return toAuthTokenResponse(authTokenIssuer.issueFor(user), user, false);
     }
 
     @Override
@@ -106,7 +124,7 @@ public class DefaultAuthService implements AuthService {
         authTokenIssuer.revoke(request.refreshToken());
     }
 
-    private AuthTokenResponse toAuthTokenResponse(IssuedTokenPair tokens, UserAccount user) {
+    private AuthTokenResponse toAuthTokenResponse(IssuedTokenPair tokens, UserAccount user, boolean onboardingRequired) {
         return new AuthTokenResponse(
             tokens.accessToken(),
             tokens.refreshToken(),
@@ -117,7 +135,8 @@ public class DefaultAuthService implements AuthService {
                 user.email(),
                 user.name(),
                 user.nickname(),
-                user.profileCompleted()
+                user.profileCompleted(),
+                onboardingRequired
             )
         );
     }

@@ -46,6 +46,11 @@ public class AuthController {
         return ApiResponse.success(authService.refresh(request));
     }
 
+    @PostMapping("/extension-session")
+    public ApiResponse<AuthTokenResponse> issueExtensionSession() {
+        return ApiResponse.success(authService.issueExtensionSession(CurrentUserSupport.currentUserId()));
+    }
+
     @PostMapping("/logout")
     public ApiResponse<LogoutResponse> logout(@Valid @RequestBody RefreshTokenRequest request) {
         authService.logout(request);

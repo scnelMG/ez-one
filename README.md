@@ -1,7 +1,7 @@
 # EZ-ONE
 
 <p align="center">
-  <img src="./docs/assets/brand/ez-one-logo.svg" alt="EZ-ONE 로고" width="560" />
+  <img src="./docs/assets/brand/ez-one-logo-final.png" alt="EZ-ONE 로고" width="560" />
 </p>
 
 <p align="center">

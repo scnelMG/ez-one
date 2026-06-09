@@ -1,10 +1,10 @@
 export const RECENT_WORKSPACES_KEY = 'ezone.recentWorkspaces';
-const MAX_RECENT_WORKSPACES = 5;
+const MAX_RECENT_WORKSPACES = 1;
 
 export function getRecentWorkspaceIds() {
     try {
         const parsed = JSON.parse(localStorage.getItem(RECENT_WORKSPACES_KEY) ?? '[]');
-        return Array.isArray(parsed) ? parsed.map(String).filter(Boolean) : [];
+        return Array.isArray(parsed) ? parsed.map(String).filter(Boolean).slice(0, MAX_RECENT_WORKSPACES) : [];
     }
     catch {
         return [];

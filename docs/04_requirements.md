@@ -233,7 +233,7 @@
 | 크롬 확장 프로그램 저장 시 Notion 경고 | NOTION-019 | 크롬 확장 프로그램 설치 또는 장바구니에 담기 과정에서 Notion 연동 구조 문제가 확인되면 사용자에게 경고한다. | Notion 연동 | P3 | 기능 | 시작 전 |  |  |  |
 | 최초 로그인 온보딩 | ONB-001 | 최초 로그인 후 온보딩을 표시하고, 저장 정보는 마이페이지에서 수정할 수 있다. | 인증/계정 | P1 | 기능 | 완료 |  |  | 현재 04. 요구사항 정의서 기준으로 추가 |
 | 추천 기준 온보딩 정보 저장 | ONB-002 | 희망 직무, 기업 유형, 산업, 지역, 기술스택, SSAFY 여부를 추천 기준으로 저장한다. | 공고 추천 | P1 | 기능 | 완료 |  |  | 현재 04. 요구사항 정의서 기준으로 추가 |
-| 회원가입 후 온보딩 진입 | ONBOARD-001 | 회원가입 완료 후 첫 화면은 희망 직무, 희망 기업, 희망 근무 지역, 보유 스킬을 입력하는 온보딩 모달을 표시한다. | 인증/계정 | P1 | 기능 | 완료 |  |  | Router tests send profileCompleted=false users to the main modal host. |
+| 회원가입 후 온보딩 진입 | ONBOARD-001 | 회원가입 완료 후 첫 화면은 희망 직무, 희망 기업, 희망 근무 지역, 보유 스킬을 입력하는 온보딩 모달을 표시한다. | 인증/계정 | P1 | 기능 | 완료 |  |  | Router tests send onboardingRequired=true users to the main modal host. |
 | 온보딩 희망 정보 입력 | ONBOARD-002 | 온보딩 화면은 희망 직무, 희망 기업 분류, 계열/업종, 희망 근무 지역, 보유 스킬 정보를 입력받는다. | 인증/계정 | P1 | 데이터 | 완료 |  |  | OnboardingPage captures roles, company types, industries, regions, and skills. |
 | 온보딩 정보 저장 | ONBOARD-003 | 온보딩에서 입력한 희망 직무, 희망 기업, 희망 근무 지역, 보유 스킬 정보는 마이페이지에 저장한다. | 인증/계정 | P1 | 기능 | 완료 |  |  | Onboarding save updates profile preferences and profileCompleted state. |
 | 온보딩 건너뛰기 | ONBOARD-004 | 사용자는 온보딩 입력을 건너뛸 수 있으며, 추후 마이 페이지에서 동일 정보를 작성 또는 수정할 수 있다. | 인증/계정 | P1 | 기능 | 완료 |  |  | Onboarding skip saves empty preferences and marks profileCompleted. |

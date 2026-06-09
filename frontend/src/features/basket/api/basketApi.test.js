@@ -36,8 +36,18 @@ describe('basketApi', () => {
         const jobs = await api.listJobs();
         expect(get).toHaveBeenCalledWith('/api/basket/jobs', { params: undefined });
         expect(jobs).toEqual([
-            expect.objectContaining({ id: '101', status: 'IN_PROGRESS', workspaceId: '102' }),
-            expect.objectContaining({ id: '104', status: 'NOT_APPLIED', workspaceId: '105' })
+            expect.objectContaining({
+                id: '101',
+                status: 'IN_PROGRESS',
+                workspaceId: '102',
+                companyLogoUrl: 'https://www.google.com/s2/favicons?domain=navercorp.com&sz=128'
+            }),
+            expect.objectContaining({
+                id: '104',
+                status: 'NOT_APPLIED',
+                workspaceId: '105',
+                companyLogoUrl: 'https://www.google.com/s2/favicons?domain=kakaopay.com&sz=128'
+            })
         ]);
     });
     it('JOB-004/JOB-010/JOB-008/JOB-007: creates, updates, fetches detail, and archives basket jobs', async () => {

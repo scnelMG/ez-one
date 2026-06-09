@@ -15,5 +15,7 @@ public interface AuthService {
 
     AuthTokenResponse refresh(RefreshTokenRequest request);
 
+    AuthTokenResponse issueExtensionSession(Long userId);
+
     void logout(RefreshTokenRequest request);
 }

@@ -97,6 +97,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
     ) {
         BasketJobRow duplicate = mapper.findDuplicateBasketJob(
                 userId,
+                request.companyName(),
                 request.sourceUrl(),
                 request.positionTitle()
             )

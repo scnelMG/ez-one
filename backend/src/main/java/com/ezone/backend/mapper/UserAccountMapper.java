@@ -112,6 +112,18 @@ public interface UserAccountMapper {
         """)
     void insertGoogleUser(@Param("profile") GoogleUserProfile profile);
 
+    @Update("""
+        UPDATE users
+        SET
+            provider = 'GOOGLE',
+            provider_id = #{profile.subject},
+            name = #{profile.name},
+            nickname = #{profile.nickname},
+            password_hash = NULL
+        WHERE LOWER(email) = LOWER(#{profile.email})
+        """)
+    void linkGoogleProfile(@Param("profile") GoogleUserProfile profile);
+
     @Insert("""
         INSERT INTO users (email, name, nickname, provider, provider_id, password_hash, profile_completed, created_at)
         VALUES (

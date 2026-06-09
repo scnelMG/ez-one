@@ -1,3 +1,5 @@
+import { logoUrlFor } from '@/features/jobs/companyLogo';
+
 export const mockBasketJobs = [
     {
         id: '101',
@@ -70,7 +72,3 @@ export const mockBasketJobs = [
         applicationMemo: ''
     }
 ];
-
-function logoUrlFor(domain) {
-    return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
-}
