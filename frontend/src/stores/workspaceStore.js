@@ -103,17 +103,19 @@ export const useWorkspaceStore = defineStore('workspace', () => {
             errorMessage.value = messageFromError(error, '문항을 삭제하지 못했습니다.');
         }
     }
-    async function createVersion(workspaceId, questionId, versionName) {
+    async function createVersion(workspaceId, questionId, versionName, body) {
         status.value = 'saving';
         errorMessage.value = '';
         try {
-            const version = await workspaceApi.createVersion(workspaceId, questionId, versionName);
+            const version = await workspaceApi.createVersion(workspaceId, questionId, versionName, body);
             versions.value = [version, ...versions.value];
             status.value = 'ready';
+            return version;
         }
         catch (error) {
             status.value = 'error';
             errorMessage.value = messageFromError(error, '버전을 저장하지 못했습니다.');
+            return null;
         }
     }
     async function compareVersions(workspaceId, leftVersionId, rightVersionId) {

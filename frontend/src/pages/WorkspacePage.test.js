@@ -127,12 +127,12 @@ describe('WorkspacePage', () => {
             draft: '새 초안',
             maxLength: 1000
         });
-        mocks.createVersion.mockResolvedValue({
+        mocks.createVersion.mockImplementation((_workspaceId, questionId, versionName, body = '새 초안') => Promise.resolve({
             id: '503',
-            questionId: '103',
-            versionName: 'v3',
-            body: '새 초안'
-        });
+            questionId: String(questionId),
+            versionName,
+            body
+        }));
         mocks.createReference.mockResolvedValue({
             id: '701',
             boardName: 'MEMO',
@@ -191,30 +191,26 @@ describe('WorkspacePage', () => {
         expect(wrapper.text()).toContain('Naver');
         expect(wrapper.text()).toContain('Backend Engineer');
         expect(wrapper.text()).toContain('naver.com');
-        expect(wrapper.text()).toContain('EZ-ONE');
+        expect(wrapper.get('.workspace-info-panel').text()).toContain('지원정보');
+        expect(wrapper.get('.workspace-info-panel').text()).toContain('기업정보');
         expect(wrapper.get('[data-testid="workspace-bottom-tabs"]').text()).toContain('도화지');
         expect(wrapper.get('[data-testid="workspace-bottom-tabs"]').text()).toContain('자소서 버전관리');
     });
 
-    it('WS-011/WS-012: keeps draft editing and explicit version creation in the canvas mode', async () => {
+    it('WS-011: keeps draft editing on auto-save and removes explicit header save actions', async () => {
         const wrapper = await mountWorkspace();
 
-        expect(wrapper.get('[data-testid="draft-editor"]').element.value).toBe('기존 초안');
-        await wrapper.get('[data-testid="draft-editor"]').setValue('새 초안');
-        await wrapper.get('[data-testid="save-draft"]').trigger('click');
-        await flushPromises();
-        expect(mocks.saveDraft).toHaveBeenCalledWith('102', '103', '새 초안');
-
-        await wrapper.get('[data-testid="create-version"]').trigger('click');
-        await flushPromises();
-        expect(mocks.createVersion).toHaveBeenCalledWith('102', '103', 'v3');
+        expect(getDraftText(wrapper)).toBe('기존 초안');
+        expect(wrapper.find('[data-testid="save-draft"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="create-version"]').exists()).toBe(false);
+        expect(wrapper.get('.workspace-hero-actions').text()).toContain('채용 사이트');
     });
 
     it('WS-009: auto-saves after two idle seconds', async () => {
         const wrapper = await mountWorkspace();
 
         vi.useFakeTimers();
-        await wrapper.get('[data-testid="draft-editor"]').setValue('auto saved body');
+        await setDraftText(wrapper, 'auto saved body');
         expect(wrapper.get('[data-testid="auto-save-status"]').attributes('data-save-state')).toBe('waiting');
         await vi.advanceTimersByTimeAsync(1999);
         expect(mocks.saveDraft).not.toHaveBeenCalledWith('102', '103', 'auto saved body');
@@ -239,8 +235,14 @@ describe('WorkspacePage', () => {
         expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('JD 게시판');
         expect(wrapper.get('[data-testid="workspace-main-pane"]').attributes('style')).toContain('--drawer-width');
 
-        await wrapper.get('[data-testid="drawer-width"]').setValue(520);
-        expect(wrapper.get('[data-testid="workspace-main-pane"]').attributes('style')).toContain('520px');
+        await wrapper.get('[data-testid="workspace-panel-divider"]').trigger('keydown', { key: 'ArrowLeft' });
+        expect(wrapper.get('[data-testid="workspace-main-pane"]').attributes('style')).toContain('464px');
+
+        await wrapper.get('[data-testid="board-full-view"]').trigger('click');
+        await flushPromises();
+        expect(document.body.textContent).toContain('전체 보기');
+        expect(document.body.textContent).toContain('JD 게시판');
+        expect(document.body.textContent).toContain('마크다운으로 입력하거나 이미지를 붙여넣으세요.');
     });
 
     it('REF-001: side panel supports the requested board types without page navigation', async () => {
@@ -256,6 +258,36 @@ describe('WorkspacePage', () => {
         ]) {
             await wrapper.get(`[data-testid="panel-trigger-${type}"]`).trigger('click');
             expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain(title);
+        }
+    });
+
+    it('REF-001: renders pasted markdown syntax inside the board editor', async () => {
+        const wrapper = await mountWorkspace();
+        const editor = wrapper.get('[data-testid="markdown-editor"]');
+        const originalExecCommand = document.execCommand;
+        document.execCommand = vi.fn((command, _showUi, value) => {
+            if (command === 'insertHTML') {
+                editor.element.innerHTML += value;
+            }
+            return true;
+        });
+        try {
+            const pasteEvent = new Event('paste', { bubbles: true, cancelable: true });
+            Object.defineProperty(pasteEvent, 'clipboardData', {
+                value: {
+                    items: [],
+                    getData: () => '# 제목\n- 항목\n**강조**와 [링크](https://example.com)'
+                }
+            });
+            editor.element.dispatchEvent(pasteEvent);
+            await flushPromises();
+
+            expect(editor.element.querySelector('h2')?.textContent).toBe('제목');
+            expect(editor.element.querySelector('li')?.textContent).toBe('항목');
+            expect(editor.element.querySelector('strong')?.textContent).toBe('강조');
+            expect(editor.element.querySelector('a')?.getAttribute('href')).toBe('https://example.com');
+        } finally {
+            document.execCommand = originalExecCommand;
         }
     });
 
@@ -292,40 +324,90 @@ describe('WorkspacePage', () => {
         await wrapper.get('[data-testid="mode-versions"]').trigger('click');
         expect(wrapper.get('[data-testid="workspace-bottom-tabs"]').classes()).toContain('is-fixed');
         expect(wrapper.get('[data-testid="workspace-side-drawer"]').exists()).toBe(true);
+        expect(wrapper.get('[data-testid="version-question-tab-1"]').classes()).toContain('active');
         expect(wrapper.text()).toContain('v1');
         expect(wrapper.text()).toContain('v2');
+        expect(wrapper.get('[data-testid="version-diff"]').text()).toContain('초안 v1');
+        expect(wrapper.get('[data-testid="version-diff"]').text()).toContain('초안 v2');
+        expect(wrapper.find('.diff-row.is-remove').exists()).toBe(true);
+        expect(wrapper.find('.diff-row.is-add').exists()).toBe(true);
 
         await wrapper.get('[data-testid="compare-versions"]').trigger('click');
         await flushPromises();
         expect(mocks.compareVersions).toHaveBeenCalledWith('102', '501', '502');
         expect(wrapper.text()).toContain('초안 v1');
         expect(wrapper.text()).toContain('초안 v2');
+
+        await wrapper.get('[data-testid="final-essay-title"]').setValue('최종본');
+        await wrapper.get('[data-testid="final-essay-body"]').setValue('저장한 최종 자소서');
+        await wrapper.get('[data-testid="save-final-essay"]').trigger('click');
+        await flushPromises();
+        expect(mocks.createVersion).toHaveBeenCalledWith('102', '103', '최종본', '저장한 최종 자소서');
+        expect(wrapper.get('[data-testid="right-version-select"]').text()).toContain('최종본');
+
+        await wrapper.get('[data-testid="version-question-tab-2"]').trigger('click');
+        expect(wrapper.get('[data-testid="version-question-tab-2"]').classes()).toContain('active');
     });
 
-    it('WS-005/WS-006/WS-007: creates, updates, and deletes questions from the fixed canvas tools', async () => {
+    it('WS-011: switches character count between including and excluding spaces', async () => {
         const wrapper = await mountWorkspace();
 
-        await wrapper.get('[data-testid="new-question-prompt"]').setValue('성장 과정을 작성하세요.');
-        await wrapper.get('[data-testid="new-question-max"]').setValue(700);
-        await wrapper.get('[data-testid="create-question"]').trigger('click');
-        await flushPromises();
-        expect(mocks.createQuestion).toHaveBeenCalledWith('102', {
-            prompt: '성장 과정을 작성하세요.',
-            maxLength: 700
-        });
+        await setDraftText(wrapper, '가 나 다');
+        expect(wrapper.get('[data-testid="draft-character-count"]').text()).toContain('5 / 1000자');
+
+        await wrapper.get('[data-testid="count-without-spaces"]').trigger('click');
+        expect(wrapper.get('[data-testid="draft-character-count"]').text()).toContain('3 / 1000자');
+
+        await wrapper.get('[data-testid="count-with-spaces"]').trigger('click');
+        expect(wrapper.get('[data-testid="draft-character-count"]').text()).toContain('5 / 1000자');
+    });
+
+    it('WS-018: saves a titled final essay in version management', async () => {
+        const wrapper = await mountWorkspace();
+
+        await wrapper.get('[data-testid="mode-versions"]').trigger('click');
+        await wrapper.get('[data-testid="final-essay-title"]').setValue('네이버 최종본');
+        await wrapper.get('[data-testid="final-essay-body"]').setValue('완성 자소서 본문');
+        await wrapper.get('[data-testid="save-final-essay"]').trigger('click');
+
+        expect(mocks.createVersion).toHaveBeenCalledWith('102', '103', '네이버 최종본', '완성 자소서 본문');
+        expect(wrapper.text()).toContain('네이버 최종본');
+        expect(wrapper.text()).toContain('완성 자소서 본문');
+    });
+
+    it('WS-005: edits an existing question prompt and character limit', async () => {
+        const wrapper = await mountWorkspace();
 
         await wrapper.get('[data-testid="edit-question-prompt"]').setValue('수정한 문항');
         await wrapper.get('[data-testid="edit-question-max"]').setValue(700);
-        await wrapper.get('[data-testid="update-question"]').trigger('click');
+        await wrapper.get('[data-testid="edit-question-prompt"]').trigger('blur');
         await flushPromises();
+
         expect(mocks.updateQuestion).toHaveBeenCalledWith('102', '103', {
             prompt: '수정한 문항',
             maxLength: 700
         });
+    });
 
-        await wrapper.get('[data-testid="delete-question"]').trigger('click');
+    it('WS-005/WS-006/WS-007: keeps three default canvas questions and adds local question tabs', async () => {
+        const wrapper = await mountWorkspace();
+
+        expect(wrapper.get('[data-testid="question-tab-1"]').text()).toBe('1');
+        expect(wrapper.get('[data-testid="question-tab-2"]').text()).toBe('2');
+        expect(wrapper.get('[data-testid="question-tab-3"]').text()).toBe('3');
+
+        await wrapper.get('[data-testid="question-tab-2"]').trigger('click');
+        expect(getDraftText(wrapper)).toBe('');
+        await setDraftText(wrapper, '2번 문항 로컬 초안');
+        expect(wrapper.get('[data-testid="auto-save-status"]').attributes('data-save-state')).toBe('saved');
+        expect(mocks.saveDraft).not.toHaveBeenCalledWith('102', 'default-2', '2번 문항 로컬 초안');
+
+        await wrapper.get('[data-testid="create-question"]').trigger('click');
         await flushPromises();
-        expect(mocks.deleteQuestion).toHaveBeenCalledWith('102', '103');
+        expect(wrapper.get('[data-testid="question-tab-4"]').text()).toBe('4');
+        expect(wrapper.get('.workspace-editor').text()).toContain('4번 문항');
+        expect(mocks.createQuestion).not.toHaveBeenCalled();
+        expect(mocks.deleteQuestion).not.toHaveBeenCalled();
     });
 });
 
@@ -340,6 +422,16 @@ async function mountWorkspace() {
     });
     await flushPromises();
     return wrapper;
+}
+
+function getDraftText(wrapper) {
+    return wrapper.get('[data-testid="draft-editor"]').element.textContent.trim();
+}
+
+async function setDraftText(wrapper, value) {
+    const editor = wrapper.get('[data-testid="draft-editor"]');
+    editor.element.innerHTML = value;
+    await editor.trigger('input');
 }
 
 function flushPromises() {
