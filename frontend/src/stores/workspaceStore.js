@@ -161,6 +161,9 @@ export const useWorkspaceStore = defineStore('workspace', () => {
             errorMessage.value = messageFromError(error, '참고자료를 열지 못했습니다.');
         }
     }
+    function clearActiveReference() {
+        activeReference.value = null;
+    }
     async function updateReference(referenceId, payload) {
         status.value = 'saving';
         errorMessage.value = '';
@@ -218,6 +221,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         compareVersions,
         createReference,
         openReference,
+        clearActiveReference,
         updateReference,
         deleteReference
     };

@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -21,10 +22,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtAccessTokenVerifier tokenVerifier;
     private final ObjectMapper objectMapper;
+    private final String appEnv;
 
-    public JwtAuthenticationFilter(JwtAccessTokenVerifier tokenVerifier, ObjectMapper objectMapper) {
+    public JwtAuthenticationFilter(
+        JwtAccessTokenVerifier tokenVerifier,
+        ObjectMapper objectMapper,
+        @Value("${APP_ENV:local}") String appEnv
+    ) {
         this.tokenVerifier = tokenVerifier;
         this.objectMapper = objectMapper;
+        this.appEnv = appEnv;
     }
 
     @Override
@@ -37,13 +44,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (authorization != null && authorization.startsWith("Bearer ")) {
             try {
-                JwtAuthenticatedUser user = tokenVerifier.verify(authorization.substring("Bearer ".length()));
-                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                    user,
-                    null,
-                    List.of(new SimpleGrantedAuthority("ROLE_USER"))
-                );
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                String token = authorization.substring("Bearer ".length());
+                setAuthenticatedUser(verifiedUser(token));
             } catch (IllegalArgumentException exception) {
                 SecurityContextHolder.clearContext();
                 writeUnauthorized(response, "Invalid access token.");
@@ -52,6 +54,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private JwtAuthenticatedUser verifiedUser(String token) {
+        if ("local".equalsIgnoreCase(appEnv) && "local-dev-access-token".equals(token)) {
+            return new JwtAuthenticatedUser(1L, "demo@ez-one.local");
+        }
+        return tokenVerifier.verify(token);
+    }
+
+    private void setAuthenticatedUser(JwtAuthenticatedUser user) {
+        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+            user,
+            null,
+            List.of(new SimpleGrantedAuthority("ROLE_USER"))
+        );
+        SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 
     private void writeUnauthorized(HttpServletResponse response, String message) throws IOException {

@@ -291,33 +291,60 @@ describe('WorkspacePage', () => {
         }
     });
 
-    it('REF-004/REF-005: edits and deletes an active reference inside the drawer', async () => {
+    it('REF-006: renders board-specific inputs for news, DART, talent, prompt, and profile boards', async () => {
         const wrapper = await mountWorkspace();
 
-        await wrapper.get('[data-testid="open-reference-104"]').trigger('click');
-        await flushPromises();
-        expect(mocks.getReference).toHaveBeenCalledWith('104');
-        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('JD 본문');
+        await wrapper.get('[data-testid="panel-trigger-NEWS"]').trigger('click');
+        await wrapper.get('[data-testid="article-title-input"]').setValue('신규 기사');
+        await wrapper.get('[data-testid="article-url-input"]').setValue('https://example.com/article');
+        await setEditorText(wrapper, 'article-body-input', '기사 내용 요약');
+        await wrapper.get('[data-testid="workspace-side-drawer"]').findAll('button').find((button) => button.text() === '저장').trigger('click');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('수집한 기사');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('신규 기사');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('기사 내용 요약');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('example.com');
 
-        await wrapper.get('[data-testid="reference-type"]').setValue('NEWS');
-        await wrapper.get('[data-testid="reference-title"]').setValue('산업 뉴스');
-        await wrapper.get('[data-testid="reference-body"]').setValue('수정한 참고자료 본문');
-        await wrapper.get('[data-testid="reference-url"]').setValue('https://example.com/news');
-        await wrapper.get('[data-testid="save-reference"]').trigger('click');
-        await flushPromises();
-        expect(mocks.updateReference).toHaveBeenCalledWith('104', {
-            boardName: 'NEWS',
-            referenceType: 'NEWS',
-            title: '산업 뉴스',
-            body: '수정한 참고자료 본문',
-            url: 'https://example.com/news'
-        });
-        expect(JSON.parse(localStorage.getItem('ezone.recentWorkspaces'))).toEqual(['102']);
+        await wrapper.get('[data-testid="panel-trigger-DART"]').trigger('click');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('확인 경로');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('주요 계약 및 연구 개발 활동');
+        await wrapper.get('[data-testid="save-dart-entry"]').trigger('click');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('저장한 DART 메모');
 
-        await wrapper.get('[data-testid="delete-reference"]').trigger('click');
-        await flushPromises();
-        expect(mocks.deleteReference).toHaveBeenCalledWith('104');
-        expect(JSON.parse(localStorage.getItem('ezone.recentWorkspaces'))).toEqual(['102']);
+        await wrapper.get('[data-testid="panel-trigger-TALENT_PROFILE"]').trigger('click');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('핵심 가치 / 키워드');
+        expect(wrapper.get('[aria-label="새 키워드"]').exists()).toBe(true);
+
+        await wrapper.get('[data-testid="panel-trigger-PROMPT"]').trigger('click');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('저장한 프롬프트가 없습니다.');
+        await wrapper.get('[data-testid="workspace-side-drawer"]').findAll('button').find((button) => button.text() === '+ 프롬프트 추가').trigger('click');
+        const promptInputs = wrapper.get('[data-testid="workspace-side-drawer"]').findAll('input');
+        await promptInputs.find((input) => input.attributes('placeholder') === '프롬프트 이름').setValue('지원동기 포인트 정리');
+        await promptInputs.find((input) => input.attributes('placeholder')?.includes('직접 입력')).setValue('지원동기');
+        await promptInputs.find((input) => input.attributes('placeholder') === '이 프롬프트를 언제 쓰는지').setValue('지원동기 정리');
+        await setEditorText(wrapper, 'prompt-body-editor', '> 기업 정보를 바탕으로 지원동기 키워드를 정리해줘.');
+        await wrapper.get('[data-testid="workspace-side-drawer"]').findAll('button').find((button) => button.text() === '저장').trigger('click');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('지원동기 포인트 정리');
+        await wrapper.get('[data-testid="workspace-side-drawer"]').findAll('button').find((button) => button.text() === '지원동기').trigger('click');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('지원동기 정리');
+
+        await wrapper.get('[data-testid="panel-trigger-AWARDS_PROJECTS"]').trigger('click');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('수상');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('프로젝트');
+        expect(wrapper.find('[data-testid="award-title-0"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="project-title-0"]').exists()).toBe(true);
+    });
+
+    it('REF-004/REF-005: saves JD notes into the local board list', async () => {
+        const wrapper = await mountWorkspace();
+
+        await wrapper.get('[data-testid="panel-trigger-JD"]').trigger('click');
+        await wrapper.get('[data-testid="board-title-input"]').setValue('JD 핵심 요구사항');
+        await wrapper.get('[data-testid="markdown-editor"]').element.dispatchEvent(new InputEvent('input', { bubbles: true }));
+        await wrapper.get('[data-testid="workspace-side-drawer"]').findAll('button').find((button) => button.text() === '저장').trigger('click');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('저장한 목록');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('JD 핵심 요구사항');
+        expect(mocks.updateReference).not.toHaveBeenCalled();
+        expect(mocks.deleteReference).not.toHaveBeenCalled();
     });
 
     it('WS-017/WS-018: version management also keeps the side panel available', async () => {
@@ -408,7 +435,7 @@ describe('WorkspacePage', () => {
         await wrapper.get('[data-testid="create-question"]').trigger('click');
         await flushPromises();
         expect(wrapper.get('[data-testid="question-tab-4"]').text()).toBe('4');
-        expect(wrapper.get('.workspace-editor').text()).toContain('4번 문항');
+        expect(wrapper.get('[data-testid="edit-question-prompt"]').element.value).toBe('문항4.');
         expect(mocks.createQuestion).not.toHaveBeenCalled();
         expect(mocks.deleteQuestion).not.toHaveBeenCalled();
         expect(JSON.parse(localStorage.getItem('ezone.recentWorkspaces'))).toEqual(['102']);
@@ -434,6 +461,12 @@ function getDraftText(wrapper) {
 
 async function setDraftText(wrapper, value) {
     const editor = wrapper.get('[data-testid="draft-editor"]');
+    editor.element.innerHTML = value;
+    await editor.trigger('input');
+}
+
+async function setEditorText(wrapper, testId, value) {
+    const editor = wrapper.get(`[data-testid="${testId}"]`);
     editor.element.innerHTML = value;
     await editor.trigger('input');
 }

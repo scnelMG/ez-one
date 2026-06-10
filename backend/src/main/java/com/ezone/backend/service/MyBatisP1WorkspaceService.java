@@ -550,7 +550,16 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
                 row.getCompanyLogoUrl(),
                 row.getCompanyRating(),
                 row.getCompanyStartingSalary(),
-                row.getCompanyFinancialStatus()
+                row.getCompanyFinancialStatus(),
+                row.getCompanyIndustry(),
+                row.getCompanyEmployeeCount(),
+                row.getCompanyFoundedAt(),
+                row.getCompanyCapital(),
+                row.getCompanyRevenue(),
+                row.getCompanyRepresentative(),
+                row.getCompanyHomepage(),
+                row.getCompanyBusiness(),
+                row.getCompanyAddress()
             ),
             mapper.listQuestions(row.getId()).stream().map(this::toQuestionResponse).toList(),
             mapper.listReferences(row.getId()).stream().map(this::toReferenceResponse).toList()

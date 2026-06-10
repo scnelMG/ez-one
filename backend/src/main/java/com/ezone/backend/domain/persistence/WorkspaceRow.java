@@ -19,6 +19,15 @@ public class WorkspaceRow {
     private BigDecimal companyRating;
     private Integer companyStartingSalary;
     private String companyFinancialStatus;
+    private String companyIndustry;
+    private Integer companyEmployeeCount;
+    private String companyFoundedAt;
+    private Long companyCapital;
+    private Long companyRevenue;
+    private String companyRepresentative;
+    private String companyHomepage;
+    private String companyBusiness;
+    private String companyAddress;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -50,4 +59,22 @@ public class WorkspaceRow {
     public void setCompanyStartingSalary(Integer companyStartingSalary) { this.companyStartingSalary = companyStartingSalary; }
     public String getCompanyFinancialStatus() { return companyFinancialStatus; }
     public void setCompanyFinancialStatus(String companyFinancialStatus) { this.companyFinancialStatus = companyFinancialStatus; }
+    public String getCompanyIndustry() { return companyIndustry; }
+    public void setCompanyIndustry(String companyIndustry) { this.companyIndustry = companyIndustry; }
+    public Integer getCompanyEmployeeCount() { return companyEmployeeCount; }
+    public void setCompanyEmployeeCount(Integer companyEmployeeCount) { this.companyEmployeeCount = companyEmployeeCount; }
+    public String getCompanyFoundedAt() { return companyFoundedAt; }
+    public void setCompanyFoundedAt(String companyFoundedAt) { this.companyFoundedAt = companyFoundedAt; }
+    public Long getCompanyCapital() { return companyCapital; }
+    public void setCompanyCapital(Long companyCapital) { this.companyCapital = companyCapital; }
+    public Long getCompanyRevenue() { return companyRevenue; }
+    public void setCompanyRevenue(Long companyRevenue) { this.companyRevenue = companyRevenue; }
+    public String getCompanyRepresentative() { return companyRepresentative; }
+    public void setCompanyRepresentative(String companyRepresentative) { this.companyRepresentative = companyRepresentative; }
+    public String getCompanyHomepage() { return companyHomepage; }
+    public void setCompanyHomepage(String companyHomepage) { this.companyHomepage = companyHomepage; }
+    public String getCompanyBusiness() { return companyBusiness; }
+    public void setCompanyBusiness(String companyBusiness) { this.companyBusiness = companyBusiness; }
+    public String getCompanyAddress() { return companyAddress; }
+    public void setCompanyAddress(String companyAddress) { this.companyAddress = companyAddress; }
 }

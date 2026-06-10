@@ -36,7 +36,7 @@
         <article class="workspace-info-section">
           <div class="workspace-section-title">
             <h2>지원정보</h2>
-            <span class="status-chip">{{ workspaceStore.workspace.statusLabel }}</span>
+            <span class="status-chip" :class="workspaceStatusClass">{{ workspaceStore.workspace.statusLabel }}</span>
           </div>
           <dl class="info-grid compact">
             <div>
@@ -53,7 +53,18 @@
             </div>
             <div>
               <dt>채용 사이트</dt>
-              <dd>{{ workspaceStore.workspace.sourceUrl ?? '미입력' }}</dd>
+              <dd>
+                <a
+                  v-if="workspaceStore.workspace.sourceUrl"
+                  class="info-link"
+                  :href="workspaceStore.workspace.sourceUrl"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {{ workspaceStore.workspace.sourceUrl }}
+                </a>
+                <span v-else>-</span>
+              </dd>
             </div>
           </dl>
         </article>
@@ -65,43 +76,38 @@
           <dl class="info-grid compact">
             <div>
               <dt>기업유형</dt>
-              <dd>{{ workspaceStore.workspace.companyDetails?.companyType ?? '미입력' }}</dd>
-            </div>
-            <div>
-              <dt>산업</dt>
-              <dd>{{ workspaceStore.workspace.companyDetails?.industry ?? workspaceStore.workspace.companyDetails?.domain ?? '미입력' }}</dd>
+              <dd>{{ companyTypeLabel }}</dd>
             </div>
             <div>
               <dt>사원수</dt>
-              <dd>{{ workspaceStore.workspace.companyDetails?.employeeCount ?? workspaceStore.workspace.companyDetails?.size ?? '미입력' }}</dd>
+              <dd>{{ displayValue(workspaceStore.workspace.companyDetails?.employeeCount) }}</dd>
             </div>
             <div>
               <dt>설립일</dt>
-              <dd>{{ workspaceStore.workspace.companyDetails?.foundedAt ?? '미입력' }}</dd>
-            </div>
-            <div>
-              <dt>자본금</dt>
-              <dd>{{ workspaceStore.workspace.companyDetails?.capital ?? '미입력' }}</dd>
-            </div>
-            <div>
-              <dt>매출액</dt>
-              <dd>{{ workspaceStore.workspace.companyDetails?.revenue ?? '미입력' }}</dd>
-            </div>
-            <div>
-              <dt>대표자</dt>
-              <dd>{{ workspaceStore.workspace.companyDetails?.representative ?? '미입력' }}</dd>
+              <dd>{{ displayValue(workspaceStore.workspace.companyDetails?.foundedAt) }}</dd>
             </div>
             <div>
               <dt>홈페이지</dt>
-              <dd>{{ workspaceStore.workspace.companyDetails?.homepage ?? workspaceStore.workspace.companyDetails?.domain ?? '미입력' }}</dd>
+              <dd>
+                <a
+                  v-if="companyHomepageUrl"
+                  class="info-link"
+                  :href="companyHomepageUrl"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {{ companyHomepageLabel }}
+                </a>
+                <span v-else>-</span>
+              </dd>
             </div>
             <div class="wide-info-row">
               <dt>주요사업</dt>
-              <dd>{{ workspaceStore.workspace.companyDetails?.business ?? '미입력' }}</dd>
+              <dd>{{ displayValue(cleanCompanyBusiness) }}</dd>
             </div>
             <div class="wide-info-row">
               <dt>주소</dt>
-              <dd>{{ workspaceStore.workspace.companyDetails?.address ?? '미입력' }}</dd>
+              <dd>{{ displayValue(workspaceStore.workspace.companyDetails?.address) }}</dd>
             </div>
           </dl>
         </article>
@@ -174,8 +180,7 @@
                 <div class="editor-toolbar">
                   <div class="question-title-editor">
                     <p class="section-kicker">초안 작성</p>
-                    <label>
-                      <span>{{ activeQuestionIndex + 1 }}번 문항</span>
+                    <label class="question-field">
                       <input
                         v-model="editQuestion.prompt"
                         data-testid="edit-question-prompt"
@@ -184,7 +189,7 @@
                         @keydown.enter.prevent="saveQuestionSettings"
                       />
                     </label>
-                    <label>
+                    <label class="question-limit-field">
                       <span>글자수</span>
                       <input
                         v-model.number="editQuestion.maxLength"
@@ -197,7 +202,7 @@
                     </label>
                   </div>
                   <span
-                    class="status-chip"
+                    class="sr-only"
                     data-testid="auto-save-status"
                     :data-save-state="autoSaveStatus"
                   >
@@ -255,7 +260,6 @@
               <div class="version-workspace">
                 <div class="section-heading">
                   <div>
-                    <p class="section-kicker">자소서 버전관리</p>
                     <h2>{{ activeQuestionIndex + 1 }}번 문항 변경점 비교</h2>
                   </div>
                 </div>
@@ -434,7 +438,7 @@
               </button>
             </header>
 
-            <section class="drawer-reference-list">
+            <section v-if="showReferenceCreateButton" class="drawer-reference-list">
               <button
                 v-for="reference in filteredReferences"
                 :key="reference.id"
@@ -450,7 +454,7 @@
 
             <component :is="activeBoardComponent" />
 
-            <section v-if="workspaceStore.activeReference" class="reference-editor-panel">
+            <section v-if="workspaceStore.activeReference && showReferenceCreateButton" class="reference-editor-panel">
               <div class="section-heading compact-heading">
                 <div>
                   <p class="section-kicker">{{ referenceTypeLabel(workspaceStore.activeReference.type) }}</p>
@@ -494,6 +498,7 @@
             </section>
 
             <button
+              v-if="showReferenceCreateButton"
               class="ghost-button drawer-create-button is-icon"
               type="button"
               data-testid="create-reference"
@@ -531,7 +536,7 @@
             </header>
             <div class="floating-board-body">
               <component :is="activeBoardComponent" />
-              <section v-if="workspaceStore.activeReference" class="reference-editor-panel floating-editor">
+              <section v-if="workspaceStore.activeReference && showReferenceCreateButton" class="reference-editor-panel floating-editor">
                 <div class="section-heading compact-heading">
                   <div>
                     <p class="section-kicker">{{ referenceTypeLabel(workspaceStore.activeReference.type) }}</p>
@@ -609,13 +614,14 @@ let suppressNextDraftWatch = false;
 let resizeStartX = 0;
 let resizeStartWidth = 0;
 let resizeLayoutWidth = 0;
+let syncActiveMarkdownEditor = () => {};
 
 const boards = [
   { type: 'JD', shortLabel: 'JD', title: 'JD 게시판' },
   { type: 'NEWS', shortLabel: '뉴스', title: '뉴스기사 게시판' },
   { type: 'DART', shortLabel: 'DART', title: 'DART 게시판' },
   { type: 'TALENT_PROFILE', shortLabel: '인재상', title: '인재상 게시판' },
-  { type: 'AWARDS_PROJECTS', shortLabel: '서류', title: '서류 / 프로젝트' },
+  { type: 'AWARDS_PROJECTS', shortLabel: '수상/프로젝트', title: '수상/프로젝트' },
   { type: 'PROMPT', shortLabel: '프롬프트', title: '프롬프트 게시판' },
   { type: 'FREE_MEMO', shortLabel: '메모', title: '메모 게시판' }
 ];
@@ -626,6 +632,7 @@ const referenceForm = reactive({
   body: '',
   url: ''
 });
+const boardDrafts = reactive({});
 const newQuestion = reactive({
   prompt: '새 문항',
   maxLength: 1000
@@ -636,13 +643,14 @@ const editQuestion = reactive({
 });
 
 const defaultQuestions = [
-  { id: 'default-1', prompt: '1번 문항', draft: '', maxLength: 1000, localOnly: true },
-  { id: 'default-2', prompt: '2번 문항', draft: '', maxLength: 1000, localOnly: true },
-  { id: 'default-3', prompt: '3번 문항', draft: '', maxLength: 1000, localOnly: true }
+  { id: 'default-1', prompt: '문항1.', draft: '', maxLength: 1000, localOnly: true },
+  { id: 'default-2', prompt: '문항2.', draft: '', maxLength: 1000, localOnly: true },
+  { id: 'default-3', prompt: '문항3.', draft: '', maxLength: 1000, localOnly: true }
 ];
 const localQuestions = ref([]);
 const localDrafts = reactive({});
 const localQuestionEdits = reactive({});
+const localVersions = ref([]);
 const canvasQuestions = computed(() => {
   const sourceQuestions = workspaceStore.workspace?.questions ?? [];
   const merged = sourceQuestions.map((question) => applyLocalQuestionEdit(question));
@@ -654,16 +662,39 @@ const canvasQuestions = computed(() => {
 const currentQuestion = computed(() => canvasQuestions.value[activeQuestionIndex.value] ?? canvasQuestions.value[0] ?? null);
 const drawerStyle = computed(() => ({ '--drawer-width': `${drawerWidth.value}px` }));
 const activeBoardTitle = computed(() => boards.find((board) => board.type === activeBoard.value)?.title ?? '참고자료');
+const boardsWithInlineCreate = new Set(['JD', 'NEWS', 'DART', 'TALENT_PROFILE', 'AWARDS_PROJECTS', 'PROMPT', 'FREE_MEMO']);
+const showReferenceCreateButton = computed(() => !boardsWithInlineCreate.has(activeBoard.value));
+const companyDetails = computed(() => workspaceStore.workspace?.companyDetails ?? {});
+const companyTypeLabel = computed(() => {
+  const type = normalizeCompanyValue(companyDetails.value.companyType);
+  if (type && !['Y', 'N'].includes(type.toUpperCase())) return type;
+  return displayValue(companyDetails.value.size);
+});
+const companyHomepageLabel = computed(() => normalizeCompanyValue(companyDetails.value.homepage ?? companyDetails.value.domain));
+const companyHomepageUrl = computed(() => {
+  const homepage = companyHomepageLabel.value;
+  if (!homepage || homepage === '-') return '';
+  return /^https?:\/\//i.test(homepage) ? homepage : `https://${homepage}`;
+});
+const cleanCompanyBusiness = computed(() => {
+  const business = normalizeCompanyValue(companyDetails.value.business);
+  if (!business) return '';
+  const looksLikeMetadataOnly = /대표자\s*:|설립일\s*:|주소\s*:|홈페이지\s*:/u.test(business);
+  return looksLikeMetadataOnly ? '' : business;
+});
+const workspaceStatusClass = computed(() => statusClassFromLabel(workspaceStore.workspace?.statusLabel));
 const currentQuestionVersions = computed(() => {
   if (!currentQuestion.value) return [];
-  return workspaceStore.versions.filter((version) => version.questionId === currentQuestion.value.id);
+  return [
+    ...localVersions.value,
+    ...workspaceStore.versions
+  ].filter((version) => version.questionId === currentQuestion.value.id);
 });
 const selectedLeftVersion = computed(() => currentQuestionVersions.value.find((version) => version.id === selectedLeftVersionId.value) ?? null);
 const selectedRightVersion = computed(() => currentQuestionVersions.value.find((version) => version.id === selectedRightVersionId.value) ?? null);
 const versionDiffRows = computed(() => buildLineDiff(selectedLeftVersion.value?.body ?? '', selectedRightVersion.value?.body ?? ''));
 const canSaveFinalEssay = computed(() => Boolean(
   currentQuestion.value
-  && !currentQuestion.value.localOnly
   && finalEssayTitle.value.trim()
   && finalEssayBody.value.trim()
 ));
@@ -772,6 +803,26 @@ function companyInitial(companyName) {
   return (companyName ?? '?').trim().charAt(0).toUpperCase() || '?';
 }
 
+function normalizeCompanyValue(value) {
+  if (value === null || value === undefined) return '';
+  const text = String(value).trim();
+  if (!text || text === '미입력' || text === 'null' || text === 'undefined') return '';
+  return text;
+}
+
+function displayValue(value) {
+  return normalizeCompanyValue(value) || '-';
+}
+
+function statusClassFromLabel(label) {
+  const text = String(label ?? '').trim();
+  if (text.includes('진행')) return 'in-progress';
+  if (text.includes('제출') || text.includes('완료')) return 'submitted';
+  if (text.includes('미지원') || text.includes('지원전') || text.includes('지원 전')) return 'not-started';
+  if (text.includes('포기') || text.includes('제외')) return 'not-applied';
+  return 'not-started';
+}
+
 async function saveDraft() {
   if (!currentQuestion.value) return;
   clearAutoSaveTimer();
@@ -801,7 +852,7 @@ function createQuestion() {
   const nextNumber = canvasQuestions.value.length + 1;
   localQuestions.value = [...localQuestions.value, {
     id: `local-${Date.now()}`,
-    prompt: `${nextNumber}번 문항`,
+    prompt: `문항${nextNumber}.`,
     draft: '',
     maxLength: 1000,
     localOnly: true
@@ -890,6 +941,7 @@ function splitLines(body) {
 function openBoard(type) {
   activeBoard.value = type;
   drawerOpen.value = true;
+  workspaceStore.clearActiveReference();
 }
 
 function openBoardFullView() {
@@ -930,6 +982,22 @@ function clampDrawerWidth(width, layoutWidth = null) {
 async function saveFinalEssay() {
   if (!canSaveFinalEssay.value) return;
   const previousNewestVersion = currentQuestionVersions.value[0] ?? null;
+  if (currentQuestion.value.localOnly) {
+    const version = {
+      id: `local-version-${Date.now()}`,
+      questionId: currentQuestion.value.id,
+      versionName: finalEssayTitle.value.trim(),
+      body: finalEssayBody.value,
+      createdAt: new Date().toLocaleString('ko-KR')
+    };
+    localVersions.value = [version, ...localVersions.value];
+    selectedRightVersionId.value = version.id;
+    selectedLeftVersionId.value = previousNewestVersion?.id ?? version.id;
+    finalEssayTitle.value = '';
+    finalEssayBody.value = '';
+    rememberCurrentWorkspaceIfSaved();
+    return;
+  }
   const version = await workspaceStore.createVersion(
     workspaceId.value,
     currentQuestion.value.id,
@@ -1000,7 +1068,7 @@ function referenceTypeLabel(type) {
     NEWS: '뉴스기사',
     DART: 'DART',
     TALENT_PROFILE: '인재상',
-    AWARDS_PROJECTS: '서류/프로젝트',
+    AWARDS_PROJECTS: '수상/프로젝트',
     PROMPT: '프롬프트',
     CUSTOM: '작성 팁'
   }[type] ?? type;
@@ -1013,30 +1081,223 @@ function referenceTemplate(type) {
       body: '공고의 주요 업무, 자격요건, 우대사항을 자유롭게 정리하세요.'
     },
     NEWS: {
-      title: '산업 뉴스 메모',
-      body: '기업이나 산업 관련 기사 링크와 요약을 정리하세요.'
+      title: '뉴스기사',
+      body: ''
     },
     DART: {
       title: 'DART 분석 메모',
       body: '사업보고서의 주요 제품 및 서비스, 연구개발활동, 기타 참고사항을 정리하세요.'
     },
     TALENT_PROFILE: {
-      title: '인재상 키워드',
-      body: '채용 홈페이지의 인재상 이미지와 핵심 가치를 정리하세요.'
+      title: '인재상',
+      body: ''
     },
     AWARDS_PROJECTS: {
-      title: '서류 / 프로젝트 근거',
+      title: '수상/프로젝트 근거',
       body: '서류 입력 정보에서 가져온 수상과 프로젝트를 자기소개서 근거로 정리하세요.'
     },
     PROMPT: {
-      title: '자소서 문항 초안 생성',
-      body: '공고 JD와 내 경험을 바탕으로 문항별 초안을 만들 프롬프트를 정리하세요.'
+      title: '프롬프트',
+      body: ''
     },
     FREE_MEMO: {
       title: '면접 예상 질문 정리',
       body: '면접 질문, 키워드, 아이디어를 자유롭게 기록하세요.'
     }
   }[type];
+}
+
+function ensureBoardDraft(type = activeBoard.value) {
+  if (!boardDrafts[type]) {
+    boardDrafts[type] = createBoardDraft(type);
+  }
+  return boardDrafts[type];
+}
+
+function createBoardDraft(type) {
+  const template = referenceTemplate(type) ?? {
+    title: activeBoardTitle.value,
+    body: ''
+  };
+  return {
+    title: template.title,
+    body: template.body,
+    selectedPromptCategory: '전체',
+    keywordInput: '',
+    keywords: [],
+    articleTitle: '',
+    articleUrl: '',
+    articleBody: '',
+    articles: [],
+    entries: [],
+    dartSections: {
+      products: '주요 제품 및 서비스 내용을 정리하세요.',
+      contracts: '주요 계약 및 연구 개발 활동 내용을 정리하세요.',
+      notes: '기타 참고사항을 정리하세요.'
+    },
+    dartEntries: [],
+    profileSections: createProfileSections(),
+    prompts: [],
+    isAddingPrompt: false,
+    newPrompt: {
+      title: '',
+      category: '',
+      purpose: '',
+      body: ''
+    }
+  };
+}
+
+function createProfileSections() {
+  const awards = profilePanelItems.value
+    .filter((item) => item.label === '수상')
+    .map((item) => ({
+      id: `award-${item.title}`,
+      title: item.title,
+      organization: '',
+      date: '',
+      description: item.summary
+    }));
+  const projects = profilePanelItems.value
+    .filter((item) => item.label === '프로젝트')
+    .map((item) => ({
+      id: `project-${item.title}`,
+      title: item.title,
+      period: '',
+      role: '',
+      skills: '',
+      description: item.summary,
+      link: ''
+    }));
+  return {
+    awards: awards.length ? awards : [emptyAward()],
+    projects: projects.length ? projects : [emptyProject()]
+  };
+}
+
+function emptyAward() {
+  return {
+    id: `award-${Date.now()}-${Math.random()}`,
+    title: '',
+    organization: '',
+    date: '',
+    description: ''
+  };
+}
+
+function emptyProject() {
+  return {
+    id: `project-${Date.now()}-${Math.random()}`,
+    title: '',
+    period: '',
+    role: '',
+    skills: '',
+    description: '',
+    link: ''
+  };
+}
+
+function addAward(draft) {
+  draft.profileSections.awards = [...draft.profileSections.awards, emptyAward()];
+}
+
+function addProject(draft) {
+  draft.profileSections.projects = [...draft.profileSections.projects, emptyProject()];
+}
+
+function addKeyword(draft) {
+  const keyword = draft.keywordInput.trim();
+  if (!keyword || draft.keywords.includes(keyword)) return;
+  draft.keywords = [...draft.keywords, keyword];
+  draft.keywordInput = '';
+}
+
+function removeKeyword(draft, keyword) {
+  draft.keywords = draft.keywords.filter((item) => item !== keyword);
+}
+
+function addArticle(draft) {
+  const title = draft.articleTitle.trim();
+  const url = draft.articleUrl.trim();
+  const body = draft.articleBody.trim();
+  if (!title || !url || !body) return;
+  draft.articles = [{
+    id: `article-${Date.now()}`,
+    title,
+    body,
+    source: '직접 추가',
+    date: new Date().toLocaleDateString('ko-KR'),
+    url
+  }, ...draft.articles];
+  draft.articleTitle = '';
+  draft.articleUrl = '';
+  draft.articleBody = '';
+}
+
+function resetBoardDraft(draft, type = activeBoard.value) {
+  const template = referenceTemplate(type) ?? { title: activeBoardTitle.value, body: '' };
+  draft.title = template.title;
+  draft.body = '';
+  if (type === 'NEWS') {
+    draft.articleTitle = '';
+    draft.articleUrl = '';
+    draft.articleBody = '';
+  }
+  if (type === 'TALENT_PROFILE') {
+    draft.keywordInput = '';
+    draft.keywords = [];
+  }
+  nextTick(() => syncActiveMarkdownEditor());
+}
+
+function saveBoardEntry(draft, type = activeBoard.value) {
+  const label = referenceTypeLabel(type);
+  const title = draft.title.trim() || `${label} 메모`;
+  const body = normalizeCompanyValue(draft.body);
+  if (!title && !body && type !== 'TALENT_PROFILE') return;
+  draft.entries = [{
+    id: `${type.toLowerCase()}-${Date.now()}`,
+    title,
+    body,
+    keywords: [...(draft.keywords ?? [])],
+    createdAt: new Date().toLocaleString('ko-KR')
+  }, ...draft.entries];
+}
+
+function saveDartEntry(draft) {
+  const title = draft.title.trim() || 'DART 메모';
+  draft.dartEntries = [{
+    id: `dart-${Date.now()}`,
+    title,
+    createdAt: new Date().toLocaleString('ko-KR'),
+    sections: { ...draft.dartSections }
+  }, ...draft.dartEntries];
+}
+
+function addDartEntry(draft) {
+  draft.title = 'DART 분석 메모';
+  draft.dartSections = {
+    products: '',
+    contracts: '',
+    notes: ''
+  };
+}
+
+function addPromptCard(draft) {
+  if (!draft.newPrompt.title.trim() || !draft.newPrompt.body.trim()) return;
+  const category = typeof draft.newPrompt.category === 'string' ? draft.newPrompt.category.trim() : '';
+  draft.prompts = [...draft.prompts, {
+    id: `prompt-${Date.now()}`,
+    title: draft.newPrompt.title.trim(),
+    category,
+    purpose: draft.newPrompt.purpose.trim(),
+    body: draft.newPrompt.body
+  }];
+  draft.newPrompt.title = '';
+  draft.newPrompt.category = '';
+  draft.newPrompt.purpose = '';
+  draft.newPrompt.body = '';
+  draft.isAddingPrompt = false;
 }
 
 const MarkdownBoard = {
@@ -1055,39 +1316,17 @@ const MarkdownBoard = {
       editorRef.value?.focus();
     }
 
-    function runCommand(command, value = null) {
-      focusEditor();
-      document.execCommand(command, false, value);
+    function syncEditorFromDraft() {
+      const editor = editorRef.value;
+      if (!editor) return;
+      const draft = ensureBoardDraft();
+      editor.innerHTML = plainTextToEditorHtml(draft.body);
       updateEmptyState();
     }
 
-    function insertHeading() {
-      runCommand('formatBlock', 'h3');
-    }
-
-    function insertList() {
-      runCommand('insertUnorderedList');
-    }
-
-    function insertCodeBlock() {
-      focusEditor();
-      const code = document.createElement('pre');
-      code.className = 'markdown-code-block';
-      code.textContent = '코드를 입력하세요.';
-      insertNodeAtCursor(code);
-      insertNodeAtCursor(document.createElement('p'));
-      updateEmptyState();
-    }
-
-    function insertLink() {
-      focusEditor();
-      const selectedText = window.getSelection()?.toString() || '링크';
-      document.execCommand('createLink', false, 'https://');
-      if (!window.getSelection()?.toString()) {
-        insertHtmlAtCursor(`<a href="https://" target="_blank" rel="noreferrer">${selectedText}</a>`);
-      }
-      updateEmptyState();
-    }
+    syncActiveMarkdownEditor = syncEditorFromDraft;
+    onMounted(syncEditorFromDraft);
+    watch(activeBoard, () => nextTick(syncEditorFromDraft));
 
     function handlePaste(event) {
       const items = [...(event.clipboardData?.items ?? [])];
@@ -1102,6 +1341,7 @@ const MarkdownBoard = {
       if (!markdown.trim()) return;
       event.preventDefault();
       insertHtmlAtCursor(markdownToHtml(markdown));
+      ensureBoardDraft().body = editorToPlainText(editorRef.value);
       updateEmptyState();
     }
 
@@ -1110,15 +1350,24 @@ const MarkdownBoard = {
       if (!file) return;
       event.preventDefault();
       focusEditor();
-      insertImageFile(file, updateEmptyState);
+      insertImageFile(file, () => {
+        ensureBoardDraft().body = editorToPlainText(editorRef.value);
+        updateEmptyState();
+      });
     }
 
     function handleKeydown(event) {
       if (event.key !== ' ' && event.key !== 'Enter') return;
       nextTick(() => {
         applyMarkdownShortcuts();
+        ensureBoardDraft().body = editorToPlainText(editorRef.value);
         updateEmptyState();
       });
+    }
+
+    function handleInput() {
+      ensureBoardDraft().body = editorToPlainText(editorRef.value);
+      updateEmptyState();
     }
 
     function applyMarkdownShortcuts() {
@@ -1151,7 +1400,409 @@ const MarkdownBoard = {
       placeCursorAtEnd(replacement);
     }
 
-    return () => h('section', { class: 'drawer-board markdown-board-page' }, [
+    function renderBoardActions(draft, type, addLabel, saveHandler = () => saveBoardEntry(draft, type)) {
+      return h('div', { class: 'board-save-actions' }, [
+        h('button', {
+          type: 'button',
+          class: 'ghost-button board-add-button',
+          onClick: () => resetBoardDraft(draft, type)
+        }, addLabel),
+        h('button', {
+          type: 'button',
+          class: 'primary-button board-save-button',
+          onClick: saveHandler
+        }, '저장')
+      ]);
+    }
+
+    function renderBoardEntryList(draft, emptyLabel = '저장한 메모가 없습니다.') {
+      return h('section', { class: 'board-entry-list' }, [
+        draft.entries.length ? h('h3', '저장한 목록') : null,
+        ...(draft.entries.length ? draft.entries.map((entry) => h('article', { class: 'board-entry-card', key: entry.id }, [
+          h('header', [
+            h('strong', entry.title),
+            h('span', entry.createdAt)
+          ]),
+          entry.keywords?.length ? h('div', { class: 'entry-keyword-list' }, entry.keywords.map((keyword) => h('span', keyword))) : null,
+          entry.body ? h('p', entry.body) : null
+        ])) : [h('p', { class: 'empty-board-message' }, emptyLabel)])
+      ]);
+    }
+
+    function renderProfileBoard(draft) {
+      const fieldInput = (item, key, placeholder, testId) => h('input', {
+        value: item[key],
+        'data-testid': testId,
+        placeholder,
+        onInput: (event) => {
+          item[key] = event.target.value;
+        }
+      });
+      const fieldText = (item, key, placeholder, testId) => h('textarea', {
+        value: item[key],
+        'data-testid': testId,
+        placeholder,
+        onInput: (event) => {
+          item[key] = event.target.value;
+        }
+      });
+      return h('section', { class: 'drawer-board profile-board-page' }, [
+        h('div', { class: 'board-title-field' }, [
+          h('span', '제목'),
+          h('input', {
+            value: draft.title,
+            'data-testid': 'board-title-input',
+            placeholder: '서류 게시판 제목',
+            onInput: (event) => {
+              draft.title = event.target.value;
+            }
+          })
+        ]),
+        h('p', { class: 'profile-board-note' }, '서류 입력 정보에 등록한 수상·프로젝트가 자동으로 불러와집니다. 이 화면에서 수정한 내용은 이 게시판 안에서만 유지됩니다.'),
+        h('section', { class: 'profile-board-section' }, [
+          h('h3', '수상'),
+          ...draft.profileSections.awards.map((award, index) => h('article', { class: 'profile-board-form-card', key: award.id }, [
+            h('label', ['수상명', fieldInput(award, 'title', '수상명', `award-title-${index}`)]),
+            h('label', ['수상기관', fieldInput(award, 'organization', '수상기관', `award-organization-${index}`)]),
+            h('label', ['수상일자', fieldInput(award, 'date', '수상일자', `award-date-${index}`)]),
+            h('label', ['수상내용', fieldText(award, 'description', '수상내용', `award-description-${index}`)])
+          ])),
+          h('button', { type: 'button', class: 'dashed-add-button', onClick: () => addAward(draft) }, '+ 수상 추가')
+        ]),
+        h('section', { class: 'profile-board-section' }, [
+          h('h3', '프로젝트'),
+          ...draft.profileSections.projects.map((project, index) => h('article', { class: 'profile-board-form-card project-card', key: project.id }, [
+            h('label', ['프로젝트명', fieldInput(project, 'title', '프로젝트명', `project-title-${index}`)]),
+            h('label', ['진행 기간', fieldInput(project, 'period', '진행 기간', `project-period-${index}`)]),
+            h('label', ['역할', fieldInput(project, 'role', '역할', `project-role-${index}`)]),
+            h('label', ['사용 기술', fieldInput(project, 'skills', '사용 기술', `project-skills-${index}`)]),
+            h('label', ['주요 내용', fieldText(project, 'description', '주요 내용', `project-description-${index}`)]),
+            h('label', ['링크', fieldInput(project, 'link', '링크', `project-link-${index}`)])
+          ])),
+          h('button', { type: 'button', class: 'dashed-add-button', onClick: () => addProject(draft) }, '+ 프로젝트 추가')
+        ])
+      ]);
+    }
+
+    function renderPromptBoard(draft) {
+      const userCategories = [...new Set(draft.prompts
+        .map((prompt) => (typeof prompt.category === 'string' ? prompt.category.trim() : ''))
+        .filter(Boolean))];
+      const categories = ['전체', ...userCategories];
+      if (!categories.includes(draft.selectedPromptCategory)) {
+        draft.selectedPromptCategory = '전체';
+      }
+      const visiblePrompts = draft.selectedPromptCategory === '전체'
+        ? draft.prompts
+        : draft.prompts.filter((prompt) => prompt.category === draft.selectedPromptCategory);
+      return h('section', { class: 'drawer-board prompt-board-page' }, [
+        h('div', { class: 'board-title-field' }, [
+          h('span', '제목'),
+          h('input', {
+            value: draft.title,
+            'data-testid': 'board-title-input',
+            placeholder: '프롬프트 게시판 제목',
+            onInput: (event) => {
+              draft.title = event.target.value;
+            }
+          })
+        ]),
+        h('div', { class: 'prompt-board-tools' }, [
+          h('input', { placeholder: '프롬프트 내용', 'aria-label': '프롬프트 내용' }),
+          h('div', { class: 'prompt-filter-pills', key: `prompt-filters-${categories.join('|')}` }, categories.map((label) => (
+            h('button', {
+              key: `prompt-filter-${label}`,
+              type: 'button',
+              class: { active: draft.selectedPromptCategory === label },
+              onClick: () => {
+                draft.selectedPromptCategory = label;
+              }
+            }, label)
+          ))),
+          h('button', {
+            type: 'button',
+            class: 'primary-button prompt-add-shortcut',
+            onClick: () => {
+              draft.isAddingPrompt = true;
+            }
+          }, '+ 프롬프트 추가')
+        ]),
+        h('div', { class: 'prompt-card-list' }, visiblePrompts.length ? visiblePrompts.map((prompt) => h('article', { class: 'prompt-board-card', key: prompt.id }, [
+          h('header', [
+            h('div', [
+              h('strong', prompt.title),
+              prompt.category ? h('span', prompt.category) : null
+            ])
+          ]),
+          h('p', [h('b', '용도'), ' ', prompt.purpose]),
+          h('pre', prompt.body),
+          h('button', { type: 'button', class: 'ghost-button prompt-copy-button' }, '복사')
+        ])) : [
+          h('p', { class: 'empty-board-message' }, '저장한 프롬프트가 없습니다.')
+        ]),
+        draft.isAddingPrompt ? h('section', { class: 'prompt-add-form' }, [
+          h('h3', '새 프롬프트 추가'),
+          h('label', ['제목', h('input', {
+            value: draft.newPrompt.title,
+            placeholder: '프롬프트 이름',
+            onInput: (event) => {
+              draft.newPrompt.title = event.target.value;
+            }
+          })]),
+          h('label', ['용도 설명', h('input', {
+            value: draft.newPrompt.purpose,
+            placeholder: '이 프롬프트를 언제·왜 쓰는지',
+            onInput: (event) => {
+              draft.newPrompt.purpose = event.target.value;
+            }
+          })]),
+          h('label', ['프롬프트', h(MarkdownDraftEditor, {
+            modelValue: draft.newPrompt.body,
+            'onUpdate:modelValue': (value) => {
+              draft.newPrompt.body = value;
+            },
+            'data-placeholder': '실제 프롬프트 내용을 입력 (변수는 [JD] [내 경험] 처럼 표시)',
+            'aria-label': '프롬프트 내용',
+            'data-testid': 'prompt-body-editor'
+          })]),
+          h('div', { class: 'prompt-form-actions' }, [
+            h('button', { type: 'button', class: 'ghost-button board-add-button', onClick: () => {
+              draft.newPrompt.title = '';
+              draft.newPrompt.category = '';
+              draft.newPrompt.purpose = '';
+              draft.newPrompt.body = '';
+              draft.isAddingPrompt = false;
+            } }, '취소'),
+            h('button', { type: 'button', class: 'primary-button board-save-button', onClick: () => addPromptCard(draft) }, '저장')
+          ])
+        ]) : null
+      ]);
+    }
+
+    function renderTalentBoard(draft) {
+      return h('section', { class: 'drawer-board talent-board-page' }, [
+        h('div', { class: 'board-title-field' }, [
+          h('span', '제목'),
+          h('input', {
+            value: draft.title,
+            'data-testid': 'board-title-input',
+            placeholder: '인재상 게시판 제목',
+            onInput: (event) => {
+              draft.title = event.target.value;
+            }
+          })
+        ]),
+        h('div', { class: 'markdown-editor-wrap' }, [
+          isEmpty.value ? h('p', { class: 'markdown-placeholder' }, '인재상 문장, 이미지, 메모를 붙여넣으세요.') : null,
+          h('div', {
+            ref: editorRef,
+            class: 'markdown-empty-page',
+            contenteditable: 'true',
+            'aria-label': '인재상 게시판 편집 영역',
+            'data-testid': 'markdown-editor',
+            onInput: handleInput,
+            onPaste: handlePaste,
+            onDrop: handleDrop,
+            onDragover: (event) => event.preventDefault(),
+            onKeydown: handleKeydown
+          })
+        ]),
+        h('section', { class: 'keyword-panel' }, [
+          h('strong', '핵심 가치 / 키워드 (직접 입력)'),
+          h('div', { class: 'keyword-chip-list' }, [
+            ...draft.keywords.map((keyword) => h('button', {
+              type: 'button',
+              class: 'keyword-chip',
+              'aria-label': `${keyword} 키워드 삭제`,
+              onClick: () => removeKeyword(draft, keyword)
+            }, [
+              h('span', keyword),
+              h('span', { class: 'keyword-remove-mark', 'aria-hidden': 'true' }, '×')
+            ])),
+            h('form', {
+              class: 'keyword-add-form',
+              onSubmit: (event) => {
+                event.preventDefault();
+                addKeyword(draft);
+              }
+            }, [
+              h('input', {
+                value: draft.keywordInput,
+                'aria-label': '새 키워드',
+                placeholder: '키워드',
+                onInput: (event) => {
+                  draft.keywordInput = event.target.value;
+                }
+              }),
+              h('button', { type: 'submit', 'aria-label': '키워드 추가' }, '+')
+            ])
+          ])
+        ]),
+        renderBoardActions(draft, 'TALENT_PROFILE', '+ 인재상 추가'),
+        renderBoardEntryList(draft, '저장한 인재상 메모가 없습니다.')
+      ]);
+    }
+
+    function renderDartBoard(draft) {
+      const sectionMeta = [
+        ['products', '주요 제품 및 서비스'],
+        ['contracts', '주요 계약 및 연구 개발 활동'],
+        ['notes', '기타 참고사항']
+      ];
+      return h('section', { class: 'drawer-board dart-board-page' }, [
+        h('div', { class: 'board-source-path' }, [
+          h('p', '전자공시(DART)에서 타깃기업 정보를 가져와 자유롭게 정리'),
+          h('div', { class: 'dart-route-box' }, [
+            h('div', [h('b', '확인 경로'), h('span', '전자공시 · 정기공시 검색 › 사업보고서 · 반기/분기보고서 › II. 사업의 내용')]),
+            h('a', { href: 'https://dart.fss.or.kr/', target: '_blank', rel: 'noreferrer' }, 'DART 바로가기 ↗'),
+            h('div', [h('b', '확인 항목'), ...sectionMeta.map(([key, label]) => h('button', {
+              type: 'button',
+              class: ''
+            }, label))])
+          ])
+        ]),
+        h('div', { class: 'board-title-field' }, [
+          h('span', '제목'),
+          h('input', {
+            value: draft.title,
+            'data-testid': 'board-title-input',
+            placeholder: 'DART 게시판 제목',
+            onInput: (event) => {
+              draft.title = event.target.value;
+            }
+          })
+        ]),
+        h('div', { class: 'dart-section-list' }, sectionMeta.map(([key, label]) => h('label', {
+          class: 'dart-section-card',
+          key
+        }, [
+          h('span', label),
+          h(MarkdownDraftEditor, {
+            modelValue: draft.dartSections[key],
+            'onUpdate:modelValue': (value) => {
+              draft.dartSections[key] = value;
+            },
+            'data-placeholder': `${label} 내용을 마크다운으로 정리하세요.`,
+            'aria-label': `${label} 내용`,
+            'data-testid': `dart-section-${key}`
+          })
+        ]))),
+        h('div', { class: 'dart-board-actions' }, [
+          h('button', {
+            type: 'button',
+            class: 'ghost-button board-add-button',
+            onClick: () => addDartEntry(draft)
+          }, '+ DART 메모 추가'),
+          h('button', {
+            type: 'button',
+            class: 'primary-button board-save-button',
+            'data-testid': 'save-dart-entry',
+            onClick: () => saveDartEntry(draft)
+          }, '저장')
+        ]),
+        draft.dartEntries.length ? h('section', { class: 'dart-entry-list' }, [
+          h('h3', '저장한 DART 메모'),
+          ...draft.dartEntries.map((entry) => h('article', { class: 'dart-entry-card', key: entry.id }, [
+            h('header', [
+              h('strong', entry.title),
+              h('span', entry.createdAt)
+            ]),
+            ...sectionMeta.map(([key, label]) => h('p', [h('b', label), ' ', entry.sections[key] || '미입력']))
+          ]))
+        ]) : null
+      ]);
+    }
+
+    function renderNewsBoard(draft) {
+      return h('section', { class: 'drawer-board news-board-page' }, [
+        h('div', { class: 'board-title-field' }, [
+          h('span', '제목'),
+          h('input', {
+            value: draft.title,
+            'data-testid': 'board-title-input',
+            placeholder: '뉴스 게시판 제목',
+            onInput: (event) => {
+              draft.title = event.target.value;
+            }
+          })
+        ]),
+        h('form', {
+          class: 'article-link-form',
+          onSubmit: (event) => {
+            event.preventDefault();
+            addArticle(draft);
+          }
+        }, [
+          h('label', '기사 제목'),
+          h('input', {
+            value: draft.articleTitle,
+            placeholder: '기사 제목',
+            'data-testid': 'article-title-input',
+            onInput: (event) => {
+              draft.articleTitle = event.target.value;
+            }
+          }),
+          h('label', '기사 링크'),
+          h('input', {
+            value: draft.articleUrl,
+            type: 'url',
+            placeholder: 'https://기사 URL 붙여넣기',
+            'data-testid': 'article-url-input',
+            onInput: (event) => {
+              draft.articleUrl = event.target.value;
+            }
+          }),
+          h('label', '내용'),
+          h(MarkdownDraftEditor, {
+            modelValue: draft.articleBody,
+            'onUpdate:modelValue': (value) => {
+              draft.articleBody = value;
+            },
+            'data-placeholder': '기사에서 자소서에 활용할 내용을 마크다운으로 정리하세요.',
+            'aria-label': '기사 내용',
+            'data-testid': 'article-body-input'
+          })
+        ]),
+        renderBoardActions(draft, 'NEWS', '+ 뉴스 기사 추가', () => addArticle(draft)),
+        h('section', { class: 'article-embed-list' }, [
+          h('h3', '수집한 기사 목록'),
+          ...(draft.articles.length ? draft.articles.map((article) => h('a', {
+            key: article.id,
+            class: 'article-embed-card',
+            href: article.url,
+            target: '_blank',
+            rel: 'noreferrer'
+          }, [
+            h('span', '🔗'),
+            h('strong', article.title),
+            h('p', article.body),
+            h('em', article.url),
+            h('small', article.date)
+          ])) : [h('p', { class: 'empty-board-message' }, '수집한 기사가 없습니다.')])
+        ])
+      ]);
+    }
+
+    return () => {
+      const draft = ensureBoardDraft();
+      if (activeBoard.value === 'AWARDS_PROJECTS') return renderProfileBoard(draft);
+      if (activeBoard.value === 'PROMPT') return renderPromptBoard(draft);
+      if (activeBoard.value === 'TALENT_PROFILE') return renderTalentBoard(draft);
+      if (activeBoard.value === 'DART') return renderDartBoard(draft);
+      if (activeBoard.value === 'NEWS') return renderNewsBoard(draft);
+      const addLabel = activeBoard.value === 'JD' ? '+ JD 추가' : '+ 메모 추가';
+      return h('section', { class: 'drawer-board markdown-board-page' }, [
+        h('div', { class: 'board-title-field' }, [
+          h('span', '제목'),
+          h('input', {
+            value: draft.title,
+            'data-testid': 'board-title-input',
+            placeholder: `${activeBoardTitle.value} 제목`,
+            onInput: (event) => {
+              draft.title = event.target.value;
+            }
+          })
+        ]),
       h('div', { class: 'markdown-editor-wrap' }, [
         isEmpty.value ? h('p', { class: 'markdown-placeholder' }, '마크다운으로 입력하거나 이미지를 붙여넣으세요.') : null,
         h('div', {
@@ -1160,14 +1811,17 @@ const MarkdownBoard = {
           contenteditable: 'true',
           'aria-label': '마크다운 게시판 편집 영역',
           'data-testid': 'markdown-editor',
-          onInput: updateEmptyState,
+          onInput: handleInput,
           onPaste: handlePaste,
           onDrop: handleDrop,
           onDragover: (event) => event.preventDefault(),
           onKeydown: handleKeydown
         })
-      ])
-    ]);
+      ]),
+      renderBoardActions(draft, activeBoard.value, addLabel),
+      renderBoardEntryList(draft, '저장한 메모가 없습니다.')
+      ]);
+    };
   }
 };
 
@@ -1184,7 +1838,7 @@ const MarkdownDraftEditor = {
     }
   },
   emits: ['update:modelValue'],
-  setup(props, { emit }) {
+  setup(props, { emit, attrs }) {
     const editorRef = ref(null);
     let syncingFromModel = false;
 
@@ -1269,6 +1923,8 @@ const MarkdownDraftEditor = {
       role: 'textbox',
       'aria-label': '자기소개서 초안',
       'data-testid': 'draft-editor',
+      'data-placeholder': '자기소개서 초안을 작성하세요.',
+      ...attrs,
       onInput: emitPlainText,
       onPaste: handlePaste,
       onDrop: handleDrop,
