@@ -8,8 +8,9 @@
       <nav class="primary-nav" aria-label="주요 메뉴">
         <RouterLink to="/basket">공고 장바구니</RouterLink>
         <RouterLink to="/document-profile">서류 입력 정보</RouterLink>
-        <RouterLink to="/recommendations">추천 공고</RouterLink>
-        <span class="nav-disabled" aria-disabled="true">과거 지원 이력</span>
+        <RouterLink to="/study">취업 스터디</RouterLink>
+        <span class="nav-disabled" aria-disabled="true">과거 지원 내역</span>
+        <RouterLink v-if="profileStore.profile?.ssafy" to="/recommendations">MM 추천 공고</RouterLink>
       </nav>
 
       <div class="header-actions">
@@ -103,8 +104,10 @@ import logoUrl from '@/assets/ez-one-logo-final.png';
 import { authApi } from '@/features/auth/api/authApi';
 import { clearAuthSession, getCurrentUser, getRefreshToken } from '@/features/auth/session/authSession';
 import ToastNotification from './ToastNotification.vue';
+import { useProfileStore } from '@/stores/profileStore';
 
 const router = useRouter();
+const profileStore = useProfileStore();
 const isProfileMenuOpen = ref(false);
 let profileMenuCloseTimer = null;
 const currentUser = computed(() => getCurrentUser());

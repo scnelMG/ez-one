@@ -11,6 +11,9 @@ import MyPage from '@/pages/MyPage.vue';
 import NotionSettingsPage from '@/pages/NotionSettingsPage.vue';
 import RecommendationPage from '@/pages/RecommendationPage.vue';
 import WorkspacePage from '@/pages/WorkspacePage.vue';
+import StudyListPage from '@/pages/StudyListPage.vue';
+import StudyDetailPage from '@/pages/StudyDetailPage.vue';
+
 export const router = createRouter({
     history: createWebHistory(),
     routes: [
@@ -68,6 +71,18 @@ export const router = createRouter({
             path: '/recommendations',
             name: 'recommendations',
             component: RecommendationPage,
+            meta: { requiresAuth: true }
+        },
+        {
+            path: '/study',
+            name: 'study-list',
+            component: StudyListPage,
+            meta: { requiresAuth: true }
+        },
+        {
+            path: '/study/:studyId',
+            name: 'study-detail',
+            component: StudyDetailPage,
             meta: { requiresAuth: true }
         },
         {
