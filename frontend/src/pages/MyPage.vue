@@ -7,6 +7,16 @@
         :description="pageDescription"
       />
 
+      <nav class="settings-tab-nav" aria-label="설정 메뉴">
+        <RouterLink to="/mypage" :class="{ active: activeSection === 'account' }">내 계정</RouterLink>
+        <RouterLink to="/mypage/notion">노션 연동 관리</RouterLink>
+        <RouterLink to="/mypage/onboarding" :class="{ active: activeSection === 'onboarding' }">온보딩 정보</RouterLink>
+        <RouterLink to="/mypage/qna" :class="{ active: activeSection === 'qna' }">자주 묻는 질문</RouterLink>
+        <RouterLink to="/mypage/inquiry" :class="{ active: activeSection === 'inquiry' }">1:1 문의</RouterLink>
+        <RouterLink to="/mypage/partnership" :class="{ active: activeSection === 'partnership' }">제휴 문의</RouterLink>
+        <RouterLink to="/mypage/terms" :class="{ active: activeSection === 'terms' }">이용약관</RouterLink>
+      </nav>
+
       <section v-if="activeSection === 'account'" class="mypage-panel" aria-label="내 계정">
         <div class="section-heading">
           <div>
@@ -135,7 +145,10 @@
                   :data-testid="`profile-skill-remove-${skill}`"
                   @click="removePreferenceSkill(skill)"
                 >
-                  ×
+                  <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
                 </button>
               </span>
               <input

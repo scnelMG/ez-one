@@ -81,7 +81,7 @@
           />
         </div>
 
-        <p v-if="basketStore.status === 'loading' && !basketStore.hasJobs" class="basket-loading">공고 목록을 불러오는 중입니다.</p>
+        <SkeletonLoader v-if="basketStore.status === 'loading' && !basketStore.hasJobs" :lines="5" label="공고 목록을 불러오는 중" />
         <StatePanel
           v-else-if="basketStore.status === 'error' && !basketStore.hasJobs"
           id="basket-error"
@@ -116,7 +116,9 @@
               :data-testid="`priority-${job.id}`"
               @click="togglePriority(job.id)"
             >
-              ♥
+              <svg class="icon-heart" viewBox="0 0 24 24" width="16" height="16" :fill="isPriorityJob(job) ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+              </svg>
             </button>
             <RouterLink class="job-main-link company-cell" :to="`/workspaces/${job.workspaceId}`">
               <span class="company-logo-badge" aria-hidden="true">
@@ -193,7 +195,10 @@
               aria-label="공고 삭제"
               @click="archiveJob(job.id)"
             >
-              ×
+              <svg class="icon-close" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
             </button>
           </article>
 
@@ -307,6 +312,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import AppLayout from '@/shared/AppLayout.vue';
 import StatePanel from '@/shared/StatePanel.vue';
+import SkeletonLoader from '@/shared/SkeletonLoader.vue';
 import { isRecentWorkspace } from '@/features/basket/recentWorkspaces';
 import { useBasketStore } from '@/stores/basketStore';
 

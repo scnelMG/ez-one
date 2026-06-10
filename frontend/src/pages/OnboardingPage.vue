@@ -12,7 +12,12 @@
           <h2 id="onboarding-title">맞춤 공고 추천 정보 입력</h2>
           <p>입력한 정보로 나에게 맞는 공고를 추천해드려요.</p>
         </div>
-        <button class="icon-button" type="button" aria-label="온보딩 닫기" @click="skipOnboarding">×</button>
+        <button class="icon-button" type="button" aria-label="온보딩 닫기" @click="skipOnboarding">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
       </header>
 
       <div class="onboarding-modal-body">
@@ -93,7 +98,12 @@
           <div class="skill-input-shell">
             <span v-for="skill in form.skills" :key="skill" class="skill-token">
               {{ skill }}
-              <button type="button" :aria-label="`${skill} 삭제`" @click="removeSkill(skill)">×</button>
+              <button type="button" :aria-label="`${skill} 삭제`" @click="removeSkill(skill)">
+                <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
             </span>
             <input
               v-model="skillInput"

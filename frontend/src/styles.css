@@ -1538,6 +1538,8 @@ li {
 .auth-page {
   background:
     linear-gradient(180deg, rgba(109, 77, 255, 0.08), rgba(109, 77, 255, 0) 280px),
+    radial-gradient(at 0% 0%, rgba(109, 77, 255, 0.05) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(15, 143, 111, 0.03) 0px, transparent 50%),
     #f5f6fa;
 }
 
@@ -5985,18 +5987,18 @@ li {
 
 /* Final P1 polish: brand/profile, basket tables, and recommendation cards. */
 .brand-mark-final {
-  width: clamp(132px, 14vw, 220px);
+  width: clamp(100px, 11vw, 130px);
   height: auto;
-  max-height: 58px;
+  max-height: 36px;
   object-fit: contain;
 }
 
 .app-shell-nav .brand-lockup {
-  min-width: clamp(132px, 14vw, 220px);
+  min-width: clamp(110px, 12vw, 150px);
 }
 
 .landing-brand-hero img {
-  width: min(360px, 72vw);
+  width: min(240px, 58vw);
   height: auto;
   object-fit: contain;
 }
@@ -6006,7 +6008,7 @@ li {
 }
 
 .auth-logo {
-  width: min(280px, 76vw);
+  width: min(200px, 60vw);
   height: auto;
   object-fit: contain;
 }
@@ -6305,3 +6307,193 @@ li {
     text-align: left;
   }
 }
+
+/* === Design Polish: micro-interactions === */
+
+/* Page transition */
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition: opacity 0.18s ease;
+}
+.page-fade-enter-from,
+.page-fade-leave-to {
+  opacity: 0;
+}
+
+/* Card hover lift */
+.recommendation-card,
+.recommendation-thumbnail-card,
+.shell-card,
+.workspace-preview-card,
+.landing-feature-grid article,
+.landing-proof-strip article,
+.extension-copy-card,
+.extension-flow-cards div {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.recommendation-card:hover,
+.recommendation-thumbnail-card:hover,
+.shell-card:hover,
+.workspace-preview-card:hover,
+.landing-feature-grid article:hover,
+.landing-proof-strip article:hover,
+.extension-copy-card:hover,
+.extension-flow-cards div:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 44px rgba(17, 24, 39, 0.12);
+}
+
+/* Table row accent */
+.basket-data-row,
+.main-basket-row {
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+.basket-data-row:hover,
+.main-basket-row:hover {
+  background: #f5f3ff;
+  box-shadow: inset 3px 0 0 var(--blue);
+}
+
+/* Metric card hover */
+.main-metric-strip a {
+  transition: background 0.18s ease;
+}
+.main-metric-strip a:hover {
+  background: #f8f6ff;
+}
+
+/* Button press */
+.primary-button:active,
+.landing-primary:active,
+.ghost-button:active,
+.recommendation-save-button:active {
+  transform: scale(0.97);
+}
+
+/* Skeleton loader */
+.skeleton-loader {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+.skeleton-line {
+  height: 14px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #e8ecf4 25%, #f3f5fa 50%, #e8ecf4 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Toast notification */
+.toast-notification {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  border: 1px solid rgba(109, 77, 255, 0.22);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 20px 54px rgba(17, 24, 39, 0.18);
+  padding: 0 20px;
+  transform: translateX(-50%);
+  backdrop-filter: blur(12px);
+}
+.toast-notification.green {
+  border-color: rgba(15, 143, 111, 0.22);
+}
+.toast-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--blue);
+}
+.toast-notification.green .toast-dot {
+  background: var(--green);
+}
+.toast-notification p {
+  margin: 0;
+  color: #111827;
+  font-size: 0.88rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.toast-slide-enter-active {
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+.toast-slide-leave-active {
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+.toast-slide-enter-from {
+  opacity: 0;
+  transform: translate(-50%, 14px);
+}
+.toast-slide-leave-to {
+  opacity: 0;
+  transform: translate(-50%, 14px);
+}
+
+/* === Inline SVG styles === */
+.priority-heart svg,
+.delete-job-button svg,
+.icon-button svg,
+.skill-token button svg {
+  display: inline-block;
+  vertical-align: middle;
+  transition: transform 0.15s ease, fill 0.15s ease;
+}
+
+.priority-heart:hover svg {
+  transform: scale(1.15);
+}
+
+.delete-job-button:hover svg {
+  transform: rotate(90deg);
+}
+
+/* === Settings Page Tab Navigation === */
+.settings-tab-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  border-bottom: 1px solid var(--line-strong);
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+}
+
+.settings-tab-nav a {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--muted);
+  padding: 8px 14px;
+  border-radius: 8px;
+  transition: all 0.18s ease;
+}
+
+.settings-tab-nav a:hover {
+  background: var(--surface-soft);
+  color: var(--ink);
+}
+
+.settings-tab-nav a.active {
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
+/* Disabled Toggle Switch */
+.toggle-switch.disabled {
+  opacity: 0.45;
+  background: #cbd5e1;
+  color: #64748b;
+  cursor: not-allowed;
+  border-color: #cbd5e1;
+}
+

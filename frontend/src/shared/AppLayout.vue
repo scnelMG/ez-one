@@ -91,6 +91,7 @@
       </p>
       <RouterLink to="/mypage/terms">이용약관</RouterLink>
     </footer>
+    <ToastNotification />
   </div>
 </template>
 
@@ -101,6 +102,7 @@ import bellIconUrl from '@/assets/bell.svg';
 import logoUrl from '@/assets/ez-one-logo-final.png';
 import { authApi } from '@/features/auth/api/authApi';
 import { clearAuthSession, getCurrentUser, getRefreshToken } from '@/features/auth/session/authSession';
+import ToastNotification from './ToastNotification.vue';
 
 const router = useRouter();
 const isProfileMenuOpen = ref(false);

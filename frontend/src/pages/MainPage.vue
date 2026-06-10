@@ -36,9 +36,7 @@
           <RouterLink class="text-button" to="/basket?sort=deadline">전체 보기</RouterLink>
         </div>
 
-        <p v-if="basketStore.status === 'loading' && basketPreviewJobs.length === 0" class="basket-loading">
-          공고 목록을 불러오는 중입니다.
-        </p>
+        <SkeletonLoader v-if="basketStore.status === 'loading' && basketPreviewJobs.length === 0" :lines="4" label="공고 목록을 불러오는 중" />
         <StatePanel
           v-else-if="basketStore.status === 'error' && basketPreviewJobs.length === 0"
           id="main-basket-error"
@@ -72,7 +70,9 @@
               :data-testid="`main-priority-${job.id}`"
               @click="togglePriority(job.id)"
             >
-              ♥
+              <svg class="icon-heart" viewBox="0 0 24 24" width="16" height="16" :fill="isPriorityJob(job) ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+              </svg>
             </button>
             <RouterLink
               class="main-workspace-link company-cell"
@@ -119,7 +119,10 @@
               aria-label="공고 삭제"
               @click="archiveJob(job.id)"
             >
-              ×
+              <svg class="icon-close" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
             </button>
           </div>
         </div>
@@ -133,9 +136,7 @@
           </div>
           <RouterLink class="text-button" to="/recommendations">추천 더보기</RouterLink>
         </div>
-        <p v-if="recommendationStore.status === 'loading' && recommendationPreviewItems.length === 0" class="basket-loading">
-          추천 공고를 불러오는 중입니다.
-        </p>
+        <SkeletonLoader v-if="recommendationStore.status === 'loading' && recommendationPreviewItems.length === 0" :lines="3" label="추천 공고를 불러오는 중" />
         <StatePanel
           v-else-if="recommendationStore.status === 'error' && recommendationPreviewItems.length === 0"
           id="main-recommendation-error"
@@ -194,6 +195,7 @@ import { computed, onMounted, ref } from 'vue';
 import AppLayout from '@/shared/AppLayout.vue';
 import StatePanel from '@/shared/StatePanel.vue';
 import OnboardingPage from '@/pages/OnboardingPage.vue';
+import SkeletonLoader from '@/shared/SkeletonLoader.vue';
 import { requiresOnboarding } from '@/features/auth/session/authSession';
 import { isRecentWorkspace } from '@/features/basket/recentWorkspaces';
 import { useBasketStore } from '@/stores/basketStore';
