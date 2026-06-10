@@ -81,7 +81,7 @@
           />
         </div>
 
-        <p v-if="basketStore.status === 'loading' && !basketStore.hasJobs" class="basket-loading">공고 목록을 불러오는 중입니다.</p>
+        <SkeletonLoader v-if="basketStore.status === 'loading' && !basketStore.hasJobs" :lines="5" label="공고 목록을 불러오는 중" />
         <StatePanel
           v-else-if="basketStore.status === 'error' && !basketStore.hasJobs"
           id="basket-error"
@@ -116,7 +116,9 @@
               :data-testid="`priority-${job.id}`"
               @click="togglePriority(job.id)"
             >
-              ♥
+              <svg class="icon-heart" viewBox="0 0 24 24" width="16" height="16" :fill="isPriorityJob(job) ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+              </svg>
             </button>
             <RouterLink class="job-main-link company-cell" :to="`/workspaces/${job.workspaceId}`">
               <span class="company-logo-badge" aria-hidden="true">
@@ -193,7 +195,10 @@
               aria-label="공고 삭제"
               @click="archiveJob(job.id)"
             >
-              ×
+              <svg class="icon-close" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
             </button>
           </article>
 
@@ -305,8 +310,16 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import {
+  deadlineRank,
+  statusClass,
+  statusLabel,
+  normalizedSourceUrl,
+  companyInitial
+} from '@/shared/utils/jobUtils';
 import AppLayout from '@/shared/AppLayout.vue';
 import StatePanel from '@/shared/StatePanel.vue';
+import SkeletonLoader from '@/shared/SkeletonLoader.vue';
 import { isRecentWorkspace } from '@/features/basket/recentWorkspaces';
 import { useBasketStore } from '@/stores/basketStore';
 
@@ -318,7 +331,7 @@ const pageSize = 10;
 const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
 const today = startOfToday();
 const selectedMonthKey = ref(toMonthKey(today));
-const priorityJobIds = ref(new Set());
+const priorityJobIds = computed(() => basketStore.priorityJobIds);
 const openStatusJobId = ref(null);
 const statusOptions = [
     { value: 'NOT_STARTED', label: '지원 전' },
@@ -446,15 +459,6 @@ function deadlineDay(job) {
     const date = parseDeadlineDate(job);
     return date && toMonthKey(date) === selectedMonthKey.value ? date.getDate() : null;
 }
-function deadlineRank(job) {
-    const date = parseDeadlineDate(job);
-    if (date) {
-        return date.getTime();
-    }
-    const source = job.deadlineDate ?? job.deadlineLabel ?? '';
-    const dDay = source.match(/D-(\d+)/i);
-    return dDay ? Number(dDay[1]) : Number.MAX_SAFE_INTEGER;
-}
 function savedRank(job) {
     const rank = Number(job.id);
     return Number.isFinite(rank) ? rank : Number.MAX_SAFE_INTEGER;
@@ -473,13 +477,6 @@ function startOfToday() {
 }
 function toMonthKey(date) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-}
-function normalizedSourceUrl(sourceUrl) {
-    const trimmed = String(sourceUrl ?? '').trim();
-    if (!trimmed) {
-        return '#';
-    }
-    return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 }
 function daysUntilDeadline(job) {
     const date = parseDeadlineDate(job);
@@ -501,17 +498,6 @@ function isWeekend(day) {
     const weekDay = new Date(currentMonthDate.value.getFullYear(), currentMonthDate.value.getMonth(), day).getDay();
     return weekDay === 0 || weekDay === 6;
 }
-function statusClass(status) {
-    return {
-        'status-not-started': status === 'NOT_STARTED',
-        'status-in-progress': status === 'IN_PROGRESS',
-        'status-submitted': status === 'SUBMITTED',
-        'status-not-applied': status === 'NOT_APPLIED'
-    };
-}
-function statusLabel(status) {
-    return statusOptions.find((option) => option.value === status)?.label ?? '미지원';
-}
 function toggleStatusMenu(jobId) {
     openStatusJobId.value = openStatusJobId.value === jobId ? null : jobId;
 }
@@ -519,14 +505,7 @@ function isPriorityJob(job) {
     return priorityJobIds.value.has(job.id) || job.priority === true;
 }
 function togglePriority(jobId) {
-    const nextPriorityJobIds = new Set(priorityJobIds.value);
-    if (nextPriorityJobIds.has(jobId)) {
-        nextPriorityJobIds.delete(jobId);
-    }
-    else {
-        nextPriorityJobIds.add(jobId);
-    }
-    priorityJobIds.value = nextPriorityJobIds;
+    basketStore.togglePriority(jobId);
 }
 async function createManualJob() {
     await basketStore.createJob({
@@ -544,9 +523,6 @@ async function createManualJob() {
 function changeStatus(jobId, nextStatus) {
     openStatusJobId.value = null;
     void basketStore.updateStatus(jobId, nextStatus);
-}
-function companyInitial(companyName) {
-    return (companyName ?? '?').trim().charAt(0).toUpperCase() || '?';
 }
 function archiveJob(jobId) {
     const job = basketStore.jobs.find((basketJob) => basketJob.id === jobId);

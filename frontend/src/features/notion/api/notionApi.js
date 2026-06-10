@@ -22,6 +22,9 @@ export function createNotionApi(httpClient = defaultHttpClient) {
             });
             return unwrapApiData(response.data);
         },
+        async disconnect() {
+            await httpClient.delete('/api/integrations/notion');
+        },
         async listSyncLogs() {
             try {
                 const response = await httpClient.get('/api/integrations/notion/sync-logs', readConfig(httpClient));

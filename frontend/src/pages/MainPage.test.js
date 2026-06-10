@@ -10,7 +10,9 @@ import MainPage from './MainPage.vue';
 
 vi.mock('@/features/basket/api/basketApi', () => ({
     basketApi: {
-        listJobs: vi.fn()
+        listJobs: vi.fn(),
+        archiveJob: vi.fn(),
+        createJob: vi.fn()
     }
 }));
 
@@ -81,6 +83,21 @@ describe('MainPage', () => {
         localStorage.clear();
         vi.mocked(basketApi.listJobs).mockReset();
         vi.mocked(basketApi.listJobs).mockResolvedValue(basketJobs);
+        vi.mocked(basketApi.archiveJob).mockReset();
+        vi.mocked(basketApi.archiveJob).mockResolvedValue(undefined);
+        vi.mocked(basketApi.createJob).mockReset();
+        vi.mocked(basketApi.createJob).mockResolvedValue({
+            id: '201',
+            companyName: 'Line',
+            positionTitle: 'Frontend Engineer',
+            status: 'NOT_STARTED',
+            statusLabel: '지원 전',
+            deadlineLabel: '2026.06.28',
+            deadlineDate: '2026-06-28',
+            deadlineSoon: false,
+            workspaceId: '202',
+            sourceUrl: 'https://www.jasoseol.com/'
+        });
         vi.mocked(dashboardApi.getSummary).mockReset();
         vi.mocked(dashboardApi.getSummary).mockResolvedValue({
             summary: {
@@ -91,6 +108,7 @@ describe('MainPage', () => {
             },
             todayJobs: []
         });
+
         vi.mocked(profileApi.getUserProfile).mockReset();
         vi.mocked(profileApi.getUserProfile).mockResolvedValue({
             desiredRoles: [],
@@ -120,6 +138,7 @@ describe('MainPage', () => {
             companyName: '우리은행',
             positionTitle: '일반 (하계 체험형)'
         });
+        vi.stubGlobal('confirm', vi.fn(() => true));
     });
 
     it('renders the dashboard without the old rail or top filters', async () => {
@@ -175,9 +194,42 @@ describe('MainPage', () => {
         expect(wrapper.text()).not.toContain('상시회사');
         expect(wrapper.findAll('[data-testid="main-recommendation-logo"]')).toHaveLength(4);
 
+        vi.mocked(dashboardApi.getSummary).mockClear();
+        vi.mocked(basketApi.listJobs).mockClear();
+
         await wrapper.get('[data-testid="main-save-recommendation-r-1"]').trigger('click');
         await flushPromises();
         expect(recommendationApi.saveJob).toHaveBeenCalledWith('r-1');
+        expect(dashboardApi.getSummary).toHaveBeenCalled();
+        expect(basketApi.listJobs).toHaveBeenCalled();
+    });
+
+    it('JOB-008: prompts confirm and reloads summary stats after deleting job in basket preview', async () => {
+        vi.stubGlobal('confirm', vi.fn(() => true));
+        const wrapper = await mountMain();
+        vi.mocked(basketApi.archiveJob).mockClear();
+        vi.mocked(dashboardApi.getSummary).mockClear();
+
+        await wrapper.get('[data-testid="main-archive-101"]').trigger('click');
+        await flushPromises();
+
+        expect(window.confirm).toHaveBeenCalledWith('Naver Backend Engineer 공고를 삭제하시겠습니까?');
+        expect(basketApi.archiveJob).toHaveBeenCalledWith('101');
+        expect(dashboardApi.getSummary).toHaveBeenCalled();
+    });
+
+    it('JOB-008: does not delete job if confirm is rejected', async () => {
+        vi.stubGlobal('confirm', vi.fn(() => false));
+        const wrapper = await mountMain();
+        vi.mocked(basketApi.archiveJob).mockClear();
+        vi.mocked(dashboardApi.getSummary).mockClear();
+
+        await wrapper.get('[data-testid="main-archive-101"]').trigger('click');
+        await flushPromises();
+
+        expect(window.confirm).toHaveBeenCalled();
+        expect(basketApi.archiveJob).not.toHaveBeenCalled();
+        expect(dashboardApi.getSummary).not.toHaveBeenCalled();
     });
 
     it('opens onboarding only for first-login users', async () => {

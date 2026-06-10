@@ -22,9 +22,7 @@
           </div>
           <span>회사 로고와 지원자 작성 수를 함께 확인할 수 있습니다.</span>
         </div>
-        <p v-if="recommendationStore.status === 'loading' && sortedJobs.length === 0" class="recommendation-loading">
-          추천 공고를 불러오는 중입니다.
-        </p>
+        <SkeletonLoader v-if="recommendationStore.status === 'loading' && sortedJobs.length === 0" :lines="4" label="추천 공고를 불러오는 중" />
         <p v-else-if="recommendationStore.status === 'loading'" class="recommendation-refreshing" data-testid="recommendation-refreshing">
           추천 공고를 갱신하는 중입니다.
         </p>
@@ -107,6 +105,13 @@ import { useRecommendationStore } from '@/stores/recommendationStore';
 import AppLayout from '@/shared/AppLayout.vue';
 import PageHeader from '@/shared/PageHeader.vue';
 import StatePanel from '@/shared/StatePanel.vue';
+import SkeletonLoader from '@/shared/SkeletonLoader.vue';
+import { showToast } from '@/shared/useToast';
+import {
+  deadlineRank,
+  companyInitial,
+  formatParticipantCount
+} from '@/shared/utils/jobUtils';
 
 const recommendationStore = useRecommendationStore();
 
@@ -117,36 +122,16 @@ onMounted(() => {
 });
 
 function saveRecommendation(recommendationId) {
-  void recommendationStore.saveRecommendation(recommendationId);
+  void recommendationStore.saveRecommendation(recommendationId).then(() => {
+    if (recommendationStore.savedJob) {
+      showToast(`${recommendationStore.savedJob.companyName} 공고를 담았습니다`, { tone: 'green' });
+    }
+  });
 }
 
 function compareByDeadline(left, right) {
   return deadlineRank(left) - deadlineRank(right);
 }
 
-function deadlineRank(job) {
-  if (job.deadlineDate) {
-    const time = Date.parse(job.deadlineDate);
-    if (!Number.isNaN(time)) {
-      return time;
-    }
-  }
-  const dDay = /^D-(\d+)$/i.exec(job.deadlineLabel ?? '');
-  if (dDay) {
-    return Number(dDay[1]);
-  }
-  if (job.deadlineLabel === '오늘마감' || job.deadlineLabel === 'D-DAY') {
-    return 0;
-  }
-  return Number.MAX_SAFE_INTEGER;
-}
 
-function companyInitial(companyName) {
-  return (companyName ?? '?').trim().charAt(0).toUpperCase() || '?';
-}
-
-function formatParticipantCount(value) {
-  const count = Number(value);
-  return Number.isFinite(count) ? count.toLocaleString('ko-KR') : '0';
-}
 </script>

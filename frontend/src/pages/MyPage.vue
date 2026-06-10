@@ -7,6 +7,8 @@
         :description="pageDescription"
       />
 
+      <MyPageNav />
+
       <section v-if="activeSection === 'account'" class="mypage-panel" aria-label="내 계정">
         <div class="section-heading">
           <div>
@@ -20,7 +22,7 @@
             이름
             <input v-model="nickname" data-testid="nickname-input" maxlength="50" />
           </label>
-          <button class="icon-edit-button" type="button" aria-label="이름 수정">✎</button>
+          <button class="icon-edit-button" type="button" aria-label="이름 수정" @click="saveProfile">✎</button>
         </article>
 
         <article class="account-login-card">
@@ -42,8 +44,8 @@
         </article>
 
         <div class="account-actions">
-          <button class="ghost-button" type="button">로그아웃</button>
-          <button class="text-button danger" type="button">회원 탈퇴</button>
+          <button class="ghost-button" type="button" @click="handleLogout">로그아웃</button>
+          <button class="text-button danger" type="button" @click="handleWithdraw">회원 탈퇴</button>
           <button class="primary-button" type="button" data-testid="save-account-profile" @click="saveProfile">
             {{ saving ? '저장 중' : '저장' }}
           </button>
@@ -135,7 +137,10 @@
                   :data-testid="`profile-skill-remove-${skill}`"
                   @click="removePreferenceSkill(skill)"
                 >
-                  ×
+                  <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
                 </button>
               </span>
               <input
@@ -172,7 +177,7 @@
         </div>
         <div class="form-actions">
           <p v-if="preferenceStatusMessage" class="form-status" role="status">{{ preferenceStatusMessage }}</p>
-          <button class="ghost-button" type="button">취소</button>
+          <button class="ghost-button" type="button" @click="cancelPreferences">취소</button>
           <button class="primary-button" type="button" data-testid="save-onboarding-profile" @click="savePreferences">
             저장
           </button>
@@ -208,22 +213,25 @@
             <h2>1:1 문의 작성</h2>
           </div>
         </div>
-        <form class="support-form">
+        <form class="support-form" @submit.prevent="submitInquiry">
           <label>
             문의 유형
-            <select>
-              <option>계정 / 오류 / 기능 제안 / 기타</option>
+            <select v-model="inquiryForm.type">
+              <option value="ACCOUNT">계정</option>
+              <option value="ERROR">오류</option>
+              <option value="SUGGESTION">기능 제안</option>
+              <option value="ETC">기타</option>
             </select>
           </label>
           <label>
             제목
-            <input />
+            <input v-model="inquiryForm.title" required />
           </label>
           <label>
             내용
-            <textarea />
+            <textarea v-model="inquiryForm.body" required />
           </label>
-          <button class="primary-button" type="button">문의 접수</button>
+          <button class="primary-button" type="submit">문의 접수</button>
         </form>
         <div class="support-history">
           <strong>내 문의 내역</strong>
@@ -240,17 +248,22 @@
           </div>
           <small>영업일 기준 3일 내 회신</small>
         </div>
-        <form class="support-form">
-          <label>회사 / 단체명 <input /></label>
-          <label>담당자명 <input /></label>
-          <label>이메일 <input /></label>
-          <label>연락처 <input /></label>
+        <form class="support-form" @submit.prevent="submitPartnership">
+          <label>회사 / 단체명 <input v-model="partnershipForm.company" required /></label>
+          <label>담당자명 <input v-model="partnershipForm.contactName" required /></label>
+          <label>이메일 <input v-model="partnershipForm.email" type="email" required /></label>
+          <label>연락처 <input v-model="partnershipForm.phone" required /></label>
           <label>
             제휴 유형
-            <select><option>콘텐츠 제휴 / 채용 연계 / 기술 제휴 / 기타</option></select>
+            <select v-model="partnershipForm.type">
+              <option value="CONTENT">콘텐츠 제휴</option>
+              <option value="RECRUIT">채용 연계</option>
+              <option value="TECH">기술 제휴</option>
+              <option value="ETC">기타</option>
+            </select>
           </label>
-          <label>제안 내용 <textarea /></label>
-          <button class="primary-button" type="button">제휴 문의 보내기</button>
+          <label>제안 내용 <textarea v-model="partnershipForm.body" required /></label>
+          <button class="primary-button" type="submit">제휴 문의 보내기</button>
         </form>
       </section>
 
@@ -286,6 +299,7 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import AppLayout from '@/shared/AppLayout.vue';
 import PageHeader from '@/shared/PageHeader.vue';
+import MyPageNav from '@/shared/MyPageNav.vue';
 import { authApi } from '@/features/auth/api/authApi';
 import { getCurrentUser, saveCurrentUser } from '@/features/auth/session/authSession';
 import { useProfileStore } from '@/stores/profileStore';
@@ -310,6 +324,19 @@ const profileForm = reactive({
   ssafy: false
 });
 const skillInput = ref('');
+const inquiryForm = reactive({
+  type: 'ACCOUNT',
+  title: '',
+  body: ''
+});
+const partnershipForm = reactive({
+  company: '',
+  contactName: '',
+  email: '',
+  phone: '',
+  type: 'CONTENT',
+  body: ''
+});
 
 const pageCopy = {
   account: {
@@ -432,5 +459,53 @@ function removePreferenceSkill(skill) {
   if (index >= 0) {
     profileForm.skills.splice(index, 1);
   }
+}
+
+import { clearAuthSession, getRefreshToken } from '@/features/auth/session/authSession';
+import { useRouter } from 'vue-router';
+const router = useRouter();
+
+async function handleLogout() {
+  const refreshToken = getRefreshToken();
+  try {
+    if (refreshToken) {
+      await authApi.logout(refreshToken);
+    }
+  } finally {
+    clearAuthSession();
+    await router.push('/login');
+  }
+}
+
+async function handleWithdraw() {
+  if (!window.confirm('정말로 탈퇴하시겠습니까? 관련 데이터가 모두 영구 삭제됩니다.')) {
+    return;
+  }
+  try {
+    await authApi.withdrawCurrentUser();
+  } finally {
+    clearAuthSession();
+    await router.push('/login');
+  }
+}
+
+function cancelPreferences() {
+  syncProfileForm();
+  preferenceStatusMessage.value = '입력 내용이 초기화되었습니다.';
+}
+
+function submitInquiry() {
+  alert('1:1 문의가 접수되었습니다.');
+  inquiryForm.title = '';
+  inquiryForm.body = '';
+}
+
+function submitPartnership() {
+  alert('제휴 문의가 전송되었습니다.');
+  partnershipForm.company = '';
+  partnershipForm.contactName = '';
+  partnershipForm.email = '';
+  partnershipForm.phone = '';
+  partnershipForm.body = '';
 }
 </script>

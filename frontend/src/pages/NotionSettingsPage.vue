@@ -7,6 +7,8 @@
         description="내보내기가 아니라 계정 연동만으로 공고와 작성 자료를 자동 동기화합니다."
       />
 
+      <MyPageNav />
+
       <StatePanel
         v-if="notionStore.status === 'error'"
         id="notion-error"
@@ -24,7 +26,8 @@
           <button
             class="ghost-button danger"
             type="button"
-            :disabled="notionStore.status === 'saving'"
+            :disabled="notionStore.status === 'saving' || !notionStore.connection?.connected"
+            @click="disconnectNotion"
           >
             연결 해제
           </button>
@@ -66,21 +69,23 @@
               <strong>공고 정보</strong>
               <small>공고 관리 데이터베이스로 동기화</small>
             </div>
-            <span class="toggle-switch active">켜짐</span>
+            <span class="toggle-switch" :class="{ active: notionStore.connection?.syncEnabled }">
+              {{ notionStore.connection?.syncEnabled ? '켜짐' : '꺼짐' }}
+            </span>
           </div>
           <div class="sync-row">
             <div>
               <strong>자소서 · 도화지</strong>
-              <small>각 공고의 노션 페이지 안에 중첩</small>
+              <small>각 공고의 노션 페이지 안에 중첩 (P2 기능)</small>
             </div>
-            <span class="toggle-switch active">켜짐</span>
+            <span class="toggle-switch disabled">꺼짐</span>
           </div>
           <div class="sync-row">
             <div>
               <strong>과거 지원 내역</strong>
-              <small>지원 결과와 기업활동 기록</small>
+              <small>지원 결과와 기업활동 기록 (P2 기능)</small>
             </div>
-            <span class="toggle-switch active">켜짐</span>
+            <span class="toggle-switch disabled">꺼짐</span>
           </div>
           <label class="sync-location">
             대상 위치
@@ -129,9 +134,15 @@ import { useNotionStore } from '@/stores/notionStore';
 import AppLayout from '@/shared/AppLayout.vue';
 import PageHeader from '@/shared/PageHeader.vue';
 import StatePanel from '@/shared/StatePanel.vue';
+import MyPageNav from '@/shared/MyPageNav.vue';
 
 const notionStore = useNotionStore();
-const loginEmail = computed(() => getCurrentUser()?.email ?? 'hong.gildong@gmail.com');
+const loginEmail = computed(() => getCurrentUser()?.email ?? '로그인 정보 없음');
+function disconnectNotion() {
+  if (window.confirm('Notion 연동을 해제하시겠습니까?')) {
+    void notionStore.disconnectNotion();
+  }
+}
 const connectionLabel = computed(() => {
   if (notionStore.status === 'saving') return '연결 중';
   if (notionStore.connection?.connected) return '연결됨';

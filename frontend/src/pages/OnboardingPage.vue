@@ -12,7 +12,12 @@
           <h2 id="onboarding-title">맞춤 공고 추천 정보 입력</h2>
           <p>입력한 정보로 나에게 맞는 공고를 추천해드려요.</p>
         </div>
-        <button class="icon-button" type="button" aria-label="온보딩 닫기" @click="skipOnboarding">×</button>
+        <button class="icon-button" type="button" aria-label="온보딩 닫기" @click="skipOnboarding">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
       </header>
 
       <div class="onboarding-modal-body">
@@ -93,7 +98,12 @@
           <div class="skill-input-shell">
             <span v-for="skill in form.skills" :key="skill" class="skill-token">
               {{ skill }}
-              <button type="button" :aria-label="`${skill} 삭제`" @click="removeSkill(skill)">×</button>
+              <button type="button" :aria-label="`${skill} 삭제`" @click="removeSkill(skill)">
+                <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
             </span>
             <input
               v-model="skillInput"
@@ -138,9 +148,11 @@
 import StatePanel from '@/shared/StatePanel.vue';
 import { onMounted, reactive, ref } from 'vue';
 import { useProfileStore } from '@/stores/profileStore';
+import { useBasketStore } from '@/stores/basketStore';
 
 const emit = defineEmits(['completed']);
 const profileStore = useProfileStore();
+const basketStore = useBasketStore();
 const roleOptions = ['프론트엔드', '백엔드', '데이터 엔지니어', 'AI/ML', '모바일', 'DevOps', 'PM', '디자인', 'QA', '기타'];
 const companyTypeOptions = ['대기업', '공공기관', '중견기업', '중소기업', '스타트업', '기타'];
 const industryOptions = ['IT/플랫폼', '제조', '금융', '커머스', '게임', '바이오/헬스', '미디어', '기타'];
@@ -155,9 +167,22 @@ const form = reactive({
 });
 const skillInput = ref('');
 
-onMounted(() => {
-    void profileStore.loadProfile();
+onMounted(async () => {
+    await profileStore.loadProfile();
+    if (profileStore.profile) {
+        const profile = profileStore.profile;
+        form.desiredRoles = selectedOrDefault(profile.desiredRoles, roleOptions);
+        form.companyTypes = selectedOrDefault(profile.companyTypes, companyTypeOptions);
+        form.industries = selectedOrDefault(profile.industries, industryOptions);
+        form.regions = selectedOrDefault(profile.regions, regionOptions);
+        form.skills = [...(profile.skills ?? [])];
+        form.ssafy = profile.ssafy ?? false;
+    }
 });
+
+function selectedOrDefault(values, options) {
+    return Array.isArray(values) && values.length > 0 ? [...values] : [options[0]];
+}
 
 function toggleListValue(values, value) {
     const index = values.indexOf(value);
@@ -183,6 +208,34 @@ function removeSkill(skill) {
     }
 }
 
+async function seedDummyJobs() {
+    try {
+        await basketStore.createJob({
+            companyName: '네이버',
+            positionTitle: 'Backend Engineer',
+            deadlineLabel: '2026.06.30',
+            sourceUrl: 'https://recruit.navercorp.com/',
+            savedSource: 'MANUAL'
+        });
+        await basketStore.createJob({
+            companyName: '카카오페이',
+            positionTitle: 'Server Developer',
+            deadlineLabel: 'D-5',
+            sourceUrl: 'https://careers.kakao.com/jobs/S-4714',
+            savedSource: 'MANUAL'
+        });
+        await basketStore.createJob({
+            companyName: '당근',
+            positionTitle: 'Product Engineer',
+            deadlineLabel: 'D-9',
+            sourceUrl: 'https://about.daangn.com/jobs/software-engineer-backend/',
+            savedSource: 'MANUAL'
+        });
+    } catch (e) {
+        console.error('Failed to seed dummy jobs', e);
+    }
+}
+
 async function saveOnboarding() {
     await profileStore.saveProfile({
         desiredRoles: form.desiredRoles,
@@ -193,6 +246,7 @@ async function saveOnboarding() {
         ssafy: form.ssafy
     });
     if (profileStore.status === 'ready') {
+        await seedDummyJobs();
         emit('completed');
     }
 }
@@ -207,6 +261,7 @@ async function skipOnboarding() {
         ssafy: false
     });
     if (profileStore.status === 'ready') {
+        await seedDummyJobs();
         emit('completed');
     }
 }

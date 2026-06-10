@@ -34,6 +34,9 @@ export function createAuthApi(httpClient = defaultHttpClient) {
         async updateCurrentUser(request) {
             const response = await httpClient.patch('/api/me', request);
             return response.data.data;
+        },
+        async withdrawCurrentUser() {
+            await httpClient.delete('/api/profile');
         }
     };
 }

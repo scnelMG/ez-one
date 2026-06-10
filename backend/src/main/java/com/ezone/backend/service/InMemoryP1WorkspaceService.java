@@ -454,7 +454,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
                 9003L,
                 "토스",
                 "Frontend Developer",
-                "상시",
+                "2026.06.28",
                 "https://www.wanted.co.kr/wd/204081",
                 "https://www.google.com/s2/favicons?domain=toss.im&sz=128"
             ),
@@ -462,7 +462,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
                 9001L,
                 "서브원",
                 "Frontend Developer",
-                "상시",
+                "2026.06.25",
                 "https://www.wanted.co.kr/wd/355373",
                 "https://www.google.com/s2/favicons?domain=serveone.co.kr&sz=128"
             ),
@@ -470,7 +470,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
                 9002L,
                 "퍼플독",
                 "시니어 Java 백엔드 엔지니어 (신규서비스)",
-                "상시",
+                "2026.06.24",
                 "https://www.wanted.co.kr/wd/101761",
                 "https://www.google.com/s2/favicons?domain=purpledog.co.kr&sz=128"
             ),
@@ -478,7 +478,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
                 9004L,
                 "플랜핏",
                 "Frontend Developer",
-                "상시",
+                "2026.06.30",
                 "https://www.wanted.co.kr/wd/279145",
                 "https://www.google.com/s2/favicons?domain=planfit.ai&sz=128"
             )

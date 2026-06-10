@@ -7,8 +7,22 @@ export const useBasketStore = defineStore('basket', () => {
     const jobs = ref([]);
     const activeJob = ref(null);
     const errorMessage = ref('');
+    const priorityJobIds = ref(new Set(JSON.parse(localStorage.getItem('priorityJobIds') ?? '[]')));
     const hasJobs = computed(() => jobs.value.length > 0);
     const deadlineSoonCount = computed(() => jobs.value.filter(isDeadlineWithinWeek).length);
+    
+    function togglePriority(jobId) {
+        const nextSet = new Set(priorityJobIds.value);
+        if (nextSet.has(jobId)) {
+            nextSet.delete(jobId);
+        }
+        else {
+            nextSet.add(jobId);
+        }
+        priorityJobIds.value = nextSet;
+        localStorage.setItem('priorityJobIds', JSON.stringify([...nextSet]));
+    }
+
     async function loadJobs(filterStatus) {
         status.value = 'loading';
         errorMessage.value = '';
@@ -104,8 +118,10 @@ export const useBasketStore = defineStore('basket', () => {
         jobs,
         activeJob,
         errorMessage,
+        priorityJobIds,
         hasJobs,
         deadlineSoonCount,
+        togglePriority,
         loadJobs,
         createJob,
         loadJob,

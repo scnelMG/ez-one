@@ -22,6 +22,12 @@ defaultHttpClient.interceptors.response.use((response) => response, async (error
     const refreshToken = getRefreshToken();
     if (!refreshToken) {
         clearAuthSession();
+        try {
+            const { router } = await import('@/router');
+            void router.push('/login');
+        } catch (routerError) {
+            window.location.href = '/login';
+        }
         throw error;
     }
     try {
@@ -36,6 +42,12 @@ defaultHttpClient.interceptors.response.use((response) => response, async (error
     }
     catch (refreshError) {
         clearAuthSession();
+        try {
+            const { router } = await import('@/router');
+            void router.push('/login');
+        } catch (routerError) {
+            window.location.href = '/login';
+        }
         throw refreshError;
     }
 });
