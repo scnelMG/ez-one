@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ezone.backend.mapper.StudyMapper">
+
+    <insert id="insertStudyGroup" parameterType="com.ezone.backend.domain.persistence.StudyGroupRow">
+        INSERT INTO study_group (id, name, description, created_by, created_at, updated_at)
+        VALUES (#{id}, #{name}, #{description}, #{createdBy}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <select id="findStudyGroupById" resultType="com.ezone.backend.domain.persistence.StudyGroupRow">
+        SELECT * FROM study_group WHERE id = #{id}
+    </select>
+
+    <select id="findStudyGroupsByUserEmail" resultType="com.ezone.backend.domain.persistence.StudyGroupRow">
+        SELECT g.*
+        FROM study_group g
+        JOIN study_member m ON g.id = m.study_id
+        WHERE m.user_email = #{userEmail}
+    </select>
+
+    <insert id="insertStudyMember" parameterType="com.ezone.backend.domain.persistence.StudyMemberRow">
+        INSERT INTO study_member (id, study_id, user_email, role, joined_at)
+        VALUES (#{id}, #{studyId}, #{userEmail}, #{role}, #{joinedAt})
+    </insert>
+
+    <select id="findMembersByStudyId" resultType="com.ezone.backend.domain.persistence.StudyMemberRow">
+        SELECT * FROM study_member WHERE study_id = #{studyId}
+    </select>
+
+    <insert id="insertStudyInvite" parameterType="com.ezone.backend.domain.persistence.StudyInviteRow">
+        INSERT INTO study_invite (id, study_id, inviter_email, invitee_email, status, invited_at)
+        VALUES (#{id}, #{studyId}, #{inviterEmail}, #{inviteeEmail}, #{status}, #{invitedAt})
+    </insert>
+
+    <insert id="insertSharedEssay" parameterType="com.ezone.backend.domain.persistence.SharedEssayRow">
+        INSERT INTO shared_essay (id, study_id, user_email, workspace_id, version_id, shared_at)
+        VALUES (#{id}, #{studyId}, #{userEmail}, #{workspaceId}, #{versionId}, #{sharedAt})
+    </insert>
+
+    <select id="findSharedEssaysByStudyId" resultType="com.ezone.backend.domain.persistence.SharedEssayRow">
+        SELECT * FROM shared_essay WHERE study_id = #{studyId}
+    </select>
+
+    <insert id="insertEssayFeedback" parameterType="com.ezone.backend.domain.persistence.EssayFeedbackRow">
+        INSERT INTO essay_feedback (id, shared_essay_id, author_email, content, created_at)
+        VALUES (#{id}, #{sharedEssayId}, #{authorEmail}, #{content}, #{createdAt})
+    </insert>
+
+    <select id="findFeedbackBySharedEssayId" resultType="com.ezone.backend.domain.persistence.EssayFeedbackRow">
+        SELECT * FROM essay_feedback WHERE shared_essay_id = #{sharedEssayId}
+    </select>
+
+    <insert id="insertSharedJob" parameterType="com.ezone.backend.domain.persistence.SharedJobRow">
+        INSERT INTO shared_job (id, study_id, recommender_email, company_name, position_title, deadline_label, source_url, recommended_at)
+        VALUES (#{id}, #{studyId}, #{recommenderEmail}, #{companyName}, #{positionTitle}, #{deadlineLabel}, #{sourceUrl}, #{recommendedAt})
+    </insert>
+
+    <select id="findSharedJobsByStudyId" resultType="com.ezone.backend.domain.persistence.SharedJobRow">
+        SELECT * FROM shared_job WHERE study_id = #{studyId}
+    </select>
+
+</mapper>

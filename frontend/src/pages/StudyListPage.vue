@@ -14,19 +14,32 @@
       <section class="study-dashboard">
         <article class="dashboard-section">
           <h2>참여 중인 스터디</h2>
-          <div class="study-grid">
-            <!-- 스터디 카드 목록 (예시) -->
-            <div class="study-card" v-for="i in 2" :key="i" @click="goToStudy(i)">
-              <h3>프론트엔드 취준 스터디 {{ i }}</h3>
-              <p>멤버: {{ i + 2 }}명</p>
+          <div v-if="studyStore.status === 'loading'" class="loading-state">불러오는 중...</div>
+          <div v-else-if="studyStore.myStudies.length === 0" class="empty-state">
+            아직 참여 중인 스터디가 없습니다. 새 스터디를 만들어 보세요!
+          </div>
+          <div v-else class="study-grid">
+            <div class="study-card" v-for="study in studyStore.myStudies" :key="study.id" @click="goToStudy(study.id)">
+              <h3>{{ study.name }}</h3>
+              <p>{{ study.description }}</p>
+              <p class="member-count">멤버: {{ study.memberCount || 1 }}명</p>
             </div>
           </div>
         </article>
 
         <article class="dashboard-section">
           <h2>받은 초대</h2>
-          <div class="invite-list">
-            <p class="empty-state">새로운 초대가 없습니다.</p>
+          <div v-if="studyStore.myInvites.length === 0" class="empty-state">
+            새로운 초대가 없습니다.
+          </div>
+          <div v-else class="invite-list">
+            <div class="invite-card" v-for="invite in studyStore.myInvites" :key="invite.id">
+              <p><strong>{{ invite.inviterEmail }}</strong>님이 <strong>{{ invite.studyName }}</strong> 스터디에 초대했습니다.</p>
+              <div class="invite-actions">
+                <button class="primary-button" @click="respondInvite(invite.id, true)">수락</button>
+                <button class="ghost-button" @click="respondInvite(invite.id, false)">거절</button>
+              </div>
+            </div>
           </div>
         </article>
       </section>
@@ -35,18 +48,40 @@
 </template>
 
 <script setup>
+import { onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import AppLayout from '@/shared/AppLayout.vue';
+import { useStudyStore } from '@/stores/studyStore';
 
 const router = useRouter();
+const studyStore = useStudyStore();
 
-function openCreateModal() {
-  // 스터디 생성 모달 로직
-  alert('스터디 생성 모달 준비 중');
+onMounted(() => {
+  studyStore.loadMyStudies();
+});
+
+async function openCreateModal() {
+  const name = prompt('스터디 이름을 입력하세요:');
+  if (!name) return;
+  const desc = prompt('스터디 설명을 입력하세요 (선택):') || '';
+  try {
+    await studyStore.createStudy(name, desc);
+    alert('스터디가 생성되었습니다!');
+  } catch (e) {
+    alert(e.message);
+  }
 }
 
 function goToStudy(studyId) {
   router.push(`/study/${studyId}`);
+}
+
+async function respondInvite(inviteId, accept) {
+  try {
+    await studyStore.respondToInvite(inviteId, accept);
+  } catch (e) {
+    alert(e.message);
+  }
 }
 </script>
 
@@ -86,7 +121,30 @@ function goToStudy(studyId) {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
-.empty-state {
+.member-count {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-top: 12px;
+}
+.invite-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.invite-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.invite-actions {
+  display: flex;
+  gap: 8px;
+}
+.empty-state, .loading-state {
   color: var(--text-secondary);
   font-size: 0.95rem;
   padding: 20px 0;
