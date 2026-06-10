@@ -9,6 +9,15 @@ public record CompanyDetailsResponse(
     String logoUrl,
     BigDecimal rating,
     Integer startingSalary,
-    String financialStatus
+    String financialStatus,
+    String industry,
+    Integer employeeCount,
+    String foundedAt,
+    Long capital,
+    Long revenue,
+    String representative,
+    String homepage,
+    String business,
+    String address
 ) {
 }

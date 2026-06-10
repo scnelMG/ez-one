@@ -47,6 +47,15 @@
     <result property="companyRating" column="company_rating"/>
     <result property="companyStartingSalary" column="company_starting_salary"/>
     <result property="companyFinancialStatus" column="company_financial_status"/>
+    <result property="companyIndustry" column="company_industry"/>
+    <result property="companyEmployeeCount" column="company_employee_count"/>
+    <result property="companyFoundedAt" column="company_founded_at"/>
+    <result property="companyCapital" column="company_capital"/>
+    <result property="companyRevenue" column="company_revenue"/>
+    <result property="companyRepresentative" column="company_representative"/>
+    <result property="companyHomepage" column="company_homepage"/>
+    <result property="companyBusiness" column="company_business"/>
+    <result property="companyAddress" column="company_address"/>
   </resultMap>
 
   <resultMap id="questionRowMap" type="com.ezone.backend.domain.persistence.EssayQuestionRow">
@@ -281,11 +290,18 @@
            j.deadline_label, bj.application_status, j.url AS source_url,
            c.domain AS company_domain, c.company_type, c.size AS company_size, c.logo_url AS company_logo_url,
            c.rating AS company_rating, c.starting_salary AS company_starting_salary,
-           'unverified' AS company_financial_status
+           IF(cp.id IS NULL, 'unverified', 'collected') AS company_financial_status,
+           cp.industry AS company_industry, cp.employee_count AS company_employee_count,
+           DATE_FORMAT(cp.founded_at, '%Y.%m.%d') AS company_founded_at,
+           cp.capital_amount AS company_capital, cp.revenue_amount AS company_revenue,
+           cp.ceo_name AS company_representative,
+           COALESCE(cp.homepage_url, c.domain) AS company_homepage,
+           cp.profile_summary AS company_business, cp.address AS company_address
     FROM workspaces w
     JOIN basket_jobs bj ON bj.id = w.basket_job_id
     JOIN jobs j ON j.id = bj.job_id
     JOIN companies c ON c.id = j.company_id
+    LEFT JOIN company_profiles cp ON cp.company_id = c.id
     WHERE w.user_id = #{userId}
       AND w.id = #{workspaceId}
       AND bj.deleted_at IS NULL

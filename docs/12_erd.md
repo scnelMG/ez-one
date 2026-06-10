@@ -17,6 +17,10 @@ erDiagram
     users ||--|| notion_sync_settings : configures
     users ||--o{ sync_logs : records
     companies ||--o{ jobs : posts
+    companies ||--|| company_profiles : has
+    companies ||--o{ company_profile_sources : cites
+    companies ||--o{ company_financial_snapshots : reports
+    companies ||--o{ company_raw_documents : stores
     jobs ||--o{ basket_jobs : saved_as
     basket_jobs ||--|| workspaces : creates
     workspaces ||--o{ essay_questions : has
@@ -33,6 +37,10 @@ erDiagram
 | `user_sessions` | id, user_id, refresh_token_hash, expires_at, revoked_at, created_at | refresh token hash 저장. 원문 token 저장 금지 |
 | `user_profiles` | user_id, desired_roles, company_types, industries, regions, skills, is_ssafy | 온보딩/추천 기준 |
 | `companies` | id, name, domain, company_type, size, rating, starting_salary | 기업 정보. P1은 nullable 허용 |
+| `company_profiles` | id, company_id, corp_code, stock_code, industry, ceo_name, founded_at, employee_count, homepage_url, address, profile_summary | 워크스페이스 표시용 기업 상세 정보 |
+| `company_profile_sources` | id, company_id, source_type, source_name, source_url, license_note, collected_at | 기업 상세 정보 출처와 라이선스 메모 |
+| `company_financial_snapshots` | id, company_id, fiscal_year, statement_type, revenue_amount, operating_income_amount, net_income_amount, total_assets_amount | DART/공공데이터 기반 연도별 재무 요약 |
+| `company_raw_documents` | id, company_id, source_type, source_document_id, document_title, source_url, payload_json, payload_text | 원천 API 응답 또는 검수용 원문 저장 |
 | `jobs` | id, company_id, title, role, deadline_at, source, url | 원본 공고 |
 | `basket_jobs` | id, user_id, job_id, application_status, status_updated_at, status_reason, saved_source, deleted_at | 사용자가 저장한 공고 |
 | `workspaces` | id, user_id, basket_job_id, created_at, updated_at | 공고 저장 시 자동 생성 |

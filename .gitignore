@@ -33,6 +33,7 @@ extension/*.zip
 # Test / Coverage
 coverage/
 .nyc_output/
+__pycache__/
 
 # Local files
 *.local

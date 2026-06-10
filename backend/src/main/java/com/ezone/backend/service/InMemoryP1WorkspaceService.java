@@ -666,7 +666,16 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
                 record.companyLogoUrl(),
                 null,
                 null,
-                CompanyDetailDefaults.UNVERIFIED
+                CompanyDetailDefaults.UNVERIFIED,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                CompanyDetailDefaults.domainFromUrl(record.sourceUrl()),
+                null,
+                null
             ),
             record.questions().stream().map(this::toQuestionResponse).toList(),
             listReferences(record.userId(), record.id())
