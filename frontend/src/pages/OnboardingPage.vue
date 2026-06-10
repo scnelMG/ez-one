@@ -148,9 +148,11 @@
 import StatePanel from '@/shared/StatePanel.vue';
 import { onMounted, reactive, ref } from 'vue';
 import { useProfileStore } from '@/stores/profileStore';
+import { useBasketStore } from '@/stores/basketStore';
 
 const emit = defineEmits(['completed']);
 const profileStore = useProfileStore();
+const basketStore = useBasketStore();
 const roleOptions = ['프론트엔드', '백엔드', '데이터 엔지니어', 'AI/ML', '모바일', 'DevOps', 'PM', '디자인', 'QA', '기타'];
 const companyTypeOptions = ['대기업', '공공기관', '중견기업', '중소기업', '스타트업', '기타'];
 const industryOptions = ['IT/플랫폼', '제조', '금융', '커머스', '게임', '바이오/헬스', '미디어', '기타'];
@@ -206,6 +208,34 @@ function removeSkill(skill) {
     }
 }
 
+async function seedDummyJobs() {
+    try {
+        await basketStore.createJob({
+            companyName: '네이버',
+            positionTitle: 'Backend Engineer',
+            deadlineLabel: '2026.06.30',
+            sourceUrl: 'https://recruit.navercorp.com/',
+            savedSource: 'MANUAL'
+        });
+        await basketStore.createJob({
+            companyName: '카카오페이',
+            positionTitle: 'Server Developer',
+            deadlineLabel: 'D-5',
+            sourceUrl: 'https://careers.kakao.com/jobs/S-4714',
+            savedSource: 'MANUAL'
+        });
+        await basketStore.createJob({
+            companyName: '당근',
+            positionTitle: 'Product Engineer',
+            deadlineLabel: 'D-9',
+            sourceUrl: 'https://about.daangn.com/jobs/software-engineer-backend/',
+            savedSource: 'MANUAL'
+        });
+    } catch (e) {
+        console.error('Failed to seed dummy jobs', e);
+    }
+}
+
 async function saveOnboarding() {
     await profileStore.saveProfile({
         desiredRoles: form.desiredRoles,
@@ -216,6 +246,7 @@ async function saveOnboarding() {
         ssafy: form.ssafy
     });
     if (profileStore.status === 'ready') {
+        await seedDummyJobs();
         emit('completed');
     }
 }
@@ -230,6 +261,7 @@ async function skipOnboarding() {
         ssafy: false
     });
     if (profileStore.status === 'ready') {
+        await seedDummyJobs();
         emit('completed');
     }
 }

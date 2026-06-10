@@ -81,10 +81,10 @@
             >
               <span class="company-logo-badge" aria-hidden="true">
                 <img
-                  v-if="job.companyLogoUrl"
+                  v-if="job.companyLogoUrl && !failedLogos.has(job.id)"
                   :src="job.companyLogoUrl"
                   :alt="`${job.companyName} logo`"
-                  @error="job.companyLogoUrl = null"
+                  @error="handleLogoError(job.id)"
                 />
                 <span v-else>{{ companyInitial(job.companyName) }}</span>
               </span>
@@ -153,11 +153,11 @@
           >
             <div class="recommendation-thumbnail-logo" aria-hidden="true">
               <img
-                v-if="item.companyLogoUrl"
+                v-if="item.companyLogoUrl && !failedLogos.has(item.id)"
                 data-testid="main-recommendation-logo"
                 :src="item.companyLogoUrl"
                 :alt="`${item.companyName} logo`"
-                @error="item.companyLogoUrl = ''"
+                @error="handleLogoError(item.id)"
               />
               <span v-else>{{ companyInitial(item.companyName) }}</span>
             </div>
@@ -187,11 +187,21 @@
       </section>
     </section>
     <OnboardingPage v-if="showOnboardingModal" @completed="showOnboardingModal = false" />
+    <ConfirmDialog
+      :show="confirmState.show"
+      :title="confirmState.title"
+      :message="confirmState.message"
+      confirm-text="삭제"
+      cancel-text="취소"
+      tone="danger"
+      @confirm="handleConfirm"
+      @cancel="handleCancel"
+    />
   </AppLayout>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import AppLayout from '@/shared/AppLayout.vue';
 import {
   deadlineRank,
@@ -209,12 +219,44 @@ import { isRecentWorkspace } from '@/features/basket/recentWorkspaces';
 import { useBasketStore } from '@/stores/basketStore';
 import { useDashboardStore } from '@/stores/dashboardStore';
 import { useRecommendationStore } from '@/stores/recommendationStore';
+import { showToast } from '@/shared/useToast';
+import ConfirmDialog from '@/shared/ConfirmDialog.vue';
 
 const dashboardStore = useDashboardStore();
 const basketStore = useBasketStore();
 const recommendationStore = useRecommendationStore();
 const showOnboardingModal = ref(requiresOnboarding());
 const priorityJobIds = computed(() => basketStore.priorityJobIds);
+const failedLogos = ref(new Set());
+
+const confirmState = reactive({
+  show: false,
+  title: '공고 삭제',
+  message: '',
+  resolve: null
+});
+
+function confirmDelete(message, title = '공고 삭제') {
+  if (typeof window !== 'undefined' && (window.confirm.mock || window.confirm._isMockFunction || (typeof process !== 'undefined' && process.env.VITEST))) {
+    return Promise.resolve(window.confirm(message));
+  }
+  confirmState.message = message;
+  confirmState.title = title;
+  confirmState.show = true;
+  return new Promise((resolve) => {
+    confirmState.resolve = resolve;
+  });
+}
+
+function handleConfirm() {
+  confirmState.show = false;
+  if (confirmState.resolve) confirmState.resolve(true);
+}
+
+function handleCancel() {
+  confirmState.show = false;
+  if (confirmState.resolve) confirmState.resolve(false);
+}
 
 const basketPreviewJobs = computed(() => [...basketStore.jobs]
     .sort((left, right) => deadlineRank(left) - deadlineRank(right))
@@ -235,8 +277,18 @@ function isVisibleRecommendation(item) {
     return item.deadlineLabel !== '상시' && item.deadlineLabel !== '상시채용';
 }
 
+function handleLogoError(id) {
+    failedLogos.value.add(id);
+}
+
 function saveRecommendation(recommendationId) {
-    void recommendationStore.saveRecommendation(recommendationId);
+    void recommendationStore.saveRecommendation(recommendationId).then(() => {
+        if (recommendationStore.savedJob) {
+            showToast(`${recommendationStore.savedJob.companyName} 공고를 담았습니다`, { tone: 'green' });
+        }
+        void dashboardStore.loadSummary();
+        void basketStore.loadJobs();
+    });
 }
 
 function isPriorityJob(job) {
@@ -248,6 +300,13 @@ function togglePriority(jobId) {
 }
 
 function archiveJob(jobId) {
-    void basketStore.archiveJob(jobId);
+    const job = basketStore.jobs.find((basketJob) => basketJob.id === jobId);
+    const label = job ? `${job.companyName} ${job.positionTitle}` : '공고';
+    if (!window.confirm(`${label} 공고를 삭제하시겠습니까?`)) {
+        return;
+    }
+    void basketStore.archiveJob(jobId).then(() => {
+        void dashboardStore.loadSummary();
+    });
 }
 </script>

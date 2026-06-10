@@ -4,16 +4,11 @@ import { resolveCompanyLogoUrl } from '@/features/jobs/companyLogo';
 export function createBasketApi(httpClient = defaultHttpClient) {
     return {
         async listJobs(status) {
-            try {
-                const response = await httpClient.get('/api/basket/jobs', {
-                    params: status ? { status: toBackendStatus(status) } : undefined,
-                    ...readConfig(httpClient)
-                });
-                return unwrapApiData(response.data).map(toBasketJob);
-            }
-            catch {
-                return status ? mockBasketJobs.filter((job) => job.status === status) : mockBasketJobs;
-            }
+            const response = await httpClient.get('/api/basket/jobs', {
+                params: status ? { status: toBackendStatus(status) } : undefined,
+                ...readConfig(httpClient)
+            });
+            return unwrapApiData(response.data).map(toBasketJob);
         },
         async createJob(payload) {
             const response = await httpClient.post('/api/basket/jobs', payload);
