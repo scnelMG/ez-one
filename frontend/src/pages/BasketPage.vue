@@ -310,6 +310,13 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import {
+  deadlineRank,
+  statusClass,
+  statusLabel,
+  normalizedSourceUrl,
+  companyInitial
+} from '@/shared/utils/jobUtils';
 import AppLayout from '@/shared/AppLayout.vue';
 import StatePanel from '@/shared/StatePanel.vue';
 import SkeletonLoader from '@/shared/SkeletonLoader.vue';
@@ -324,7 +331,7 @@ const pageSize = 10;
 const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
 const today = startOfToday();
 const selectedMonthKey = ref(toMonthKey(today));
-const priorityJobIds = ref(new Set());
+const priorityJobIds = computed(() => basketStore.priorityJobIds);
 const openStatusJobId = ref(null);
 const statusOptions = [
     { value: 'NOT_STARTED', label: '지원 전' },
@@ -452,15 +459,6 @@ function deadlineDay(job) {
     const date = parseDeadlineDate(job);
     return date && toMonthKey(date) === selectedMonthKey.value ? date.getDate() : null;
 }
-function deadlineRank(job) {
-    const date = parseDeadlineDate(job);
-    if (date) {
-        return date.getTime();
-    }
-    const source = job.deadlineDate ?? job.deadlineLabel ?? '';
-    const dDay = source.match(/D-(\d+)/i);
-    return dDay ? Number(dDay[1]) : Number.MAX_SAFE_INTEGER;
-}
 function savedRank(job) {
     const rank = Number(job.id);
     return Number.isFinite(rank) ? rank : Number.MAX_SAFE_INTEGER;
@@ -479,13 +477,6 @@ function startOfToday() {
 }
 function toMonthKey(date) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-}
-function normalizedSourceUrl(sourceUrl) {
-    const trimmed = String(sourceUrl ?? '').trim();
-    if (!trimmed) {
-        return '#';
-    }
-    return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 }
 function daysUntilDeadline(job) {
     const date = parseDeadlineDate(job);
@@ -507,17 +498,6 @@ function isWeekend(day) {
     const weekDay = new Date(currentMonthDate.value.getFullYear(), currentMonthDate.value.getMonth(), day).getDay();
     return weekDay === 0 || weekDay === 6;
 }
-function statusClass(status) {
-    return {
-        'status-not-started': status === 'NOT_STARTED',
-        'status-in-progress': status === 'IN_PROGRESS',
-        'status-submitted': status === 'SUBMITTED',
-        'status-not-applied': status === 'NOT_APPLIED'
-    };
-}
-function statusLabel(status) {
-    return statusOptions.find((option) => option.value === status)?.label ?? '미지원';
-}
 function toggleStatusMenu(jobId) {
     openStatusJobId.value = openStatusJobId.value === jobId ? null : jobId;
 }
@@ -525,14 +505,7 @@ function isPriorityJob(job) {
     return priorityJobIds.value.has(job.id) || job.priority === true;
 }
 function togglePriority(jobId) {
-    const nextPriorityJobIds = new Set(priorityJobIds.value);
-    if (nextPriorityJobIds.has(jobId)) {
-        nextPriorityJobIds.delete(jobId);
-    }
-    else {
-        nextPriorityJobIds.add(jobId);
-    }
-    priorityJobIds.value = nextPriorityJobIds;
+    basketStore.togglePriority(jobId);
 }
 async function createManualJob() {
     await basketStore.createJob({
@@ -550,9 +523,6 @@ async function createManualJob() {
 function changeStatus(jobId, nextStatus) {
     openStatusJobId.value = null;
     void basketStore.updateStatus(jobId, nextStatus);
-}
-function companyInitial(companyName) {
-    return (companyName ?? '?').trim().charAt(0).toUpperCase() || '?';
 }
 function archiveJob(jobId) {
     const job = basketStore.jobs.find((basketJob) => basketJob.id === jobId);

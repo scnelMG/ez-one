@@ -107,6 +107,11 @@ import PageHeader from '@/shared/PageHeader.vue';
 import StatePanel from '@/shared/StatePanel.vue';
 import SkeletonLoader from '@/shared/SkeletonLoader.vue';
 import { showToast } from '@/shared/useToast';
+import {
+  deadlineRank,
+  companyInitial,
+  formatParticipantCount
+} from '@/shared/utils/jobUtils';
 
 const recommendationStore = useRecommendationStore();
 
@@ -128,29 +133,5 @@ function compareByDeadline(left, right) {
   return deadlineRank(left) - deadlineRank(right);
 }
 
-function deadlineRank(job) {
-  if (job.deadlineDate) {
-    const time = Date.parse(job.deadlineDate);
-    if (!Number.isNaN(time)) {
-      return time;
-    }
-  }
-  const dDay = /^D-(\d+)$/i.exec(job.deadlineLabel ?? '');
-  if (dDay) {
-    return Number(dDay[1]);
-  }
-  if (job.deadlineLabel === '오늘마감' || job.deadlineLabel === 'D-DAY') {
-    return 0;
-  }
-  return Number.MAX_SAFE_INTEGER;
-}
 
-function companyInitial(companyName) {
-  return (companyName ?? '?').trim().charAt(0).toUpperCase() || '?';
-}
-
-function formatParticipantCount(value) {
-  const count = Number(value);
-  return Number.isFinite(count) ? count.toLocaleString('ko-KR') : '0';
-}
 </script>

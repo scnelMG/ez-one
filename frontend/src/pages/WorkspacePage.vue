@@ -3,8 +3,8 @@
     <section class="workspace-page">
       <header class="workspace-hero">
         <div>
-          <p class="section-kicker">WS-002 · WS-004 · REF-001</p>
-          <h1>지원 워크스페이스</h1>
+          <p class="section-kicker">지원 워크스페이스</p>
+          <h1>자기소개서 작성 공간</h1>
           <p>{{ headerDescription }}</p>
         </div>
         <div class="workspace-hero-actions">
@@ -157,6 +157,7 @@
                   class="question-item"
                   :class="{ active: question.id === currentQuestion?.id }"
                   type="button"
+                  @click="selectQuestion(question.id)"
                 >
                   {{ question.prompt }}
                 </button>
@@ -376,10 +377,12 @@ import { rememberRecentWorkspace } from '@/features/basket/recentWorkspaces';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import AppLayout from '@/shared/AppLayout.vue';
 import StatePanel from '@/shared/StatePanel.vue';
+import { companyInitial } from '@/shared/utils/jobUtils';
 
 const route = useRoute();
 const workspaceStore = useWorkspaceStore();
 const workspaceId = computed(() => String(route.params.workspaceId ?? '102'));
+const selectedQuestionId = ref(null);
 const draftBody = ref('');
 const autoSaveStatus = ref('idle');
 const activeMode = ref('canvas');
@@ -414,7 +417,15 @@ const editQuestion = reactive({
   maxLength: 1000
 });
 
-const currentQuestion = computed(() => workspaceStore.workspace?.questions[0] ?? null);
+const currentQuestion = computed(() => {
+  const questions = workspaceStore.workspace?.questions ?? [];
+  if (questions.length === 0) return null;
+  return questions.find((q) => String(q.id) === String(selectedQuestionId.value)) ?? questions[0];
+});
+
+function selectQuestion(questionId) {
+  selectedQuestionId.value = String(questionId);
+}
 const drawerStyle = computed(() => ({ '--drawer-width': `${drawerWidth.value}px` }));
 const activeBoardTitle = computed(() => boards.find((board) => board.type === activeBoard.value)?.title ?? '참고자료');
 const comparableVersions = computed(() => workspaceStore.versions.slice(0, 2));
@@ -456,6 +467,16 @@ const activeBoardComponent = computed(() => {
   };
   return map[activeBoard.value] ?? JdBoard;
 });
+
+watch(() => workspaceStore.workspace?.questions, (questions) => {
+  if (questions && questions.length > 0) {
+    if (!selectedQuestionId.value || !questions.some((q) => String(q.id) === String(selectedQuestionId.value))) {
+      selectedQuestionId.value = String(questions[0].id);
+    }
+  } else {
+    selectedQuestionId.value = null;
+  }
+}, { immediate: true });
 
 watch(currentQuestion, (question) => {
   suppressNextDraftWatch = true;
@@ -501,9 +522,7 @@ function isRecord(value) {
   return typeof value === 'object' && value !== null;
 }
 
-function companyInitial(companyName) {
-  return (companyName ?? '?').trim().charAt(0).toUpperCase() || '?';
-}
+
 
 async function saveDraft() {
   if (!currentQuestion.value) return;

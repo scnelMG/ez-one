@@ -165,9 +165,22 @@ const form = reactive({
 });
 const skillInput = ref('');
 
-onMounted(() => {
-    void profileStore.loadProfile();
+onMounted(async () => {
+    await profileStore.loadProfile();
+    if (profileStore.profile) {
+        const profile = profileStore.profile;
+        form.desiredRoles = selectedOrDefault(profile.desiredRoles, roleOptions);
+        form.companyTypes = selectedOrDefault(profile.companyTypes, companyTypeOptions);
+        form.industries = selectedOrDefault(profile.industries, industryOptions);
+        form.regions = selectedOrDefault(profile.regions, regionOptions);
+        form.skills = [...(profile.skills ?? [])];
+        form.ssafy = profile.ssafy ?? false;
+    }
 });
+
+function selectedOrDefault(values, options) {
+    return Array.isArray(values) && values.length > 0 ? [...values] : [options[0]];
+}
 
 function toggleListValue(values, value) {
     const index = values.indexOf(value);

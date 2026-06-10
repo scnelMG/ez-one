@@ -7,15 +7,7 @@
         description="내보내기가 아니라 계정 연동만으로 공고와 작성 자료를 자동 동기화합니다."
       />
 
-      <nav class="settings-tab-nav" aria-label="설정 메뉴">
-        <RouterLink to="/mypage">내 계정</RouterLink>
-        <RouterLink to="/mypage/notion" class="active">노션 연동 관리</RouterLink>
-        <RouterLink to="/mypage/onboarding">온보딩 정보</RouterLink>
-        <RouterLink to="/mypage/qna">자주 묻는 질문</RouterLink>
-        <RouterLink to="/mypage/inquiry">1:1 문의</RouterLink>
-        <RouterLink to="/mypage/partnership">제휴 문의</RouterLink>
-        <RouterLink to="/mypage/terms">이용약관</RouterLink>
-      </nav>
+      <MyPageNav />
 
       <StatePanel
         v-if="notionStore.status === 'error'"
@@ -34,7 +26,8 @@
           <button
             class="ghost-button danger"
             type="button"
-            :disabled="notionStore.status === 'saving'"
+            :disabled="notionStore.status === 'saving' || !notionStore.connection?.connected"
+            @click="disconnectNotion"
           >
             연결 해제
           </button>
@@ -141,9 +134,15 @@ import { useNotionStore } from '@/stores/notionStore';
 import AppLayout from '@/shared/AppLayout.vue';
 import PageHeader from '@/shared/PageHeader.vue';
 import StatePanel from '@/shared/StatePanel.vue';
+import MyPageNav from '@/shared/MyPageNav.vue';
 
 const notionStore = useNotionStore();
-const loginEmail = computed(() => getCurrentUser()?.email ?? 'hong.gildong@gmail.com');
+const loginEmail = computed(() => getCurrentUser()?.email ?? '로그인 정보 없음');
+function disconnectNotion() {
+  if (window.confirm('Notion 연동을 해제하시겠습니까?')) {
+    void notionStore.disconnectNotion();
+  }
+}
 const connectionLabel = computed(() => {
   if (notionStore.status === 'saving') return '연결 중';
   if (notionStore.connection?.connected) return '연결됨';

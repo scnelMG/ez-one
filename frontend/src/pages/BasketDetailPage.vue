@@ -3,8 +3,8 @@
     <section class="basket-page">
       <header class="basket-hero">
         <div>
-          <p class="section-kicker">JOB-006 · JOB-007</p>
-          <h1>공고 상세</h1>
+          <p class="section-kicker">공고 상세</p>
+          <h1>공고 상세 정보</h1>
           <p>저장한 공고의 기본 정보를 확인하고 수정합니다.</p>
         </div>
         <RouterLink class="ghost-button" to="/basket">목록</RouterLink>
@@ -18,7 +18,7 @@
         :body="basketStore.errorMessage"
       />
 
-      <p v-else-if="basketStore.status === 'loading'" class="basket-loading">공고 상세를 불러오는 중입니다.</p>
+      <SkeletonLoader v-else-if="basketStore.status === 'loading'" :lines="5" label="공고 상세 정보를 불러오는 중" />
 
       <section v-else class="deadline-panel" aria-label="공고 상세 수정">
         <div class="section-heading">
@@ -65,6 +65,8 @@
 
 <script setup>import AppLayout from '@/shared/AppLayout.vue';
 import StatePanel from '@/shared/StatePanel.vue';
+import SkeletonLoader from '@/shared/SkeletonLoader.vue';
+import { showToast } from '@/shared/useToast';
 import { computed, onMounted, reactive, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useBasketStore } from '@/stores/basketStore';
@@ -91,17 +93,22 @@ function loadJob() {
     }
     void basketStore.loadJob(basketJobId.value);
 }
-function saveJob() {
+async function saveJob() {
     if (!basketJobId.value) {
         return;
     }
-    void basketStore.updateJob(basketJobId.value, {
+    await basketStore.updateJob(basketJobId.value, {
         companyName: form.companyName,
         positionTitle: form.positionTitle,
         deadlineLabel: form.deadlineLabel,
         sourceUrl: form.sourceUrl,
         applicationMemo: form.applicationMemo
     });
+    if (basketStore.status === 'error') {
+        showToast(basketStore.errorMessage || '공고 수정을 실패했습니다.', { tone: 'red' });
+    } else {
+        showToast('공고 정보가 수정되었습니다.', { tone: 'green' });
+    }
 }
 onMounted(loadJob);
 watch(basketJobId, loadJob);

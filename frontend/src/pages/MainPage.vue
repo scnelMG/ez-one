@@ -193,6 +193,14 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import AppLayout from '@/shared/AppLayout.vue';
+import {
+  deadlineRank,
+  statusClass,
+  statusLabel,
+  normalizedSourceUrl,
+  companyInitial,
+  formatParticipantCount
+} from '@/shared/utils/jobUtils';
 import StatePanel from '@/shared/StatePanel.vue';
 import OnboardingPage from '@/pages/OnboardingPage.vue';
 import SkeletonLoader from '@/shared/SkeletonLoader.vue';
@@ -206,7 +214,7 @@ const dashboardStore = useDashboardStore();
 const basketStore = useBasketStore();
 const recommendationStore = useRecommendationStore();
 const showOnboardingModal = ref(requiresOnboarding());
-const priorityJobIds = ref(new Set());
+const priorityJobIds = computed(() => basketStore.priorityJobIds);
 
 const basketPreviewJobs = computed(() => [...basketStore.jobs]
     .sort((left, right) => deadlineRank(left) - deadlineRank(right))
@@ -227,59 +235,8 @@ function isVisibleRecommendation(item) {
     return item.deadlineLabel !== '상시' && item.deadlineLabel !== '상시채용';
 }
 
-function deadlineRank(job) {
-    if (job.deadlineDate) {
-        const time = Date.parse(job.deadlineDate);
-        if (!Number.isNaN(time)) {
-            return time;
-        }
-    }
-    const source = job.deadlineDate ?? job.deadlineLabel ?? '';
-    const explicit = source.match(/(20\d{2})[-.](\d{1,2})[-.](\d{1,2})/);
-    if (explicit) {
-        return new Date(Number(explicit[1]), Number(explicit[2]) - 1, Number(explicit[3])).getTime();
-    }
-    const dDay = source.match(/D-(\d+)/i);
-    return dDay ? Number(dDay[1]) : Number.MAX_SAFE_INTEGER;
-}
-
 function saveRecommendation(recommendationId) {
     void recommendationStore.saveRecommendation(recommendationId);
-}
-
-function statusClass(status) {
-    return {
-        NOT_STARTED: 'status-not-started',
-        IN_PROGRESS: 'status-in-progress',
-        SUBMITTED: 'status-submitted',
-        NOT_APPLIED: 'status-not-applied'
-    }[status] ?? 'status-not-applied';
-}
-
-function statusLabel(status, fallback) {
-    return {
-        NOT_STARTED: '지원 전',
-        IN_PROGRESS: '진행중',
-        SUBMITTED: '지원완료',
-        NOT_APPLIED: '미지원'
-    }[status] ?? fallback ?? '미지원';
-}
-
-function normalizedSourceUrl(sourceUrl) {
-    const trimmed = String(sourceUrl ?? '').trim();
-    if (!trimmed) {
-        return '#';
-    }
-    return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-}
-
-function companyInitial(companyName) {
-    return (companyName ?? '?').trim().charAt(0).toUpperCase() || '?';
-}
-
-function formatParticipantCount(value) {
-    const count = Number(value);
-    return Number.isFinite(count) ? count.toLocaleString('ko-KR') : '0';
 }
 
 function isPriorityJob(job) {
@@ -287,14 +244,7 @@ function isPriorityJob(job) {
 }
 
 function togglePriority(jobId) {
-    const nextPriorityJobIds = new Set(priorityJobIds.value);
-    if (nextPriorityJobIds.has(jobId)) {
-        nextPriorityJobIds.delete(jobId);
-    }
-    else {
-        nextPriorityJobIds.add(jobId);
-    }
-    priorityJobIds.value = nextPriorityJobIds;
+    basketStore.togglePriority(jobId);
 }
 
 function archiveJob(jobId) {

@@ -46,7 +46,7 @@
         </aside>
 
         <main class="document-form-panel document-form-panel-focused">
-          <p v-if="documentProfileStore.status === 'loading'">서류 입력 정보를 불러오는 중입니다.</p>
+          <SkeletonLoader v-if="documentProfileStore.status === 'loading'" :lines="10" label="서류 프로필 정보를 불러오는 중" />
 
           <template v-else>
             <div class="section-heading">
@@ -286,6 +286,8 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useDocumentProfileStore } from '@/stores/documentProfileStore';
 import AppLayout from '@/shared/AppLayout.vue';
 import StatePanel from '@/shared/StatePanel.vue';
+import SkeletonLoader from '@/shared/SkeletonLoader.vue';
+import { showToast } from '@/shared/useToast';
 
 const documentProfileStore = useDocumentProfileStore();
 const activeSection = ref('basicInfo');
@@ -710,9 +712,15 @@ async function saveActiveSection() {
     } else if (activeSectionSchema.value) {
       await documentProfileStore.saveReusableSection(activeSection.value, cloneValue(activeSectionForm));
     }
-    autoSaveStatus.value = documentProfileStore.status === 'error' ? 'failed' : 'saved';
-  } catch {
+    if (documentProfileStore.status === 'error') {
+      autoSaveStatus.value = 'failed';
+      showToast(documentProfileStore.errorMessage || '저장에 실패했습니다.', { tone: 'red' });
+    } else {
+      autoSaveStatus.value = 'saved';
+    }
+  } catch (err) {
     autoSaveStatus.value = 'failed';
+    showToast('저장 중 네트워크 오류가 발생했습니다.', { tone: 'red' });
   }
 }
 
@@ -790,6 +798,9 @@ function addGroupItem(groupKey) {
 
 function deleteGroupItem(groupKey, index) {
   if (!Array.isArray(activeSectionForm[groupKey])) return;
+  if (!window.confirm('해당 항목을 정말로 삭제하시겠습니까?')) {
+    return;
+  }
   activeSectionForm[groupKey].splice(index, 1);
 }
 
@@ -812,6 +823,9 @@ function updateCustomField() {
 }
 
 function deleteCustomField(fieldId) {
+  if (!window.confirm('이 커스텀 항목을 삭제하시겠습니까?')) {
+    return;
+  }
   void documentProfileStore.deleteCustomField(fieldId);
   if (editingCustomFieldId.value === fieldId) {
     resetCustomFieldForm();

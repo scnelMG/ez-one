@@ -51,5 +51,18 @@ export const useNotionStore = defineStore('notion', () => {
             errorMessage.value = messageFromError(error, 'Notion 계정을 연결하지 못했습니다.');
         }
     }
-    return { status, connection, syncLogs, errorMessage, loadNotionSettings, connectNotion, updateJobOnlySync };
+    async function disconnectNotion() {
+        status.value = 'saving';
+        errorMessage.value = '';
+        try {
+            await notionApi.disconnect();
+            connection.value = { connected: false, syncEnabled: false, syncScope: 'JOB_ONLY', accountName: '' };
+            status.value = 'ready';
+        }
+        catch (error) {
+            status.value = 'error';
+            errorMessage.value = messageFromError(error, 'Notion 연결을 해제하지 못했습니다.');
+        }
+    }
+    return { status, connection, syncLogs, errorMessage, loadNotionSettings, connectNotion, disconnectNotion, updateJobOnlySync };
 });
