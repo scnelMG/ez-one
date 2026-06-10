@@ -1,5 +1,11 @@
 import { defaultHttpClient, unwrapApiData } from '@/shared/apiClient';
 import { mockWorkspaces } from './mockWorkspaceData';
+
+const mockVersionsByWorkspace = new Map();
+let mockQuestionId = 9000;
+let mockVersionId = 9500;
+let mockReferenceId = 9700;
+
 export function createWorkspaceApi(httpClient = defaultHttpClient) {
     return {
         async getWorkspace(workspaceId) {
@@ -23,56 +29,163 @@ export function createWorkspaceApi(httpClient = defaultHttpClient) {
                 if (!mockWorkspace) {
                     throw new Error('Workspace not found');
                 }
-                return mockWorkspace;
+                return cloneWorkspace(mockWorkspace);
             }
         },
         async getDefaults(workspaceId) {
-            const response = await httpClient.get(`/api/workspaces/${workspaceId}/defaults`);
-            const data = unwrapApiData(response.data);
-            return {
-                workspaceId: String(data.workspaceId),
-                sections: data.sections
-            };
+            try {
+                const response = await httpClient.get(`/api/workspaces/${workspaceId}/defaults`);
+                const data = unwrapApiData(response.data);
+                return {
+                    workspaceId: String(data.workspaceId),
+                    sections: data.sections
+                };
+            }
+            catch {
+                if (!mockWorkspaces[workspaceId]) {
+                    throw new Error('Workspace defaults not found');
+                }
+                return {
+                    workspaceId: String(workspaceId),
+                    sections: {
+                        basicInfo: { nameKo: '', email: '' },
+                        projects: [],
+                        awards: []
+                    }
+                };
+            }
         },
         async saveDraft(workspaceId, draftId, body) {
-            const response = await httpClient.patch(`/api/workspaces/${workspaceId}/drafts/${draftId}`, { body });
-            return toWorkspaceQuestion(unwrapApiData(response.data));
+            try {
+                const response = await httpClient.patch(`/api/workspaces/${workspaceId}/drafts/${draftId}`, { body });
+                return toWorkspaceQuestion(unwrapApiData(response.data));
+            }
+            catch {
+                const question = findMockQuestion(workspaceId, draftId);
+                question.draft = body;
+                return { ...question };
+            }
         },
         async createQuestion(workspaceId, payload) {
-            const response = await httpClient.post(`/api/workspaces/${workspaceId}/questions`, payload);
-            return toWorkspaceQuestion(unwrapApiData(response.data));
+            try {
+                const response = await httpClient.post(`/api/workspaces/${workspaceId}/questions`, payload);
+                return toWorkspaceQuestion(unwrapApiData(response.data));
+            }
+            catch {
+                const workspace = requireMockWorkspace(workspaceId);
+                const question = {
+                    id: String(mockQuestionId += 1),
+                    prompt: payload.prompt,
+                    draft: '',
+                    maxLength: payload.maxLength
+                };
+                workspace.questions.push(question);
+                return { ...question };
+            }
         },
         async updateQuestion(workspaceId, questionId, payload) {
-            const response = await httpClient.patch(`/api/workspaces/${workspaceId}/questions/${questionId}`, payload);
-            return toWorkspaceQuestion(unwrapApiData(response.data));
+            try {
+                const response = await httpClient.patch(`/api/workspaces/${workspaceId}/questions/${questionId}`, payload);
+                return toWorkspaceQuestion(unwrapApiData(response.data));
+            }
+            catch {
+                const question = findMockQuestion(workspaceId, questionId);
+                question.prompt = payload.prompt;
+                question.maxLength = payload.maxLength;
+                return { ...question };
+            }
         },
         async deleteQuestion(workspaceId, questionId) {
-            if (!httpClient.delete) {
-                throw new Error('HTTP delete is not configured');
+            try {
+                if (!httpClient.delete) {
+                    throw new Error('HTTP delete is not configured');
+                }
+                await httpClient.delete(`/api/workspaces/${workspaceId}/questions/${questionId}`);
             }
-            await httpClient.delete(`/api/workspaces/${workspaceId}/questions/${questionId}`);
+            catch {
+                const workspace = requireMockWorkspace(workspaceId);
+                workspace.questions = workspace.questions.filter((question) => question.id !== String(questionId));
+            }
         },
-        async createVersion(workspaceId, questionId, versionName) {
-            const response = await httpClient.post(`/api/workspaces/${workspaceId}/versions`, {
-                questionId: Number(questionId),
-                versionName
-            });
-            return toEssayVersion(unwrapApiData(response.data));
+        async createVersion(workspaceId, questionId, versionName, body = null) {
+            try {
+                const payload = {
+                    questionId: Number(questionId),
+                    versionName
+                };
+                if (body !== null) {
+                    payload.body = body;
+                }
+                const response = await httpClient.post(`/api/workspaces/${workspaceId}/versions`, {
+                    ...payload
+                });
+                return toEssayVersion(unwrapApiData(response.data));
+            }
+            catch {
+                const question = findMockQuestion(workspaceId, questionId);
+                const version = {
+                    id: String(mockVersionId += 1),
+                    questionId: String(questionId),
+                    versionName,
+                    body: body ?? question.draft,
+                    createdAt: new Date().toLocaleString('ko-KR')
+                };
+                mockVersionList(workspaceId).unshift(version);
+                return { ...version };
+            }
         },
         async listVersions(workspaceId) {
-            const response = await httpClient.get(`/api/workspaces/${workspaceId}/versions`);
-            return unwrapApiData(response.data).map(toEssayVersion);
+            try {
+                const response = await httpClient.get(`/api/workspaces/${workspaceId}/versions`);
+                return unwrapApiData(response.data).map(toEssayVersion);
+            }
+            catch {
+                requireMockWorkspace(workspaceId);
+                return mockVersionList(workspaceId).map((version) => ({ ...version }));
+            }
         },
         async compareVersions(workspaceId, leftVersionId, rightVersionId) {
-            const response = await httpClient.post(`/api/workspaces/${workspaceId}/versions/compare`, {
-                leftVersionId: Number(leftVersionId),
-                rightVersionId: Number(rightVersionId)
-            });
-            return toVersionComparison(unwrapApiData(response.data));
+            try {
+                const response = await httpClient.post(`/api/workspaces/${workspaceId}/versions/compare`, {
+                    leftVersionId: Number(leftVersionId),
+                    rightVersionId: Number(rightVersionId)
+                });
+                return toVersionComparison(unwrapApiData(response.data));
+            }
+            catch {
+                const versions = mockVersionList(workspaceId);
+                const left = versions.find((version) => version.id === String(leftVersionId));
+                const right = versions.find((version) => version.id === String(rightVersionId));
+                if (!left || !right) {
+                    throw new Error('Version not found');
+                }
+                return {
+                    leftVersionId: left.id,
+                    rightVersionId: right.id,
+                    leftBody: left.body,
+                    rightBody: right.body,
+                    changed: left.body !== right.body
+                };
+            }
         },
         async createReference(workspaceId, payload) {
-            const response = await httpClient.post(`/api/workspaces/${workspaceId}/references`, payload);
-            return toWorkspaceReference(unwrapApiData(response.data));
+            try {
+                const response = await httpClient.post(`/api/workspaces/${workspaceId}/references`, payload);
+                return toWorkspaceReference(unwrapApiData(response.data));
+            }
+            catch {
+                const workspace = requireMockWorkspace(workspaceId);
+                const reference = {
+                    id: String(mockReferenceId += 1),
+                    boardName: payload.boardName,
+                    type: payload.referenceType,
+                    title: payload.title,
+                    body: payload.body,
+                    url: payload.url
+                };
+                workspace.references.unshift(reference);
+                return { ...reference };
+            }
         },
         async getReference(referenceId) {
             const response = await httpClient.get(`/api/references/${referenceId}`);
@@ -103,7 +216,8 @@ function toEssayVersion(version) {
         id: String(version.id),
         questionId: String(version.questionId),
         versionName: version.versionName,
-        body: version.body
+        body: version.body,
+        createdAt: version.createdAt
     };
 }
 function toVersionComparison(comparison) {
@@ -130,3 +244,36 @@ function readConfig(httpClient) {
 }
 export const workspaceApi = createWorkspaceApi();
 
+function cloneWorkspace(workspace) {
+    return {
+        ...workspace,
+        companyDetails: { ...workspace.companyDetails },
+        questions: workspace.questions.map((question) => ({ ...question })),
+        references: workspace.references.map((reference) => ({ ...reference }))
+    };
+}
+
+function requireMockWorkspace(workspaceId) {
+    const workspace = mockWorkspaces[workspaceId];
+    if (!workspace) {
+        throw new Error('Workspace not found');
+    }
+    return workspace;
+}
+
+function findMockQuestion(workspaceId, questionId) {
+    const workspace = requireMockWorkspace(workspaceId);
+    const question = workspace.questions.find((item) => item.id === String(questionId));
+    if (!question) {
+        throw new Error('Question not found');
+    }
+    return question;
+}
+
+function mockVersionList(workspaceId) {
+    if (!mockVersionsByWorkspace.has(String(workspaceId))) {
+        requireMockWorkspace(workspaceId);
+        mockVersionsByWorkspace.set(String(workspaceId), []);
+    }
+    return mockVersionsByWorkspace.get(String(workspaceId));
+}

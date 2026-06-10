@@ -1,0 +1,83 @@
+CREATE TABLE IF NOT EXISTS company_profiles (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  company_id BIGINT NOT NULL,
+  corp_code VARCHAR(20) NULL,
+  stock_code VARCHAR(20) NULL,
+  business_number VARCHAR(20) NULL,
+  industry VARCHAR(255) NULL,
+  company_category VARCHAR(100) NULL,
+  ceo_name VARCHAR(255) NULL,
+  founded_at DATE NULL,
+  employee_count INT NULL,
+  capital_amount BIGINT NULL,
+  revenue_amount BIGINT NULL,
+  homepage_url VARCHAR(500) NULL,
+  address VARCHAR(500) NULL,
+  profile_summary TEXT NULL,
+  source_priority VARCHAR(64) NOT NULL DEFAULT 'DART_PUBLIC_DATA_MANUAL',
+  source_updated_at TIMESTAMP NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_company_profiles_company FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
+  UNIQUE KEY uk_company_profiles_company (company_id),
+  UNIQUE KEY uk_company_profiles_corp_code (corp_code),
+  KEY idx_company_profiles_stock_code (stock_code),
+  KEY idx_company_profiles_industry (industry)
+);
+
+CREATE TABLE IF NOT EXISTS company_profile_sources (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  company_id BIGINT NOT NULL,
+  source_type VARCHAR(32) NOT NULL,
+  source_name VARCHAR(100) NOT NULL,
+  source_url VARCHAR(1024) NULL,
+  source_url_hash BINARY(32) GENERATED ALWAYS AS (UNHEX(SHA2(COALESCE(source_url, ''), 256))) STORED,
+  license_name VARCHAR(255) NULL,
+  license_url VARCHAR(1024) NULL,
+  license_note TEXT NULL,
+  collected_at TIMESTAMP NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_company_profile_sources_company FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
+  UNIQUE KEY uk_company_profile_sources_url (company_id, source_type, source_url_hash),
+  KEY idx_company_profile_sources_type (source_type)
+);
+
+CREATE TABLE IF NOT EXISTS company_financial_snapshots (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  company_id BIGINT NOT NULL,
+  fiscal_year INT NOT NULL,
+  statement_type VARCHAR(32) NOT NULL,
+  revenue_amount BIGINT NULL,
+  operating_income_amount BIGINT NULL,
+  net_income_amount BIGINT NULL,
+  total_assets_amount BIGINT NULL,
+  total_liabilities_amount BIGINT NULL,
+  currency VARCHAR(16) NOT NULL DEFAULT 'KRW',
+  source_type VARCHAR(32) NOT NULL,
+  source_url VARCHAR(1024) NULL,
+  collected_at TIMESTAMP NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_company_financial_snapshots_company FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
+  UNIQUE KEY uk_company_financial_snapshots_period (company_id, fiscal_year, statement_type),
+  KEY idx_company_financial_snapshots_year (fiscal_year)
+);
+
+CREATE TABLE IF NOT EXISTS company_raw_documents (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  company_id BIGINT NOT NULL,
+  source_type VARCHAR(32) NOT NULL,
+  source_document_id VARCHAR(255) NULL,
+  document_title VARCHAR(500) NOT NULL,
+  source_url VARCHAR(1024) NULL,
+  payload_json JSON NULL,
+  payload_text MEDIUMTEXT NULL,
+  license_note TEXT NULL,
+  collected_at TIMESTAMP NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_company_raw_documents_company FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
+  KEY idx_company_raw_documents_source (source_type, source_document_id),
+  KEY idx_company_raw_documents_company_created (company_id, created_at)
+);

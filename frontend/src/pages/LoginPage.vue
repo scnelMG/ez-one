@@ -27,6 +27,15 @@
           >
             이메일로 로그인
           </button>
+          <button
+            v-if="showLocalDevLogin"
+            class="landing-secondary email-auth-trigger"
+            data-testid="local-dev-login"
+            type="button"
+            @click="loginAsLocalDevUser"
+          >
+            로컬 개발 로그인
+          </button>
         </div>
 
         <div class="landing-sub-actions" aria-label="보조 이동">
@@ -319,6 +328,7 @@ const authMode = ref('login');
 const isSubmitting = ref(false);
 const showEmailAuth = ref(false);
 const isAccountSwitchFlow = computed(() => route.query.switch === 'account');
+const showLocalDevLogin = computed(() => import.meta.env.DEV && window.location.hostname === 'localhost');
 const extensionInstallUrl = import.meta.env.VITE_EXTENSION_INSTALL_URL || 'https://chromewebstore.google.com/';
 const emailForm = reactive({
     name: '',
@@ -375,6 +385,23 @@ async function submitEmailAuth() {
 function openEmailAuth() {
     showEmailAuth.value = true;
     errorMessage.value = '';
+}
+
+async function loginAsLocalDevUser() {
+    saveAuthSession({
+        accessToken: 'local-dev-access-token',
+        refreshToken: 'local-dev-refresh-token',
+        tokenType: 'Bearer',
+        expiresIn: 3600,
+        user: {
+            id: 2,
+            email: 'eunjaelee058@gmail.com',
+            name: '이은재',
+            nickname: '이은재',
+            profileCompleted: true
+        }
+    });
+    await router.push(getRedirectTarget());
 }
 
 function getRedirectTarget() {
