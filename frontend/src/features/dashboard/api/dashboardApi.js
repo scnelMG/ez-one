@@ -41,6 +41,14 @@ export function createDashboardApi(httpClient = defaultHttpClient) {
             } catch {
                 return [];
             }
+        },
+        async getActivityLogs(date) {
+            try {
+                const response = await httpClient.get('/api/dashboard/activities/logs', { params: { date }, skipAuthRefresh: true });
+                return unwrapApiData(response.data);
+            } catch {
+                return [];
+            }
         }
     };
 }

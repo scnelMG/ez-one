@@ -26,14 +26,15 @@
               {{ month.label }}
             </span>
           </div>
-          <div class="honey-pot-grid" @click="showModal = true" role="button" aria-label="꿀통 현황 및 가이드 보기">
+          <div class="honey-pot-grid" role="grid" aria-label="꿀통 현황">
             <div v-for="(week, weekIndex) in weeks" :key="weekIndex" class="honey-pot-week">
               <div 
                 v-for="day in week" 
                 :key="day.dateStr" 
                 class="honey-pot-cell" 
-                :class="['level-' + day.level, { 'future': day.isFuture }]"
-                :title="day.isFuture ? '' : `${day.dateStr}: ${day.score} 방울`"
+                :class="['level-' + day.level, { 'future': day.isFuture, 'selected': day.dateStr === selectedDate }]"
+                :title="day.isFuture ? '' : `${formatDate(day.dateStr)}: ${day.score}개의 활동`"
+                @click="selectDay(day)"
               ></div>
             </div>
           </div>
@@ -41,13 +42,32 @@
       </div>
     </div>
     
+    <div v-if="selectedDate" class="honey-pot-details">
+      <div class="details-header">
+        <h4>{{ formatDate(selectedDate) }} 활동 내역</h4>
+        <button class="close-details" @click="selectedDate = null">×</button>
+      </div>
+      <div v-if="isLoadingLogs" class="loading-logs">기록을 불러오는 중...</div>
+      <ul v-else-if="selectedDateLogs.length > 0" class="log-list">
+        <li v-for="(log, idx) in selectedDateLogs" :key="idx">
+          <span class="log-time">{{ log.time }}</span>
+          <span class="log-desc">{{ log.description }}</span>
+        </li>
+      </ul>
+      <p v-else class="empty-logs">기록된 활동이 없습니다.</p>
+    </div>
+
+    <div class="honey-pot-footer">
+      <button class="text-button small" @click="showModal = true">점수 기준표 보기</button>
+    </div>
     <HoneyPotModal v-if="showModal" :activities="activities" @close="showModal = false" />
   </div>
 </template>
 
 <script setup>
-import { computed, ref, onMounted } from 'vue';
+import { computed, ref } from 'vue';
 import HoneyPotModal from './HoneyPotModal.vue';
+import { useDashboardStore } from '@/stores/dashboardStore';
 
 const props = defineProps({
   activities: {
@@ -56,7 +76,28 @@ const props = defineProps({
   }
 });
 
+const dashboardStore = useDashboardStore();
 const showModal = ref(false);
+const selectedDate = ref(null);
+const selectedDateLogs = ref([]);
+const isLoadingLogs = ref(false);
+
+async function selectDay(day) {
+  if (day.isFuture) return;
+  selectedDate.value = day.dateStr;
+  isLoadingLogs.value = true;
+  try {
+    selectedDateLogs.value = await dashboardStore.loadActivityLogs(day.dateStr);
+  } finally {
+    isLoadingLogs.value = false;
+  }
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  const [year, month, day] = dateStr.split('-');
+  return `${year}년 ${parseInt(month, 10)}월 ${parseInt(day, 10)}일`;
+}
 
 // Map of { "2026-06-11": 3 }
 const activityMap = computed(() => {
@@ -282,4 +323,76 @@ function getMonthName(m) {
   background-color: transparent;
   border: 1px solid #f1f5f9;
 }
+
+.honey-pot-cell.selected {
+  outline: 2px solid #3b82f6;
+  outline-offset: 1px;
+}
+
+.honey-pot-details {
+  margin-top: 20px;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.details-header h4 {
+  margin: 0;
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.close-details {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.log-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.log-list li {
+  display: flex;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.log-time {
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+  min-width: 40px;
+}
+
+.log-desc {
+  color: #334155;
+}
+
+.empty-logs, .loading-logs {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+.honey-pot-footer {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+
 </style>

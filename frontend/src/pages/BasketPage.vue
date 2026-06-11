@@ -31,6 +31,7 @@
         <div class="basket-title-row">
           <div>
             <h2>공고 장바구니</h2>
+            <button class="primary-button small" @click="isManualAddModalOpen = true" style="margin-left: 12px;">+ 직접 추가하기</button>
           </div>
           <div class="basket-tools" aria-label="장바구니 정렬">
             <RouterLink
@@ -202,46 +203,7 @@
             </button>
           </article>
 
-          <form class="basket-data-row inline-create-row" data-testid="inline-create-row" @submit.prevent="createManualJob">
-            <span class="inline-placeholder">-</span>
-            <input
-              v-model="manualForm.companyName"
-              data-testid="inline-company"
-              name="companyName"
-              autocomplete="organization"
-              placeholder="+ 회사명"
-              required
-            />
-            <input
-              v-model="manualForm.positionTitle"
-              data-testid="inline-position"
-              name="positionTitle"
-              autocomplete="organization-title"
-              placeholder="직무명"
-              required
-            />
-            <span class="inline-placeholder">지원 전</span>
-            <input
-              v-model="manualForm.deadlineLabel"
-              data-testid="inline-deadline"
-              name="deadline"
-              inputmode="numeric"
-              autocomplete="off"
-              placeholder="2026.06.30"
-            />
-            <input
-              v-model="manualForm.sourceUrl"
-              data-testid="inline-source"
-              name="sourceUrl"
-              type="text"
-              inputmode="url"
-              autocomplete="off"
-              placeholder="jasoseol.com/jobs/123"
-              required
-            />
-            <span class="inline-placeholder"></span>
-            <button class="text-button" type="submit">추가</button>
-          </form>
+
 
           <div v-if="totalPages > 1" class="pagination-row" aria-label="장바구니 페이지 이동">
             <button
@@ -303,6 +265,7 @@
           </div>
         </div>
       </section>
+      <ManualJobAddModal :is-open="isManualAddModalOpen" @close="isManualAddModalOpen = false" />
     </section>
   </AppLayout>
 </template>
@@ -322,6 +285,7 @@ import StatePanel from '@/shared/StatePanel.vue';
 import SkeletonLoader from '@/shared/SkeletonLoader.vue';
 import { isRecentWorkspace } from '@/features/basket/recentWorkspaces';
 import { useBasketStore } from '@/stores/basketStore';
+import ManualJobAddModal from '@/features/basket/components/ManualJobAddModal.vue';
 
 const route = useRoute();
 const basketStore = useBasketStore();
@@ -376,12 +340,7 @@ const calendarMonthLabel = computed(() => new Intl.DateTimeFormat('ko-KR', {
     year: 'numeric',
     month: 'long'
 }).format(currentMonthDate.value));
-const manualForm = reactive({
-    companyName: '',
-    positionTitle: '',
-    deadlineLabel: '',
-    sourceUrl: ''
-});
+const isManualAddModalOpen = ref(false);
 const statusFilters = [
     { label: '전체', value: undefined },
     { label: '지원 전', value: 'NOT_STARTED' },
@@ -507,19 +466,7 @@ function isPriorityJob(job) {
 function togglePriority(jobId) {
     basketStore.togglePriority(jobId);
 }
-async function createManualJob() {
-    await basketStore.createJob({
-        companyName: manualForm.companyName.trim(),
-        positionTitle: manualForm.positionTitle.trim(),
-        deadlineLabel: manualForm.deadlineLabel.trim(),
-        sourceUrl: normalizedSourceUrl(manualForm.sourceUrl),
-        savedSource: 'MANUAL'
-    });
-    manualForm.companyName = '';
-    manualForm.positionTitle = '';
-    manualForm.deadlineLabel = '';
-    manualForm.sourceUrl = '';
-}
+
 function changeStatus(jobId, nextStatus) {
     openStatusJobId.value = null;
     void basketStore.updateStatus(jobId, nextStatus);
