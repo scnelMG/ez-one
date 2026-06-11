@@ -126,7 +126,6 @@
             </button>
           </div>
         </div>
-        </div>
         <StatePanel
           v-else
           id="main-basket-empty"
