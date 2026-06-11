@@ -1,7 +1,9 @@
 <template>
   <div class="honey-pot-graph-container">
     <div class="honey-pot-header">
-      <h3 class="honey-pot-title">🍯 꿀통 채우기 (나의 취준 활동)</h3>
+      <h3 class="honey-pot-title">
+        🍯 꿀통 채우기 <span class="honey-pot-subtitle">나의 취준 로그</span>
+      </h3>
       <div class="honey-pot-legend">
         <span>Less</span>
         <div class="honey-pot-cell level-0"></div>
@@ -214,6 +216,15 @@ function getMonthName(m) {
   font-weight: 600;
   color: #1e293b;
   margin: 0;
+  display: flex;
+  align-items: center;
+}
+
+.honey-pot-subtitle {
+  font-size: 13px;
+  font-weight: 400;
+  color: #94a3b8;
+  margin-left: 8px;
 }
 
 .honey-pot-legend {
