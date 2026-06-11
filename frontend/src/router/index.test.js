@@ -29,6 +29,11 @@ describe('router', () => {
         expect(routes.find((route) => route.path === '/main')?.redirect).toBe('/');
         expect(routes.find((route) => route.path === '/basket/:basketJobId')?.name).toBe('basket-detail');
     });
+    it('uses the login page as the default start page when the user is not authenticated', async () => {
+        await router.push('/');
+        expect(router.currentRoute.value.name).toBe('login');
+        expect(router.currentRoute.value.query.redirect).toBeUndefined();
+    });
     it('redirects protected P1 pages to login when the user is not authenticated', async () => {
         await router.push('/basket');
         expect(router.currentRoute.value.name).toBe('login');

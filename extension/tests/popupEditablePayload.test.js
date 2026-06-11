@@ -7,5 +7,7 @@ describe('extension popup editable preview', () => {
         expect(markup).toContain('id="company-name-input"');
         expect(markup).toContain('id="position-title-input"');
         expect(markup).toContain('id="deadline-label-input"');
+        expect(markup).toContain('id="essay-questions-input"');
+        expect(markup).toContain('자소서 문항');
     });
 });

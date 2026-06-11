@@ -27,6 +27,8 @@ const saveButton = requireElement('save-button');
 const companyNameInput = requireElement('company-name-input');
 const positionTitleInput = requireElement('position-title-input');
 const deadlineLabelInput = requireElement('deadline-label-input');
+const essayQuestionsInput = requireElement('essay-questions-input');
+const essayQuestionStatus = requireElement('essay-question-status');
 const roleOptions = requireElement('role-options');
 const basketLink = requireElement('basket-link');
 const savedJobList = requireElement('saved-job-list');
@@ -35,6 +37,7 @@ const autofillFilledList = requireElement('autofill-filled-list');
 const autofillFailedList = requireElement('autofill-failed-list');
 const autofillCopyList = requireElement('autofill-copy-list');
 let currentPosting = null;
+let activeEssayRole = null;
 
 const jobApi = createExtensionJobApi({
     apiBaseUrl,
@@ -86,6 +89,8 @@ saveButton.addEventListener('click', async () => {
             companyName: normalizeInput(companyNameInput.value),
             positionTitle: normalizeInput(positionTitleInput.value),
             deadlineLabel: normalizeInput(deadlineLabelInput.value),
+            essayQuestions: collectEssayQuestions(),
+            roleEssayQuestions: buildRoleEssayQuestionsPayload(selectedRoles),
             selectedRoles
         });
         const firstWorkspaceId = savedJobs[0]?.workspaceId;
@@ -148,7 +153,7 @@ async function extractCurrentTabPosting(tabId) {
     });
     const [result] = await chrome.scripting.executeScript({
         target: { tabId },
-        func: () => window.ezOneExtractJobPosting?.() ?? null
+        func: async () => await window.ezOneExtractJobPosting?.() ?? null
     });
     if (!result?.result) {
         throw new Error('현재 페이지에서 공고 정보를 찾지 못했습니다.');
@@ -185,6 +190,7 @@ async function runDocumentAutoFill() {
 }
 
 function renderPosting(posting) {
+    activeEssayRole = null;
     companyNameInput.value = posting.companyName ?? '';
     positionTitleInput.value = posting.positionTitle ?? '';
     deadlineLabelInput.value = posting.deadlineLabel ?? '';
@@ -198,15 +204,107 @@ function renderPosting(posting) {
         input.type = 'checkbox';
         input.value = role;
         input.checked = index === 0;
+        if (input.checked) {
+            activeEssayRole = role;
+        }
+        input.addEventListener('change', () => updateEssayQuestionsForSelectedRoles(role));
         labelText.textContent = role;
         label.append(input, labelText);
         return label;
     }));
+    updateEssayQuestionsForSelectedRoles();
 }
 
 function normalizeInput(value) {
     const trimmed = value.trim();
     return trimmed.length > 0 ? trimmed : null;
+}
+
+function formatEssayQuestions(essayQuestions = []) {
+    return essayQuestions
+        .map((item) => {
+        const prompt = normalizeInput(item.prompt ?? '');
+        if (!prompt) {
+            return null;
+        }
+        return item.maxLength ? `${prompt} (${item.maxLength}자)` : prompt;
+    })
+        .filter(Boolean)
+        .join('\n');
+}
+
+function updateEssayQuestionsForSelectedRoles(changedRole = null) {
+    if (!currentPosting) {
+        return;
+    }
+    const selectedRoles = getSelectedRoles();
+    const roleQuestionMap = currentPosting.roleEssayQuestions ?? {};
+    if (changedRole && selectedRoles.includes(changedRole)) {
+        activeEssayRole = changedRole;
+    }
+    activeEssayRole = selectedRoles.includes(activeEssayRole) ? activeEssayRole : selectedRoles[0] ?? null;
+    const matchedRole = selectedRoles.find((role) => role === activeEssayRole && Array.isArray(roleQuestionMap[role]) && roleQuestionMap[role].length > 0) ??
+        selectedRoles.find((role) => Array.isArray(roleQuestionMap[role]) && roleQuestionMap[role].length > 0);
+    activeEssayRole = matchedRole ?? activeEssayRole;
+    const questions = matchedRole
+        ? roleQuestionMap[matchedRole]
+        : currentPosting.essayQuestions ?? [];
+    essayQuestionsInput.value = formatEssayQuestions(questions);
+    renderEssayQuestionStatus(matchedRole, questions, selectedRoles);
+}
+
+function buildRoleEssayQuestionsPayload(selectedRoles) {
+    const source = currentPosting?.roleEssayQuestions ?? {};
+    const payload = selectedRoles.reduce((accumulator, role) => {
+        if (Array.isArray(source[role])) {
+            accumulator[role] = source[role];
+        }
+        return accumulator;
+    }, {});
+    if (activeEssayRole && selectedRoles.includes(activeEssayRole)) {
+        payload[activeEssayRole] = collectEssayQuestions();
+    }
+    return payload;
+}
+
+function getSelectedRoles() {
+    return Array.from(roleOptions.querySelectorAll('input:checked'))
+        .map((item) => item.value);
+}
+
+function renderEssayQuestionStatus(matchedRole, questions, selectedRoles) {
+    if (matchedRole && questions.length > 0) {
+        essayQuestionStatus.textContent = `"${matchedRole}" 기준 자소서 문항 ${questions.length}개를 가져왔습니다. 직무 선택을 바꾸면 문항도 함께 바뀝니다.`;
+        essayQuestionStatus.classList.remove('is-warning');
+        return;
+    }
+    if ((currentPosting?.essayQuestions ?? []).length > 0) {
+        essayQuestionStatus.textContent = `공통 자소서 문항 ${questions.length}개를 가져왔습니다. 직무별 문항을 찾지 못하면 이 문항을 사용합니다.`;
+        essayQuestionStatus.classList.remove('is-warning');
+        return;
+    }
+    const roleLabel = selectedRoles[0] ? `"${selectedRoles[0]}" ` : '';
+    essayQuestionStatus.textContent = `${roleLabel}자소서 문항을 자동으로 확인하지 못했습니다. 아래에 직접 입력하면 저장됩니다.`;
+    essayQuestionStatus.classList.add('is-warning');
+}
+
+function collectEssayQuestions() {
+    return essayQuestionsInput.value
+        .split(/\r?\n/)
+        .map((line) => normalizeInput(line))
+        .filter(Boolean)
+        .map(parseEssayQuestionLine);
+}
+
+function parseEssayQuestionLine(line) {
+    const match = line.match(/^(.*?)\s*\((\d{2,5})자\)$/);
+    if (!match) {
+        return { prompt: line, maxLength: null };
+    }
+    return {
+        prompt: match[1].trim(),
+        maxLength: Number(match[2])
+    };
 }
 
 function renderSavedJobs(savedJobs, posting) {

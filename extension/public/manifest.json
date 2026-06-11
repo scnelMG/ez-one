@@ -11,7 +11,7 @@
     "128": "icon-128.png"
   },
   "action": {
-    "default_popup": "popup.html",
+    "default_title": "EZ-ONE 열기",
     "default_icon": {
       "16": "icon-16.png",
       "32": "icon-32.png",
@@ -35,6 +35,12 @@
   "externally_connectable": {
     "matches": ["http://localhost/*", "http://127.0.0.1/*"]
   },
+  "web_accessible_resources": [
+    {
+      "resources": ["popup.html", "assets/*.js", "assets/*.css", "ez-one-logo-final.png"],
+      "matches": ["http://*/*", "https://*/*"]
+    }
+  ],
   "content_scripts": [
     {
       "matches": [

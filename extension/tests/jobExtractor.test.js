@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extractJobPosting } from '../src/content/jobExtractor';
+import { extractJobPosting, extractJobPostingWithInteractions } from '../src/content/jobExtractor';
 describe('extractJobPosting', () => {
     it('EXT-016: prefers explicit role fixtures and removes duplicate branch labels', () => {
         const doc = document.implementation.createHTMLDocument('posting');
@@ -114,7 +114,7 @@ describe('extractJobPosting', () => {
         </section>
       </main>
     `;
-        expect(extractJobPosting(doc, 'https://www.jasoseol.com/recruit/1')).toEqual({
+        expect(extractJobPosting(doc, 'https://www.jasoseol.com/recruit/1')).toMatchObject({
             companyName: 'Naver',
             positionTitle: 'Backend Developer',
             deadlineLabel: 'D-26',
@@ -125,6 +125,130 @@ describe('extractJobPosting', () => {
                 { prompt: '지원동기를 작성해 주세요.', maxLength: 1000 },
                 { prompt: '협업 경험을 작성해 주세요.', maxLength: 800 }
             ]
+        });
+    });
+    it('EXT-005: reveals and extracts essay questions from role hover content', async () => {
+        const doc = document.implementation.createHTMLDocument('hover-essay');
+        doc.body.innerHTML = `
+      <main>
+        <h1>Backend Developer</h1>
+        <a href="/company/naver">Naver</a>
+        <time datetime="2026-06-30">D-26</time>
+        <section aria-label="모집 직무">
+          <table>
+            <tbody>
+              <tr>
+                <td>신입</td>
+                <td>Backend</td>
+                <td>10명 작성</td>
+                <td><button id="essay-button">자기소개서 작성</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+      </main>
+    `;
+        doc.getElementById('essay-button').addEventListener('mouseover', () => {
+            const section = doc.createElement('section');
+            section.setAttribute('aria-label', '자기소개서');
+            section.innerHTML = `
+          <article>
+            <p>지원동기를 작성해 주세요.</p>
+            <span>1000자</span>
+          </article>
+          <article>
+            <p>직무 관련 경험을 작성해 주세요.</p>
+            <span>800자</span>
+          </article>
+        `;
+            doc.querySelector('main').append(section);
+        }, { once: true });
+
+        await expect(extractJobPostingWithInteractions(doc, 'https://www.jasoseol.com/recruit/1', {
+            hoverDelayMs: 0
+        })).resolves.toMatchObject({
+            essayQuestions: [
+                { prompt: '지원동기를 작성해 주세요.', maxLength: 1000 },
+                { prompt: '직무 관련 경험을 작성해 주세요.', maxLength: 800 }
+            ]
+        });
+    });
+    it('EXT-005: keeps essay questions mapped to the selected role', async () => {
+        const doc = document.implementation.createHTMLDocument('role-specific-essays');
+        doc.body.innerHTML = `
+      <main>
+        <h1>2026년 3분기 신입 및 경력사원 채용</h1>
+        <a href="/company/taewoong">태웅로직스</a>
+        <time datetime="2026-06-21">2026년 6월 21일 23:59</time>
+        <section aria-label="모집 직무">
+          <table>
+            <tbody>
+              <tr>
+                <td>신입</td>
+                <td>자동화 기계-로봇 자동화 설계</td>
+                <td>28명 작성</td>
+                <td><button id="robot-essay">자기소개서 작성</button></td>
+              </tr>
+              <tr>
+                <td>경력</td>
+                <td>자율주행로봇 알고리즘 개발</td>
+                <td>0명 작성</td>
+                <td><button id="algorithm-essay">자기소개서 작성</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+      </main>
+    `;
+        doc.getElementById('robot-essay').addEventListener('mouseover', () => {
+            doc.querySelector('[aria-label="자기소개서"]')?.remove();
+            const section = doc.createElement('section');
+            section.setAttribute('aria-label', '자기소개서');
+            section.innerHTML = `
+          <article><p>본인의 핵심 직무 능력을 요약하여 기술하세요</p><span>300자</span></article>
+          <article><p>태웅로직스에 지원한 구체적인 동기는 무엇이며 입사 후 목표에 대해 기술하시오</p><span>700자</span></article>
+          <article><p>본인이 지금까지 했던 일 중 가장 열정을 가지고 했던 일은 무엇이었는지 기술하시오</p><span>700자</span></article>
+          <article><p>본인이 지원한 직무를 어떻게 이해하고 있는지 구체적으로 기술하고, 해당직무에 본인이 적합하다고 판단 할 수 있는 근거를 사례 및 경험을 바탕으로 기술하시오</p><span>700자</span></article>
+          <article><p>최근 태웅로직스에서 발생한 이슈 한가지를 선정하여 해당 이슈에 대한 본인의 생각을 자유롭게 기술하시오</p><span>700자</span></article>
+        `;
+            doc.querySelector('main').append(section);
+        });
+        doc.getElementById('algorithm-essay').addEventListener('mouseover', () => {
+            doc.querySelector('[aria-label="자기소개서"]')?.remove();
+            const section = doc.createElement('section');
+            section.setAttribute('aria-label', '자기소개서');
+            section.innerHTML = `
+          <article><p>알고리즘 개발 경험을 구체적으로 기술하세요</p><span>500자</span></article>
+        `;
+            doc.querySelector('main').append(section);
+        });
+
+        await expect(extractJobPostingWithInteractions(doc, 'https://jasoseol.com/recruit/taewoong', {
+            hoverDelayMs: 0
+        })).resolves.toMatchObject({
+            roleOptions: [
+                '자동화 기계-로봇 자동화 설계',
+                '자율주행로봇 알고리즘 개발'
+            ],
+            essayQuestions: [
+                { prompt: '본인의 핵심 직무 능력을 요약하여 기술하세요', maxLength: 300 },
+                { prompt: '태웅로직스에 지원한 구체적인 동기는 무엇이며 입사 후 목표에 대해 기술하시오', maxLength: 700 },
+                { prompt: '본인이 지금까지 했던 일 중 가장 열정을 가지고 했던 일은 무엇이었는지 기술하시오', maxLength: 700 },
+                { prompt: '본인이 지원한 직무를 어떻게 이해하고 있는지 구체적으로 기술하고, 해당직무에 본인이 적합하다고 판단 할 수 있는 근거를 사례 및 경험을 바탕으로 기술하시오', maxLength: 700 },
+                { prompt: '최근 태웅로직스에서 발생한 이슈 한가지를 선정하여 해당 이슈에 대한 본인의 생각을 자유롭게 기술하시오', maxLength: 700 }
+            ],
+            roleEssayQuestions: {
+                '자동화 기계-로봇 자동화 설계': [
+                    { prompt: '본인의 핵심 직무 능력을 요약하여 기술하세요', maxLength: 300 },
+                    { prompt: '태웅로직스에 지원한 구체적인 동기는 무엇이며 입사 후 목표에 대해 기술하시오', maxLength: 700 },
+                    { prompt: '본인이 지금까지 했던 일 중 가장 열정을 가지고 했던 일은 무엇이었는지 기술하시오', maxLength: 700 },
+                    { prompt: '본인이 지원한 직무를 어떻게 이해하고 있는지 구체적으로 기술하고, 해당직무에 본인이 적합하다고 판단 할 수 있는 근거를 사례 및 경험을 바탕으로 기술하시오', maxLength: 700 },
+                    { prompt: '최근 태웅로직스에서 발생한 이슈 한가지를 선정하여 해당 이슈에 대한 본인의 생각을 자유롭게 기술하시오', maxLength: 700 }
+                ],
+                '자율주행로봇 알고리즘 개발': [
+                    { prompt: '알고리즘 개발 경험을 구체적으로 기술하세요', maxLength: 500 }
+                ]
+            }
         });
     });
     it('extracts a Jasoseol floating posting modal from the listing page', () => {
@@ -164,11 +288,39 @@ describe('extractJobPosting', () => {
             companyName: 'BGF로지스',
             positionTitle: '2026년 하계 채용연계형 인턴 채용',
             sourceUrl: 'https://jasoseol.com/?campaignid=1',
-            deadlineLabel: '2026년 6월 2일 00:00 ~ 2026년 6월 15일 23:59',
+            deadlineLabel: '2026년 6월 15일 23:59',
             roleOptions: [
                 '물류센터 직군 - 지역거점 물류센터(RDC)',
                 '물류센터 직군 - 자동화 물류센터(CDC)'
             ]
+        });
+    });
+    it('EXT-004: extracts only the deadline date from a visible start-to-end range', () => {
+        const doc = document.implementation.createHTMLDocument('deadline-range');
+        doc.body.innerHTML = `
+      <main>
+        <h1>2026 Summer Internship</h1>
+        <a href="/company/bgf">BGF로지스</a>
+        <p>2026년 6월 2일 00:00 ~ 2026년 6월 15일 23:59 (7일 남음)</p>
+      </main>
+    `;
+
+        expect(extractJobPosting(doc, 'https://jasoseol.com/?campaignid=1')).toMatchObject({
+            deadlineLabel: '2026년 6월 15일 23:59'
+        });
+    });
+    it('EXT-004: normalizes explicit deadline ranges before preview/save', () => {
+        const doc = document.implementation.createHTMLDocument('explicit-deadline-range');
+        doc.body.innerHTML = `
+      <main>
+        <h1>Backend Developer</h1>
+        <a href="/company/naver">Naver</a>
+        <span data-ezone-deadline>2026-06-02 00:00 ~ 2026-06-15 23:59</span>
+      </main>
+    `;
+
+        expect(extractJobPosting(doc, 'https://www.jasoseol.com/recruit/1')).toMatchObject({
+            deadlineLabel: '2026-06-15 23:59'
         });
     });
     it('uses the visible floating modal instead of background listing content when no dialog attributes exist', () => {
@@ -281,7 +433,7 @@ describe('extractJobPosting', () => {
         expect(extractJobPosting(doc, 'https://jasoseol.com/recruit?ec=104470')).toMatchObject({
             companyName: '한국국제협력단(KOICA)',
             positionTitle: '2026년 일반직 및 공무직 채용',
-            deadlineLabel: '2026년 6월 8일 15:00 ~ 2026년 6월 23일 11:00',
+            deadlineLabel: '2026년 6월 23일 11:00',
             roleOptions: [
                 '일반직 - 개발협력일반 (일반)',
                 '일반직 - 개발협력일반 (비수도권 지역인재)',

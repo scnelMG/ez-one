@@ -15,6 +15,18 @@ describe('extension manifest', () => {
         expect(manifest.host_permissions).not.toContain('<all_urls>');
         expect(manifest.content_scripts.flatMap((item) => item.matches)).not.toContain('<all_urls>');
     });
+    it('EXT-006: opens the extension UI as an in-page floating panel instead of OS window or Chrome side panel', () => {
+        expect(manifest.permissions).not.toContain('windows');
+        expect(manifest.permissions).not.toContain('sidePanel');
+        expect(manifest).not.toHaveProperty('side_panel');
+        expect(manifest.action).not.toHaveProperty('default_popup');
+        expect(manifest.web_accessible_resources).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                resources: expect.arrayContaining(['popup.html', 'assets/*.js', 'assets/*.css']),
+                matches: expect.arrayContaining(['http://*/*', 'https://*/*'])
+            })
+        ]));
+    });
     it('EXT-003: keeps the unpacked extension id stable for web login handoff', () => {
         expect(extensionIdFromManifestKey(manifest.key)).toBe('ikpeibohnopmikegoogggmdipmhmiadi');
         expect(manifest.externally_connectable.matches).toEqual(expect.arrayContaining([

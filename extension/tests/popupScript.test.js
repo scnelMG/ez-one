@@ -17,4 +17,17 @@ describe('extension popup script', () => {
         expect(script).toContain('await clearExtensionSession();');
         expect(script).toContain('showPanel(loginPanel);');
     });
+    it('includes manually entered essay questions in the save payload', () => {
+        expect(script).toContain("requireElement('essay-questions-input')");
+        expect(script).toContain('collectEssayQuestions()');
+        expect(script).toContain('function collectEssayQuestions()');
+        expect(script).toContain('essayQuestions: collectEssayQuestions()');
+    });
+
+    it('updates the visible essay questions when the selected role changes', () => {
+        expect(script).toContain("requireElement('essay-question-status')");
+        expect(script).toContain('function updateEssayQuestionsForSelectedRoles');
+        expect(script).toContain('currentPosting.roleEssayQuestions');
+        expect(script).toContain('roleEssayQuestions: buildRoleEssayQuestionsPayload(selectedRoles)');
+    });
 });

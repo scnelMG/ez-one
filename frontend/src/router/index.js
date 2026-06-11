@@ -145,6 +145,9 @@ router.beforeEach((to) => {
         }
         return true;
     }
+    if (to.name === 'main') {
+        return { name: 'login' };
+    }
     return {
         name: 'login',
         query: {

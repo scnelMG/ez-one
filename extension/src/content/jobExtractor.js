@@ -1,11 +1,15 @@
 const KOREAN_ROLE_LABELS = ['\uBAA8\uC9D1 \uC9C1\uBB34', '\uBAA8\uC9D1 \uBD80\uBB38', '\uC9C0\uC6D0 \uBD84\uC57C'];
 const KOREAN_ESSAY_LABEL = '\uC790\uAE30\uC18C\uAC1C\uC11C';
 const KOREAN_ESSAY_WRITE = '\uC790\uAE30\uC18C\uAC1C\uC11C \uC4F0\uAE30';
+const KOREAN_ESSAY_CREATE = '\uC790\uAE30\uC18C\uAC1C\uC11C \uC791\uC131';
 const KOREAN_COMPANY_ICON = '\uAE30\uC5C5 \uC544\uC774\uCF58';
 
 export function extractJobPosting(documentRef = document, sourceUrl = documentRef.location.href) {
     const postingRoot = findPostingRoot(documentRef, sourceUrl);
     const jasoseolData = extractJasoseolPageData(documentRef);
+    const roleOptions = extractRoleOptions(postingRoot, jasoseolData);
+    const roleEssayQuestions = extractRoleEssayQuestions(postingRoot, roleOptions, documentRef);
+    const essayQuestions = resolveDefaultEssayQuestions(roleOptions, roleEssayQuestions, postingRoot);
     const title = cleanText(postingRoot.querySelector('[data-ezone-title]')?.textContent) ||
         cleanText(postingRoot.querySelector('h1')?.textContent) ||
         cleanText(postingRoot.querySelector('h2')?.textContent) ||
@@ -16,9 +20,15 @@ export function extractJobPosting(documentRef = document, sourceUrl = documentRe
         deadlineLabel: extractDeadlineLabel(postingRoot, jasoseolData),
         sourceUrl,
         logoUrl: extractLogoUrl(postingRoot, sourceUrl) || extractLogoUrl(documentRef, sourceUrl),
-        roleOptions: extractRoleOptions(postingRoot, jasoseolData),
-        essayQuestions: extractEssayQuestions(postingRoot)
+        roleOptions,
+        essayQuestions,
+        roleEssayQuestions
     };
+}
+
+export async function extractJobPostingWithInteractions(documentRef = document, sourceUrl = documentRef.location.href, options = {}) {
+    await revealEssayQuestions(documentRef, options);
+    return extractJobPosting(documentRef, sourceUrl);
 }
 
 function extractCompanyName(documentRef, jasoseolData) {
@@ -30,13 +40,64 @@ function extractCompanyName(documentRef, jasoseolData) {
         null;
 }
 
+async function revealEssayQuestions(documentRef, options = {}) {
+    const hoverDelayMs = options.hoverDelayMs ?? 120;
+    const roleEssayQuestions = {};
+    const candidates = findEssayTriggerCandidates(documentRef);
+    for (const candidate of candidates) {
+        const role = extractRoleFromEssayTrigger(candidate);
+        dispatchHoverEvents(candidate, documentRef);
+        if (hoverDelayMs > 0) {
+            await delay(hoverDelayMs);
+        }
+        const questions = extractEssayQuestions(documentRef);
+        if (role && questions.length > 0) {
+            roleEssayQuestions[role] = questions;
+        }
+    }
+    if (Object.keys(roleEssayQuestions).length > 0) {
+        documentRef.__ezOneRoleEssayQuestions = roleEssayQuestions;
+    }
+}
+
+function findEssayTriggerCandidates(documentRef) {
+    const selector = 'button, a, [role="button"], td, li';
+    return Array.from(documentRef.querySelectorAll(selector)).filter((item) => {
+        const text = cleanText(item.textContent) ?? '';
+        return text.includes(KOREAN_ESSAY_WRITE) ||
+            text.includes(KOREAN_ESSAY_CREATE) ||
+            (text.includes(KOREAN_ESSAY_LABEL) && /작성|쓰기|문항|보기/.test(text));
+    });
+}
+
+function dispatchHoverEvents(element, documentRef) {
+    const eventView = documentRef.defaultView ?? window;
+    for (const eventName of ['pointerover', 'mouseover', 'mouseenter', 'focus']) {
+        const mouseEventOptions = {
+            bubbles: eventName !== 'mouseenter',
+            cancelable: true
+        };
+        if (documentRef.defaultView) {
+            mouseEventOptions.view = documentRef.defaultView;
+        }
+        const event = eventName === 'focus'
+            ? new eventView.FocusEvent(eventName, { bubbles: false })
+            : new eventView.MouseEvent(eventName, mouseEventOptions);
+        element.dispatchEvent(event);
+    }
+}
+
+function delay(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function extractDeadlineLabel(documentRef, jasoseolData) {
     const datetime = documentRef.querySelector('time')?.getAttribute('datetime');
-    return cleanText(documentRef.querySelector('[data-ezone-deadline]')?.textContent) ||
-        cleanText(documentRef.querySelector('time')?.textContent) ||
-        datetime ||
+    return normalizeDeadlineLabel(cleanText(documentRef.querySelector('[data-ezone-deadline]')?.textContent)) ||
+        normalizeDeadlineLabel(cleanText(documentRef.querySelector('time')?.textContent)) ||
+        normalizeDeadlineLabel(datetime) ||
         extractDeadlineText(documentRef) ||
-        jasoseolData.deadlineLabel ||
+        normalizeDeadlineLabel(jasoseolData.deadlineLabel) ||
         null;
 }
 
@@ -63,7 +124,9 @@ function extractRoleOptions(documentRef, jasoseolData) {
 }
 
 function extractEssayQuestions(documentRef) {
-    const questionSection = findSection(documentRef, [KOREAN_ESSAY_LABEL, 'Essay']);
+    const questionSection = isEssayQuestionSection(documentRef)
+        ? documentRef
+        : findSection(documentRef, [KOREAN_ESSAY_LABEL, 'Essay']);
     if (!questionSection) {
         return [];
     }
@@ -77,6 +140,88 @@ function extractEssayQuestions(documentRef) {
             maxLength: extractMaxLength(cleanText(item.textContent))
         }];
     });
+}
+
+function isEssayQuestionSection(element) {
+    return Boolean(element?.matches?.('section, article, div, [role="region"]') &&
+        (element.getAttribute('aria-label')?.includes(KOREAN_ESSAY_LABEL) ||
+            element.hasAttribute('data-ezone-essay-role') ||
+            cleanText(element.querySelector('h2, h3')?.textContent)?.includes(KOREAN_ESSAY_LABEL)));
+}
+
+function extractRoleEssayQuestions(postingRoot, roleOptions = [], documentRef = postingRoot) {
+    const stored = documentRef.__ezOneRoleEssayQuestions;
+    if (stored && typeof stored === 'object') {
+        return normalizeRoleEssayQuestionMap(stored);
+    }
+
+    const explicit = Array.from(postingRoot.querySelectorAll('[data-ezone-essay-role]'))
+        .reduce((accumulator, section) => {
+        const role = cleanText(section.getAttribute('data-ezone-essay-role'));
+        const questions = extractEssayQuestions(section);
+        if (role && questions.length > 0) {
+            accumulator[role] = questions;
+        }
+        return accumulator;
+    }, {});
+    if (Object.keys(explicit).length > 0) {
+        return normalizeRoleEssayQuestionMap(explicit);
+    }
+
+    const rows = getRoleRowCandidates(postingRoot);
+    const mapped = rows.reduce((accumulator, row) => {
+        const role = parseRoleFromRowText(cleanText(row.textContent));
+        const questions = extractEssayQuestions(row);
+        if (role && questions.length > 0) {
+            accumulator[role] = questions;
+        }
+        return accumulator;
+    }, {});
+    if (Object.keys(mapped).length > 0) {
+        return normalizeRoleEssayQuestionMap(mapped);
+    }
+
+    const sharedQuestions = extractEssayQuestions(postingRoot);
+    if (sharedQuestions.length === 0) {
+        return {};
+    }
+    return roleOptions.reduce((accumulator, role) => {
+        accumulator[role] = sharedQuestions;
+        return accumulator;
+    }, {});
+}
+
+function normalizeRoleEssayQuestionMap(source) {
+    return Object.entries(source).reduce((accumulator, [role, questions]) => {
+        const cleanRole = cleanText(role);
+        const cleanQuestions = Array.isArray(questions)
+            ? questions.filter((question) => cleanText(question?.prompt))
+            : [];
+        if (cleanRole && cleanQuestions.length > 0) {
+            accumulator[cleanRole] = cleanQuestions;
+        }
+        return accumulator;
+    }, {});
+}
+
+function resolveDefaultEssayQuestions(roleOptions, roleEssayQuestions, postingRoot) {
+    const firstRoleQuestions = roleOptions
+        .map((role) => roleEssayQuestions[role])
+        .find((questions) => Array.isArray(questions) && questions.length > 0);
+    return firstRoleQuestions ?? extractEssayQuestions(postingRoot);
+}
+
+function extractRoleFromEssayTrigger(candidate) {
+    const row = candidate.closest('tr, li');
+    if (row) {
+        const cells = Array.from(row.querySelectorAll('td, th'))
+            .map((cell) => cleanText(cell.textContent))
+            .filter(Boolean);
+        return cells.length >= 2
+            ? cells.find(isRoleText) ?? parseRoleFromRowText(cleanText(row.textContent))
+            : parseRoleFromRowText(cleanText(row.textContent));
+    }
+    return null;
 }
 
 function extractLogoUrl(documentRef, sourceUrl) {
@@ -222,19 +367,26 @@ function extractCompanyNearTitle(documentRef) {
 function extractDeadlineText(documentRef) {
     return Array.from(documentRef.querySelectorAll('time, p, span, div'))
         .map((item) => cleanText(item.textContent))
-        .map((text) => text ? extractDeadlineRange(text) : null)
+        .map((text) => text ? extractDeadlineEnd(text) : null)
         .find(Boolean) ||
         null;
 }
 
 function hasDeadlineText(text) {
-    return Boolean(extractDeadlineRange(text)) || /(\d{4}-\d{2}-\d{2}).*~/.test(text);
+    return Boolean(extractDeadlineEnd(text)) || /(\d{4}-\d{2}-\d{2}).*~/.test(text);
 }
 
-function extractDeadlineRange(text) {
-    return text.match(/\d{4}년\s*\d{1,2}월\s*\d{1,2}일\s*\d{1,2}:\d{2}\s*~\s*\d{4}년\s*\d{1,2}월\s*\d{1,2}일\s*\d{1,2}:\d{2}/)?.[0] ||
-        text.match(/\d{4}-\d{2}-\d{2}[^~]{0,30}~[^()]{0,60}/)?.[0]?.trim() ||
+function extractDeadlineEnd(text) {
+    return text.match(/\d{4}년\s*\d{1,2}월\s*\d{1,2}일\s*\d{1,2}:\d{2}\s*~\s*(\d{4}년\s*\d{1,2}월\s*\d{1,2}일\s*\d{1,2}:\d{2})/)?.[1] ||
+        text.match(/\d{4}-\d{2}-\d{2}[^~]{0,30}~\s*([^()]{0,60})/)?.[1]?.trim() ||
         null;
+}
+
+function normalizeDeadlineLabel(text) {
+    if (!text) {
+        return null;
+    }
+    return extractDeadlineEnd(text) || text;
 }
 
 function extractModalTableRoles(documentRef) {
@@ -343,14 +495,16 @@ function asRecord(value) {
     return value && typeof value === 'object' ? value : null;
 }
 
-window.ezOneExtractJobPosting = () => extractJobPosting();
+window.ezOneExtractJobPosting = () => extractJobPostingWithInteractions();
 if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage && !window.ezOneJobExtractorListenerReady) {
     window.ezOneJobExtractorListenerReady = true;
     chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         if (message?.type !== 'EZONE_EXTRACT_JOB') {
             return false;
         }
-        sendResponse(extractJobPosting());
+        extractJobPostingWithInteractions()
+            .then((posting) => sendResponse(posting))
+            .catch(() => sendResponse(extractJobPosting()));
         return true;
     });
 }

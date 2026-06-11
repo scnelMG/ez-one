@@ -8,11 +8,9 @@
   <body>
     <main class="popup-shell">
       <header class="popup-header" aria-label="EZ-ONE 확장프로그램">
-        <a id="home-link" class="brand-lockup" href="#" target="_blank" rel="noreferrer">
+        <a id="home-link" class="brand-lockup" href="#" target="_blank" rel="noreferrer" aria-label="EZ-ONE 홈">
           <img class="brand-mark" src="/ez-one-logo-final.png" alt="" aria-hidden="true" />
-          <strong>EZ-ONE</strong>
         </a>
-        <span class="header-status">채용 도구</span>
       </header>
       <section id="status-panel" class="status-panel" aria-live="polite">
         <span class="state-dot" aria-hidden="true"></span>
@@ -20,7 +18,6 @@
       </section>
       <section id="login-panel" class="panel login-panel" hidden>
         <div class="panel-heading">
-          <span class="section-kicker">계정 연결</span>
           <h1>로그인이 필요합니다</h1>
           <p>먼저 EZ-ONE 계정으로 연결한 뒤 사용할 기능을 선택할 수 있습니다.</p>
         </div>
@@ -30,18 +27,18 @@
       <section id="feature-panel" class="panel feature-panel" hidden>
         <div class="panel-heading">
           <span class="section-kicker">작업 선택</span>
-          <h1>기능을 선택하세요</h1>
-          <p>로그인된 계정으로 사용할 확장 기능을 선택합니다.</p>
+          <h1>작업을 선택하세요</h1>
+          <p>지금 페이지에서 할 작업을 고르세요.</p>
         </div>
         <button id="job-save-mode-button" class="mode-card active" type="button">
           <span class="section-kicker">채용공고</span>
           <strong>공고 저장하기</strong>
-          <small>현재 채용공고를 읽고 저장 전 미리보기로 확인합니다.</small>
+          <small>현재 공고를 읽고 저장 전 미리보기로 확인합니다.</small>
         </button>
         <button id="document-input-mode-button" class="mode-card" type="button">
           <span class="section-kicker">서류입력</span>
           <strong>서류 정보 입력하기</strong>
-          <small>현재 지원서 페이지의 입력칸을 감지해 내 서류 정보를 자동 입력합니다.</small>
+          <small>지원서 입력칸에 내 서류 정보를 채웁니다.</small>
         </button>
       </section>
       <section id="preview-panel" class="panel preview-panel" hidden>
@@ -58,6 +55,11 @@
         <fieldset class="role-fieldset">
           <legend>저장할 직무</legend>
           <div id="role-options" class="role-options"></div>
+        </fieldset>
+        <fieldset class="essay-fieldset">
+          <legend>자소서 문항</legend>
+          <p id="essay-question-status">자동으로 가져오지 못했다면 문항을 직접 입력하세요. 한 줄에 하나씩 저장됩니다.</p>
+          <textarea id="essay-questions-input" rows="5" placeholder="예: 지원동기를 작성해 주세요."></textarea>
         </fieldset>
         <button id="save-button" class="primary-button" type="button">선택한 공고 장바구니에 담기</button>
       </section>
