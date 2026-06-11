@@ -79,4 +79,15 @@ describe('extensionDocumentProfileApi', () => {
         await expect(api.getDocumentProfile()).rejects.toThrow('로그인이 만료되었습니다. 다시 로그인해 주세요.');
         expect(clearSession).toHaveBeenCalled();
     });
+    it('hides raw browser fetch errors behind a user-friendly server message', async () => {
+        const api = createExtensionDocumentProfileApi({
+            apiBaseUrl: 'http://localhost:8080/api',
+            getAccessToken: async () => 'access-token',
+            fetcher: vi.fn(async () => {
+                throw new TypeError('Failed to fetch');
+            })
+        });
+
+        await expect(api.getDocumentProfile()).rejects.toThrow('서버에 연결하지 못했습니다. EZ-ONE 서버가 켜져 있는지 확인해 주세요.');
+    });
 });

@@ -58,5 +58,17 @@ async function refreshExtensionSession(client) {
 }
 function callFetch(client, url, init) {
     const fetcher = client.fetcher;
-    return fetcher(url, init);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    return fetcher(url, {
+        ...init,
+        signal: controller.signal
+    })
+        .catch((error) => {
+        if (error?.name === 'AbortError') {
+            throw new Error('서버 응답이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.');
+        }
+        throw new Error('서버에 연결하지 못했습니다. EZ-ONE 서버가 켜져 있는지 확인해 주세요.');
+    })
+        .finally(() => clearTimeout(timeoutId));
 }

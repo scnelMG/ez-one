@@ -18,6 +18,7 @@ describe('extension popup markup', () => {
         expect(featurePanel).toContain('서류 정보 입력하기');
         expect(featurePanel).toContain('id="job-save-mode-button"');
         expect(featurePanel).toContain('id="document-input-mode-button"');
+        expect(featurePanel).not.toContain('mode-card active');
         expect(featurePanel).not.toContain('disabled aria-disabled="true"');
     });
 

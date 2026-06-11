@@ -173,6 +173,84 @@ describe('extractJobPosting', () => {
             ]
         });
     });
+    it('EXT-005: limits essay hover attempts so preview does not stay loading too long', async () => {
+        const doc = document.implementation.createHTMLDocument('many-essay-triggers');
+        const rows = Array.from({ length: 20 }, (_, index) => `
+              <tr>
+                <td>신입</td>
+                <td>Role ${index + 1}</td>
+                <td>${index + 1}명 작성</td>
+                <td><button id="essay-${index + 1}">자기소개서 작성</button></td>
+              </tr>
+        `).join('');
+        doc.body.innerHTML = `
+      <main>
+        <h1>Backend Developer</h1>
+        <a href="/company/naver">Naver</a>
+        <time datetime="2026-06-30">D-26</time>
+        <section aria-label="모집 직무">
+          <table><tbody>${rows}</tbody></table>
+        </section>
+      </main>
+    `;
+        let hoverCount = 0;
+        Array.from(doc.querySelectorAll('button')).forEach((button) => {
+            button.addEventListener('mouseover', () => {
+                hoverCount += 1;
+            });
+        });
+
+        await extractJobPostingWithInteractions(doc, 'https://www.jasoseol.com/recruit/1', {
+            hoverDelayMs: 0,
+            maxEssayTriggers: 3
+        });
+
+        expect(hoverCount).toBe(3);
+    });
+    it('EXT-005: only checks essay questions for the selected role when requested', async () => {
+        const doc = document.implementation.createHTMLDocument('selected-role-essay');
+        doc.body.innerHTML = `
+      <main>
+        <h1>Backend Developer</h1>
+        <a href="/company/naver">Naver</a>
+        <time datetime="2026-06-30">D-26</time>
+        <section aria-label="모집 직무">
+          <table>
+            <tbody>
+              <tr>
+                <td>신입</td>
+                <td>Backend</td>
+                <td>1명 작성</td>
+                <td><button id="backend-essay">자기소개서 작성</button></td>
+              </tr>
+              <tr>
+                <td>신입</td>
+                <td>Platform</td>
+                <td>1명 작성</td>
+                <td><button id="platform-essay">자기소개서 작성</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+      </main>
+    `;
+        let backendHoverCount = 0;
+        let platformHoverCount = 0;
+        doc.getElementById('backend-essay').addEventListener('mouseover', () => {
+            backendHoverCount += 1;
+        });
+        doc.getElementById('platform-essay').addEventListener('mouseover', () => {
+            platformHoverCount += 1;
+        });
+
+        await extractJobPostingWithInteractions(doc, 'https://www.jasoseol.com/recruit/1', {
+            hoverDelayMs: 0,
+            targetRoles: ['Platform']
+        });
+
+        expect(backendHoverCount).toBe(0);
+        expect(platformHoverCount).toBe(1);
+    });
     it('EXT-005: keeps essay questions mapped to the selected role', async () => {
         const doc = document.implementation.createHTMLDocument('role-specific-essays');
         doc.body.innerHTML = `

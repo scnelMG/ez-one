@@ -38,6 +38,7 @@ const autofillFailedList = requireElement('autofill-failed-list');
 const autofillCopyList = requireElement('autofill-copy-list');
 let currentPosting = null;
 let activeEssayRole = null;
+let essayQuestionRequestId = 0;
 
 const jobApi = createExtensionJobApi({
     apiBaseUrl,
@@ -128,8 +129,12 @@ async function loadPreview() {
     try {
         setStatus('현재 페이지에서 공고 정보를 읽고 있습니다.');
         const tab = await getActiveTab();
-        if (!tab.id || !tab.url?.includes('jasoseol.com')) {
-            setStatus('자소설닷컴 공고 페이지에서 사용할 수 있습니다.', true);
+        if (!tab.id) {
+            setStatus('현재 탭을 찾지 못했습니다.', true);
+            return;
+        }
+        if (!isSupportedJobPostingPage(tab.url)) {
+            setStatus('지원하려는 자소설닷컴 공고에 들어간 뒤 다시 실행해 주세요.', true);
             return;
         }
         const posting = await extractCurrentTabPosting(tab.id);
@@ -137,6 +142,7 @@ async function loadPreview() {
         await jobApi.preview(posting);
         renderPosting(posting);
         showPanel(previewPanel);
+        void loadEssayQuestionsForSelectedRole();
     }
     catch (error) {
         if (await handleAuthExpired(error)) {
@@ -146,11 +152,25 @@ async function loadPreview() {
     }
 }
 
+function isSupportedJobPostingPage(url) {
+    if (!url) {
+        return false;
+    }
+    try {
+        const parsedUrl = new URL(url);
+        if (!parsedUrl.hostname.endsWith('jasoseol.com')) {
+            return false;
+        }
+        return parsedUrl.pathname.startsWith('/recruit') ||
+            parsedUrl.searchParams.has('campaignid') ||
+            parsedUrl.searchParams.has('ec');
+    } catch {
+        return false;
+    }
+}
+
 async function extractCurrentTabPosting(tabId) {
-    await chrome.scripting.executeScript({
-        target: { tabId },
-        files: ['assets/jobExtractor.js']
-    });
+    await ensureContentScriptLoaded(tabId, 'assets/jobExtractor.js', () => Boolean(window.ezOneExtractJobPosting));
     const [result] = await chrome.scripting.executeScript({
         target: { tabId },
         func: async () => await window.ezOneExtractJobPosting?.() ?? null
@@ -159,6 +179,21 @@ async function extractCurrentTabPosting(tabId) {
         throw new Error('현재 페이지에서 공고 정보를 찾지 못했습니다.');
     }
     return result.result;
+}
+
+async function extractEssayQuestionsForRole(tabId, role) {
+    await ensureContentScriptLoaded(tabId, 'assets/jobExtractor.js', () => Boolean(window.ezOneExtractJobPosting));
+    const [result] = await chrome.scripting.executeScript({
+        target: { tabId },
+        func: async (targetRole) => await window.ezOneExtractJobPosting?.({
+            withEssayQuestions: true,
+            targetRoles: [targetRole],
+            hoverDelayMs: 50,
+            maxEssayTriggers: 1
+        }) ?? null,
+        args: [role]
+    });
+    return result?.result ?? null;
 }
 
 async function runDocumentAutoFill() {
@@ -170,10 +205,7 @@ async function runDocumentAutoFill() {
             return;
         }
         const profile = await documentProfileApi.getDocumentProfile();
-        await chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            files: ['assets/applicationAutoFill.js']
-        });
+        await ensureContentScriptLoaded(tab.id, 'assets/applicationAutoFill.js', () => Boolean(window.ezOneAutoFillApplicationLoaded));
         const result = await chrome.tabs.sendMessage(tab.id, {
             type: 'EZONE_AUTOFILL_APPLICATION',
             profile
@@ -187,6 +219,20 @@ async function runDocumentAutoFill() {
         }
         setStatus(error instanceof Error ? error.message : '서류 정보 자동 입력에 실패했습니다.', true);
     }
+}
+
+async function ensureContentScriptLoaded(tabId, file, isLoaded) {
+    const [loaded] = await chrome.scripting.executeScript({
+        target: { tabId },
+        func: isLoaded
+    });
+    if (loaded?.result) {
+        return;
+    }
+    await chrome.scripting.executeScript({
+        target: { tabId },
+        files: [file]
+    });
 }
 
 function renderPosting(posting) {
@@ -207,12 +253,53 @@ function renderPosting(posting) {
         if (input.checked) {
             activeEssayRole = role;
         }
-        input.addEventListener('change', () => updateEssayQuestionsForSelectedRoles(role));
+        input.addEventListener('change', () => {
+            updateEssayQuestionsForSelectedRoles(role);
+            if (input.checked) {
+                void loadEssayQuestionsForSelectedRole(role);
+            }
+        });
         labelText.textContent = role;
         label.append(input, labelText);
         return label;
     }));
     updateEssayQuestionsForSelectedRoles();
+}
+
+async function loadEssayQuestionsForSelectedRole(role = activeEssayRole) {
+    if (!currentPosting || !role) {
+        return;
+    }
+    if (Array.isArray(currentPosting.roleEssayQuestions?.[role]) && currentPosting.roleEssayQuestions[role].length > 0) {
+        updateEssayQuestionsForSelectedRoles(role);
+        return;
+    }
+    const requestId = ++essayQuestionRequestId;
+    renderEssayQuestionLoading(role);
+    try {
+        const tab = await getActiveTab();
+        if (!tab.id) {
+            return;
+        }
+        const posting = await extractEssayQuestionsForRole(tab.id, role);
+        if (requestId !== essayQuestionRequestId || !posting) {
+            return;
+        }
+        currentPosting = {
+            ...currentPosting,
+            essayQuestions: currentPosting.essayQuestions ?? posting.essayQuestions ?? [],
+            roleEssayQuestions: {
+                ...(currentPosting.roleEssayQuestions ?? {}),
+                ...(posting.roleEssayQuestions ?? {})
+            }
+        };
+        updateEssayQuestionsForSelectedRoles(role);
+    }
+    catch {
+        if (requestId === essayQuestionRequestId) {
+            renderEssayQuestionStatus(null, [], getSelectedRoles());
+        }
+    }
 }
 
 function normalizeInput(value) {
@@ -253,6 +340,12 @@ function updateEssayQuestionsForSelectedRoles(changedRole = null) {
     renderEssayQuestionStatus(matchedRole, questions, selectedRoles);
 }
 
+function renderEssayQuestionLoading(role) {
+    essayQuestionsInput.value = '';
+    essayQuestionStatus.textContent = `"${role}" 자소서 문항을 확인하고 있습니다.`;
+    essayQuestionStatus.classList.remove('is-warning');
+}
+
 function buildRoleEssayQuestionsPayload(selectedRoles) {
     const source = currentPosting?.roleEssayQuestions ?? {};
     const payload = selectedRoles.reduce((accumulator, role) => {
@@ -272,9 +365,25 @@ function getSelectedRoles() {
         .map((item) => item.value);
 }
 
-function renderEssayQuestionStatus(matchedRole, questions, selectedRoles) {
+function renderLegacyEssayQuestionStatus(matchedRole, questions, selectedRoles) {
     if (matchedRole && questions.length > 0) {
         essayQuestionStatus.textContent = `"${matchedRole}" 기준 자소서 문항 ${questions.length}개를 가져왔습니다. 직무 선택을 바꾸면 문항도 함께 바뀝니다.`;
+        essayQuestionStatus.classList.remove('is-warning');
+        return;
+    }
+    if ((currentPosting?.essayQuestions ?? []).length > 0) {
+        essayQuestionStatus.textContent = `공통 자소서 문항 ${questions.length}개를 가져왔습니다. 직무별 문항을 찾지 못하면 이 문항을 사용합니다.`;
+        essayQuestionStatus.classList.remove('is-warning');
+        return;
+    }
+    const roleLabel = selectedRoles[0] ? `"${selectedRoles[0]}" ` : '';
+    essayQuestionStatus.textContent = `${roleLabel}자소서 문항을 자동으로 확인하지 못했습니다. 아래에 직접 입력하면 저장됩니다.`;
+    essayQuestionStatus.classList.add('is-warning');
+}
+
+function renderEssayQuestionStatus(matchedRole, questions, selectedRoles) {
+    if (matchedRole && questions.length > 0) {
+        essayQuestionStatus.textContent = `"${matchedRole}" 기준 자소서 문항 ${questions.length}개를 가져왔습니다.`;
         essayQuestionStatus.classList.remove('is-warning');
         return;
     }
@@ -408,9 +517,19 @@ function showPanel(panel) {
 }
 
 function setStatus(message, isError = false) {
-    statusMessage.textContent = message;
+    statusMessage.textContent = normalizeStatusMessage(message, isError);
     statusPanel.classList.toggle('is-error', isError);
     showPanel(statusPanel);
+}
+
+function normalizeStatusMessage(message, isError = false) {
+    const text = String(message ?? '').replace(/\s+/g, ' ').trim();
+    const fallback = isError ? '문제가 발생했습니다. 잠시 후 다시 시도해 주세요.' : '처리 중입니다.';
+    const normalized = text || fallback;
+    if (isError && /failed to fetch/i.test(normalized)) {
+        return '서버에 연결하지 못했습니다. EZ-ONE 서버가 켜져 있는지 확인해 주세요.';
+    }
+    return normalized.length > 160 ? `${normalized.slice(0, 157)}...` : normalized;
 }
 
 function setStaticLinks() {

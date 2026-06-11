@@ -200,4 +200,22 @@ describe('extensionJobApi', () => {
             globalThis.fetch = originalFetch;
         }
     });
+    it('hides raw browser fetch errors behind a user-friendly server message', async () => {
+        const api = createExtensionJobApi({
+            apiBaseUrl: 'http://localhost:8080/api',
+            getAccessToken: async () => 'access-token',
+            fetcher: vi.fn(async () => {
+                throw new TypeError('Failed to fetch');
+            })
+        });
+
+        await expect(api.preview({
+            companyName: 'Naver',
+            positionTitle: 'Backend Developer',
+            deadlineLabel: 'D-26',
+            sourceUrl: 'https://www.jasoseol.com/recruit/1',
+            roleOptions: ['Backend'],
+            essayQuestions: []
+        })).rejects.toThrow('서버에 연결하지 못했습니다. EZ-ONE 서버가 켜져 있는지 확인해 주세요.');
+    });
 });

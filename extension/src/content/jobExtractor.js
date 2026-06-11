@@ -41,9 +41,15 @@ function extractCompanyName(documentRef, jasoseolData) {
 }
 
 async function revealEssayQuestions(documentRef, options = {}) {
-    const hoverDelayMs = options.hoverDelayMs ?? 120;
+    const hoverDelayMs = options.hoverDelayMs ?? 50;
+    const maxEssayTriggers = options.maxEssayTriggers ?? 12;
+    const targetRoles = Array.isArray(options.targetRoles)
+        ? options.targetRoles.map(cleanText).filter(Boolean)
+        : [];
     const roleEssayQuestions = {};
-    const candidates = findEssayTriggerCandidates(documentRef);
+    const candidates = findEssayTriggerCandidates(documentRef)
+        .filter((candidate) => matchesTargetRole(extractRoleFromEssayTrigger(candidate), targetRoles))
+        .slice(0, maxEssayTriggers);
     for (const candidate of candidates) {
         const role = extractRoleFromEssayTrigger(candidate);
         dispatchHoverEvents(candidate, documentRef);
@@ -60,14 +66,30 @@ async function revealEssayQuestions(documentRef, options = {}) {
     }
 }
 
+function matchesTargetRole(role, targetRoles) {
+    if (targetRoles.length === 0) {
+        return true;
+    }
+    const cleanRole = cleanText(role);
+    return Boolean(cleanRole && targetRoles.includes(cleanRole));
+}
+
 function findEssayTriggerCandidates(documentRef) {
-    const selector = 'button, a, [role="button"], td, li';
-    return Array.from(documentRef.querySelectorAll(selector)).filter((item) => {
+    const directTriggers = Array.from(documentRef.querySelectorAll('button, a, [role="button"]'));
+    const roleRowTriggers = getRoleRowCandidates(documentRef).flatMap((row) => {
+        const controls = Array.from(row.querySelectorAll('button, a, [role="button"]'));
+        return controls.length > 0 ? controls : [row];
+    });
+    return uniqueElements([...directTriggers, ...roleRowTriggers]).filter((item) => {
         const text = cleanText(item.textContent) ?? '';
         return text.includes(KOREAN_ESSAY_WRITE) ||
             text.includes(KOREAN_ESSAY_CREATE) ||
             (text.includes(KOREAN_ESSAY_LABEL) && /작성|쓰기|문항|보기/.test(text));
     });
+}
+
+function uniqueElements(elements) {
+    return Array.from(new Set(elements));
 }
 
 function dispatchHoverEvents(element, documentRef) {
@@ -495,7 +517,12 @@ function asRecord(value) {
     return value && typeof value === 'object' ? value : null;
 }
 
-window.ezOneExtractJobPosting = () => extractJobPostingWithInteractions();
+window.ezOneExtractJobPosting = (options = {}) => {
+    if (options.withEssayQuestions) {
+        return extractJobPostingWithInteractions(document, document.location.href, options);
+    }
+    return extractJobPosting(document, document.location.href);
+};
 if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage && !window.ezOneJobExtractorListenerReady) {
     window.ezOneJobExtractorListenerReady = true;
     chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
