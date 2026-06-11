@@ -2861,10 +2861,10 @@ li {
   justify-content: center;
   border: 1px solid transparent;
   border-radius: 6px;
-  font-size: 0.78rem;
-  font-weight: 900;
+  font-size: 0.65rem;
+  font-weight: 800;
   line-height: 1.1;
-  padding: 6px 10px;
+  padding: 4px 8px;
   white-space: nowrap;
 }
 

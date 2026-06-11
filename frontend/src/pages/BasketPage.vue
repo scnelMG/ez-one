@@ -28,28 +28,11 @@
       </section>
 
       <section class="basket-list-panel" data-testid="basket-list-panel" aria-label="저장한 공고 목록">
-        <div class="basket-title-row">
           <div style="display: flex; align-items: center;">
             <h2 style="margin: 0;">공고 장바구니</h2>
-            <button class="primary-button small" @click="isManualAddModalOpen = true" style="margin-left: 12px;">+ 직접 추가하기</button>
           </div>
-          <div class="basket-tools" aria-label="장바구니 정렬">
-            <RouterLink
-              class="ghost-button small"
-              data-testid="basket-sort-deadline"
-              :class="{ active: selectedSort === 'deadline' }"
-              :to="queryLink({ sort: 'deadline' })"
-            >
-              마감일순
-            </RouterLink>
-            <RouterLink
-              class="ghost-button small"
-              data-testid="basket-sort-saved"
-              :class="{ active: selectedSort === 'saved' }"
-              :to="queryLink({ sort: 'saved' })"
-            >
-              담은 순
-            </RouterLink>
+          <div class="basket-tools" aria-label="장바구니 관리">
+            <button class="primary-button small" @click="isManualAddModalOpen = true">+ 직접 추가하기</button>
           </div>
         </div>
 
@@ -349,7 +332,7 @@ const statusFilters = [
     { label: '미지원', value: 'NOT_APPLIED' }
 ];
 
-const selectedSort = computed(() => route.query.sort === 'saved' ? 'saved' : 'deadline');
+
 const selectedStatus = computed(() => {
     const status = route.query.status;
     return status === 'NOT_STARTED' || status === 'NOT_APPLIED' || status === 'IN_PROGRESS' || status === 'SUBMITTED'
@@ -367,11 +350,8 @@ const searchedJobs = computed(() => {
         job.positionTitle.toLowerCase().includes(keyword)));
 });
 const sortedJobs = computed(() => [...searchedJobs.value].sort((left, right) => {
-    if (selectedSort.value === 'deadline') {
-        const deadlineDifference = deadlineRank(left) - deadlineRank(right);
-        return deadlineDifference === 0 ? savedRank(left) - savedRank(right) : deadlineDifference;
-    }
-    return savedRank(left) - savedRank(right);
+    const deadlineDifference = deadlineRank(left) - deadlineRank(right);
+    return deadlineDifference === 0 ? savedRank(left) - savedRank(right) : deadlineDifference;
 }));
 const totalPages = computed(() => Math.max(1, Math.ceil(sortedJobs.value.length / pageSize)));
 const pagedJobs = computed(() => {
@@ -491,7 +471,7 @@ watch(() => route.query.q, (nextQuery) => {
     currentPage.value = 1;
     searchQuery.value = String(nextQuery ?? '');
 });
-watch([searchQuery, isPriorityFilter, selectedSort, sortedJobs], () => {
+watch([searchQuery, isPriorityFilter, sortedJobs], () => {
     currentPage.value = 1;
 });
 watch(totalPages, (nextTotalPages) => {
