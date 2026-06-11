@@ -53,13 +53,12 @@
         </div>
 
         <div class="form-group">
-          <label for="sourceUrl">채용 공고 URL *</label>
+          <label for="sourceUrl">채용 공고 URL</label>
           <input
             id="sourceUrl"
             v-model="form.sourceUrl"
             type="url"
             placeholder="https://..."
-            required
           />
         </div>
 

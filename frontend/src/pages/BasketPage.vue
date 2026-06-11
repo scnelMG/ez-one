@@ -29,8 +29,8 @@
 
       <section class="basket-list-panel" data-testid="basket-list-panel" aria-label="저장한 공고 목록">
         <div class="basket-title-row">
-          <div>
-            <h2>공고 장바구니</h2>
+          <div style="display: flex; align-items: center;">
+            <h2 style="margin: 0;">공고 장바구니</h2>
             <button class="primary-button small" @click="isManualAddModalOpen = true" style="margin-left: 12px;">+ 직접 추가하기</button>
           </div>
           <div class="basket-tools" aria-label="장바구니 정렬">
