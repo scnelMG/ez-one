@@ -1,0 +1,2 @@
+ALTER TABLE study_group ADD COLUMN image_url VARCHAR(1024) NULL;
+ALTER TABLE shared_job ADD COLUMN deadline_date VARCHAR(64) NULL;

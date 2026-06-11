@@ -253,15 +253,39 @@ public class StudyService {
     }
 
     public void recommendJob(String userEmail, String studyId, RecommendJobRequest request) {
-        SharedJobRow job = new SharedJobRow();
-        job.setId(UUID.randomUUID().toString());
-        job.setStudyId(studyId);
-        job.setRecommenderEmail(userEmail);
-        job.setCompanyName(request.getCompanyName());
-        job.setPositionTitle(request.getPositionTitle());
-        job.setDeadlineLabel(request.getDeadlineLabel());
-        job.setSourceUrl(request.getSourceUrl());
-        job.setRecommendedAt(LocalDateTime.now());
-        studyMapper.insertSharedJob(job);
+        SharedJobRow row = new SharedJobRow();
+        row.setId(UUID.randomUUID().toString());
+        row.setStudyId(studyId);
+        row.setRecommenderEmail(userEmail);
+        row.setCompanyName(request.getCompanyName());
+        row.setPositionTitle(request.getPositionTitle());
+        row.setDeadlineLabel(request.getDeadlineLabel());
+        row.setDeadlineDate(request.getDeadlineDate());
+        row.setSourceUrl(request.getSourceUrl());
+        row.setRecommendedAt(LocalDateTime.now());
+
+        studyMapper.insertSharedJob(row);
+    }
+
+    public void uploadStudyImage(String studyId, org.springframework.web.multipart.MultipartFile file, String userEmail) {
+        StudyGroupRow study = studyMapper.findStudyGroupById(studyId);
+        if (study == null) {
+            throw new IllegalArgumentException("스터디를 찾을 수 없습니다.");
+        }
+        
+        try {
+            String fileName = java.util.UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
+            java.nio.file.Path uploadDir = java.nio.file.Paths.get("uploads", "study_images");
+            if (!java.nio.file.Files.exists(uploadDir)) {
+                java.nio.file.Files.createDirectories(uploadDir);
+            }
+            java.nio.file.Path filePath = uploadDir.resolve(fileName);
+            java.nio.file.Files.copy(file.getInputStream(), filePath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+
+            String imageUrl = "http://localhost:8080/uploads/study_images/" + fileName;
+            studyMapper.updateStudyImageUrl(studyId, imageUrl);
+        } catch (java.io.IOException e) {
+            throw new RuntimeException("이미지 업로드에 실패했습니다.", e);
+        }
     }
 }

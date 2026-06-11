@@ -73,5 +73,15 @@ export const studyApi = {
   async recommendJob(studyId, jobData) {
     const { data } = await apiClient.post(`/api/study/${studyId}/job`, jobData);
     return data;
+  },
+
+  async uploadStudyImage(studyId, file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiClient.post(`/study/${studyId}/image`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
   }
 };

@@ -11,6 +11,7 @@ public class BasketJobRow {
     private String positionTitle;
     private ApplicationStatus applicationStatus;
     private String deadlineLabel;
+    private String deadlineDate;
     private boolean deadlineSoon;
     private String companyLogoUrl;
     private String sourceUrl;
@@ -32,6 +33,8 @@ public class BasketJobRow {
     public void setApplicationStatus(ApplicationStatus applicationStatus) { this.applicationStatus = applicationStatus; }
     public String getDeadlineLabel() { return deadlineLabel; }
     public void setDeadlineLabel(String deadlineLabel) { this.deadlineLabel = deadlineLabel; }
+    public String getDeadlineDate() { return deadlineDate; }
+    public void setDeadlineDate(String deadlineDate) { this.deadlineDate = deadlineDate; }
     public boolean isDeadlineSoon() { return deadlineSoon; }
     public void setDeadlineSoon(boolean deadlineSoon) { this.deadlineSoon = deadlineSoon; }
     public String getCompanyLogoUrl() { return companyLogoUrl; }

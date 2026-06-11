@@ -12,6 +12,7 @@ public class StudyGroupDto {
     private LocalDateTime updatedAt;
     private List<StudyMemberDto> members;
     private int memberCount;
+    private String imageUrl;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -29,4 +30,6 @@ public class StudyGroupDto {
     public void setMembers(List<StudyMemberDto> members) { this.members = members; }
     public int getMemberCount() { return memberCount; }
     public void setMemberCount(int memberCount) { this.memberCount = memberCount; }
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
 }

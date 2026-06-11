@@ -12,6 +12,7 @@
     <result property="positionTitle" column="position_title"/>
     <result property="applicationStatus" column="application_status"/>
     <result property="deadlineLabel" column="deadline_label"/>
+    <result property="deadlineDate" column="deadline_date"/>
     <result property="deadlineSoon" column="deadline_soon"/>
     <result property="companyLogoUrl" column="company_logo_url"/>
     <result property="sourceUrl" column="source_url"/>
@@ -136,6 +137,7 @@
   <select id="findDuplicateBasketJob" resultMap="basketJobRowMap">
     SELECT bj.id, bj.user_id, bj.job_id, w.id AS workspace_id, c.name AS company_name,
            j.title AS position_title, bj.application_status, j.deadline_label,
+           DATE_FORMAT(j.deadline_at, '%Y.%m.%d') AS deadline_date,
            CASE WHEN j.deadline_label LIKE '오늘%' OR j.deadline_label LIKE 'D-%' THEN TRUE ELSE FALSE END AS deadline_soon,
            c.logo_url AS company_logo_url,
            j.url AS source_url, bj.application_memo
@@ -179,6 +181,7 @@
   <select id="listBasketJobs" resultMap="basketJobRowMap">
     SELECT bj.id, bj.user_id, bj.job_id, w.id AS workspace_id, c.name AS company_name,
            j.title AS position_title, bj.application_status, j.deadline_label,
+           DATE_FORMAT(j.deadline_at, '%Y.%m.%d') AS deadline_date,
            CASE WHEN j.deadline_label LIKE '오늘%' OR j.deadline_label LIKE 'D-%' THEN TRUE ELSE FALSE END AS deadline_soon,
            c.logo_url AS company_logo_url,
            j.url AS source_url, bj.application_memo
@@ -225,6 +228,7 @@
   <select id="findBasketJob" resultMap="basketJobRowMap">
     SELECT bj.id, bj.user_id, bj.job_id, w.id AS workspace_id, c.name AS company_name,
            j.title AS position_title, bj.application_status, j.deadline_label,
+           DATE_FORMAT(j.deadline_at, '%Y.%m.%d') AS deadline_date,
            CASE WHEN j.deadline_label LIKE '오늘%' OR j.deadline_label LIKE 'D-%' THEN TRUE ELSE FALSE END AS deadline_soon,
            c.logo_url AS company_logo_url,
            j.url AS source_url, bj.application_memo

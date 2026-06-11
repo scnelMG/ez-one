@@ -4,6 +4,7 @@ public class RecommendJobRequest {
     private String companyName;
     private String positionTitle;
     private String deadlineLabel;
+    private String deadlineDate;
     private String sourceUrl;
 
     public String getCompanyName() { return companyName; }
@@ -12,6 +13,8 @@ public class RecommendJobRequest {
     public void setPositionTitle(String positionTitle) { this.positionTitle = positionTitle; }
     public String getDeadlineLabel() { return deadlineLabel; }
     public void setDeadlineLabel(String deadlineLabel) { this.deadlineLabel = deadlineLabel; }
+    public String getDeadlineDate() { return deadlineDate; }
+    public void setDeadlineDate(String deadlineDate) { this.deadlineDate = deadlineDate; }
     public String getSourceUrl() { return sourceUrl; }
     public void setSourceUrl(String sourceUrl) { this.sourceUrl = sourceUrl; }
 }

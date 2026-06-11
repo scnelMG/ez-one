@@ -84,8 +84,20 @@ public class StudyController {
     }
 
     @PostMapping("/{studyId}/job")
-    public ResponseEntity<Void> recommendJob(@AuthenticationPrincipal JwtAuthenticatedUser user, @PathVariable String studyId, @RequestBody RecommendJobRequest request) {
-        studyService.recommendJob(user.email(), studyId, request);
+    public ResponseEntity<Void> recommendJob(
+            @PathVariable String studyId,
+            @RequestBody RecommendJobRequest request,
+            @AuthenticationPrincipal org.springframework.security.core.userdetails.User user) {
+        studyService.recommendJob(user.getUsername(), studyId, request);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{studyId}/image")
+    public ResponseEntity<Void> uploadStudyImage(
+            @PathVariable String studyId,
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
+            @AuthenticationPrincipal org.springframework.security.core.userdetails.User user) {
+        studyService.uploadStudyImage(studyId, file, user.getUsername());
         return ResponseEntity.ok().build();
     }
 }

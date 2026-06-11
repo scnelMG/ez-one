@@ -90,9 +90,9 @@
             </div>
             <div v-else class="shared-list">
               <div class="shared-card" v-for="job in studyStore.sharedJobs" :key="job.id">
-                <p><strong>{{ job.recommenderEmail }}</strong>님이 추천했습니다.</p>
+                <p><strong>{{ job.recommenderName }}</strong>님이 추천했습니다.</p>
                 <h3>{{ job.companyName }} - {{ job.positionTitle }}</h3>
-                <p>마감일: {{ job.deadlineLabel }}</p>
+                <p class="deadline-row">마감일: <strong>{{ job.deadlineDate || '상시' }}</strong> <span class="deadline-badge">{{ job.deadlineLabel }}</span></p>
                 <a v-if="job.sourceUrl" :href="job.sourceUrl" target="_blank" class="text-button">공고 보러가기</a>
               </div>
             </div>
@@ -234,10 +234,14 @@
               <li v-for="basket in recommendJobsList" :key="basket.id" class="workspace-item checkbox-item">
                 <label class="checkbox-label">
                   <input type="checkbox" :value="basket" v-model="selectedRecommendJobs">
+                  <div class="company-logo-badge">
+                    <img v-if="basket.companyLogoUrl" :src="basket.companyLogoUrl" :alt="basket.companyName" />
+                    <span v-else>{{ basket.companyName.charAt(0) }}</span>
+                  </div>
                   <div class="workspace-info">
                     <strong>{{ basket.companyName }}</strong>
                     <span>{{ basket.positionTitle }}</span>
-                    <small>마감일: {{ basket.deadlineLabel }}</small>
+                    <small>마감일: {{ basket.deadlineDate ? basket.deadlineDate + ' (' + basket.deadlineLabel + ')' : basket.deadlineLabel }}</small>
                   </div>
                 </label>
               </li>
@@ -444,6 +448,7 @@ async function submitRecommendJobs() {
         companyName: job.companyName,
         positionTitle: job.positionTitle,
         deadlineLabel: job.deadlineLabel,
+        deadlineDate: job.deadlineDate || null,
         sourceUrl: job.sourceUrl || ''
       });
     });
@@ -788,5 +793,35 @@ async function submitRecommendJobs() {
   width: 20px;
   height: 20px;
   cursor: pointer;
+}
+.company-logo-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: var(--surface-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.company-logo-badge img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.deadline-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.deadline-badge {
+  background: var(--color-danger-light, #fee2e2);
+  color: var(--color-danger, #dc2626);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: bold;
 }
 </style>

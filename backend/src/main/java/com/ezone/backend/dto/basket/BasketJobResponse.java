@@ -10,6 +10,7 @@ public record BasketJobResponse(
     ApplicationStatus applicationStatus,
     String statusLabel,
     String deadlineLabel,
+    String deadlineDate,
     boolean deadlineSoon,
     String companyLogoUrl,
     String sourceUrl,

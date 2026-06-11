@@ -26,4 +26,5 @@ public interface StudyMapper {
 
     void insertSharedJob(SharedJobRow row);
     List<SharedJobRow> findSharedJobsByStudyId(@Param("studyId") String studyId);
+    void updateStudyImageUrl(@Param("studyId") String studyId, @Param("imageUrl") String imageUrl);
 }

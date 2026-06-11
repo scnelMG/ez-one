@@ -5,6 +5,7 @@ import com.ezone.backend.domain.ReferenceType;
 import com.ezone.backend.dto.basket.BasketJobResponse;
 import com.ezone.backend.dto.basket.CreateBasketJobRequest;
 import com.ezone.backend.dto.basket.UpdateBasketJobRequest;
+import com.ezone.backend.dto.dashboard.ActivitySummaryResponse;
 import com.ezone.backend.dto.dashboard.DashboardJobResponse;
 import com.ezone.backend.dto.dashboard.DashboardSummaryResponse;
 import com.ezone.backend.dto.workspace.CompareEssayVersionsRequest;
@@ -73,6 +74,11 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
                 .map(this::toDashboardJob)
                 .toList()
         );
+    }
+
+    @Override
+    public List<ActivitySummaryResponse> getActivitySummary(Long userId) {
+        return List.of();
     }
 
     @Override
@@ -632,6 +638,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             status,
             statusLabel(status),
             record.deadlineLabel(),
+            null, // deadlineDate (not used in InMemory mock)
             record.deadlineSoon(),
             record.companyLogoUrl(),
             record.sourceUrl(),

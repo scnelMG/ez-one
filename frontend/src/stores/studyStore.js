@@ -95,6 +95,17 @@ export const useStudyStore = defineStore('study', {
       } catch (error) {
         throw new Error(error.response?.data?.message || '피드백 작성 실패');
       }
+    },
+    async uploadStudyImage(studyId, file) {
+      this.status = 'saving';
+      try {
+        await studyApi.uploadStudyImage(studyId, file);
+        this.status = 'ready';
+      } catch (error) {
+        this.status = 'error';
+        this.errorMessage = error.message;
+        throw error;
+      }
     }
   }
 });

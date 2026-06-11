@@ -44,7 +44,7 @@
           title="공고 목록 로딩 실패"
           :body="basketStore.errorMessage"
         />
-        <div v-else class="main-basket-table">
+        <div v-else-if="basketPreviewJobs.length > 0" class="main-basket-table">
           <p v-if="basketStore.status === 'loading'" class="basket-refreshing">공고 목록을 갱신하는 중입니다.</p>
           <div class="main-basket-head">
             <span>중요</span>
@@ -91,8 +91,8 @@
               <strong>{{ job.companyName }}</strong>
             </RouterLink>
             <span class="main-basket-position">{{ job.positionTitle }}</span>
-            <span class="status-tag" :class="statusClass(job.status)" data-testid="main-basket-status">
-              {{ statusLabel(job.status, job.statusLabel) }}
+            <span class="status-tag" :class="statusClass(job.applicationStatus)" data-testid="main-basket-status">
+              {{ statusLabel(job.applicationStatus, job.applicationStatusLabel) }}
             </span>
             <span class="deadline-pill" :class="{ urgent: job.deadlineSoon }">{{ job.deadlineLabel }}</span>
             <a
@@ -126,65 +126,18 @@
             </button>
           </div>
         </div>
-      </section>
-
-      <section class="dashboard-panel main-recommendation-preview" aria-label="추천 공고 미리보기">
-        <div class="section-heading">
-          <div>
-            <h2>추천 공고</h2>
-            <p>마감일과 지원자 관심도를 기준으로 정리한 추천 공고입니다.</p>
-          </div>
-          <RouterLink class="text-button" to="/recommendations">추천 더보기</RouterLink>
-        </div>
-        <SkeletonLoader v-if="recommendationStore.status === 'loading' && recommendationPreviewItems.length === 0" :lines="3" label="추천 공고를 불러오는 중" />
-        <StatePanel
-          v-else-if="recommendationStore.status === 'error' && recommendationPreviewItems.length === 0"
-          id="main-recommendation-error"
-          tone="navy"
-          title="추천 공고 로딩 실패"
-          :body="recommendationStore.errorMessage"
-        />
-        <div v-else-if="recommendationPreviewItems.length > 0" class="recommendation-thumbnail-grid">
-          <article
-            v-for="item in recommendationPreviewItems"
-            :key="item.id"
-            class="recommendation-thumbnail-card"
-            data-testid="main-recommendation-preview-job"
-          >
-            <div class="recommendation-thumbnail-logo" aria-hidden="true">
-              <img
-                v-if="item.companyLogoUrl && !failedLogos.has(item.id)"
-                data-testid="main-recommendation-logo"
-                :src="item.companyLogoUrl"
-                :alt="`${item.companyName} logo`"
-                @error="handleLogoError(item.id)"
-              />
-              <span v-else>{{ companyInitial(item.companyName) }}</span>
-            </div>
-            <div class="recommendation-thumbnail-copy">
-              <strong>{{ item.companyName }}</strong>
-              <span>{{ item.positionTitle }}</span>
-              <p>{{ item.deadlineLabel }} · {{ formatParticipantCount(item.participantCount) }}명 작성</p>
-            </div>
-            <button
-              class="recommendation-save-button"
-              type="button"
-              :disabled="recommendationStore.status === 'saving'"
-              :data-testid="`main-save-recommendation-${item.id}`"
-              @click="saveRecommendation(item.id)"
-            >
-              담기
-            </button>
-          </article>
         </div>
         <StatePanel
           v-else
-          id="main-recommendation-empty"
+          id="main-basket-empty"
           tone="navy"
-          title="추천 공고가 없습니다"
-          body="추천 공고 페이지에서 조건을 확인해 주세요."
+          title="장바구니에 담긴 공고가 없습니다"
+          body="새로운 공고를 찾아 장바구니에 담아보세요!"
         />
       </section>
+
+      <HoneyPotGraph :activities="activities" />
+
     </section>
     <OnboardingPage v-if="showOnboardingModal" @completed="showOnboardingModal = false" />
     <ConfirmDialog
@@ -202,6 +155,8 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
+import { dashboardApi } from '@/features/dashboard/api/dashboardApi';
+import HoneyPotGraph from '@/components/HoneyPotGraph.vue';
 import AppLayout from '@/shared/AppLayout.vue';
 import {
   deadlineRank,
@@ -267,10 +222,15 @@ const recommendationPreviewItems = computed(() => [...recommendationStore.jobs]
     .sort((left, right) => deadlineRank(left) - deadlineRank(right))
     .slice(0, 4));
 
-onMounted(() => {
-    void dashboardStore.loadSummary();
-    void basketStore.loadJobs();
-    void recommendationStore.loadRecommendations();
+const activities = ref([]);
+
+onMounted(async () => {
+  await Promise.all([
+    basketStore.loadJobs(),
+    dashboardStore.loadSummary()
+  ]);
+  activities.value = await dashboardApi.getActivities();
+  void recommendationStore.loadRecommendations();
 });
 
 function isVisibleRecommendation(item) {

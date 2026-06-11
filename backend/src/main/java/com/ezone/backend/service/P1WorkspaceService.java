@@ -6,6 +6,7 @@ import com.ezone.backend.dto.basket.BasketJobResponse;
 import com.ezone.backend.dto.basket.CreateBasketJobRequest;
 import com.ezone.backend.dto.basket.UpdateBasketJobRequest;
 import com.ezone.backend.dto.dashboard.DashboardJobResponse;
+import com.ezone.backend.dto.dashboard.ActivitySummaryResponse;
 import com.ezone.backend.dto.dashboard.DashboardSummaryResponse;
 import com.ezone.backend.dto.workspace.CompareEssayVersionsRequest;
 import com.ezone.backend.dto.workspace.CompareEssayVersionsResponse;
@@ -23,6 +24,8 @@ import java.util.List;
 public interface P1WorkspaceService {
 
     DashboardSummaryResponse getDashboardSummary(Long userId);
+
+    List<ActivitySummaryResponse> getActivitySummary(Long userId);
 
     List<BasketJobResponse> listBasketJobs(Long userId, ApplicationStatus status, String sort);
 

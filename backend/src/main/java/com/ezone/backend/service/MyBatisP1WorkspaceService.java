@@ -23,8 +23,11 @@ import com.ezone.backend.dto.workspace.EssayQuestionResponse;
 import com.ezone.backend.dto.workspace.EssayVersionResponse;
 import com.ezone.backend.dto.workspace.ReferenceResponse;
 import com.ezone.backend.dto.workspace.UpdateDraftRequest;
+import com.ezone.backend.dto.dashboard.ActivitySummaryResponse;
+import com.ezone.backend.dto.workspace.WorkspaceDefaultsResponse;
 import com.ezone.backend.dto.workspace.WorkspaceDefaultsResponse;
 import com.ezone.backend.dto.workspace.WorkspaceResponse;
+import com.ezone.backend.mapper.ActivityMapper;
 import com.ezone.backend.mapper.P1WorkspaceMapper;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -44,9 +47,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class MyBatisP1WorkspaceService implements P1WorkspaceService {
 
     private final P1WorkspaceMapper mapper;
+    private final ActivityMapper activityMapper;
 
-    public MyBatisP1WorkspaceService(P1WorkspaceMapper mapper) {
+    public MyBatisP1WorkspaceService(P1WorkspaceMapper mapper, ActivityMapper activityMapper) {
         this.mapper = mapper;
+        this.activityMapper = activityMapper;
     }
 
     @Override
@@ -71,6 +76,11 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
                 .map(this::toDashboardJob)
                 .toList()
         );
+    }
+
+    @Override
+    public List<ActivitySummaryResponse> getActivitySummary(Long userId) {
+        return activityMapper.findActivitySummaryByUserId(userId);
     }
 
     @Override
@@ -156,6 +166,8 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         reference.setUrl(request.sourceUrl());
         mapper.insertReferenceMaterial(reference);
 
+        activityMapper.insertActivity(userId, "BASKET_ADD", 1);
+
         return toBasketResponse(basketJob);
     }
 
@@ -231,6 +243,11 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         if (mapper.updateBasketJobStatus(userId, basketJobId, status) == 0) {
             throw new IllegalArgumentException("Basket job not found");
         }
+        
+        if (status == ApplicationStatus.IN_PROGRESS || status == ApplicationStatus.COMPLETED) {
+            activityMapper.insertActivity(userId, "STATUS_CHANGE", 2);
+        }
+        
         return getBasketJob(userId, basketJobId);
     }
 
@@ -314,6 +331,9 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         mapper.updateDraft(draftId, request.body());
         mapper.markWorkspaceBasketJobInProgress(userId, workspaceId);
         question.setDraft(request.body());
+        
+        activityMapper.insertActivity(userId, "DRAFT_UPDATE", 1);
+        
         return toQuestionResponse(question);
     }
 
@@ -378,6 +398,9 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         reference.setUrl(request.url());
         mapper.insertReferenceMaterial(reference);
         mapper.markWorkspaceBasketJobInProgress(userId, workspaceId);
+        
+        activityMapper.insertActivity(userId, "REFERENCE_ADD", 1);
+        
         return toReferenceResponse(reference);
     }
 
@@ -492,6 +515,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
             status,
             statusLabel(status),
             row.getDeadlineLabel(),
+            row.getDeadlineDate(),
             row.isDeadlineSoon(),
             row.getCompanyLogoUrl(),
             row.getSourceUrl(),

@@ -9,12 +9,12 @@
     </insert>
 
     <select id="findStudyGroupById" resultType="com.ezone.backend.domain.persistence.StudyGroupRow">
-        SELECT id, name, description, created_by AS createdBy, created_at AS createdAt, updated_at AS updatedAt
+        SELECT id, name, description, created_by AS createdBy, created_at AS createdAt, updated_at AS updatedAt, image_url AS imageUrl
         FROM study_group WHERE id = #{id}
     </select>
 
     <select id="findStudyGroupsByUserEmail" resultType="com.ezone.backend.domain.persistence.StudyGroupRow">
-        SELECT g.id, g.name, g.description, g.created_by AS createdBy, g.created_at AS createdAt, g.updated_at AS updatedAt
+        SELECT g.id, g.name, g.description, g.created_by AS createdBy, g.created_at AS createdAt, g.updated_at AS updatedAt, g.image_url AS imageUrl
         FROM study_group g
         JOIN study_member m ON g.id = m.study_id
         WHERE m.user_email = #{userEmail}
@@ -106,13 +106,25 @@
     </select>
 
     <insert id="insertSharedJob" parameterType="com.ezone.backend.domain.persistence.SharedJobRow">
-        INSERT INTO shared_job (id, study_id, recommender_email, company_name, position_title, deadline_label, source_url, recommended_at)
-        VALUES (#{id}, #{studyId}, #{recommenderEmail}, #{companyName}, #{positionTitle}, #{deadlineLabel}, #{sourceUrl}, #{recommendedAt})
+        INSERT INTO shared_job (id, study_id, recommender_email, company_name, position_title, deadline_label, deadline_date, source_url, recommended_at)
+        VALUES (#{id}, #{studyId}, #{recommenderEmail}, #{companyName}, #{positionTitle}, #{deadlineLabel}, #{deadlineDate}, #{sourceUrl}, #{recommendedAt})
     </insert>
 
     <select id="findSharedJobsByStudyId" resultType="com.ezone.backend.domain.persistence.SharedJobRow">
-        SELECT id, study_id AS studyId, recommender_email AS recommenderEmail, company_name AS companyName, position_title AS positionTitle, deadline_label AS deadlineLabel, source_url AS sourceUrl, recommended_at AS recommendedAt
-        FROM shared_job WHERE study_id = #{studyId}
+        SELECT 
+            sj.id, sj.study_id AS studyId, sj.recommender_email AS recommenderEmail, 
+            sj.company_name AS companyName, sj.position_title AS positionTitle, 
+            sj.deadline_label AS deadlineLabel, sj.deadline_date AS deadlineDate, 
+            sj.source_url AS sourceUrl, sj.recommended_at AS recommendedAt,
+            u.name AS recommenderName
+        FROM shared_job sj
+        LEFT JOIN users u ON sj.recommender_email = u.email
+        WHERE sj.study_id = #{studyId}
+        ORDER BY sj.recommended_at DESC
     </select>
+
+    <update id="updateStudyImageUrl">
+        UPDATE study_group SET image_url = #{imageUrl} WHERE id = #{studyId}
+    </update>
 
 </mapper>

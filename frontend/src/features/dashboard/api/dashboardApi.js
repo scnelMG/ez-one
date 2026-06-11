@@ -33,6 +33,14 @@ export function createDashboardApi(httpClient = defaultHttpClient) {
             } catch {
                 return emptyDashboardSummary;
             }
+        },
+        async getActivities() {
+            try {
+                const response = await httpClient.get('/api/dashboard/activities', { skipAuthRefresh: true });
+                return unwrapApiData(response.data);
+            } catch {
+                return [];
+            }
         }
     };
 }
