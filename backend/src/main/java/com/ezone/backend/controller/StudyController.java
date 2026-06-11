@@ -87,8 +87,8 @@ public class StudyController {
     public ResponseEntity<Void> recommendJob(
             @PathVariable String studyId,
             @RequestBody RecommendJobRequest request,
-            @AuthenticationPrincipal org.springframework.security.core.userdetails.User user) {
-        studyService.recommendJob(user.getUsername(), studyId, request);
+            @AuthenticationPrincipal JwtAuthenticatedUser user) {
+        studyService.recommendJob(user.email(), studyId, request);
         return ResponseEntity.ok().build();
     }
 
@@ -96,8 +96,8 @@ public class StudyController {
     public ResponseEntity<Void> uploadStudyImage(
             @PathVariable String studyId,
             @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
-            @AuthenticationPrincipal org.springframework.security.core.userdetails.User user) {
-        studyService.uploadStudyImage(studyId, file, user.getUsername());
+            @AuthenticationPrincipal JwtAuthenticatedUser user) {
+        studyService.uploadStudyImage(studyId, file, user.email());
         return ResponseEntity.ok().build();
     }
 }

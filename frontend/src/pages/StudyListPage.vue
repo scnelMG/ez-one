@@ -191,8 +191,8 @@ async function respondInvite(inviteId, accept) {
   flex-grow: 1;
 }
 .study-image-upload {
-  width: 60px;
-  height: 60px;
+  width: 120px;
+  height: 120px;
   border-radius: 8px;
   background: var(--surface-hover);
   display: flex;
