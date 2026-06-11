@@ -28,6 +28,7 @@
       </section>
 
       <section class="basket-list-panel" data-testid="basket-list-panel" aria-label="저장한 공고 목록">
+        <div class="basket-title-row">
           <div style="display: flex; align-items: center;">
             <h2 style="margin: 0;">공고 장바구니</h2>
           </div>
