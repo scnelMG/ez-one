@@ -33,7 +33,7 @@
             <h2 style="margin: 0;">공고 장바구니</h2>
           </div>
           <div class="basket-tools" aria-label="장바구니 관리">
-            <button class="primary-button small" @click="isManualAddModalOpen = true">+ 직접 추가하기</button>
+            <button class="add-manual-btn" @click="isManualAddModalOpen = true">+ 직접 추가하기</button>
           </div>
         </div>
 
@@ -491,3 +491,24 @@ watch(totalPages, (nextTotalPages) => {
     }
 });
 </script>
+
+<style scoped>
+.add-manual-btn {
+  background: #8b5cf6;
+  border: 1px solid #8b5cf6;
+  color: #ffffff;
+  padding: 10px 18px;
+  min-height: 40px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  border-radius: 6px;
+  white-space: nowrap;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.add-manual-btn:hover {
+  background: #7c3aed;
+}
+</style>
