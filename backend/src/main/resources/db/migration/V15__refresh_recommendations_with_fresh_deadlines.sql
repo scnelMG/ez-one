@@ -1,7 +1,7 @@
 -- Refresh recommendation posts with the latest metadata and deadlines.
 -- Keep existing recommendation rows and update their company profile, posting URL, and deadline.
 
-UPDATE companies
+UPDATE IGNORE companies
 SET name = CASE domain
     WHEN 'toss.im' THEN '토스'
     WHEN 'serveone.co.kr' THEN 'ServeOne'

@@ -17,7 +17,9 @@ public interface StudyMapper {
     void insertStudyInvite(StudyInviteRow row);
     
     void insertSharedEssay(SharedEssayRow row);
+    SharedEssayRow findSharedEssayById(@Param("id") String id);
     List<SharedEssayRow> findSharedEssaysByStudyId(@Param("studyId") String studyId);
+    List<com.ezone.backend.dto.study.SharedEssayItemDto> findEssayItemsByVersionIds(@Param("versionIds") List<String> versionIds);
 
     void insertEssayFeedback(EssayFeedbackRow row);
     List<EssayFeedbackRow> findFeedbackBySharedEssayId(@Param("sharedEssayId") String sharedEssayId);

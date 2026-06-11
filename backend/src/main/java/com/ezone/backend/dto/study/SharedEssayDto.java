@@ -1,16 +1,16 @@
-package com.ezone.backend.domain.persistence;
+package com.ezone.backend.dto.study;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
-public class SharedEssayRow {
+public class SharedEssayDto {
     private String id;
     private String studyId;
     private String userEmail;
     private String workspaceId;
-    private String versionIds; // Stored as JSON string
+    private List<String> versionIds;
     private LocalDateTime sharedAt;
     
-    // Joined columns from jobs/basket_jobs
     private String companyName;
     private String positionTitle;
     private String deadlineLabel;
@@ -23,8 +23,8 @@ public class SharedEssayRow {
     public void setUserEmail(String userEmail) { this.userEmail = userEmail; }
     public String getWorkspaceId() { return workspaceId; }
     public void setWorkspaceId(String workspaceId) { this.workspaceId = workspaceId; }
-    public String getVersionIds() { return versionIds; }
-    public void setVersionIds(String versionIds) { this.versionIds = versionIds; }
+    public List<String> getVersionIds() { return versionIds; }
+    public void setVersionIds(List<String> versionIds) { this.versionIds = versionIds; }
     public LocalDateTime getSharedAt() { return sharedAt; }
     public void setSharedAt(LocalDateTime sharedAt) { this.sharedAt = sharedAt; }
     public String getCompanyName() { return companyName; }

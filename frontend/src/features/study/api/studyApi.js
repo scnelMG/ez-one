@@ -1,4 +1,4 @@
-import { apiClient } from '@/shared/apiClient';
+import { defaultHttpClient as apiClient } from '@/shared/apiClient';
 
 export const studyApi = {
   async getMyStudies() {
@@ -12,16 +12,8 @@ export const studyApi = {
   },
 
   async getStudyDetail(studyId) {
-    // 백엔드 API 부재로 목업 데이터 리턴 (추후 백엔드 GET /api/study/{id} 구현 필요)
-    return {
-      id: studyId,
-      name: '임시 스터디 상세',
-      description: '로딩된 임시 스터디입니다.',
-      members: [
-        { id: '1', userEmail: 'leader@example.com', role: 'LEADER', activeJobCount: 5 },
-        { id: '2', userEmail: 'member@example.com', role: 'MEMBER', activeJobCount: 2 }
-      ]
-    };
+    const { data } = await apiClient.get(`/api/study/${studyId}`);
+    return data;
   },
 
   async inviteMember(studyId, email) {
@@ -41,12 +33,25 @@ export const studyApi = {
   },
 
   async getSharedEssays(studyId) {
-    // 백엔드 API 부재로 빈 배열 리턴
-    return [];
+    const { data } = await apiClient.get(`/api/study/${studyId}/essays`);
+    return data;
   },
 
-  async shareEssay(studyId, workspaceId, versionId) {
-    const { data } = await apiClient.post(`/api/study/${studyId}/essay`, { workspaceId, versionId });
+  async shareEssay(studyId, workspaceId, versionIds) {
+    const { data } = await apiClient.post(`/api/study/${studyId}/essay`, {
+      workspaceId,
+      versionIds
+    });
+    return data;
+  },
+
+  async getSharedEssayDetail(studyId, sharedEssayId) {
+    const { data } = await apiClient.get(`/api/study/${studyId}/essay/${sharedEssayId}`);
+    return data;
+  },
+
+  async addEssayFeedback(studyId, sharedEssayId, content) {
+    const { data } = await apiClient.post(`/api/study/${studyId}/essay/${sharedEssayId}/feedback`, { content });
     return data;
   },
 
@@ -61,8 +66,8 @@ export const studyApi = {
   },
 
   async getSharedJobs(studyId) {
-    // 백엔드 API 부재로 빈 배열 리턴
-    return [];
+    const { data } = await apiClient.get(`/api/study/${studyId}/jobs`);
+    return data;
   },
 
   async recommendJob(studyId, jobData) {

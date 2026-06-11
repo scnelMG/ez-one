@@ -8,6 +8,7 @@ export const useStudyStore = defineStore('study', {
     currentStudy: null,
     sharedEssays: [],
     sharedJobs: [],
+    currentSharedEssayDetail: null,
     status: 'idle',
     errorMessage: ''
   }),
@@ -72,6 +73,27 @@ export const useStudyStore = defineStore('study', {
         this.sharedJobs = await studyApi.getSharedJobs(studyId);
       } catch (error) {
         console.error('Failed to load shared jobs', error);
+      }
+    },
+
+    async loadSharedEssayDetail(studyId, sharedEssayId) {
+      try {
+        this.status = 'loading';
+        const detail = await studyApi.getSharedEssayDetail(studyId, sharedEssayId);
+        this.currentSharedEssayDetail = detail;
+        this.status = 'ready';
+      } catch (error) {
+        this.status = 'error';
+        this.errorMessage = error.response?.data?.message || '자소서 상세 정보를 불러오는 중 오류가 발생했습니다.';
+      }
+    },
+
+    async addEssayFeedback(studyId, sharedEssayId, content) {
+      try {
+        await studyApi.addEssayFeedback(studyId, sharedEssayId, content);
+        await this.loadSharedEssayDetail(studyId, sharedEssayId); // 새로고침
+      } catch (error) {
+        throw new Error(error.response?.data?.message || '피드백 작성 실패');
       }
     }
   }

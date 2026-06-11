@@ -97,7 +97,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import bellIconUrl from '@/assets/bell.svg';
 import logoUrl from '@/assets/ez-one-logo-final.png';
@@ -111,6 +111,12 @@ const profileStore = useProfileStore();
 const isProfileMenuOpen = ref(false);
 let profileMenuCloseTimer = null;
 const currentUser = computed(() => getCurrentUser());
+
+onMounted(async () => {
+  if (currentUser.value && !profileStore.profile && profileStore.status === 'idle') {
+    await profileStore.loadProfile();
+  }
+});
 
 const profileDisplayName = computed(() => {
   const user = currentUser.value;

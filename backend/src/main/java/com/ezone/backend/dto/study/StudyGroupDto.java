@@ -1,6 +1,7 @@
 package com.ezone.backend.dto.study;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class StudyGroupDto {
     private String id;
@@ -9,6 +10,8 @@ public class StudyGroupDto {
     private String createdBy;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private List<StudyMemberDto> members;
+    private int memberCount;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -22,4 +25,8 @@ public class StudyGroupDto {
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public List<StudyMemberDto> getMembers() { return members; }
+    public void setMembers(List<StudyMemberDto> members) { this.members = members; }
+    public int getMemberCount() { return memberCount; }
+    public void setMemberCount(int memberCount) { this.memberCount = memberCount; }
 }
