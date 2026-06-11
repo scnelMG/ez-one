@@ -43,12 +43,18 @@
         </div>
 
         <div class="form-group">
-          <label for="deadline">마감일</label>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label for="deadline" style="margin-bottom: 0;">마감일</label>
+            <label style="font-size: 0.8rem; font-weight: normal; display: flex; align-items: center; gap: 4px; cursor: pointer;">
+              <input type="checkbox" v-model="form.isRolling" @change="onRollingChange" /> 상시 채용
+            </label>
+          </div>
           <input
             id="deadline"
             v-model="form.deadlineLabel"
             type="text"
             placeholder="YYYY.MM.DD"
+            :disabled="form.isRolling"
           />
         </div>
 
@@ -90,6 +96,7 @@ const form = reactive({
     companyName: '',
     positionTitle: '',
     deadlineLabel: '',
+    isRolling: false,
     sourceUrl: '',
     logoUrl: ''
 });
@@ -99,6 +106,12 @@ const searchResults = ref([]);
 const showDropdown = ref(false);
 
 let searchTimeout = null;
+
+function onRollingChange() {
+    if (form.isRolling) {
+        form.deadlineLabel = '';
+    }
+}
 
 function onSearchInput() {
     form.companyId = null;
@@ -128,6 +141,7 @@ function close() {
     form.companyName = '';
     form.positionTitle = '';
     form.deadlineLabel = '';
+    form.isRolling = false;
     form.sourceUrl = '';
     form.logoUrl = '';
     searchResults.value = [];
@@ -140,7 +154,7 @@ async function submitForm() {
             companyId: form.companyId,
             companyName: form.companyName.trim(),
             positionTitle: form.positionTitle.trim(),
-            deadlineLabel: form.deadlineLabel.trim(),
+            deadlineLabel: form.isRolling ? '상시' : form.deadlineLabel.trim(),
             sourceUrl: form.sourceUrl.trim(),
             logoUrl: form.logoUrl,
             savedSource: 'MANUAL'

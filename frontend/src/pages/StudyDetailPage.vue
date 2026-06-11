@@ -92,7 +92,11 @@
               <div class="shared-card" v-for="job in studyStore.sharedJobs" :key="job.id">
                 <p><strong>{{ job.recommenderName }}</strong>님이 추천했습니다.</p>
                 <h3>{{ job.companyName }} - {{ job.positionTitle }}</h3>
-                <p class="deadline-row">마감일: <strong>{{ job.deadlineDate || '상시' }}</strong> <span class="deadline-badge">{{ job.deadlineLabel }}</span></p>
+                <p class="deadline-row">
+                  마감일: 
+                  <strong v-if="job.deadlineLabel !== '상시' && job.deadlineLabel !== '상시채용'">{{ job.deadlineLabel || '-' }}</strong>
+                  <span v-else class="deadline-badge">상시</span>
+                </p>
                 <a v-if="job.sourceUrl" :href="job.sourceUrl" target="_blank" class="text-button">공고 보러가기</a>
               </div>
             </div>
