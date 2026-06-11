@@ -33,7 +33,7 @@
             <h2>공고 장바구니</h2>
             <p class="main-preview-note">마감 임박순으로 제공됩니다.</p>
           </div>
-          <RouterLink class="text-button" to="/basket?sort=deadline">전체 보기</RouterLink>
+          <RouterLink class="text-button" style="flex-shrink: 0; margin-bottom: 8px;" to="/basket?sort=deadline">전체 보기</RouterLink>
         </div>
 
         <SkeletonLoader v-if="basketStore.status === 'loading' && basketPreviewJobs.length === 0" :lines="4" label="공고 목록을 불러오는 중" />

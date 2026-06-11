@@ -503,6 +503,8 @@ watch(totalPages, (nextTotalPages) => {
   font-weight: bold;
   border-radius: 6px;
   white-space: nowrap;
+  flex-shrink: 0;
+  min-width: max-content;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
