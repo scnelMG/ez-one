@@ -14,23 +14,40 @@
     </div>
     
     <div class="honey-pot-grid-scroll">
-      <div class="honey-pot-grid">
-        <div v-for="(week, weekIndex) in weeks" :key="weekIndex" class="honey-pot-week">
-          <div 
-            v-for="day in week" 
-            :key="day.dateStr" 
-            class="honey-pot-cell" 
-            :class="['level-' + day.level, { 'future': day.isFuture }]"
-            :title="day.isFuture ? '' : `${day.dateStr}: ${day.score} 방울`"
-          ></div>
+      <div class="honey-pot-graph-body">
+        <div class="honey-pot-y-axis">
+          <span style="grid-row: 2">Mon</span>
+          <span style="grid-row: 4">Wed</span>
+          <span style="grid-row: 6">Fri</span>
+        </div>
+        <div class="honey-pot-main">
+          <div class="honey-pot-months">
+            <span v-for="(month, idx) in months" :key="idx" :style="{ width: `${month.weeks * 16}px` }">
+              {{ month.label }}
+            </span>
+          </div>
+          <div class="honey-pot-grid" @click="showModal = true" role="button" aria-label="꿀통 현황 및 가이드 보기">
+            <div v-for="(week, weekIndex) in weeks" :key="weekIndex" class="honey-pot-week">
+              <div 
+                v-for="day in week" 
+                :key="day.dateStr" 
+                class="honey-pot-cell" 
+                :class="['level-' + day.level, { 'future': day.isFuture }]"
+                :title="day.isFuture ? '' : `${day.dateStr}: ${day.score} 방울`"
+              ></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
+    
+    <HoneyPotModal v-if="showModal" :activities="activities" @close="showModal = false" />
   </div>
 </template>
 
 <script setup>
 import { computed, ref, onMounted } from 'vue';
+import HoneyPotModal from './HoneyPotModal.vue';
 
 const props = defineProps({
   activities: {
@@ -38,6 +55,8 @@ const props = defineProps({
     default: () => []
   }
 });
+
+const showModal = ref(false);
 
 // Map of { "2026-06-11": 3 }
 const activityMap = computed(() => {
@@ -91,6 +110,45 @@ const weeks = computed(() => {
   return result;
 });
 
+const months = computed(() => {
+  const result = [];
+  let currentMonth = -1;
+  let weeksCount = 0;
+  
+  for (let w = 0; w < weeks.value.length; w++) {
+    const week = weeks.value[w];
+    // Use the first day of the week to determine the month
+    const firstDayStr = week[0].dateStr; // YYYY-MM-DD
+    const month = parseInt(firstDayStr.split('-')[1], 10);
+    
+    if (currentMonth !== month) {
+      if (currentMonth !== -1) {
+        result.push({
+          label: getMonthName(currentMonth),
+          weeks: weeksCount
+        });
+      }
+      currentMonth = month;
+      weeksCount = 1;
+    } else {
+      weeksCount++;
+    }
+  }
+  
+  if (weeksCount > 0) {
+    result.push({
+      label: getMonthName(currentMonth),
+      weeks: weeksCount
+    });
+  }
+  
+  return result;
+});
+
+function getMonthName(m) {
+  const names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return names[m - 1];
+}
 </script>
 
 <style scoped>
@@ -143,15 +201,53 @@ const weeks = computed(() => {
   border-radius: 3px;
 }
 
+.honey-pot-graph-body {
+  display: flex;
+  gap: 8px;
+}
+
+.honey-pot-y-axis {
+  display: grid;
+  grid-template-rows: repeat(7, 12px);
+  gap: 4px;
+  font-size: 10px;
+  color: #64748b;
+  line-height: 12px;
+  margin-top: 20px; /* Align with cells below months */
+}
+
+.honey-pot-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.honey-pot-months {
+  display: flex;
+  font-size: 10px;
+  color: #64748b;
+  height: 16px;
+}
+
+.honey-pot-months span {
+  display: inline-block;
+  overflow: hidden;
+}
+
 .honey-pot-grid {
   display: flex;
   gap: 4px;
   min-width: max-content;
+  cursor: pointer;
+}
+
+.honey-pot-grid:hover .honey-pot-cell:not(.future) {
+  opacity: 0.8;
 }
 
 .honey-pot-week {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: repeat(7, 12px);
   gap: 4px;
 }
 
