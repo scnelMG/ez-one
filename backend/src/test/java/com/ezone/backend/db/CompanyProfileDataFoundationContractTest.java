@@ -32,7 +32,7 @@ class CompanyProfileDataFoundationContractTest {
 
     @Test
     void flywayMigrationCreatesCompanyDataFoundationTables() throws IOException {
-        String migration = readResource("/db/migration/V14__add_company_profile_data_foundation.sql")
+        String migration = readResource("/db/migration/V19__add_company_profile_data_foundation.sql")
             .toLowerCase(Locale.ROOT);
 
         assertThat(migration).contains("create table if not exists company_profiles");
