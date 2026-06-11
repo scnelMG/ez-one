@@ -4,7 +4,7 @@
       <header class="dashboard-header main-dashboard-header">
         <div class="dashboard-title">
           <h1>지원 현황</h1>
-          <p>저장한 공고와 추천 공고를 빠르게 확인하고 다음 작업으로 이동합니다.</p>
+          <p>저장한 공고와 추천 공고를 빠르게 확인하고 다음 작업으로 이동합니다</p>
         </div>
       </header>
 
@@ -14,7 +14,7 @@
           <strong>{{ dashboardStore.summary?.totalApplications ?? 0 }}</strong>
         </RouterLink>
         <RouterLink to="/basket?sort=deadline" data-testid="metric-deadline">
-          <span>마감 임박</span>
+          <span>마감 임박 <small style="color: var(--text-tertiary); font-weight: normal; font-size: 0.8em;">(일주일 이내)</small></span>
           <strong>{{ dashboardStore.summary?.deadlineSoon ?? 0 }}</strong>
         </RouterLink>
         <RouterLink to="/basket" data-testid="metric-progress">
@@ -31,7 +31,7 @@
         <div class="section-heading">
           <div class="main-basket-title-row">
             <h2>공고 장바구니</h2>
-            <p class="main-preview-note">마감 임박순으로 제공됩니다.</p>
+            <p class="main-preview-note">마감 임박순으로 제공됩니다</p>
           </div>
           <RouterLink class="text-button" style="flex-shrink: 0; margin-bottom: 8px;" to="/basket?sort=deadline">전체 보기</RouterLink>
         </div>
