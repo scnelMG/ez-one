@@ -5,6 +5,9 @@ import com.ezone.backend.domain.ReferenceType;
 import com.ezone.backend.dto.basket.BasketJobResponse;
 import com.ezone.backend.dto.basket.CreateBasketJobRequest;
 import com.ezone.backend.dto.basket.UpdateBasketJobRequest;
+import com.ezone.backend.dto.basket.UpdateBasketJobStatusRequest;
+import com.ezone.backend.dto.company.CompanySearchResponse;
+import com.ezone.backend.dto.dashboard.ActivityLogResponse;
 import com.ezone.backend.dto.dashboard.ActivitySummaryResponse;
 import com.ezone.backend.dto.dashboard.DashboardJobResponse;
 import com.ezone.backend.dto.dashboard.DashboardSummaryResponse;
@@ -78,6 +81,11 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
 
     @Override
     public List<ActivitySummaryResponse> getActivitySummary(Long userId) {
+        return List.of();
+    }
+
+    @Override
+    public List<ActivityLogResponse> getActivityLogs(Long userId, String date) {
         return List.of();
     }
 
@@ -445,6 +453,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             .findFirst()
             .orElseGet(() -> recommendationSamples().get(0));
         return createBasketJob(userId, new CreateBasketJobRequest(
+            null,
             sample.companyName(),
             sample.positionTitle(),
             sample.deadlineLabel(),
@@ -897,5 +906,10 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
         String sourceUrl,
         String logoUrl
     ) {
+    }
+
+    @Override
+    public List<CompanySearchResponse> searchCompanies(String query) {
+        return List.of();
     }
 }

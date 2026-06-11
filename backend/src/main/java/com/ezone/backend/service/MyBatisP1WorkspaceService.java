@@ -11,6 +11,10 @@ import com.ezone.backend.domain.persistence.WorkspaceRow;
 import com.ezone.backend.dto.basket.BasketJobResponse;
 import com.ezone.backend.dto.basket.CreateBasketJobRequest;
 import com.ezone.backend.dto.basket.UpdateBasketJobRequest;
+import com.ezone.backend.dto.basket.UpdateBasketJobStatusRequest;
+import com.ezone.backend.dto.company.CompanySearchResponse;
+import com.ezone.backend.dto.dashboard.ActivityLogResponse;
+import com.ezone.backend.dto.dashboard.ActivitySummaryResponse;
 import com.ezone.backend.dto.dashboard.DashboardJobResponse;
 import com.ezone.backend.dto.dashboard.DashboardSummaryResponse;
 import com.ezone.backend.dto.workspace.CompareEssayVersionsRequest;
@@ -23,8 +27,6 @@ import com.ezone.backend.dto.workspace.EssayQuestionResponse;
 import com.ezone.backend.dto.workspace.EssayVersionResponse;
 import com.ezone.backend.dto.workspace.ReferenceResponse;
 import com.ezone.backend.dto.workspace.UpdateDraftRequest;
-import com.ezone.backend.dto.dashboard.ActivitySummaryResponse;
-import com.ezone.backend.dto.workspace.WorkspaceDefaultsResponse;
 import com.ezone.backend.dto.workspace.WorkspaceDefaultsResponse;
 import com.ezone.backend.dto.workspace.WorkspaceResponse;
 import com.ezone.backend.mapper.ActivityMapper;
@@ -84,6 +86,11 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
     }
 
     @Override
+    public List<ActivityLogResponse> getActivityLogs(Long userId, String date) {
+        return activityMapper.findDailyLogs(userId, date);
+    }
+
+    @Override
     public List<BasketJobResponse> listBasketJobs(Long userId, ApplicationStatus status, String sort) {
         return mapper.listBasketJobs(userId, null, null).stream()
             .filter(job -> status == null || effectiveStatus(job) == status)
@@ -118,15 +125,28 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         }
 
         JobRow job = new JobRow();
-        job.setCompanyName(request.companyName());
-        applyCompanyDetailDefaults(job, request.sourceUrl());
-        applyCompanyLogoCandidate(job, request.sourceUrl(), request.logoUrl());
-        job.setPositionTitle(request.positionTitle());
-        job.setDeadlineLabel(normalizeDeadline(request.deadlineLabel()));
-        job.setSourceUrl(request.sourceUrl());
-        mapper.upsertCompany(job);
-        recordUnverifiedCompanyInfoSource(job);
-        mapper.insertJob(job);
+        if (request.companyId() != null) {
+            job.setCompanyId(request.companyId());
+            job.setCompanyName(request.companyName());
+            applyCompanyDetailDefaults(job, request.sourceUrl());
+            applyCompanyLogoCandidate(job, request.sourceUrl(), request.logoUrl());
+            job.setPositionTitle(request.positionTitle());
+            job.setDeadlineLabel(normalizeDeadline(request.deadlineLabel()));
+            job.setSourceUrl(request.sourceUrl());
+            // No need to upsertCompany if companyId is provided, just record info and insert job
+            recordUnverifiedCompanyInfoSource(job);
+            mapper.insertJob(job);
+        } else {
+            job.setCompanyName(request.companyName());
+            applyCompanyDetailDefaults(job, request.sourceUrl());
+            applyCompanyLogoCandidate(job, request.sourceUrl(), request.logoUrl());
+            job.setPositionTitle(request.positionTitle());
+            job.setDeadlineLabel(normalizeDeadline(request.deadlineLabel()));
+            job.setSourceUrl(request.sourceUrl());
+            mapper.upsertCompany(job);
+            recordUnverifiedCompanyInfoSource(job);
+            mapper.insertJob(job);
+        }
 
         BasketJobRow basketJob = new BasketJobRow();
         basketJob.setUserId(userId);
@@ -445,6 +465,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         JobRow recommendation = mapper.findRecommendationJob(recommendationId)
             .orElseThrow(() -> new IllegalArgumentException("Recommendation not found"));
         return createBasketJob(userId, new CreateBasketJobRequest(
+            null,
             recommendation.getCompanyName(),
             recommendation.getPositionTitle(),
             recommendation.getDeadlineLabel(),
@@ -503,6 +524,14 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         if (!resourceOwnerId.equals(currentUserId)) {
             throw new ForbiddenResourceException(forbiddenMessage);
         }
+    }
+
+    @Override
+    public List<CompanySearchResponse> searchCompanies(String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return List.of();
+        }
+        return mapper.searchCompaniesByName(query.trim());
     }
 
     private BasketJobResponse toBasketResponse(BasketJobRow row) {

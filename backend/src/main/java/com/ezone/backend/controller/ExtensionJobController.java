@@ -76,6 +76,7 @@ public class ExtensionJobController {
             .map(role -> workspaceService.createBasketJobWithQuestions(
                 userId,
                 new CreateBasketJobRequest(
+                    null,
                     request.companyName(),
                     role,
                     request.deadlineLabel(),

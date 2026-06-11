@@ -5,8 +5,10 @@ import com.ezone.backend.domain.ReferenceType;
 import com.ezone.backend.dto.basket.BasketJobResponse;
 import com.ezone.backend.dto.basket.CreateBasketJobRequest;
 import com.ezone.backend.dto.basket.UpdateBasketJobRequest;
-import com.ezone.backend.dto.dashboard.DashboardJobResponse;
+import com.ezone.backend.dto.company.CompanySearchResponse;
+import com.ezone.backend.dto.dashboard.ActivityLogResponse;
 import com.ezone.backend.dto.dashboard.ActivitySummaryResponse;
+import com.ezone.backend.dto.dashboard.DashboardJobResponse;
 import com.ezone.backend.dto.dashboard.DashboardSummaryResponse;
 import com.ezone.backend.dto.workspace.CompareEssayVersionsRequest;
 import com.ezone.backend.dto.workspace.CompareEssayVersionsResponse;
@@ -26,6 +28,10 @@ public interface P1WorkspaceService {
     DashboardSummaryResponse getDashboardSummary(Long userId);
 
     List<ActivitySummaryResponse> getActivitySummary(Long userId);
+
+    List<ActivityLogResponse> getActivityLogs(Long userId, String date);
+
+    List<CompanySearchResponse> searchCompanies(String query);
 
     List<BasketJobResponse> listBasketJobs(Long userId, ApplicationStatus status, String sort);
 
