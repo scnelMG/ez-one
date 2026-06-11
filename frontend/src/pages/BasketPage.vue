@@ -243,7 +243,10 @@
             >
               <strong>{{ job.companyName }}</strong>
               <small>{{ job.positionTitle }}</small>
-              <em class="status-tag" :class="statusClass(job.status)">{{ statusLabel(job.status) }}</em>
+              <div style="display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                <em class="status-tag" :class="statusClass(job.status)" style="font-size: 0.6rem; padding: 2px 6px;">{{ statusLabel(job.status) }}</em>
+                <span style="color: #94a3b8; font-size: 0.65rem;" v-if="formatDDay(job)">{{ formatDDay(job) }}</span>
+              </div>
             </RouterLink>
           </div>
         </div>
@@ -423,6 +426,13 @@ function daysUntilDeadline(job) {
         return null;
     }
     return Math.ceil((date.getTime() - today.getTime()) / 86400000);
+}
+function formatDDay(job) {
+    const days = daysUntilDeadline(job);
+    if (days === null) return '';
+    if (days === 0) return 'D-Day';
+    if (days > 0) return `D-${days}`;
+    return `D+${-days}`;
 }
 function isDeadlineSoon(job) {
     const daysLeft = daysUntilDeadline(job);
