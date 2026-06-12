@@ -27,6 +27,20 @@
         </RouterLink>
       </section>
 
+      <section v-if="recentTaskJob" class="recent-task-widget" aria-label="최근 작업 이어서 하기">
+        <div class="recent-task-info">
+          <div class="recent-task-pulse"></div>
+          <div class="recent-task-text">
+            <span>다음 작업</span>
+            <strong>{{ recentTaskJob.companyName }} {{ recentTaskJob.positionTitle }} 자소서 이어쓰기</strong>
+          </div>
+        </div>
+        <RouterLink :to="`/workspaces/${recentTaskJob.workspaceId}`" class="recent-task-button">
+          이어서 하기
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </RouterLink>
+      </section>
+
       <section class="dashboard-panel main-basket-preview" aria-label="공고 장바구니 미리보기">
         <div class="section-heading">
           <div class="main-basket-title-row">
@@ -212,6 +226,10 @@ function handleCancel() {
   if (confirmState.resolve) confirmState.resolve(false);
 }
 
+const recentTaskJob = computed(() => {
+  return basketStore.jobs.find(job => isRecentWorkspace(job.workspaceId));
+});
+
 const basketPreviewJobs = computed(() => [...basketStore.jobs]
     .sort((left, right) => deadlineRank(left) - deadlineRank(right))
     .slice(0, 5));
@@ -269,3 +287,88 @@ function archiveJob(jobId) {
     });
 }
 </script>
+
+<style scoped>
+.recent-task-widget {
+  margin-top: 24px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 28px;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(79, 70, 229, 0.15);
+  border-radius: 20px;
+  box-shadow: 0 10px 30px -5px rgba(79, 70, 229, 0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.recent-task-widget:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 40px -5px rgba(79, 70, 229, 0.15);
+}
+
+.recent-task-info {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.recent-task-pulse {
+  width: 12px;
+  height: 12px;
+  background-color: #10B981;
+  border-radius: 50%;
+  box-shadow: 0 0 0 rgba(16, 185, 129, 0.4);
+  animation: pulse 2s infinite;
+  flex-shrink: 0;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.recent-task-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.recent-task-text span {
+  font-size: 0.85rem;
+  color: var(--blue-strong);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.recent-task-text strong {
+  font-size: 1.15rem;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.recent-task-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-strong) 100%);
+  color: #ffffff !important;
+  font-weight: 600;
+  font-size: 1rem;
+  border-radius: 12px;
+  text-decoration: none;
+  box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.recent-task-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(79, 70, 229, 0.4);
+}
+</style>
