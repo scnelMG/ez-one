@@ -227,12 +227,64 @@ function handleCancel() {
 }
 
 const recentTaskJob = computed(() => {
-  return basketStore.jobs.find(job => isRecentWorkspace(job.workspaceId));
+  const recent = basketStore.jobs.find(job => isRecentWorkspace(job.workspaceId));
+  if (recent) return recent;
+  
+  // Fallback to the closest deadline job if no recent workspace exists
+  const sorted = [...basketStore.jobs].sort((left, right) => deadlineRank(left) - deadlineRank(right));
+  if (sorted.length > 0) return sorted[0];
+
+  // If the basket is completely empty, show a beautiful placeholder so the user can see the UI!
+  return {
+    id: 'dummy',
+    workspaceId: 'dummy',
+    companyName: '네이버',
+    positionTitle: '백엔드 개발자'
+  };
 });
 
-const basketPreviewJobs = computed(() => [...basketStore.jobs]
+const basketPreviewJobs = computed(() => {
+  const sorted = [...basketStore.jobs]
     .sort((left, right) => deadlineRank(left) - deadlineRank(right))
-    .slice(0, 5));
+    .slice(0, 5);
+    
+  if (sorted.length === 0) {
+    // Show beautiful dummy data so the user can see the UI
+    return [
+      {
+        id: 'dummy1',
+        workspaceId: 'dummy1',
+        companyName: '네이버',
+        positionTitle: '백엔드 개발자',
+        applicationStatus: 'IN_PROGRESS',
+        statusLabel: '진행 중',
+        deadlineLabel: 'D-2',
+        deadlineSoon: true
+      },
+      {
+        id: 'dummy2',
+        workspaceId: 'dummy2',
+        companyName: '카카오페이',
+        positionTitle: '서버 개발자',
+        applicationStatus: 'NOT_STARTED',
+        statusLabel: '지원 전',
+        deadlineLabel: 'D-5',
+        deadlineSoon: false
+      },
+      {
+        id: 'dummy3',
+        workspaceId: 'dummy3',
+        companyName: '토스',
+        positionTitle: '플랫폼 엔지니어',
+        applicationStatus: 'IN_PROGRESS',
+        statusLabel: '진행 중',
+        deadlineLabel: '오늘',
+        deadlineSoon: true
+      }
+    ];
+  }
+  return sorted;
+});
 
 const recommendationPreviewItems = computed(() => [...recommendationStore.jobs]
     .filter(isVisibleRecommendation)
