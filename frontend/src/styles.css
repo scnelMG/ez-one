@@ -6697,6 +6697,13 @@ li {
   background: #fff;
   background-size: 24px 24px;
   padding: 12px;
+  border: 2px solid rgba(79, 70, 229, 0.15);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.dart-section-card .draft-markdown-editor:hover {
+  border-color: rgba(79, 70, 229, 0.25);
 }
 
 .article-link-form button {
