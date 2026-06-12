@@ -24,7 +24,7 @@ public class NationalPensionApiClient {
     private final ObjectMapper objectMapper;
     private final String serviceKey;
 
-    private static final String API_URL = "http://apis.data.go.kr/B552015/NpsBplcInfoInqireService/getBplcCrrmfcInfoInqire";
+    private static final String API_URL = "http://apis.data.go.kr/B552015/NpsBplcInfoInqireServiceV2/getBassInfoSearchV2";
 
     public NationalPensionApiClient(RestTemplate restTemplate,
                                     @Value("${public-data.api.key}") String serviceKey) {
@@ -47,7 +47,7 @@ public class NationalPensionApiClient {
                     .queryParam("pageNo", 1)
                     .queryParam("numOfRows", 10)
                     .queryParam("resultType", "json")
-                    .build(true)
+                    .build()
                     .toUri();
 
             ResponseEntity<String> response = restTemplate.getForEntity(uri, String.class);
