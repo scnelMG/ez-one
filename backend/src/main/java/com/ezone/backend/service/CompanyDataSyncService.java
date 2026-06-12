@@ -28,7 +28,17 @@ public class CompanyDataSyncService {
 
     @Transactional
     public void syncCompanyByName(String companyName) {
-        log.info("Starting on-demand company sync for: {}", companyName);
+        // 1. 최적화: 우리 DB에 이미 프로필 정보가 있는지 먼저 확인합니다.
+        Long existingCompanyId = syncMapper.findCompanyIdByName(companyName);
+        if (existingCompanyId != null) {
+            Long existingProfileId = syncMapper.findCompanyProfileIdByCompanyId(existingCompanyId);
+            if (existingProfileId != null) {
+                log.info("Company {} already has a profile in DB. Skipping API call to save rate limit.", companyName);
+                return; // 이미 정보가 있으므로 API 호출 생략 (속도 향상 및 트래픽 절약)
+            }
+        }
+
+        log.info("Starting on-demand company sync from API for: {}", companyName);
 
         List<NationalPensionApiClient.CompanyPensionData> dataList = pensionApiClient.searchCompanyByName(companyName);
         if (dataList == null || dataList.isEmpty()) {
