@@ -8260,3 +8260,29 @@ button, .primary-button, .ghost-button, .text-button {
 main, .study-dashboard, .workspace-layout {
   animation: fadeInApp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* =========================================
+   Main Dashboard Premium Overrides
+   ========================================= */
+
+.metric-strip a, .dashboard-panel {
+  box-shadow: var(--shadow-sm) !important;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  border-radius: 16px !important;
+  background-color: var(--surface) !important;
+  border: 1px solid rgba(226, 232, 240, 0.6) !important;
+}
+
+.metric-strip a:hover, .dashboard-panel:hover {
+  transform: translateY(-4px) !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+.main-basket-row {
+  transition: background 0.2s ease, transform 0.2s ease !important;
+}
+
+.main-basket-row:hover {
+  background-color: var(--surface-soft) !important;
+  transform: translateX(4px) !important;
+}
