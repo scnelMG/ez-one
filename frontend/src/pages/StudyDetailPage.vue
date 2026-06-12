@@ -14,27 +14,28 @@
 
       <div class="study-layout">
         <!-- 좌측 사이드바: 탭 메뉴 -->
-        <aside class="study-sidebar">
-          <nav class="study-nav">
-            <button
-              :class="{ active: activeTab === 'dashboard' }"
-              @click="activeTab = 'dashboard'"
-            >
-              스터디 대시보드
-            </button>
-            <button
-              :class="{ active: activeTab === 'essays' }"
-              @click="activeTab = 'essays'"
-            >
-              자소서 피드백
-            </button>
-            <button
-              :class="{ active: activeTab === 'jobs' }"
-              @click="activeTab = 'jobs'"
-            >
-              지인 공고 추천
-            </button>
-          </nav>
+        <aside class="study-sidebar document-section-rail" aria-label="스터디 탭 메뉴">
+          <button
+            class="rail-button"
+            :class="{ active: activeTab === 'dashboard' }"
+            @click="activeTab = 'dashboard'"
+          >
+            스터디 대시보드
+          </button>
+          <button
+            class="rail-button"
+            :class="{ active: activeTab === 'essays' }"
+            @click="activeTab = 'essays'"
+          >
+            자소서 피드백
+          </button>
+          <button
+            class="rail-button"
+            :class="{ active: activeTab === 'jobs' }"
+            @click="activeTab = 'jobs'"
+          >
+            지인 공고 추천
+          </button>
         </aside>
 
         <!-- 우측 메인 콘텐츠 -->
@@ -92,7 +93,11 @@
               <div class="shared-card" v-for="job in studyStore.sharedJobs" :key="job.id">
                 <p><strong>{{ job.recommenderName }}</strong>님이 추천했습니다.</p>
                 <h3>{{ job.companyName }} - {{ job.positionTitle }}</h3>
-                <p class="deadline-row">마감일: <strong>{{ job.deadlineDate || '상시' }}</strong> <span class="deadline-badge">{{ job.deadlineLabel }}</span></p>
+                <p class="deadline-row">
+                  마감일: 
+                  <strong v-if="job.deadlineLabel !== '상시' && job.deadlineLabel !== '상시채용'">{{ job.deadlineLabel || '-' }}</strong>
+                  <span v-else class="deadline-badge">상시</span>
+                </p>
                 <a v-if="job.sourceUrl" :href="job.sourceUrl" target="_blank" class="text-button">공고 보러가기</a>
               </div>
             </div>
@@ -489,29 +494,6 @@ async function submitRecommendJobs() {
 .study-sidebar {
   width: 240px;
   flex-shrink: 0;
-}
-.study-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.study-nav button {
-  text-align: left;
-  padding: 12px 16px;
-  border-radius: 8px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-size: 1rem;
-  color: var(--text-secondary);
-}
-.study-nav button:hover {
-  background: var(--surface-hover);
-}
-.study-nav button.active {
-  background: var(--color-primary-light);
-  color: var(--color-primary);
-  font-weight: bold;
 }
 .study-main-content {
   flex-grow: 1;

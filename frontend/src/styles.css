@@ -1,20 +1,29 @@
 :root {
-  --blue: #6d4dff;
-  --blue-strong: #5838e8;
-  --blue-soft: #f1efff;
-  --blue-line: #c9bfff;
-  --ink: #111827;
-  --text: #2f3747;
-  --muted: #6b7280;
-  --quiet: #9aa3b2;
-  --bg: #d8d8d8;
+  /* Premium Colors */
+  --blue: #4F46E5;
+  --blue-strong: #4338CA;
+  --blue-soft: #EEF2FF;
+  --blue-line: #C7D2FE;
+  --ink: #0F172A;
+  --text: #334155;
+  --muted: #64748B;
+  --quiet: #94A3B8;
+  --bg: #F8FAFC;
   --surface: #ffffff;
-  --surface-soft: #f7f8fb;
-  --line: #dfe4ee;
-  --line-strong: #cbd3df;
-  --warning: #9a5b10;
-  --warning-soft: #fff7e8;
-  --green: #0f8f6f;
+  --surface-soft: #F1F5F9;
+  --line: #E2E8F0;
+  --line-strong: #CBD5E1;
+  --warning: #B45309;
+  --warning-soft: #FEF3C7;
+  --green: #059669;
+  
+  /* Shadows & Depth */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+  --glass-bg: rgba(255, 255, 255, 0.7);
+
   color: var(--text);
   background: var(--bg);
   --font-sans: "Pretendard Variable", Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
@@ -80,14 +89,18 @@ textarea {
 .global-header {
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: 50;
   display: grid;
   grid-template-columns: 180px minmax(0, 1fr) auto;
   align-items: center;
-  min-height: 54px;
-  border-bottom: 1px solid var(--line-strong);
-  background: #ffffff;
+  min-height: 64px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   padding: 0 24px;
+  box-shadow: var(--shadow-sm);
+  transition: background 0.3s ease, box-shadow 0.3s ease;
 }
 
 .brand-lockup,
@@ -2861,10 +2874,10 @@ li {
   justify-content: center;
   border: 1px solid transparent;
   border-radius: 6px;
-  font-size: 0.78rem;
-  font-weight: 900;
-  line-height: 1.1;
-  padding: 6px 10px;
+  font-size: 0.6rem;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 2px 5px;
   white-space: nowrap;
 }
 
@@ -6684,6 +6697,13 @@ li {
   background: #fff;
   background-size: 24px 24px;
   padding: 12px;
+  border: 2px solid rgba(79, 70, 229, 0.15);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.dart-section-card .draft-markdown-editor:hover {
+  border-color: rgba(79, 70, 229, 0.25);
 }
 
 .article-link-form button {
@@ -8209,4 +8229,67 @@ li {
   font-size: 0.8rem;
   color: #5b3bea;
   background: #f5f3ff;
+}
+
+/* =========================================
+   Premium Aesthetic Overhaul Overrides
+   ========================================= */
+
+/* Soft shadows and radius for all major cards */
+.shell-card, .recommendation-card, .workspace-preview-card, .recommendation-job-card, .job-card, .basket-job-card, .kanban-column {
+  box-shadow: var(--shadow-md);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  border-radius: 16px !important;
+}
+
+/* Hover lift effect for cards */
+.shell-card:hover, .recommendation-card:hover, .workspace-preview-card:hover, .recommendation-job-card:hover, .job-card:hover {
+  transform: translateY(-4px) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+/* Button transitions */
+button, .primary-button, .ghost-button, .text-button {
+  transition: all 0.2s ease-in-out !important;
+}
+
+.primary-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3) !important;
+}
+
+/* App fade-in animation for page loads */
+@keyframes fadeInApp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+main, .study-dashboard, .workspace-layout {
+  animation: fadeInApp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* =========================================
+   Main Dashboard Premium Overrides
+   ========================================= */
+
+.metric-strip a, .dashboard-panel {
+  box-shadow: var(--shadow-sm) !important;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  border-radius: 16px !important;
+  background-color: var(--surface) !important;
+  border: 1px solid rgba(226, 232, 240, 0.6) !important;
+}
+
+.metric-strip a:hover, .dashboard-panel:hover {
+  transform: translateY(-4px) !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+.main-basket-row {
+  transition: background 0.2s ease, transform 0.2s ease !important;
+}
+
+.main-basket-row:hover {
+  background-color: var(--surface-soft) !important;
+  transform: translateX(4px) !important;
 }

@@ -7,13 +7,18 @@ import com.ezone.backend.domain.persistence.EssayVersionRow;
 import com.ezone.backend.domain.persistence.JobRow;
 import com.ezone.backend.domain.persistence.ReferenceMaterialRow;
 import com.ezone.backend.domain.persistence.WorkspaceRow;
+import com.ezone.backend.dto.company.CompanySearchResponse;
 import java.util.List;
 import java.util.Optional;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 
 @Mapper
 public interface P1WorkspaceMapper {
+
+    @Select("SELECT id, name, domain, logo_url as logoUrl FROM companies WHERE name LIKE CONCAT('%', #{query}, '%') LIMIT 10")
+    List<CompanySearchResponse> searchCompaniesByName(@Param("query") String query);
 
     void upsertCompany(JobRow row);
 

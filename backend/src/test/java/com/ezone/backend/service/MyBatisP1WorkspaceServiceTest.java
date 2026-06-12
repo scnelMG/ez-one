@@ -59,12 +59,24 @@ class MyBatisP1WorkspaceServiceTest {
             return null;
         }).when(mapper).insertEssayQuestion(org.mockito.ArgumentMatchers.any());
 
+        CreateBasketJobRequest request = new CreateBasketJobRequest(
+            null,
+            "현대모비스",
+            "SW 엔지니어",
+            "D-10",
+            "https://wanted.co.kr/123",
+            "https://logo.com",
+            "MANUAL"
+        );
+
         service.createBasketJob(1L, new CreateBasketJobRequest(
+            null,
             "Example Labs",
             "Backend Developer",
-            "D-5",
-            sourceUrl,
-            "https://static.example.com/example-logo.png",
+            "D-15",
+            "https://example.com/job",
+            "https://example.com/logo.png",
+            "MANUAL",
             "DIRECT"
         ));
 

@@ -29,6 +29,11 @@ spring:
           starttls:
             enable: true
 
+# 공공데이터포털 API 연동
+public-data:
+  api:
+    key: ${PUBLIC_DATA_API_KEY:}
+
 mybatis:
   mapper-locations: classpath:mapper/**/*.xml
 

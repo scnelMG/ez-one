@@ -29,26 +29,11 @@
 
       <section class="basket-list-panel" data-testid="basket-list-panel" aria-label="저장한 공고 목록">
         <div class="basket-title-row">
-          <div>
-            <h2>공고 장바구니</h2>
+          <div style="display: flex; align-items: center;">
+            <h2 style="margin: 0;">공고 장바구니</h2>
           </div>
-          <div class="basket-tools" aria-label="장바구니 정렬">
-            <RouterLink
-              class="ghost-button small"
-              data-testid="basket-sort-deadline"
-              :class="{ active: selectedSort === 'deadline' }"
-              :to="queryLink({ sort: 'deadline' })"
-            >
-              마감일순
-            </RouterLink>
-            <RouterLink
-              class="ghost-button small"
-              data-testid="basket-sort-saved"
-              :class="{ active: selectedSort === 'saved' }"
-              :to="queryLink({ sort: 'saved' })"
-            >
-              담은 순
-            </RouterLink>
+          <div class="basket-tools" aria-label="장바구니 관리">
+            <button class="add-manual-btn" @click="isManualAddModalOpen = true">+ 직접 추가하기</button>
           </div>
         </div>
 
@@ -202,46 +187,7 @@
             </button>
           </article>
 
-          <form class="basket-data-row inline-create-row" data-testid="inline-create-row" @submit.prevent="createManualJob">
-            <span class="inline-placeholder">-</span>
-            <input
-              v-model="manualForm.companyName"
-              data-testid="inline-company"
-              name="companyName"
-              autocomplete="organization"
-              placeholder="+ 회사명"
-              required
-            />
-            <input
-              v-model="manualForm.positionTitle"
-              data-testid="inline-position"
-              name="positionTitle"
-              autocomplete="organization-title"
-              placeholder="직무명"
-              required
-            />
-            <span class="inline-placeholder">지원 전</span>
-            <input
-              v-model="manualForm.deadlineLabel"
-              data-testid="inline-deadline"
-              name="deadline"
-              inputmode="numeric"
-              autocomplete="off"
-              placeholder="2026.06.30"
-            />
-            <input
-              v-model="manualForm.sourceUrl"
-              data-testid="inline-source"
-              name="sourceUrl"
-              type="text"
-              inputmode="url"
-              autocomplete="off"
-              placeholder="jasoseol.com/jobs/123"
-              required
-            />
-            <span class="inline-placeholder"></span>
-            <button class="text-button" type="submit">추가</button>
-          </form>
+
 
           <div v-if="totalPages > 1" class="pagination-row" aria-label="장바구니 페이지 이동">
             <button
@@ -298,11 +244,15 @@
             >
               <strong>{{ job.companyName }}</strong>
               <small>{{ job.positionTitle }}</small>
-              <em class="status-tag" :class="statusClass(job.status)">{{ statusLabel(job.status) }}</em>
+              <div style="display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                <em class="status-tag" :class="statusClass(job.status)" style="font-size: 0.6rem; padding: 2px 6px;">{{ statusLabel(job.status) }}</em>
+                <span style="color: #94a3b8; font-size: 0.65rem;" v-if="formatDDay(job)">{{ formatDDay(job) }}</span>
+              </div>
             </RouterLink>
           </div>
         </div>
       </section>
+      <ManualJobAddModal :is-open="isManualAddModalOpen" @close="isManualAddModalOpen = false" />
     </section>
   </AppLayout>
 </template>
@@ -322,6 +272,7 @@ import StatePanel from '@/shared/StatePanel.vue';
 import SkeletonLoader from '@/shared/SkeletonLoader.vue';
 import { isRecentWorkspace } from '@/features/basket/recentWorkspaces';
 import { useBasketStore } from '@/stores/basketStore';
+import ManualJobAddModal from '@/features/basket/components/ManualJobAddModal.vue';
 
 const route = useRoute();
 const basketStore = useBasketStore();
@@ -376,12 +327,7 @@ const calendarMonthLabel = computed(() => new Intl.DateTimeFormat('ko-KR', {
     year: 'numeric',
     month: 'long'
 }).format(currentMonthDate.value));
-const manualForm = reactive({
-    companyName: '',
-    positionTitle: '',
-    deadlineLabel: '',
-    sourceUrl: ''
-});
+const isManualAddModalOpen = ref(false);
 const statusFilters = [
     { label: '전체', value: undefined },
     { label: '지원 전', value: 'NOT_STARTED' },
@@ -390,7 +336,7 @@ const statusFilters = [
     { label: '미지원', value: 'NOT_APPLIED' }
 ];
 
-const selectedSort = computed(() => route.query.sort === 'saved' ? 'saved' : 'deadline');
+
 const selectedStatus = computed(() => {
     const status = route.query.status;
     return status === 'NOT_STARTED' || status === 'NOT_APPLIED' || status === 'IN_PROGRESS' || status === 'SUBMITTED'
@@ -408,11 +354,8 @@ const searchedJobs = computed(() => {
         job.positionTitle.toLowerCase().includes(keyword)));
 });
 const sortedJobs = computed(() => [...searchedJobs.value].sort((left, right) => {
-    if (selectedSort.value === 'deadline') {
-        const deadlineDifference = deadlineRank(left) - deadlineRank(right);
-        return deadlineDifference === 0 ? savedRank(left) - savedRank(right) : deadlineDifference;
-    }
-    return savedRank(left) - savedRank(right);
+    const deadlineDifference = deadlineRank(left) - deadlineRank(right);
+    return deadlineDifference === 0 ? savedRank(left) - savedRank(right) : deadlineDifference;
 }));
 const totalPages = computed(() => Math.max(1, Math.ceil(sortedJobs.value.length / pageSize)));
 const pagedJobs = computed(() => {
@@ -485,6 +428,13 @@ function daysUntilDeadline(job) {
     }
     return Math.ceil((date.getTime() - today.getTime()) / 86400000);
 }
+function formatDDay(job) {
+    const days = daysUntilDeadline(job);
+    if (days === null) return '';
+    if (days === 0) return 'D-Day';
+    if (days > 0) return `D-${days}`;
+    return `D+${-days}`;
+}
 function isDeadlineSoon(job) {
     const daysLeft = daysUntilDeadline(job);
     return daysLeft !== null && daysLeft >= 0 && daysLeft <= 7;
@@ -507,19 +457,7 @@ function isPriorityJob(job) {
 function togglePriority(jobId) {
     basketStore.togglePriority(jobId);
 }
-async function createManualJob() {
-    await basketStore.createJob({
-        companyName: manualForm.companyName.trim(),
-        positionTitle: manualForm.positionTitle.trim(),
-        deadlineLabel: manualForm.deadlineLabel.trim(),
-        sourceUrl: normalizedSourceUrl(manualForm.sourceUrl),
-        savedSource: 'MANUAL'
-    });
-    manualForm.companyName = '';
-    manualForm.positionTitle = '';
-    manualForm.deadlineLabel = '';
-    manualForm.sourceUrl = '';
-}
+
 function changeStatus(jobId, nextStatus) {
     openStatusJobId.value = null;
     void basketStore.updateStatus(jobId, nextStatus);
@@ -544,7 +482,7 @@ watch(() => route.query.q, (nextQuery) => {
     currentPage.value = 1;
     searchQuery.value = String(nextQuery ?? '');
 });
-watch([searchQuery, isPriorityFilter, selectedSort, sortedJobs], () => {
+watch([searchQuery, isPriorityFilter, sortedJobs], () => {
     currentPage.value = 1;
 });
 watch(totalPages, (nextTotalPages) => {
@@ -553,3 +491,26 @@ watch(totalPages, (nextTotalPages) => {
     }
 });
 </script>
+
+<style scoped>
+.add-manual-btn {
+  background: #8b5cf6;
+  border: 1px solid #8b5cf6;
+  color: #ffffff;
+  padding: 10px 18px;
+  min-height: 40px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  border-radius: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: max-content;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.add-manual-btn:hover {
+  background: #7c3aed;
+}
+</style>

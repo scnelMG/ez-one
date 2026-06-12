@@ -22,4 +22,10 @@ public interface ActivityMapper {
             "GROUP BY DATE_FORMAT(created_at, '%Y-%m-%d') " +
             "ORDER BY date ASC")
     List<ActivitySummaryResponse> findActivitySummaryByUserId(@Param("userId") Long userId);
+
+    @Select("SELECT DATE_FORMAT(created_at, '%H:%i') as time, action_type as description " +
+            "FROM user_activities " +
+            "WHERE user_id = #{userId} AND DATE(created_at) = #{date} " +
+            "ORDER BY created_at DESC")
+    List<com.ezone.backend.dto.dashboard.ActivityLogResponse> findDailyLogs(@Param("userId") Long userId, @Param("date") String date);
 }

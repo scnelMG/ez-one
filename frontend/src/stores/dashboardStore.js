@@ -24,5 +24,9 @@ export const useDashboardStore = defineStore('dashboard', () => {
         }
     }
 
-    return { status, summary, todayJobs, errorMessage, hasJobs, loadSummary };
+    async function loadActivityLogs(date) {
+        return await dashboardApi.getActivityLogs(date);
+    }
+
+    return { status, summary, todayJobs, errorMessage, hasJobs, loadSummary, loadActivityLogs };
 });

@@ -81,7 +81,7 @@ public class StudyService {
             mDto.setUserEmail(m.getUserEmail());
             mDto.setRole(m.getRole());
             mDto.setJoinedAt(m.getJoinedAt());
-            mDto.setActiveJobCount(0); // Optional: calculate later
+            mDto.setActiveJobCount(studyMapper.countActiveJobsByUserEmail(m.getUserEmail()));
             return mDto;
         }).collect(Collectors.toList());
         dto.setMembers(members);
