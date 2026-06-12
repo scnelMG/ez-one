@@ -13,17 +13,17 @@
           <span>전체 공고</span>
           <strong>{{ dashboardStore.summary?.totalApplications ?? 0 }}</strong>
         </RouterLink>
-        <RouterLink to="/basket?sort=deadline" data-testid="metric-deadline">
-          <span>마감 임박 <small style="color: var(--text-tertiary); font-weight: normal; font-size: 0.8em;">(일주일 이내)</small></span>
-          <strong>{{ dashboardStore.summary?.deadlineSoon ?? 0 }}</strong>
+        <RouterLink to="/basket" data-testid="metric-not-started">
+          <span>지원 전</span>
+          <strong>{{ dashboardStore.summary?.notStarted ?? 0 }}</strong>
         </RouterLink>
         <RouterLink to="/basket" data-testid="metric-progress">
           <span>진행 중</span>
           <strong>{{ dashboardStore.summary?.inProgress ?? 0 }}</strong>
         </RouterLink>
-        <RouterLink to="/basket" data-testid="metric-not-started">
-          <span>지원 전</span>
-          <strong>{{ dashboardStore.summary?.notStarted ?? 0 }}</strong>
+        <RouterLink to="/basket?sort=deadline" data-testid="metric-deadline">
+          <span>마감 임박 <small style="color: var(--text-tertiary); font-weight: normal; font-size: 0.8em;">(일주일 이내)</small></span>
+          <strong>{{ dashboardStore.summary?.deadlineSoon ?? 0 }}</strong>
         </RouterLink>
       </section>
 
