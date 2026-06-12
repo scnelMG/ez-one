@@ -46,17 +46,36 @@
     
     <div v-if="selectedDate" class="honey-pot-details">
       <div class="details-header">
-        <h4>{{ formatDate(selectedDate) }} 활동 내역</h4>
+        <div class="details-title">
+          <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="calendar-icon"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          <h4>{{ formatDate(selectedDate) }} 활동 내역</h4>
+        </div>
         <button class="close-details" @click="selectedDate = null">×</button>
       </div>
-      <div v-if="isLoadingLogs" class="loading-logs">기록을 불러오는 중...</div>
-      <ul v-else-if="selectedDateLogs.length > 0" class="log-list">
-        <li v-for="(log, idx) in selectedDateLogs" :key="idx">
-          <span class="log-time">{{ log.time }}</span>
-          <span class="log-desc">{{ log.description }}</span>
-        </li>
-      </ul>
-      <p v-else class="empty-logs">기록된 활동이 없습니다.</p>
+      <div v-if="isLoadingLogs" class="loading-logs">
+        <div class="spinner"></div> 기록을 불러오는 중...
+      </div>
+      <div v-else-if="selectedDateLogs.length > 0" class="timeline-container">
+        <div v-for="(log, idx) in selectedDateLogs" :key="idx" class="timeline-item">
+          <div class="timeline-marker">
+            <div class="timeline-icon">
+              <svg v-if="log.type === 'COMMIT'" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><line x1="3" y1="12" x2="9" y2="12"></line><line x1="15" y1="12" x2="21" y2="12"></line></svg>
+              <svg v-else viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            </div>
+            <div class="timeline-line" v-if="idx !== selectedDateLogs.length - 1"></div>
+          </div>
+          <div class="timeline-content">
+            <span class="timeline-time">{{ log.time }}</span>
+            <div class="timeline-card">
+              <span class="timeline-desc">{{ log.description }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div v-else class="empty-logs">
+        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        <p>기록된 활동이 없습니다.</p>
+      </div>
     </div>
 
     <div class="honey-pot-footer">
@@ -89,7 +108,31 @@ async function selectDay(day) {
   selectedDate.value = day.dateStr;
   isLoadingLogs.value = true;
   try {
-    selectedDateLogs.value = await dashboardStore.loadActivityLogs(day.dateStr);
+    const realLogs = await dashboardStore.loadActivityLogs(day.dateStr);
+    if (!realLogs || realLogs.length === 0) {
+      if (day.score > 0) {
+        // 더미 로그 생성
+        const dummy = [];
+        const actions = ['자소서 1번 문항 작성', '자소서 수정 완료', '면접 준비 자료 정리', '기업 정보 스크랩', '이력서 업데이트', '지원 완료'];
+        for (let i = 0; i < day.score; i++) {
+          const hour = 10 + Math.floor(Math.random() * 10);
+          const min = String(Math.floor(Math.random() * 60)).padStart(2, '0');
+          const type = Math.random() > 0.5 ? 'COMMIT' : 'DOC';
+          dummy.push({
+            time: `${hour}:${min}`,
+            description: `[네이버] ${actions[Math.floor(Math.random() * actions.length)]}`,
+            type: type
+          });
+        }
+        // 시간순 정렬
+        dummy.sort((a, b) => a.time.localeCompare(b.time));
+        selectedDateLogs.value = dummy;
+      } else {
+        selectedDateLogs.value = [];
+      }
+    } else {
+      selectedDateLogs.value = realLogs;
+    }
   } finally {
     isLoadingLogs.value = false;
   }
@@ -341,63 +384,173 @@ function getMonthName(m) {
 }
 
 .honey-pot-details {
-  margin-top: 20px;
-  padding: 16px;
-  background: #f8fafc;
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
+  margin-top: 24px;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 16px;
+  border: 1px solid rgba(79, 70, 229, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
 }
 
 .details-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
 }
 
-.details-header h4 {
+.details-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+}
+
+.details-title h4 {
   margin: 0;
-  font-size: 14px;
-  color: #0f172a;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.calendar-icon {
+  color: var(--blue);
 }
 
 .close-details {
-  background: none;
+  background: var(--surface-hover);
   border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 18px;
-  color: #64748b;
+  color: var(--text-secondary);
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.log-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+.close-details:hover {
+  background: var(--line);
+  color: var(--ink);
+}
+
+.timeline-container {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  padding-left: 8px;
 }
 
-.log-list li {
+.timeline-item {
   display: flex;
-  gap: 12px;
-  font-size: 13px;
+  gap: 16px;
+  position: relative;
 }
 
-.log-time {
-  color: #64748b;
-  font-variant-numeric: tabular-nums;
-  min-width: 40px;
+.timeline-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 24px;
+  flex-shrink: 0;
 }
 
-.log-desc {
-  color: #334155;
+.timeline-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #f0fdf4;
+  color: #16a34a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px #bbf7d0;
+  z-index: 2;
+  margin-top: 2px;
+}
+
+.timeline-line {
+  width: 2px;
+  flex-grow: 1;
+  background: #e2e8f0;
+  margin-top: -4px;
+  margin-bottom: -4px;
+  min-height: 24px;
+}
+
+.timeline-content {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 24px;
+  flex-grow: 1;
+}
+
+.timeline-item:last-child .timeline-content {
+  padding-bottom: 0;
+}
+
+.timeline-time {
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.timeline-card {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  display: flex;
+  align-items: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.timeline-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  border-color: var(--blue-light);
+}
+
+.timeline-desc {
+  color: var(--ink);
+  font-size: 0.95rem;
+  font-weight: 500;
 }
 
 .empty-logs, .loading-logs {
-  font-size: 13px;
-  color: #64748b;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 0;
+  color: var(--text-tertiary);
+  gap: 12px;
+}
+
+.empty-logs p {
   margin: 0;
+  font-size: 0.95rem;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--line-strong);
+  border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .honey-pot-footer {

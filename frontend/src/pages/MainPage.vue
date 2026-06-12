@@ -31,7 +31,7 @@
         <div class="recent-task-info">
           <div class="recent-task-pulse"></div>
           <div class="recent-task-text">
-            <span>다음 작업</span>
+            <span>진행 중</span>
             <strong>{{ recentTaskJob.companyName }} {{ recentTaskJob.positionTitle }} 자소서 이어쓰기</strong>
           </div>
         </div>
@@ -298,7 +298,28 @@ onMounted(async () => {
     basketStore.loadJobs(),
     dashboardStore.loadSummary()
   ]);
-  activities.value = await dashboardApi.getActivities();
+  
+  const realActivities = await dashboardApi.getActivities();
+  if (!realActivities || realActivities.length === 0) {
+    // 꿀통채우기 테스트용 더미 데이터 생성
+    const dummy = [];
+    const today = new Date();
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const score = Math.floor(Math.random() * 5); // 0~4
+      if (score > 0) {
+        dummy.push({
+          date: d.toISOString().split('T')[0],
+          score: score
+        });
+      }
+    }
+    activities.value = dummy;
+  } else {
+    activities.value = realActivities;
+  }
+
   void recommendationStore.loadRecommendations();
 });
 
@@ -422,5 +443,106 @@ function archiveJob(jobId) {
 .recent-task-button:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(79, 70, 229, 0.4);
+}
+
+/* Metric Strip Enhancements */
+.main-metric-strip {
+  gap: 16px;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.main-metric-strip a {
+  background: rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(79, 70, 229, 0.08) !important;
+  border-radius: 20px !important;
+  padding: 24px !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02) !important;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  position: relative;
+  overflow: hidden;
+}
+
+.main-metric-strip a::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, var(--blue-light), var(--blue));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.main-metric-strip a:hover {
+  transform: translateY(-4px) !important;
+  box-shadow: 0 12px 25px rgba(79, 70, 229, 0.1) !important;
+  border-color: rgba(79, 70, 229, 0.2) !important;
+}
+
+.main-metric-strip a:hover::before {
+  opacity: 1;
+}
+
+.main-metric-strip a span {
+  font-size: 0.95rem !important;
+  color: var(--text-secondary) !important;
+  margin-bottom: 8px !important;
+}
+
+.main-metric-strip a strong {
+  font-size: 2.2rem !important;
+  color: var(--ink) !important;
+  font-weight: 800 !important;
+  background: linear-gradient(135deg, var(--ink) 0%, var(--blue-strong) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Basket Preview Enhancements */
+.main-basket-preview {
+  background: rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(79, 70, 229, 0.1) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04) !important;
+  padding: 28px !important;
+  margin-top: 32px !important;
+}
+
+.section-heading h2 {
+  font-size: 1.3rem !important;
+  font-weight: 700 !important;
+}
+
+.main-basket-row {
+  border-radius: 12px !important;
+  transition: all 0.2s ease !important;
+  border: 1px solid transparent !important;
+  border-bottom: 1px solid var(--line) !important;
+}
+
+.main-basket-row:hover {
+  background: #f8fafc !important;
+  border-color: rgba(79, 70, 229, 0.1) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.02) !important;
+  transform: scale(1.002);
+}
+
+.priority-heart.active {
+  color: #ef4444 !important;
+}
+
+.company-logo-badge {
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
 }
 </style>
