@@ -140,7 +140,7 @@ router.beforeEach((to) => {
         return true;
     }
     if (hasAccessToken()) {
-        if (to.name !== 'main' && requiresOnboarding()) {
+        if (to.name !== 'main' && to.name !== 'study-list' && to.name !== 'study-detail' && requiresOnboarding()) {
             return '/';
         }
         return true;
