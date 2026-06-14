@@ -419,7 +419,7 @@ async function confirmInvite() {
   isInviting.value = true;
   try {
     await studyApi.inviteMember(studyId, searchedUser.value.email);
-    alert(`${searchedUser.value.name} 님에게 스터디 초대 알림을 발송했어요!`);
+    alert(`${searchedUser.value.name}님에게 스터디 초대 알림을 발송했어요!`);
     closeInviteModal();
   } catch (e) {
     alert(e.message || '초대 실패');
