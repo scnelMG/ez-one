@@ -21,6 +21,11 @@ export const studyApi = {
     return data;
   },
 
+  async searchUser(email) {
+    const { data } = await apiClient.get(`/api/study/users/search?email=${encodeURIComponent(email)}`);
+    return data;
+  },
+
   async getMyInvites() {
     const { data } = await apiClient.get('/api/study/invites');
     return data;
