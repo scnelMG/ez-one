@@ -18,6 +18,9 @@ public interface StudyMapper {
     int countActiveJobsByUserEmail(@Param("userEmail") String userEmail);
 
     void insertStudyInvite(StudyInviteRow row);
+    List<StudyInviteRow> findInvitesByInviteeEmail(@Param("inviteeEmail") String inviteeEmail);
+    StudyInviteRow findStudyInviteById(@Param("id") String id);
+    void updateStudyInviteStatus(@Param("id") String id, @Param("status") String status);
     
     void insertSharedEssay(SharedEssayRow row);
     SharedEssayRow findSharedEssayById(@Param("id") String id);

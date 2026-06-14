@@ -22,14 +22,13 @@ export const studyApi = {
   },
 
   async getMyInvites() {
-    // 백엔드 API 부재로 빈 배열 리턴
-    return [];
+    const { data } = await apiClient.get('/api/study/invites');
+    return data;
   },
 
   async respondToInvite(inviteId, accept) {
-    // 백엔드 API 부재
-    console.log(`응답: ${accept}`);
-    return {};
+    const { data } = await apiClient.post(`/api/study/invites/${inviteId}/respond?accept=${accept}`);
+    return data;
   },
 
   async getSharedEssays(studyId) {

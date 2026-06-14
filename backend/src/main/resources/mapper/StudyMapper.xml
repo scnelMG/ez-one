@@ -35,6 +35,23 @@
         VALUES (#{id}, #{studyId}, #{inviterEmail}, #{inviteeEmail}, #{status}, #{invitedAt})
     </insert>
 
+    <select id="findInvitesByInviteeEmail" resultType="com.ezone.backend.domain.persistence.StudyInviteRow">
+        SELECT i.id, i.study_id AS studyId, i.inviter_email AS inviterEmail, i.invitee_email AS inviteeEmail, i.status, i.invited_at AS invitedAt, g.name AS studyName
+        FROM study_invite i
+        JOIN study_group g ON i.study_id = g.id
+        WHERE i.invitee_email = #{inviteeEmail} AND i.status = 'PENDING'
+        ORDER BY i.invited_at DESC
+    </select>
+
+    <select id="findStudyInviteById" resultType="com.ezone.backend.domain.persistence.StudyInviteRow">
+        SELECT id, study_id AS studyId, inviter_email AS inviterEmail, invitee_email AS inviteeEmail, status, invited_at AS invitedAt
+        FROM study_invite WHERE id = #{id}
+    </select>
+
+    <update id="updateStudyInviteStatus">
+        UPDATE study_invite SET status = #{status} WHERE id = #{id}
+    </update>
+
     <insert id="insertSharedEssay" parameterType="com.ezone.backend.domain.persistence.SharedEssayRow">
         INSERT INTO shared_essay (id, study_id, user_email, workspace_id, version_ids, shared_at)
         VALUES (#{id}, #{studyId}, #{userEmail}, #{workspaceId}, #{versionIds}, #{sharedAt})
