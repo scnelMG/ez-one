@@ -19,6 +19,15 @@ public class StudyController {
         this.studyService = studyService;
     }
 
+    @GetMapping("/users/search")
+    public ResponseEntity<UserSearchDto> searchUserByEmail(@RequestParam String email) {
+        UserSearchDto user = studyService.searchUserByEmail(email);
+        if (user == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(user);
+    }
+
     @PostMapping
     public ResponseEntity<StudyGroupDto> createStudy(@AuthenticationPrincipal JwtAuthenticatedUser user, @RequestBody CreateStudyRequest request) {
         String email = user.email();

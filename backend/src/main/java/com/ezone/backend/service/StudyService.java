@@ -3,6 +3,8 @@ package com.ezone.backend.service;
 import com.ezone.backend.domain.persistence.*;
 import com.ezone.backend.dto.study.*;
 import com.ezone.backend.mapper.StudyMapper;
+import com.ezone.backend.mapper.UserAccountMapper;
+import com.ezone.backend.domain.UserAccount;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,12 +21,20 @@ import com.fasterxml.jackson.core.type.TypeReference;
 public class StudyService {
 
     private final StudyMapper studyMapper;
+    private final UserAccountMapper userAccountMapper;
     private final EmailService emailService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public StudyService(StudyMapper studyMapper, EmailService emailService) {
+    public StudyService(StudyMapper studyMapper, UserAccountMapper userAccountMapper, EmailService emailService) {
         this.studyMapper = studyMapper;
+        this.userAccountMapper = userAccountMapper;
         this.emailService = emailService;
+    }
+
+    public UserSearchDto searchUserByEmail(String email) {
+        return userAccountMapper.findByEmail(email)
+            .map(user -> new UserSearchDto(user.email(), user.name(), user.nickname()))
+            .orElse(null);
     }
 
     public StudyGroupDto createStudy(String userEmail, CreateStudyRequest request) {

@@ -8,7 +8,7 @@
         <h1>{{ studyStore.currentStudy?.name || '로딩 중...' }}</h1>
         <p class="study-description">{{ studyStore.currentStudy?.description }}</p>
         <div class="header-actions">
-          <button class="ghost-button" type="button" @click="inviteMember">팀원 초대</button>
+          <button class="primary-button" type="button" @click="openInviteModal">팀원 초대</button>
         </div>
       </header>
 
@@ -103,6 +103,57 @@
             </div>
           </div>
         </main>
+      </div>
+
+      <!-- 팀원 초대 모달 -->
+      <div v-if="isInviteModalOpen" class="modal-backdrop" @click.self="closeInviteModal">
+        <div class="modal-content invite-modal">
+          <header class="modal-header">
+            <h2>팀원 초대하기</h2>
+            <button class="icon-button" @click="closeInviteModal">×</button>
+          </header>
+          
+          <div class="modal-body">
+            <div class="form-group" v-if="!searchedUser">
+              <label>초대할 팀원의 이메일</label>
+              <div class="search-input-group">
+                <input 
+                  type="email" 
+                  v-model="inviteEmail" 
+                  placeholder="ez-one@example.com" 
+                  @keyup.enter="searchUserToInvite"
+                />
+                <button class="primary-button" @click="searchUserToInvite" :disabled="isSearchingUser || !inviteEmail.trim()">
+                  검색
+                </button>
+              </div>
+              <p v-if="searchUserError" class="error-message">{{ searchUserError }}</p>
+            </div>
+
+            <div class="user-profile-card" v-else>
+              <div class="user-profile-info">
+                <div class="user-avatar">{{ searchedUser.name.charAt(0).toUpperCase() }}</div>
+                <div class="user-details">
+                  <strong>{{ searchedUser.name }} ({{ searchedUser.nickname }})</strong>
+                  <span>{{ searchedUser.email }}</span>
+                </div>
+              </div>
+              <p class="confirm-message">이 분을 스터디에 초대하시겠습니까?</p>
+            </div>
+          </div>
+
+          <footer class="modal-footer">
+            <button class="ghost-button" @click="closeInviteModal">취소</button>
+            <button 
+              v-if="searchedUser" 
+              class="primary-button" 
+              @click="confirmInvite" 
+              :disabled="isInviting"
+            >
+              {{ isInviting ? '초대 중...' : '초대 보내기' }}
+            </button>
+          </footer>
+        </div>
       </div>
 
       <!-- 내 자소서 공유하기 모달 -->
@@ -280,6 +331,13 @@ const activeTab = ref('dashboard');
 const studyId = route.params.studyId;
 
 // 모달 상태
+const isInviteModalOpen = ref(false);
+const inviteEmail = ref('');
+const searchedUser = ref(null);
+const searchUserError = ref('');
+const isSearchingUser = ref(false);
+const isInviting = ref(false);
+
 const isShareModalOpen = ref(false);
 const shareStep = ref(1);
 const isLoadingBaskets = ref(false);
@@ -323,15 +381,50 @@ function loadData() {
   }
 }
 
-async function inviteMember() {
-  const email = prompt('초대할 팀원의 이메일을 입력하세요:');
-  if (email) {
-    try {
-      await studyApi.inviteMember(studyId, email);
-      alert(`${email} 님에게 초대 메일을 보냈습니다!`);
-    } catch (e) {
-      alert(e.message || '초대 실패');
+function openInviteModal() {
+  inviteEmail.value = '';
+  searchedUser.value = null;
+  searchUserError.value = '';
+  isInviteModalOpen.value = true;
+}
+
+function closeInviteModal() {
+  isInviteModalOpen.value = false;
+}
+
+async function searchUserToInvite() {
+  if (!inviteEmail.value.trim()) return;
+  
+  isSearchingUser.value = true;
+  searchUserError.value = '';
+  searchedUser.value = null;
+  
+  try {
+    const user = await studyApi.searchUser(inviteEmail.value.trim());
+    searchedUser.value = user;
+  } catch (e) {
+    if (e.response && e.response.status === 404) {
+      searchUserError.value = '가입 내역이 없습니다. 이메일을 다시 한 번 확인해 주세요.';
+    } else {
+      searchUserError.value = '사용자 검색 중 오류가 발생했습니다.';
     }
+  } finally {
+    isSearchingUser.value = false;
+  }
+}
+
+async function confirmInvite() {
+  if (!searchedUser.value) return;
+  
+  isInviting.value = true;
+  try {
+    await studyApi.inviteMember(studyId, searchedUser.value.email);
+    alert(`${searchedUser.value.name} 님에게 스터디 초대 알림을 발송했어요!`);
+    closeInviteModal();
+  } catch (e) {
+    alert(e.message || '초대 실패');
+  } finally {
+    isInviting.value = false;
   }
 }
 
@@ -605,6 +698,54 @@ async function submitRecommendJobs() {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+}
+.search-input-group {
+  display: flex;
+  gap: 8px;
+}
+.search-input-group input {
+  flex-grow: 1;
+}
+.error-message {
+  color: #ef4444;
+  font-size: 0.85rem;
+  margin-top: 8px;
+}
+.user-profile-card {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-hover);
+  text-align: center;
+}
+.user-profile-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.user-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+.user-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.confirm-message {
+  font-weight: 600;
+  color: var(--text-primary);
 }
 .workspace-list {
   list-style: none;

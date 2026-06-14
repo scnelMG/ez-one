@@ -70,13 +70,19 @@
           </div>
         </div>
 
-        <div class="notification-menu">
+        <div 
+          class="notification-menu"
+          @mouseenter="openNotificationMenu"
+          @mouseleave="scheduleNotificationMenuClose"
+        >
           <button
             type="button"
             class="header-icon-action"
             :class="{ 'has-alerts': studyStore.myInvites.length > 0 }"
             aria-label="알림"
             data-testid="reserved-alerts"
+            :aria-expanded="isNotificationMenuOpen ? 'true' : 'false'"
+            @mouseenter="openNotificationMenu"
             @click="isNotificationMenuOpen = !isNotificationMenuOpen"
           >
             <!-- Modern Bell SVG -->
@@ -90,6 +96,9 @@
           <div
             v-if="isNotificationMenuOpen"
             class="notification-dropdown mypage-dropdown"
+            role="menu"
+            @mouseenter="openNotificationMenu"
+            @mouseleave="scheduleNotificationMenuClose"
           >
             <div class="notification-header">알림</div>
             <div v-if="studyStore.myInvites.length === 0" class="notification-empty">새로운 알림이 없습니다.</div>
@@ -139,6 +148,7 @@ const studyStore = useStudyStore();
 const isProfileMenuOpen = ref(false);
 const isNotificationMenuOpen = ref(false);
 let profileMenuCloseTimer = null;
+let notificationMenuCloseTimer = null;
 const currentUser = computed(() => getCurrentUser());
 
 onMounted(async () => {
@@ -170,6 +180,10 @@ function openProfileMenu() {
     profileMenuCloseTimer = null;
   }
   isProfileMenuOpen.value = true;
+  // 알림창 닫기
+  if (isNotificationMenuOpen.value) {
+    isNotificationMenuOpen.value = false;
+  }
 }
 
 function scheduleProfileMenuClose() {
@@ -179,6 +193,28 @@ function scheduleProfileMenuClose() {
   profileMenuCloseTimer = setTimeout(() => {
     isProfileMenuOpen.value = false;
     profileMenuCloseTimer = null;
+  }, 180);
+}
+
+function openNotificationMenu() {
+  if (notificationMenuCloseTimer) {
+    clearTimeout(notificationMenuCloseTimer);
+    notificationMenuCloseTimer = null;
+  }
+  isNotificationMenuOpen.value = true;
+  // 마이페이지 닫기
+  if (isProfileMenuOpen.value) {
+    isProfileMenuOpen.value = false;
+  }
+}
+
+function scheduleNotificationMenuClose() {
+  if (notificationMenuCloseTimer) {
+    clearTimeout(notificationMenuCloseTimer);
+  }
+  notificationMenuCloseTimer = setTimeout(() => {
+    isNotificationMenuOpen.value = false;
+    notificationMenuCloseTimer = null;
   }, 180);
 }
 
