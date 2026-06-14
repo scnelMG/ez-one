@@ -29,6 +29,14 @@ export const useStudyStore = defineStore('study', {
       }
     },
 
+    async loadMyInvites() {
+      try {
+        this.myInvites = await studyApi.getMyInvites();
+      } catch (error) {
+        console.error('Failed to load my invites', error);
+      }
+    },
+
     async createStudy(name, description) {
       try {
         const study = await studyApi.createStudy({ name, description });
@@ -54,7 +62,7 @@ export const useStudyStore = defineStore('study', {
     async respondToInvite(inviteId, accept) {
       try {
         await studyApi.respondToInvite(inviteId, accept);
-        await this.loadMyStudies(); // 새로고침
+        await Promise.all([this.loadMyStudies(), this.loadMyInvites()]); // 새로고침
       } catch (error) {
         throw new Error(error.response?.data?.message || '초대 응답 실패');
       }

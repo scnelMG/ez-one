@@ -158,9 +158,40 @@ public class StudyService {
         invite.setStatus("PENDING");
         invite.setInvitedAt(LocalDateTime.now());
         studyMapper.insertStudyInvite(invite);
-        
-        // 실제 이메일 비동기 발송
-        emailService.sendStudyInviteEmail(request.getInviteeEmail(), study.getName());
+    }
+
+    @Transactional(readOnly = true)
+    public List<StudyInviteDto> listMyInvites(String email) {
+        return studyMapper.findInvitesByInviteeEmail(email).stream().map(i -> {
+            StudyInviteDto dto = new StudyInviteDto();
+            dto.setId(i.getId());
+            dto.setStudyId(i.getStudyId());
+            dto.setStudyName(i.getStudyName());
+            dto.setInviterEmail(i.getInviterEmail());
+            dto.setStatus(i.getStatus());
+            dto.setInvitedAt(i.getInvitedAt());
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
+    public void respondToInvite(String email, String inviteId, boolean accept) {
+        StudyInviteRow invite = studyMapper.findStudyInviteById(inviteId);
+        if (invite == null || !invite.getInviteeEmail().equals(email) || !"PENDING".equals(invite.getStatus())) {
+            throw new IllegalArgumentException("Invalid invite");
+        }
+
+        if (accept) {
+            studyMapper.updateStudyInviteStatus(inviteId, "ACCEPTED");
+            StudyMemberRow member = new StudyMemberRow();
+            member.setId(UUID.randomUUID().toString());
+            member.setStudyId(invite.getStudyId());
+            member.setUserEmail(email);
+            member.setRole("MEMBER");
+            member.setJoinedAt(LocalDateTime.now());
+            studyMapper.insertStudyMember(member);
+        } else {
+            studyMapper.updateStudyInviteStatus(inviteId, "DECLINED");
+        }
     }
 
     public void shareEssay(String userEmail, String studyId, ShareEssayRequest request) {

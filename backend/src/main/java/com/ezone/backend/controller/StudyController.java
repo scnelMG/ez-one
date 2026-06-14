@@ -53,6 +53,17 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @GetMapping("/invites")
+    public ResponseEntity<List<StudyInviteDto>> listMyInvites(@AuthenticationPrincipal JwtAuthenticatedUser user) {
+        return ResponseEntity.ok(studyService.listMyInvites(user.email()));
+    }
+
+    @PostMapping("/invites/{inviteId}/respond")
+    public ResponseEntity<Void> respondToInvite(@AuthenticationPrincipal JwtAuthenticatedUser user, @PathVariable String inviteId, @RequestParam boolean accept) {
+        studyService.respondToInvite(user.email(), inviteId, accept);
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping("/{studyId}/essay")
     public ResponseEntity<Void> shareEssay(@AuthenticationPrincipal JwtAuthenticatedUser user, @PathVariable String studyId, @RequestBody ShareEssayRequest request) {
         studyService.shareEssay(user.email(), studyId, request);

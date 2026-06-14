@@ -1,28 +1,25 @@
-package com.ezone.backend.domain.persistence;
+package com.ezone.backend.dto.study;
 
 import java.time.LocalDateTime;
 
-public class StudyInviteRow {
+public class StudyInviteDto {
     private String id;
     private String studyId;
+    private String studyName;
     private String inviterEmail;
-    private String inviteeEmail;
     private String status;
     private LocalDateTime invitedAt;
-    private String studyName;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     public String getStudyId() { return studyId; }
     public void setStudyId(String studyId) { this.studyId = studyId; }
+    public String getStudyName() { return studyName; }
+    public void setStudyName(String studyName) { this.studyName = studyName; }
     public String getInviterEmail() { return inviterEmail; }
     public void setInviterEmail(String inviterEmail) { this.inviterEmail = inviterEmail; }
-    public String getInviteeEmail() { return inviteeEmail; }
-    public void setInviteeEmail(String inviteeEmail) { this.inviteeEmail = inviteeEmail; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
     public LocalDateTime getInvitedAt() { return invitedAt; }
     public void setInvitedAt(LocalDateTime invitedAt) { this.invitedAt = invitedAt; }
-    public String getStudyName() { return studyName; }
-    public void setStudyName(String studyName) { this.studyName = studyName; }
 }
