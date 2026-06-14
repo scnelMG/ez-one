@@ -23,12 +23,14 @@ public class StudyService {
     private final StudyMapper studyMapper;
     private final UserAccountMapper userAccountMapper;
     private final EmailService emailService;
+    private final P1WorkspaceService p1WorkspaceService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public StudyService(StudyMapper studyMapper, UserAccountMapper userAccountMapper, EmailService emailService) {
+    public StudyService(StudyMapper studyMapper, UserAccountMapper userAccountMapper, EmailService emailService, P1WorkspaceService p1WorkspaceService) {
         this.studyMapper = studyMapper;
         this.userAccountMapper = userAccountMapper;
         this.emailService = emailService;
+        this.p1WorkspaceService = p1WorkspaceService;
     }
 
     public UserSearchDto searchUserByEmail(String email) {
@@ -85,15 +87,25 @@ public class StudyService {
             throw new RuntimeException("스터디를 찾을 수 없습니다.");
         }
         StudyGroupDto dto = mapToDto(group);
-        List<StudyMemberDto> members = studyMapper.findMembersByStudyId(studyId).stream().map(m -> {
-            StudyMemberDto mDto = new StudyMemberDto();
-            mDto.setId(m.getId());
-            mDto.setUserEmail(m.getUserEmail());
-            mDto.setRole(m.getRole());
-            mDto.setJoinedAt(m.getJoinedAt());
-            mDto.setActiveJobCount(studyMapper.countActiveJobsByUserEmail(m.getUserEmail()));
-            return mDto;
-        }).collect(Collectors.toList());
+        List<StudyMemberDto> members = studyMapper.findMembersByStudyId(studyId).stream()
+            .map(m -> {
+                Long userId = userAccountMapper.findByEmail(m.getUserEmail())
+                    .map(user -> user.id())
+                    .orElse(null);
+
+                int activeJobCount = 0;
+                if (userId != null) {
+                    activeJobCount = (int) p1WorkspaceService.getDashboardSummary(userId).inProgressJobs();
+                }
+
+                StudyMemberDto mDto = new StudyMemberDto();
+                mDto.setId(m.getId());
+                mDto.setUserEmail(m.getUserEmail());
+                mDto.setRole(m.getRole());
+                mDto.setJoinedAt(m.getJoinedAt());
+                mDto.setActiveJobCount(activeJobCount);
+                return mDto;
+            }).collect(Collectors.toList());
         dto.setMembers(members);
         dto.setMemberCount(members.size());
         return dto;
