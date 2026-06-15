@@ -202,7 +202,7 @@
                     </label>
                   </div>
                   <span
-                    class="sr-only"
+                    class="auto-save-badge"
                     data-testid="auto-save-status"
                     :data-save-state="autoSaveStatus"
                   >
@@ -491,8 +491,8 @@
                   URL
                   <input v-model="referenceForm.url" data-testid="reference-url" />
                 </label>
-                <button class="primary-button" type="button" data-testid="save-reference" @click="saveReference">
-                  참고자료 저장
+                <button class="primary-button small-button" type="button" data-testid="save-reference" @click="saveReference">
+                  저장
                 </button>
               </form>
             </section>
@@ -572,8 +572,8 @@
                     URL
                     <input v-model="referenceForm.url" data-testid="floating-reference-url" />
                   </label>
-                  <button class="primary-button" type="button" data-testid="floating-save-reference" @click="saveReference">
-                    참고자료 저장
+                  <button class="primary-button small-button" type="button" data-testid="floating-save-reference" @click="saveReference">
+                    저장
                   </button>
                 </form>
               </section>
@@ -587,6 +587,7 @@
 
 <script setup>
 import { computed, h, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import * as Diff from 'diff';
 import { useRoute } from 'vue-router';
 import { rememberRecentWorkspace } from '@/features/basket/recentWorkspaces';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
@@ -816,11 +817,11 @@ function displayValue(value) {
 
 function statusClassFromLabel(label) {
   const text = String(label ?? '').trim();
-  if (text.includes('진행')) return 'in-progress';
-  if (text.includes('제출') || text.includes('완료')) return 'submitted';
-  if (text.includes('미지원') || text.includes('지원전') || text.includes('지원 전')) return 'not-started';
-  if (text.includes('포기') || text.includes('제외')) return 'not-applied';
-  return 'not-started';
+  if (text.includes('진행')) return 'is-in-progress';
+  if (text.includes('제출') || text.includes('완료')) return 'is-submitted';
+  if (text.includes('미지원') || text.includes('지원전') || text.includes('지원 전')) return 'is-not-started';
+  if (text.includes('포기') || text.includes('제외')) return 'is-not-applied';
+  return 'is-not-started';
 }
 
 async function saveDraft() {
@@ -903,17 +904,7 @@ function compareVersions() {
 }
 
 function buildLineDiff(leftBody, rightBody) {
-  const leftLines = splitLines(leftBody);
-  const rightLines = splitLines(rightBody);
-  const table = Array.from({ length: leftLines.length + 1 }, () => Array(rightLines.length + 1).fill(0));
-  for (let leftIndex = leftLines.length - 1; leftIndex >= 0; leftIndex -= 1) {
-    for (let rightIndex = rightLines.length - 1; rightIndex >= 0; rightIndex -= 1) {
-      table[leftIndex][rightIndex] = leftLines[leftIndex] === rightLines[rightIndex]
-        ? table[leftIndex + 1][rightIndex + 1] + 1
-        : Math.max(table[leftIndex + 1][rightIndex], table[leftIndex][rightIndex + 1]);
-    }
-  }
-
+  const diffs = Diff.diffLines(leftBody, rightBody);
   const rows = [];
   let leftIndex = 0;
   let rightIndex = 0;
@@ -1046,6 +1037,10 @@ async function saveReference() {
     url: referenceForm.url
   });
   rememberCurrentWorkspaceIfSaved();
+  alert('저장 되었습니다.');
+  nextTick(() => {
+    document.querySelector('.workspace-side-rail')?.scrollIntoView({ behavior: 'smooth' });
+  });
 }
 
 async function deleteReference() {

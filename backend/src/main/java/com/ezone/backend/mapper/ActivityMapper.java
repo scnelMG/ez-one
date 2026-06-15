@@ -11,11 +11,12 @@ import java.util.List;
 @Mapper
 public interface ActivityMapper {
     @Insert("INSERT INTO user_activities (user_id, workspace_id, action_type, points, created_at) " +
-            "VALUES (#{userId}, #{workspaceId}, #{actionType}, #{points}, CURRENT_TIMESTAMP)")
+            "VALUES (#{userId}, #{workspaceId}, #{actionType}, #{points}, #{createdAt})")
     void insertActivity(@Param("userId") Long userId, 
                         @Param("workspaceId") Long workspaceId,
                         @Param("actionType") String actionType, 
-                        @Param("points") int points);
+                        @Param("points") int points,
+                        @Param("createdAt") java.time.LocalDateTime createdAt);
 
     @Select("SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS date, SUM(points) AS score " +
             "FROM user_activities " +

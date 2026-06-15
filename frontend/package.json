@@ -12,6 +12,7 @@
   "dependencies": {
     "@vitejs/plugin-vue": "^5.2.4",
     "axios": "^1.7.9",
+    "diff": "^9.0.0",
     "pinia": "^2.3.1",
     "vite": "^6.0.7",
     "vue": "^3.5.13",
@@ -20,6 +21,7 @@
   "devDependencies": {
     "@vue/test-utils": "^2.4.6",
     "jsdom": "^25.0.1",
+    "puppeteer": "^25.1.0",
     "vitest": "^2.1.8"
   }
 }
