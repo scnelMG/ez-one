@@ -112,7 +112,7 @@
               {{ statusLabel(job.applicationStatus, job.applicationStatusLabel) }}
             </span>
             <RouterLink class="job-main-link" :to="`/workspaces/${job.workspaceId}`" style="display: flex; gap: 8px; align-items: center; text-decoration: none;">
-              <span style="color: var(--ink); font-weight: 500;">{{ formatAbsoluteDeadline(job) }}</span>
+              <span style="color: var(--ink); font-weight: 500; white-space: nowrap;">{{ formatAbsoluteDeadline(job) }}</span>
             </RouterLink>
             <a
               class="main-apply-link"
@@ -172,6 +172,7 @@ import HoneyPotGraph from '@/components/HoneyPotGraph.vue';
 import AppLayout from '@/shared/AppLayout.vue';
 import {
   deadlineRank,
+  isDeadlineWithinDays,
   statusClass,
   statusLabel,
   normalizedSourceUrl,
@@ -234,6 +235,7 @@ const recentTaskJob = computed(() => {
 
 const basketPreviewJobs = computed(() => {
   return [...basketStore.jobs]
+    .filter(job => isDeadlineWithinDays(job, 7))
     .sort((left, right) => deadlineRank(left) - deadlineRank(right))
     .slice(0, 5);
 });

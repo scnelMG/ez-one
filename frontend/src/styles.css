@@ -4132,14 +4132,15 @@ li {
 .primary-nav {
   justify-content: space-evenly;
   width: 100%;
-  gap: clamp(16px, 2.6vw, 44px);
+  gap: clamp(12px, 2vw, 32px);
 }
 
 .primary-nav a,
 .nav-disabled {
-  font-size: 1.02rem;
+  font-size: 0.95rem;
   font-weight: 800;
   white-space: nowrap;
+  letter-spacing: -0.02em;
 }
 
 .header-actions {

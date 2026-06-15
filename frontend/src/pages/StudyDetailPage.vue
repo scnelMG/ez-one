@@ -3,7 +3,7 @@
     <section class="study-detail-page">
       <header class="study-header" :style="studyStore.currentStudy?.imageUrl ? { backgroundImage: `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url(${studyStore.currentStudy.imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center', color: 'white' } : {}">
         <div class="breadcrumb">
-          <RouterLink to="/study" :style="studyStore.currentStudy?.imageUrl ? { color: 'white' } : {}">← 취업 스터디 목록으로</RouterLink>
+          <RouterLink to="/study" style="color: #000; font-weight: 600;">← 취업 스터디 목록으로</RouterLink>
         </div>
         <h1>{{ studyStore.currentStudy?.name || '로딩 중...' }}</h1>
         <p class="study-description" :style="studyStore.currentStudy?.imageUrl ? { color: '#f3f4f6' } : {}">{{ studyStore.currentStudy?.description }}</p>
@@ -83,7 +83,7 @@
                           <span v-if="hasUnreadEssays(member.userEmail)" class="new-badge">NEW!</span>
                         </div>
                         <span class="text-secondary text-sm" style="word-break: break-all;">{{ member.userEmail }}</span>
-                        <span class="role-badge" v-if="member.role === 'LEADER'">스터디장</span>
+                        <span class="role-badge" :class="{'role-member': member.role !== 'LEADER'}">{{ member.role === 'LEADER' ? '스터디장' : '팀원' }}</span>
                       </div>
                     </div>
                     
@@ -808,7 +808,6 @@ const confirmDelete = async () => {
   align-items: flex-end;
   background: linear-gradient(135deg, #ede9fe 0%, #f3f4f6 100%);
   position: relative;
-  overflow: hidden;
 }
 .study-header h1 {
   font-size: 2rem;
@@ -916,6 +915,10 @@ const confirmDelete = async () => {
   color: var(--color-primary);
   padding: 2px 6px;
   border-radius: 4px;
+}
+.role-member {
+  background: var(--gray);
+  color: var(--text-secondary);
 }
 .shared-list {
   display: flex;

@@ -14,6 +14,20 @@ export function deadlineRank(job) {
   return dDay ? Number(dDay[1]) : Number.MAX_SAFE_INTEGER;
 }
 
+export function isDeadlineWithinDays(job, days) {
+  const rank = deadlineRank(job);
+  // D-day format returns small numbers (e.g. 3 for D-3)
+  if (rank <= days) return true;
+  // If it's max value, there's no deadline
+  if (rank === Number.MAX_SAFE_INTEGER) return false;
+  
+  // For absolute timestamps
+  const now = Date.now();
+  // Filter for jobs that are in the future but within the given days
+  // Also include jobs that just passed today (within 24h) just in case
+  return rank >= now - 86400000 && rank <= now + (days * 24 * 60 * 60 * 1000);
+}
+
 export function statusClass(status) {
   return {
     NOT_STARTED: 'status-not-started',
