@@ -9,7 +9,6 @@ describe('extension background in-page panel behavior', () => {
         expect(backgroundScript).not.toContain('chrome.sidePanel');
         expect(backgroundScript).not.toContain('setPanelBehavior');
         expect(backgroundScript).not.toContain('chrome.windows.create');
-        expect(backgroundScript).not.toContain('chrome.windows.update');
         expect(backgroundScript).toContain('chrome.action.onClicked.addListener');
         expect(backgroundScript).toContain("files: ['assets/panelHost.js']");
         expect(backgroundScript).not.toContain('window.ezOneTogglePanel?.()');
@@ -26,7 +25,10 @@ describe('extension background in-page panel behavior', () => {
         expect(backgroundScript).toContain('sendResponse({ accepted });');
         expect(backgroundScript).toContain('closeAuthTabAfterResponse(chrome.tabs, sender.tab?.id, message?.sourceTabId);');
         expect(backgroundScript).toContain('function closeAuthTabAfterResponse');
+        expect(backgroundScript).toContain('tabs.update(parsedSourceTabId, { active: true })');
+        expect(backgroundScript).toContain('function parsePositiveInteger');
         expect(backgroundScript).toContain('setTimeout(() =>');
         expect(backgroundScript).toContain('tabs.remove(senderTabId)');
+        expect(backgroundScript).toContain('Leave the auth tab open');
     });
 });

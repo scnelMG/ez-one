@@ -34,6 +34,11 @@ describe('router', () => {
         expect(router.currentRoute.value.name).toBe('login');
         expect(router.currentRoute.value.query.redirect).toBeUndefined();
     });
+    it('preserves extension connect redirects when the extension starts login from the main route', async () => {
+        await router.push('/?redirect=%2Fextension%2Fconnect%3FsourceUrl%3Dhttps%253A%252F%252Fwww.jasoseol.com%252Frecruit%252F1%26sourceTabId%3D42');
+        expect(router.currentRoute.value.name).toBe('login');
+        expect(router.currentRoute.value.query.redirect).toBe('/extension/connect?sourceUrl=https%3A%2F%2Fwww.jasoseol.com%2Frecruit%2F1&sourceTabId=42');
+    });
     it('redirects protected P1 pages to login when the user is not authenticated', async () => {
         await router.push('/basket');
         expect(router.currentRoute.value.name).toBe('login');

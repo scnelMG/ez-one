@@ -15,6 +15,10 @@ describe('extension in-page panel host', () => {
         expect(script).toContain('const PANEL_DEFAULT_WIDTH = 360');
         expect(script).toContain('const PANEL_RIGHT = 12');
         expect(script).toContain('right: ${PANEL_RIGHT}px');
+        expect(script).toContain('const PANEL_DEFAULT_HEIGHT = 420');
+        expect(script).toContain('const PANEL_MIN_HEIGHT = 220');
+        expect(script).toContain('height: min(${PANEL_DEFAULT_HEIGHT}px, calc(100vh - ${PANEL_TOP * 2}px))');
+        expect(script).toContain('max-height: calc(100vh - ${PANEL_TOP * 2}px)');
         expect(script).toContain('z-index: 2147483647');
     });
 
@@ -37,5 +41,15 @@ describe('extension in-page panel host', () => {
         expect(script).toContain('function setPanelWidth');
         expect(script).toContain('chrome.storage.local.set');
         expect(script).toContain('chrome.storage.local.get');
+    });
+
+    it('resizes panel height to the embedded popup content while respecting the viewport', () => {
+        expect(script).toContain("const PANEL_RESIZE_MESSAGE = 'EZONE_PANEL_RESIZE'");
+        expect(script).toContain("window.addEventListener('message', panelMessageHandler)");
+        expect(script).toContain('function handlePanelMessage');
+        expect(script).toContain('event.source !== frame.contentWindow');
+        expect(script).toContain('setPanelHeight(panel, Number(event.data.height))');
+        expect(script).toContain('function setPanelHeight');
+        expect(script).toContain('window.removeEventListener');
     });
 });

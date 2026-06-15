@@ -36,6 +36,8 @@ describe('extension popup script', () => {
         expect(script).toContain('const UNSUPPORTED_JOB_PAGE_MESSAGE');
         expect(script).toContain("parsedUrl.hostname.endsWith('jasoseol.com')");
         expect(script).toContain("parsedUrl.pathname.startsWith('/recruit/')");
+        expect(script).toContain("parsedUrl.pathname === '/'");
+        expect(script).toContain('function hasMinimumPostingData');
         expect(script).not.toContain("parsedUrl.pathname.startsWith('/recruit') ||");
         expect(script).toContain("parsedUrl.searchParams.has('campaignid')");
         expect(script).toContain('setStatus(UNSUPPORTED_JOB_PAGE_MESSAGE, true)');
@@ -50,11 +52,26 @@ describe('extension popup script', () => {
 
     it('automatically resumes the popup after web login stores the extension session', () => {
         expect(script).toContain('let waitingForWebLogin = false;');
+        expect(script).toContain('const LOGIN_SESSION_POLL_INTERVAL_MS');
         expect(script).toContain('chrome.storage.onChanged?.addListener(handleSessionStorageChanged);');
+        expect(script).toContain('startLoginSessionPolling();');
+        expect(script).toContain('async function reconcileWebLoginSession');
         expect(script).toContain('async function handleSessionStorageChanged(changes, areaName)');
         expect(script).toContain('waitingForWebLogin = false;');
-        expect(script).toContain('await loadPreview({ fallbackPanel: featurePanel });');
+        expect(script).toContain('async function resumeAfterWebLogin');
+        expect(script).toContain('await loadPreview({ force: true, fallbackPanel: featurePanel });');
         expect(script).not.toContain('로그인 완료 후 팝업을 다시 열어 주세요.');
+    });
+
+    it('reports embedded popup height so the in-page panel can fit its current content', () => {
+        expect(script).toContain("const PANEL_RESIZE_MESSAGE = 'EZONE_PANEL_RESIZE'");
+        expect(script).toContain('setupPanelAutoResize();');
+        expect(script).toContain('function setupPanelAutoResize');
+        expect(script).toContain('new ResizeObserver');
+        expect(script).toContain('function schedulePanelResize');
+        expect(script).toContain('function reportPanelHeight');
+        expect(script).toContain('window.parent.postMessage');
+        expect(script).toContain('height: Math.ceil');
     });
 
     it('includes manually entered essay questions in the save payload', () => {
@@ -65,6 +82,9 @@ describe('extension popup script', () => {
         expect(script).toContain('essay-question-summary');
         expect(script).toContain('essay-question-preview');
         expect(script).toContain("item.addEventListener('toggle'");
+        expect(script).toContain('function autoResizeEssayQuestionInput');
+        expect(script).toContain("textarea.addEventListener('input'");
+        expect(script).toContain('textarea.scrollHeight + 2');
         expect(script).toContain("item.scrollIntoView({ block: 'nearest', behavior: 'smooth' })");
         expect(script).toContain('getEssayQuestionRows');
         expect(script).toContain("data-max-length");
@@ -100,9 +120,9 @@ describe('extension popup script', () => {
 
     it('can read another posting without closing and reopening the extension panel', () => {
         expect(script).toContain("requireElement('reload-preview-button')");
-        expect(script).toContain("requireElement('save-another-button')");
+        expect(script).not.toContain("requireElement('save-another-button')");
         expect(script).toContain("reloadPreviewButton.addEventListener('click'");
-        expect(script).toContain("saveAnotherButton.addEventListener('click'");
+        expect(script).not.toContain("saveAnotherButton.addEventListener('click'");
         expect(script).toContain('const POSTING_WATCH_INTERVAL_MS = 1200;');
         expect(script).toContain('startPostingChangeWatcher();');
         expect(script).toContain('function startPostingChangeWatcher');

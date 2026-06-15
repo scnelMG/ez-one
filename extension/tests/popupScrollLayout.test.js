@@ -18,7 +18,7 @@ describe('extension popup scroll layout', () => {
     });
 
     it('makes long role lists visibly scrollable and keeps employment badges secondary to role names', () => {
-        expect(css).toContain('max-height: 190px;');
+        expect(css).toContain('max-height: clamp(154px, 32vh, 280px);');
         expect(css).toContain('background-attachment: local, local, scroll, scroll;');
         expect(css).toContain('.role-employment-badge');
         expect(css).toContain('.role-employment-badge--new');
@@ -27,7 +27,7 @@ describe('extension popup scroll layout', () => {
         expect(css).toContain('.role-options label:has(input:checked) .role-employment-badge--new');
         expect(css).toContain('.role-title');
         expect(css).toContain('.role-option-text--with-badge');
-        expect(css).toContain('grid-template-columns: 52px minmax(0, 1fr);');
+        expect(css).toContain('grid-template-columns: 46px minmax(0, 1fr);');
         expect(css).toContain('.role-options label:has(input:checked) .role-title');
         expect(css).toContain('color: var(--ink);');
         expect(css).toContain('box-sizing: border-box;');
@@ -43,9 +43,14 @@ describe('extension popup scroll layout', () => {
         expect(css).toContain('.essay-question-item[open] .essay-question-preview');
         expect(css).toContain('display: none;');
         expect(css).toContain('overflow: clip;');
+        expect(css).toContain('.essay-question-item[open]');
+        expect(css).toContain('overflow: visible;');
         expect(css).toContain('scroll-padding: 10px 0 16px;');
-        expect(css).toContain('width: auto;');
+        expect(css).toContain('width: calc(100% - 28px);');
+        expect(css).toContain('max-width: calc(100% - 28px);');
         expect(css).toContain('margin: 12px 14px 14px;');
+        expect(css).toContain('overflow-y: hidden;');
+        expect(css).toContain('resize: none;');
         expect(css).toContain('box-shadow: inset 0 0 0 1px var(--accent), 0 0 0 2px rgba(91, 69, 240, 0.08);');
         expect(css).toContain('@media (prefers-reduced-motion: reduce)');
     });

@@ -47,12 +47,30 @@ chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => 
 });
 
 function closeAuthTabAfterResponse(tabs, senderTabId, sourceTabId) {
-    if (!Number.isInteger(senderTabId) || senderTabId <= 0 || String(senderTabId) === String(sourceTabId)) {
+    const parsedSourceTabId = parsePositiveInteger(sourceTabId);
+    if (!Number.isInteger(senderTabId) || senderTabId <= 0 || parsedSourceTabId === null || senderTabId === parsedSourceTabId) {
         return;
     }
-    setTimeout(() => {
-        tabs.remove(senderTabId).catch(() => {
+    tabs.update(parsedSourceTabId, { active: true })
+        .then(() => {
+        setTimeout(() => {
+            tabs.remove(senderTabId).catch(() => {
             // The user may close the auth tab before cleanup runs.
-        });
-    }, 120);
+            });
+        }, 120);
+    })
+        .catch(() => {
+        // Leave the auth tab open so the user can use the web fallback if the source tab is gone.
+    });
+}
+
+function parsePositiveInteger(value) {
+    if (Number.isInteger(value) && value > 0) {
+        return value;
+    }
+    if (typeof value === 'string' && /^\d+$/.test(value)) {
+        const parsed = Number(value);
+        return parsed > 0 ? parsed : null;
+    }
+    return null;
 }

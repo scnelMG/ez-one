@@ -1,13 +1,15 @@
 (() => {
     const HOST_ID = 'ezone-extension-panel-host';
+    const PANEL_RESIZE_MESSAGE = 'EZONE_PANEL_RESIZE';
     const PANEL_WIDTH_STORAGE_KEY = 'ezonePanelWidth';
     const PANEL_DEFAULT_WIDTH = 360;
     const PANEL_MIN_WIDTH = 320;
     const PANEL_MAX_WIDTH = 520;
     const PANEL_TOP = 12;
     const PANEL_RIGHT = 12;
-    const PANEL_MIN_HEIGHT = 360;
-    const PANEL_MAX_HEIGHT = 560;
+    const PANEL_DEFAULT_HEIGHT = 420;
+    const PANEL_MIN_HEIGHT = 220;
+    let panelMessageHandler = null;
 
     togglePanel();
 
@@ -44,12 +46,15 @@
                 top: ${PANEL_TOP}px;
                 right: ${PANEL_RIGHT}px;
                 width: min(${PANEL_DEFAULT_WIDTH}px, calc(100vw - 24px));
-                height: min(${PANEL_MAX_HEIGHT}px, max(${PANEL_MIN_HEIGHT}px, calc(100vh - 24px)));
+                height: min(${PANEL_DEFAULT_HEIGHT}px, calc(100vh - ${PANEL_TOP * 2}px));
+                min-height: min(${PANEL_MIN_HEIGHT}px, calc(100vh - ${PANEL_TOP * 2}px));
+                max-height: calc(100vh - ${PANEL_TOP * 2}px);
                 overflow: hidden;
                 border: 1px solid rgba(17, 24, 39, 0.14);
                 border-radius: 14px;
                 background: #f7f8fb;
                 box-shadow: 0 18px 46px rgba(17, 24, 39, 0.28);
+                transition: height 160ms ease;
             }
 
             .panel.is-resizing iframe {
@@ -153,9 +158,20 @@
         document.documentElement.append(host);
 
         applyStoredPanelWidth(panel);
+        panelMessageHandler = (event) => {
+            handlePanelMessage(event, panel, frame);
+        };
+        window.addEventListener('message', panelMessageHandler);
         resizeHandle.addEventListener('pointerdown', (event) => {
             startResize(event, panel);
         });
+    }
+
+    function handlePanelMessage(event, panel, frame) {
+        if (event.source !== frame.contentWindow || event.data?.type !== PANEL_RESIZE_MESSAGE) {
+            return;
+        }
+        setPanelHeight(panel, Number(event.data.height));
     }
 
     async function applyStoredPanelWidth(panel) {
@@ -211,6 +227,15 @@
         panel.style.width = `${boundedWidth}px`;
     }
 
+    function setPanelHeight(panel, height) {
+        if (!Number.isFinite(height)) {
+            return;
+        }
+        const maxViewportHeight = Math.max(PANEL_MIN_HEIGHT, window.innerHeight - PANEL_TOP * 2);
+        const boundedHeight = Math.min(Math.max(height, PANEL_MIN_HEIGHT), maxViewportHeight);
+        panel.style.height = `${Math.round(boundedHeight)}px`;
+    }
+
     function savePanelWidth(panel) {
         const width = Math.round(panel.getBoundingClientRect().width);
         chrome.storage.local.set({ [PANEL_WIDTH_STORAGE_KEY]: width }).catch(() => {
@@ -219,6 +244,10 @@
     }
 
     function removePanel() {
+        if (panelMessageHandler) {
+            window.removeEventListener('message', panelMessageHandler);
+            panelMessageHandler = null;
+        }
         document.getElementById(HOST_ID)?.remove();
     }
 })();

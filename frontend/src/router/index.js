@@ -146,7 +146,12 @@ router.beforeEach((to) => {
         return true;
     }
     if (to.name === 'main') {
-        return { name: 'login' };
+        const redirect = typeof to.query.redirect === 'string' && isSafeRedirectPath(to.query.redirect)
+            ? to.query.redirect
+            : undefined;
+        return redirect
+            ? { name: 'login', query: { redirect } }
+            : { name: 'login' };
     }
     return {
         name: 'login',

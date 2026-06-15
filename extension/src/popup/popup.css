@@ -125,7 +125,7 @@ a {
 
 .panel {
   display: grid;
-  gap: 16px;
+  gap: 14px;
   align-content: start;
   min-height: 0;
   overflow-y: auto;
@@ -188,22 +188,40 @@ a {
 
 .status-panel.is-guidance {
   grid-template-columns: minmax(0, 1fr);
-  gap: 6px;
-  border-color: var(--line);
-  background: var(--surface);
+  gap: 8px;
+  border-color: rgba(220, 38, 38, 0.24);
+  background: #fff7f7;
   box-shadow: none;
-  padding: 15px 16px;
+  padding: 16px;
+}
+
+.status-panel.is-guidance .status-copy {
+  gap: 7px;
+}
+
+.status-panel.is-guidance .status-copy::before {
+  content: "공고 저장 안내";
+  justify-self: start;
+  border: 1px solid rgba(220, 38, 38, 0.22);
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 0.64rem;
+  font-weight: 800;
+  line-height: 1;
+  padding: 5px 8px;
+  white-space: nowrap;
 }
 
 .status-panel.is-guidance .status-copy strong {
-  color: var(--ink);
-  font-size: 0.9rem;
-  font-weight: 750;
+  color: #991b1b;
+  font-size: 0.94rem;
+  font-weight: 800;
   line-height: 1.35;
 }
 
 .status-panel.is-guidance p {
-  color: var(--muted);
+  color: #5f2a2a;
   font-size: 0.76rem;
   font-weight: 500;
   line-height: 1.55;
@@ -515,23 +533,23 @@ p {
 
 .panel-heading {
   display: grid;
-  gap: 5px;
+  gap: 4px;
 }
 
 .editable-preview {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   border: 1px solid var(--line);
   border-radius: var(--radius-control);
-  background: #fbfcfe;
-  padding: 10px;
+  background: #ffffff;
+  padding: 9px 10px;
 }
 
 .editable-preview label {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr);
+  grid-template-columns: 42px minmax(0, 1fr);
   align-items: center;
-  gap: 8px;
+  gap: 7px;
 }
 
 .editable-preview span {
@@ -542,14 +560,14 @@ p {
 
 .editable-preview input {
   width: 100%;
-  min-height: 34px;
+  min-height: 30px;
   border: 1px solid transparent;
-  border-radius: 7px;
-  background: #ffffff;
+  border-radius: 6px;
+  background: #fbfcfe;
   color: var(--ink);
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 650;
-  padding: 0 9px;
+  padding: 0 8px;
   transition: all 0.2s ease;
 }
 
@@ -562,7 +580,7 @@ p {
 .role-fieldset,
 .essay-fieldset {
   display: grid;
-  gap: 8px;
+  gap: 7px;
   margin: 0;
   padding: 0;
   border: 0;
@@ -606,10 +624,10 @@ legend {
 
 .role-options {
   display: grid;
-  gap: 8px;
-  max-height: 190px;
+  gap: 7px;
+  max-height: clamp(154px, 32vh, 280px);
   overflow-y: auto;
-  padding: 2px 6px 18px 0;
+  padding: 2px 6px 14px 0;
   scrollbar-gutter: stable;
   border-radius: var(--radius-control);
   background:
@@ -639,18 +657,18 @@ legend {
 .role-options label {
   position: relative;
   display: grid;
-  grid-template-columns: 20px minmax(0, 1fr);
+  grid-template-columns: 18px minmax(0, 1fr);
   align-items: start;
-  gap: 10px;
-  min-height: 48px;
+  gap: 9px;
+  min-height: 42px;
   border: 1px solid var(--line);
   border-radius: var(--radius-control);
   background: #ffffff;
   color: var(--text);
   cursor: pointer;
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  padding: 10px 11px;
+  padding: 8px 10px;
   transition: all 0.15s ease;
 }
 
@@ -672,8 +690,8 @@ legend {
 }
 
 .role-options input {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   flex: 0 0 auto;
   accent-color: var(--accent);
   margin: 2px 0 0;
@@ -685,9 +703,9 @@ legend {
 
 .role-option-text--with-badge {
   display: grid;
-  grid-template-columns: 52px minmax(0, 1fr);
+  grid-template-columns: 46px minmax(0, 1fr);
   align-items: start;
-  gap: 9px;
+  gap: 8px;
 }
 
 .role-option-text--plain {
@@ -700,16 +718,16 @@ legend {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 52px;
+  width: 46px;
   min-width: 0;
-  height: 24px;
+  height: 22px;
   box-sizing: border-box;
   border: 1px solid #d0d5dd;
   border-radius: 999px;
   background: #f8fafc;
   color: #475467;
   flex-shrink: 0;
-  font-size: 0.62rem;
+  font-size: 0.58rem;
   font-weight: 800;
   line-height: 1;
   padding: 0 6px;
@@ -780,12 +798,14 @@ legend {
 }
 
 .essay-fieldset p {
-  font-size: 0.74rem;
-  line-height: 1.45;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.42;
   border: 1px solid var(--line);
   border-radius: var(--radius-control);
   background: #fbfcfe;
-  padding: 8px 9px;
+  padding: 7px 9px;
 }
 
 .essay-fieldset p.is-warning {
@@ -796,7 +816,7 @@ legend {
 
 .essay-question-list {
   display: grid;
-  gap: 9px;
+  gap: 8px;
   overflow: visible;
   padding: 0 4px 96px 0;
   scroll-padding: 10px 0 16px;
@@ -813,15 +833,16 @@ legend {
 
 .essay-question-item[open] {
   border-color: #cbd5e1;
+  overflow: visible;
   box-shadow: 0 10px 24px rgba(16, 24, 40, 0.08);
 }
 
 .essay-question-summary {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 9px;
+  gap: 7px;
   cursor: pointer;
-  padding: 12px 13px;
+  padding: 10px 12px;
   list-style: none;
 }
 
@@ -837,7 +858,7 @@ legend {
 .essay-question-action {
   display: inline-flex;
   flex: 0 0 auto;
-  min-height: 28px;
+  min-height: 26px;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--line);
@@ -848,7 +869,7 @@ legend {
   font-weight: 800;
   line-height: 1;
   margin-left: auto;
-  padding: 0 10px;
+  padding: 0 9px;
   white-space: nowrap;
 }
 
@@ -894,11 +915,11 @@ legend {
   overflow: hidden;
   color: var(--text);
   display: -webkit-box;
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   font-weight: 500;
-  line-height: 1.55;
+  line-height: 1.5;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   overflow-wrap: anywhere;
   word-break: keep-all;
 }
@@ -923,16 +944,16 @@ legend {
 }
 
 .essay-question-input {
-  width: auto;
+  width: calc(100% - 28px);
+  max-width: calc(100% - 28px);
   min-height: 116px;
-  max-height: 220px;
   margin: 12px 14px 14px;
   background: #fbfcfe;
   color: #1f2937;
   font-size: 0.77rem;
   line-height: 1.58;
-  overflow-y: auto;
-  resize: vertical;
+  overflow-y: hidden;
+  resize: none;
 }
 
 .essay-fieldset textarea:focus,
@@ -958,13 +979,28 @@ legend {
 
 .result-panel {
   text-align: center;
-  gap: 14px;
+  gap: 12px;
+  align-content: start;
+  padding-top: 22px;
+}
+
+.result-panel h1 {
+  margin-top: 2px;
+}
+
+.result-panel > p {
+  max-width: 280px;
+  justify-self: center;
+  margin: -2px 0 2px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
 }
 
 .success-mark {
   display: grid;
-  width: 44px;
-  height: 44px;
+  width: 42px;
+  height: 42px;
   place-items: center;
   border: none;
   border-radius: 999px;
@@ -973,13 +1009,14 @@ legend {
   font-size: 1.25rem;
   font-weight: 800;
   justify-self: center;
-  box-shadow: 0 4px 10px rgba(15, 143, 111, 0.1);
+  box-shadow: 0 8px 22px rgba(15, 143, 111, 0.12);
 }
 
 .saved-job-list {
   display: grid;
   gap: 6px;
-  margin: 0;
+  width: 100%;
+  margin: 2px 0 4px;
   padding: 0;
   list-style: none;
   text-align: left;
@@ -987,11 +1024,12 @@ legend {
 
 .saved-job-list li {
   display: grid;
-  gap: 2px;
+  gap: 4px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--surface-soft);
-  padding: 10px;
+  background: linear-gradient(180deg, #ffffff 0%, var(--surface-soft) 100%);
+  padding: 11px 12px;
+  box-shadow: 0 8px 20px rgba(16, 24, 40, 0.04);
   transition: all 0.2s ease;
 }
 
@@ -1002,8 +1040,9 @@ legend {
 
 .saved-job-list span {
   color: var(--muted);
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 700;
+  letter-spacing: 0;
 }
 
 .saved-job-list strong {

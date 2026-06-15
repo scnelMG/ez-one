@@ -1196,10 +1196,10 @@ describe('extractJobPosting', () => {
         </div>
       </main>
     `;
-        expect(extractJobPosting(doc, 'https://jasoseol.com/?campaignid=1')).toMatchObject({
+        expect(extractJobPosting(doc, 'https://jasoseol.com/')).toMatchObject({
             companyName: 'BGF로지스',
             positionTitle: '2026년 하계 채용연계형 인턴 채용',
-            sourceUrl: 'https://jasoseol.com/?campaignid=1',
+            sourceUrl: 'https://jasoseol.com/',
             deadlineLabel: '2026년 6월 15일 23:59',
             roleOptions: [
                 '인턴 · 물류센터 직군 - 지역거점 물류센터(RDC)',
