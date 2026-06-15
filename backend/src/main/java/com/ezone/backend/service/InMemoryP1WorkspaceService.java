@@ -75,7 +75,8 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
                 .sorted(dashboardDeadlineComparator())
                 .limit(5)
                 .map(this::toDashboardJob)
-                .toList()
+                .toList(),
+            null
         );
     }
 

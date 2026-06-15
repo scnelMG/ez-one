@@ -4370,13 +4370,7 @@ li {
 .main-basket-head,
 .main-basket-row {
   display: grid;
-  grid-template-columns:
-    minmax(120px, 1fr)
-    minmax(190px, 1.4fr)
-    minmax(86px, 0.72fr)
-    minmax(104px, 0.72fr)
-    minmax(82px, 0.58fr)
-    minmax(88px, 0.62fr);
+  grid-template-columns: 48px minmax(120px, 1fr) minmax(150px, 1.4fr) 90px minmax(100px, 0.72fr) 90px 70px 48px;
   gap: 14px;
   align-items: center;
   min-height: 52px;
@@ -8404,4 +8398,52 @@ main, .study-dashboard, .workspace-layout {
 .main-basket-row:hover {
   background-color: var(--surface-soft) !important;
   transform: translateX(4px) !important;
+}
+
+/* Unified Page Hero */
+.page-hero {
+  position: relative;
+  padding: 48px 32px;
+  margin-bottom: 32px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(240, 245, 255, 0.9) 100%);
+  border: 1px solid rgba(79, 70, 229, 0.1);
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03), inset 0 2px 20px rgba(255, 255, 255, 0.8);
+}
+
+.page-hero::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -10%;
+  width: 120%;
+  height: 200%;
+  background: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.8) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.page-hero-content {
+  position: relative;
+  z-index: 1;
+  max-width: 800px;
+}
+
+.page-hero h1 {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--ink);
+  margin: 0 0 12px 0;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, var(--ink) 0%, var(--blue-strong) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.page-hero p {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.6;
+  font-weight: 500;
 }

@@ -1,8 +1,8 @@
 <template>
   <AppLayout>
     <section class="basket-page">
-      <header class="basket-hero">
-        <div>
+      <header class="page-hero">
+        <div class="page-hero-content">
           <h1>공고 장바구니</h1>
           <p>담아둔 공고의 마감일과 지원 상태를 한 화면에서 확인하고 바로 워크스페이스로 이동합니다.</p>
         </div>
@@ -88,7 +88,7 @@
             <span>상태</span>
             <span>마감일</span>
             <span>채용 사이트 링크</span>
-            <span>최근 작업</span>
+            <span></span>
             <span aria-label="삭제"></span>
           </div>
 
@@ -153,8 +153,8 @@
                 </button>
               </div>
             </div>
-            <RouterLink class="job-main-link" :to="`/workspaces/${job.workspaceId}`">
-              <span class="deadline-pill" :class="{ urgent: isDeadlineSoon(job) }">{{ job.deadlineLabel }}</span>
+            <RouterLink class="job-main-link" :to="`/workspaces/${job.workspaceId}`" style="display: flex; gap: 8px; align-items: center;">
+              <span>{{ formatDateTime(job.deadlineDate) || job.deadlineLabel }}</span>
             </RouterLink>
             <a
               class="source-link"
@@ -165,14 +165,8 @@
             >
               바로가기
             </a>
-            <span
-              v-if="isRecentWorkspace(job.workspaceId)"
-              class="recent-visit-badge"
-              :data-testid="`recent-work-${job.id}`"
-            >
-              최근 작업
-            </span>
-            <span v-else class="recent-visit-empty" aria-hidden="true">-</span>
+            <span v-if="formatDDay(job) || job.deadlineLabel?.startsWith('D-')" class="deadline-pill" :class="{ urgent: isDeadlineSoon(job) }">{{ formatDDay(job) || job.deadlineLabel }}</span>
+            <span v-else></span>
             <button
               class="delete-job-button"
               type="button"
@@ -263,7 +257,9 @@ import {
   statusClass,
   statusLabel,
   normalizedSourceUrl,
-  companyInitial
+  companyInitial,
+  formatDDay,
+  formatDateTime
 } from '@/shared/utils/jobUtils';
 import AppLayout from '@/shared/AppLayout.vue';
 import StatePanel from '@/shared/StatePanel.vue';
@@ -426,13 +422,6 @@ function daysUntilDeadline(job) {
     }
     return Math.ceil((date.getTime() - today.getTime()) / 86400000);
 }
-function formatDDay(job) {
-    const days = daysUntilDeadline(job);
-    if (days === null) return '';
-    if (days === 0) return 'D-Day';
-    if (days > 0) return `D-${days}`;
-    return `D+${-days}`;
-}
 function isDeadlineSoon(job) {
     const daysLeft = daysUntilDeadline(job);
     return daysLeft !== null && daysLeft >= 0 && daysLeft <= 7;
@@ -460,13 +449,11 @@ function changeStatus(jobId, nextStatus) {
     openStatusJobId.value = null;
     void basketStore.updateStatus(jobId, nextStatus);
 }
-function archiveJob(jobId) {
-    const job = basketStore.jobs.find((basketJob) => basketJob.id === jobId);
-    const label = job ? `${job.companyName} ${job.positionTitle}` : '공고';
-    if (!window.confirm(`${label} 공고를 삭제하시겠습니까?`)) {
-        return;
-    }
-    void basketStore.archiveJob(jobId);
+async function archiveJob(id) {
+  if (!window.confirm(`해당 공고를 삭제하시겠습니까?`)) {
+    return;
+  }
+  void basketStore.archiveJob(id);
 }
 
 onMounted(() => {
