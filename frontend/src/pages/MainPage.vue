@@ -33,7 +33,7 @@
           <div class="recent-task-text">
             <span>진행 중</span>
             <strong>[{{ dashboardStore.summary.recentActivity.companyName }} {{ dashboardStore.summary.recentActivity.positionTitle }}] {{ dashboardStore.summary.recentActivity.actionName }}</strong>
-            <span class="recent-task-date">{{ dashboardStore.summary.recentActivity.updatedAt }}</span>
+            <span class="recent-task-date" style="font-size: 0.85em; color: var(--text-tertiary); margin-top: 4px;">{{ dashboardStore.summary.recentActivity.updatedAt }}</span>
           </div>
         </div>
         <RouterLink class="recent-task-action" :to="`/workspaces/${dashboardStore.summary.recentActivity.workspaceId}`">
