@@ -10,7 +10,9 @@ export const useStudyStore = defineStore('study', {
     sharedJobs: [],
     currentSharedEssayDetail: null,
     status: 'idle',
-    errorMessage: ''
+    errorMessage: '',
+    notifications: [],
+    unreadNotificationCount: 0
   }),
   actions: {
     async loadMyStudies() {
@@ -37,9 +39,13 @@ export const useStudyStore = defineStore('study', {
       }
     },
 
-    async createStudy(name, description) {
+    async createStudy(name, description, settings) {
       try {
-        const study = await studyApi.createStudy({ name, description });
+        const study = await studyApi.createStudy({ 
+          name, 
+          description, 
+          settingsJson: JSON.stringify(settings) 
+        });
         this.myStudies.push(study);
         return study;
       } catch (error) {
@@ -112,6 +118,33 @@ export const useStudyStore = defineStore('study', {
       } catch (error) {
         this.status = 'error';
         this.errorMessage = error.message;
+        throw error;
+      }
+    },
+
+    async deleteStudy(studyId) {
+      this.status = 'loading';
+      try {
+        await studyApi.deleteStudy(studyId);
+        // Remove from list
+        this.studies = this.studies.filter(s => s.id !== studyId);
+        this.status = 'ready';
+      } catch (error) {
+        this.status = 'error';
+        this.errorMessage = error.response?.data?.message || '스터디 삭제 중 오류가 발생했습니다.';
+        throw error;
+      }
+    },
+
+    async leaveStudy(studyId, delegateEmail) {
+      this.status = 'loading';
+      try {
+        await studyApi.leaveStudy(studyId, delegateEmail);
+        this.studies = this.studies.filter(s => s.id !== studyId);
+        this.status = 'ready';
+      } catch (error) {
+        this.status = 'error';
+        this.errorMessage = error.response?.data?.message || '스터디 탈퇴 중 오류가 발생했습니다.';
         throw error;
       }
     }

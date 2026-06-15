@@ -78,7 +78,7 @@
           <button
             type="button"
             class="header-icon-action"
-            :class="{ 'has-alerts': studyStore.myInvites.length > 0 }"
+            :class="{ 'has-alerts': studyStore.myInvites.length > 0 || studyStore.unreadNotificationCount > 0 }"
             aria-label="알림"
             data-testid="reserved-alerts"
             :aria-expanded="isNotificationMenuOpen ? 'true' : 'false'"
@@ -90,7 +90,9 @@
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
               <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
             </svg>
-            <span v-if="studyStore.myInvites.length > 0" class="notification-badge">{{ studyStore.myInvites.length }}</span>
+            <span v-if="studyStore.myInvites.length + studyStore.unreadNotificationCount > 0" class="notification-badge">
+              {{ studyStore.myInvites.length + studyStore.unreadNotificationCount }}
+            </span>
           </button>
 
           <div
@@ -101,14 +103,18 @@
             @mouseleave="scheduleNotificationMenuClose"
           >
             <div class="notification-header">알림</div>
-            <div v-if="studyStore.myInvites.length === 0" class="notification-empty">새로운 알림이 없습니다.</div>
+            <div v-if="studyStore.myInvites.length === 0 && studyStore.notifications.length === 0" class="notification-empty">새로운 알림이 없습니다.</div>
             <div v-else class="notification-list">
-              <div v-for="invite in studyStore.myInvites" :key="invite.id" class="notification-item">
+              <div v-for="invite in studyStore.myInvites" :key="'inv-'+invite.id" class="notification-item">
                 <p><strong>{{ invite.inviterEmail }}</strong>님이 <strong>{{ invite.studyName }}</strong> 스터디에 초대했습니다.</p>
                 <div class="notification-actions">
                   <button class="primary-button" @click="handleInvite(invite.id, true)">수락</button>
                   <button class="ghost-button" @click="handleInvite(invite.id, false)">거절</button>
                 </div>
+              </div>
+              <div v-for="noti in studyStore.notifications" :key="'not-'+noti.id" class="notification-item" :class="{ 'is-unread': !noti.isRead }" @click="handleNotificationClick(noti.id)">
+                <p>{{ noti.message }}</p>
+                <small class="noti-date">{{ new Date(noti.createdAt).toLocaleString() }}</small>
               </div>
             </div>
           </div>
@@ -157,6 +163,8 @@ onMounted(async () => {
       profileStore.loadProfile();
     }
     studyStore.loadMyInvites();
+    studyStore.loadNotifications();
+    studyStore.loadUnreadNotificationCount();
   }
 });
 
@@ -242,7 +250,7 @@ async function endCurrentSession(nextPath) {
 async function handleInvite(inviteId, accept) {
   try {
     await studyStore.respondToInvite(inviteId, accept);
-    if (studyStore.myInvites.length === 0) {
+    if (studyStore.myInvites.length === 0 && studyStore.notifications.length === 0) {
       isNotificationMenuOpen.value = false;
     }
     if (accept) {
@@ -251,6 +259,10 @@ async function handleInvite(inviteId, accept) {
   } catch (error) {
     alert('초대 응답 중 오류가 발생했습니다.');
   }
+}
+
+async function handleNotificationClick(id) {
+  await studyStore.readNotification(id);
 }
 </script>
 
@@ -340,5 +352,19 @@ async function handleInvite(inviteId, accept) {
   padding: 6px 12px;
   font-size: 0.85rem;
   border-radius: 6px;
+}
+.notification-item.is-unread {
+  background-color: var(--surface-hover);
+  font-weight: 500;
+  cursor: pointer;
+}
+.notification-item.is-unread:hover {
+  background-color: var(--line);
+}
+.noti-date {
+  color: var(--text-tertiary);
+  font-size: 0.8rem;
+  margin-top: 4px;
+  display: block;
 }
 </style>

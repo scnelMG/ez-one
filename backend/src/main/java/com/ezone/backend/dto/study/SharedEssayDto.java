@@ -14,6 +14,7 @@ public class SharedEssayDto {
     private String companyName;
     private String positionTitle;
     private String deadlineLabel;
+    private boolean isNew;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -33,4 +34,6 @@ public class SharedEssayDto {
     public void setPositionTitle(String positionTitle) { this.positionTitle = positionTitle; }
     public String getDeadlineLabel() { return deadlineLabel; }
     public void setDeadlineLabel(String deadlineLabel) { this.deadlineLabel = deadlineLabel; }
+    public boolean getIsNew() { return isNew; }
+    public void setIsNew(boolean isNew) { this.isNew = isNew; }
 }

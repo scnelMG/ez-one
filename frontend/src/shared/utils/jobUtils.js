@@ -17,8 +17,10 @@ export function deadlineRank(job) {
 export function statusClass(status) {
   return {
     NOT_STARTED: 'status-not-started',
+    READY: 'status-not-started',
     IN_PROGRESS: 'status-in-progress',
     SUBMITTED: 'status-submitted',
+    COMPLETED: 'status-submitted',
     NOT_APPLIED: 'status-not-applied'
   }[status] ?? 'status-not-applied';
 }
@@ -26,8 +28,10 @@ export function statusClass(status) {
 export function statusLabel(status, fallback) {
   return {
     NOT_STARTED: '지원 전',
+    READY: '지원 전',
     IN_PROGRESS: '진행중',
     SUBMITTED: '지원완료',
+    COMPLETED: '지원완료',
     NOT_APPLIED: '미지원'
   }[status] ?? fallback ?? '미지원';
 }

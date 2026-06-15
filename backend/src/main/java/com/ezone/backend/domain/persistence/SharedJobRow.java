@@ -12,6 +12,7 @@ public class SharedJobRow {
     private String deadlineLabel;
     private String deadlineDate;
     private String sourceUrl;
+    private String reason;
     private LocalDateTime recommendedAt;
 
     public String getId() { return id; }
@@ -32,6 +33,8 @@ public class SharedJobRow {
     public void setDeadlineDate(String deadlineDate) { this.deadlineDate = deadlineDate; }
     public String getSourceUrl() { return sourceUrl; }
     public void setSourceUrl(String sourceUrl) { this.sourceUrl = sourceUrl; }
+    public String getReason() { return reason; }
+    public void setReason(String reason) { this.reason = reason; }
     public LocalDateTime getRecommendedAt() { return recommendedAt; }
     public void setRecommendedAt(LocalDateTime recommendedAt) { this.recommendedAt = recommendedAt; }
 }

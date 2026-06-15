@@ -36,8 +36,11 @@ INSERT INTO basket_jobs (user_id, job_id, application_status, application_memo, 
 SELECT 1, j.id, seed.application_status, '', CURRENT_TIMESTAMP, 'DEMO_SEED', 'DIRECT', CURRENT_TIMESTAMP
 FROM (
   SELECT 'https://www.jasoseol.com/recruit/ez-one-demo-naver-backend' AS url, 'IN_PROGRESS' AS application_status
-  UNION ALL SELECT 'https://www.jasoseol.com/recruit/ez-one-demo-kakaopay-server', 'READY'
-  UNION ALL SELECT 'https://www.jasoseol.com/recruit/ez-one-demo-daangn-product', 'NOT_APPLIED'
+  UNION ALL SELECT 'https://www.jasoseol.com/recruit/ez-one-demo-kakao-pay-server', 'READY'
+  UNION ALL SELECT 'https://www.jasoseol.com/recruit/ez-one-demo-toss-platform', 'NOT_APPLIED'
+  UNION ALL SELECT 'https://www.jasoseol.com/recruit/ez-one-demo-toss-frontend', 'READY'
+  UNION ALL SELECT 'https://www.jasoseol.com/recruit/ez-one-demo-toss-data', 'IN_PROGRESS'
+  UNION ALL SELECT 'https://www.jasoseol.com/recruit/ez-one-demo-toss-security', 'COMPLETED'
 ) seed
 JOIN jobs j ON j.url = seed.url
 WHERE NOT EXISTS (

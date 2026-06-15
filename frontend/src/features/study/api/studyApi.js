@@ -79,13 +79,41 @@ export const studyApi = {
     return data;
   },
 
+  async readEssay(studyId, essayId) {
+    const { data } = await apiClient.post(`/api/study/${studyId}/essays/${essayId}/read`);
+    return data;
+  },
+
   async uploadStudyImage(studyId, file) {
     const formData = new FormData();
     formData.append('file', file);
-    return apiClient.post(`/study/${studyId}/image`, formData, {
+    return apiClient.post(`/api/study/${studyId}/image`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
     });
+  },
+
+  async getMyNotifications() {
+    const { data } = await apiClient.get('/api/notifications');
+    return data;
+  },
+
+  async getUnreadNotificationCount() {
+    const { data } = await apiClient.get('/api/notifications/unread-count');
+    return data;
+  },
+
+  async readNotification(id) {
+    const { data } = await apiClient.post(`/api/notifications/${id}/read`);
+    return data;
+  },
+
+  async deleteStudy(studyId) {
+    return await apiClient.delete(`/api/study/${studyId}`);
+  },
+
+  async leaveStudy(studyId, delegateEmail) {
+    return await apiClient.post(`/api/study/${studyId}/leave`, { delegateEmail });
   }
 };

@@ -3,6 +3,10 @@ spring:
     import: optional:file:.env[.properties]
   application:
     name: ez-one-backend
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
   datasource:
     url: ${DB_URL:jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:ez_one}}
     username: ${DB_USERNAME:${DB_USER:ez_one}}

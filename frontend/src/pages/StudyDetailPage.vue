@@ -9,6 +9,14 @@
         <p class="study-description">{{ studyStore.currentStudy?.description }}</p>
         <div class="header-actions">
           <button class="primary-button" type="button" @click="openInviteModal">팀원 초대</button>
+          
+          <div class="dropdown-container" v-if="amILeader || amIMember">
+            <button class="icon-button settings-button" type="button" @click="toggleSettings" title="스터디 설정">⚙️</button>
+            <div class="dropdown-menu" v-if="isSettingsOpen">
+              <button class="dropdown-item danger-text" v-if="amILeader" @click="openDeleteModal">스터디 삭제</button>
+              <button class="dropdown-item" @click="openLeaveModal">스터디 탈퇴</button>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -41,21 +49,66 @@
         <!-- 우측 메인 콘텐츠 -->
         <main class="study-main-content">
           <!-- 대시보드 탭 -->
-          <div v-if="activeTab === 'dashboard'" class="tab-pane">
-            <h2>멤버 현황</h2>
+          <div v-if="activeTab === 'dashboard'" class="tab-pane dashboard-pane">
             <div v-if="studyStore.status === 'loading'" class="loading-state">로딩 중...</div>
-            <div v-else class="member-list">
-              <div class="member-row" v-for="member in studyStore.currentStudy?.members || []" :key="member.id">
-                <div class="member-info">
-                  <span class="member-avatar">{{ member.userEmail.charAt(0).toUpperCase() }}</span>
-                  <strong>{{ member.userEmail }}</strong>
-                  <span class="role-badge" v-if="member.role === 'LEADER'">스터디장</span>
-                </div>
-                <div class="member-stats">
-                  <span>진행 중인 공고: <strong>{{ member.activeJobCount || 0 }}</strong>개</span>
+            <template v-else>
+              <!-- 팀원 진척도 차트 섹션 -->
+              <div v-if="studySettings.showTeamComparison" class="dashboard-section chart-section">
+                <h2>팀원 진척도 비교 <span class="subtitle">(진행중인 공고 수 기준)</span></h2>
+                <div class="chart-container">
+                  <div class="chart-bar-row" v-for="member in studyStore.currentStudy?.members || []" :key="'chart-'+member.id">
+                    <div class="chart-label">
+                      <div class="member-avatar-small">{{ member.userEmail.charAt(0).toUpperCase() }}</div>
+                      <span class="member-name">{{ member.userEmail.split('@')[0] }}</span>
+                    </div>
+                    <div class="chart-track">
+                      <div class="chart-fill" :style="{ width: Math.min((member.activeJobCount || 0) * 10, 100) + '%' }">
+                        <span class="chart-value" v-if="(member.activeJobCount || 0) > 0">{{ member.activeJobCount }}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
+
+              <!-- 멤버 현황 그리드 섹션 -->
+              <div class="dashboard-section">
+                <h2>멤버 상세 현황</h2>
+                <div class="member-grid">
+                  <div class="member-card-new" v-for="member in studyStore.currentStudy?.members || []" :key="member.id">
+                    <div class="member-card-header">
+                      <div class="member-avatar-large">{{ member.userEmail.charAt(0).toUpperCase() }}</div>
+                      <div class="member-info-new">
+                        <strong>{{ member.userEmail.split('@')[0] }}</strong>
+                        <span class="text-secondary text-sm">{{ member.userEmail }}</span>
+                        <span class="role-badge" v-if="member.role === 'LEADER'">스터디장</span>
+                      </div>
+                    </div>
+                    
+                    <div v-if="studySettings.showDashboard" class="member-stats-grid">
+                      <div class="stat-box-new">
+                        <span class="stat-label">진행중</span>
+                        <strong class="stat-value text-primary">{{ member.activeJobCount || 0 }}</strong>
+                      </div>
+                      <div class="stat-box-new">
+                        <span class="stat-label">지원전</span>
+                        <strong class="stat-value">{{ member.notStartedCount || 0 }}</strong>
+                      </div>
+                      <div class="stat-box-new">
+                        <span class="stat-label">이번주</span>
+                        <strong class="stat-value">{{ member.appsThisWeekCount || 0 }}</strong>
+                      </div>
+                      <div class="stat-box-new">
+                        <span class="stat-label">이번달</span>
+                        <strong class="stat-value">{{ member.appsThisMonthCount || 0 }}</strong>
+                      </div>
+                    </div>
+                    <div v-else class="member-stats-basic">
+                      진행 중인 공고: <strong>{{ member.activeJobCount || 0 }}</strong>개
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>
           </div>
 
           <!-- 자소서 피드백 탭 -->
@@ -73,7 +126,10 @@
                   <p><strong>{{ essay.userEmail }}</strong>님의 자소서</p>
                   <small>{{ new Date(essay.sharedAt).toLocaleString() }}</small>
                 </div>
-                <h3>{{ essay.companyName || '회사명 정보 없음' }} - {{ essay.positionTitle || '직무 정보 없음' }}</h3>
+                <h3 style="display:flex; align-items:center; gap:8px;">
+                  {{ essay.companyName || '회사명 정보 없음' }} - {{ essay.positionTitle || '직무 정보 없음' }}
+                  <span v-if="studySettings.showUnreadBadge && essay.isNew" class="badge new-badge">NEW</span>
+                </h3>
                 <p>마감일: {{ essay.deadlineLabel || '-' }}</p>
                 <button class="text-button" @click="viewEssay(essay.id)">자세히 보기</button>
               </div>
@@ -91,11 +147,13 @@
             </div>
             <div v-else class="shared-list">
               <div class="shared-card" v-for="job in studyStore.sharedJobs" :key="job.id">
-                <p><strong>{{ job.recommenderName }}</strong>님이 추천했습니다.</p>
+                <p><strong>{{ job.recommenderName || job.recommenderEmail }}</strong>님이 추천했습니다.</p>
+                <div v-if="job.reason" class="job-reason">"{{ job.reason }}"</div>
                 <h3>{{ job.companyName }} - {{ job.positionTitle }}</h3>
                 <p class="deadline-row">
                   마감일: 
-                  <strong v-if="job.deadlineLabel !== '상시' && job.deadlineLabel !== '상시채용'">{{ job.deadlineLabel || '-' }}</strong>
+                  <strong v-if="job.deadlineDate">{{ job.deadlineDate }}</strong>
+                  <strong v-else-if="job.deadlineLabel !== '상시' && job.deadlineLabel !== '상시채용'">{{ job.deadlineLabel || '-' }}</strong>
                   <span v-else class="deadline-badge">상시</span>
                 </p>
                 <a v-if="job.sourceUrl" :href="job.sourceUrl" target="_blank" class="text-button">공고 보러가기</a>
@@ -286,7 +344,7 @@
             <div v-else-if="recommendJobsList.length === 0" class="empty-state">
               장바구니에 담긴 공고가 없습니다.
             </div>
-            <ul v-else class="workspace-list">
+            <ul v-else class="workspace-list" style="max-height: 200px; overflow-y: auto;">
               <li v-for="basket in recommendJobsList" :key="basket.id" class="workspace-item checkbox-item">
                 <label class="checkbox-label">
                   <input type="checkbox" :value="basket" v-model="selectedRecommendJobs">
@@ -302,6 +360,10 @@
                 </label>
               </li>
             </ul>
+            <div class="form-group" v-if="recommendJobsList.length > 0" style="margin-top: 16px;">
+              <label>추천 사유 (선택)</label>
+              <textarea v-model="recommendReason" placeholder="팀원들에게 이 공고를 추천하는 이유를 적어주세요!" rows="2"></textarea>
+            </div>
           </div>
 
           <footer class="modal-footer">
@@ -312,12 +374,72 @@
           </footer>
         </div>
       </div>
+
+      <!-- 스터디 탈퇴 모달 -->
+      <div v-if="isLeaveModalOpen" class="modal-backdrop" @click.self="closeLeaveModal">
+        <div class="modal-content">
+          <header class="modal-header">
+            <h2>스터디 탈퇴</h2>
+            <button class="icon-button" @click="closeLeaveModal">×</button>
+          </header>
+          <div class="modal-body">
+            <p v-if="amILeader && otherMembers.length > 0">
+              스터디장 권한을 위임할 팀원을 선택해야 탈퇴할 수 있습니다.
+            </p>
+            <p v-else>
+              정말로 스터디를 탈퇴하시겠습니까?<br/>
+              <span v-if="amILeader && otherMembers.length === 0" class="text-danger">
+                마지막 남은 스터디장이므로, 탈퇴 시 스터디가 완전히 삭제됩니다.
+              </span>
+            </p>
+            <div class="form-group" v-if="amILeader && otherMembers.length > 0">
+              <label>권한 위임 대상</label>
+              <select v-model="delegateEmail">
+                <option value="">-- 위임할 팀원 선택 --</option>
+                <option v-for="m in otherMembers" :key="m.id" :value="m.userEmail">
+                  {{ m.userEmail }}
+                </option>
+              </select>
+            </div>
+          </div>
+          <footer class="modal-footer">
+            <button class="ghost-button" @click="closeLeaveModal">취소</button>
+            <button class="danger-button" @click="confirmLeave" :disabled="isLeaving || (amILeader && otherMembers.length > 0 && !delegateEmail)">
+              {{ isLeaving ? '처리 중...' : '탈퇴하기' }}
+            </button>
+          </footer>
+        </div>
+      </div>
+
+      <!-- 스터디 삭제 모달 -->
+      <div v-if="isDeleteModalOpen" class="modal-backdrop" @click.self="closeDeleteModal">
+        <div class="modal-content">
+          <header class="modal-header">
+            <h2>스터디 삭제</h2>
+            <button class="icon-button" @click="closeDeleteModal">×</button>
+          </header>
+          <div class="modal-body">
+            <p class="text-danger" style="font-weight: bold; margin-bottom: 12px;">
+              정말로 스터디를 삭제하시겠습니까?
+            </p>
+            <p>
+              스터디를 삭제하면 공유된 자소서, 피드백, 공고 추천 등 모든 데이터가 완전히 삭제되며 <strong>복구할 수 없습니다</strong>.
+            </p>
+          </div>
+          <footer class="modal-footer">
+            <button class="ghost-button" @click="closeDeleteModal">취소</button>
+            <button class="danger-button" @click="confirmDelete" :disabled="isDeleting">
+              {{ isDeleting ? '삭제 중...' : '삭제하기' }}
+            </button>
+          </footer>
+        </div>
+      </div>
     </section>
   </AppLayout>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import AppLayout from '@/shared/AppLayout.vue';
 import { useStudyStore } from '@/stores/studyStore';
@@ -329,6 +451,16 @@ const route = useRoute();
 const studyStore = useStudyStore();
 const activeTab = ref('dashboard');
 const studyId = route.params.studyId;
+
+const studySettings = computed(() => {
+  const json = studyStore.currentStudy?.settingsJson;
+  if (!json) return { showDashboard: false, showTeamComparison: false, showUnreadBadge: false };
+  try {
+    return JSON.parse(json);
+  } catch(e) {
+    return { showDashboard: false, showTeamComparison: false, showUnreadBadge: false };
+  }
+});
 
 // 모달 상태
 const isInviteModalOpen = ref(false);
@@ -360,12 +492,52 @@ const isSubmittingFeedback = ref(false);
 const isRecommendModalOpen = ref(false);
 const recommendJobsList = ref([]);
 const selectedRecommendJobs = ref([]);
+const recommendReason = ref('');
 const isLoadingRecommendJobs = ref(false);
 const isRecommending = ref(false);
 
+// 설정 드롭다운 및 탈퇴/삭제 모달 상태
+const isSettingsOpen = ref(false);
+const isLeaveModalOpen = ref(false);
+const isDeleteModalOpen = ref(false);
+const delegateEmail = ref('');
+const isLeaving = ref(false);
+const isDeleting = ref(false);
+
 onMounted(() => {
   loadData();
+  
+  // 모달 닫을 때 설정창도 닫음
+  const closeDropdowns = (e) => {
+    if (!e.target.closest('.dropdown-container')) {
+      isSettingsOpen.value = false;
+    }
+  };
+  document.addEventListener('click', closeDropdowns);
+  return () => {
+    document.removeEventListener('click', closeDropdowns);
+  };
 });
+
+// 권한 확인
+const myEmail = computed(() => {
+  return localStorage.getItem('ez_one_user_email') || 'eunjaelee058@gmail.com'; // TODO: auth store
+});
+
+const myMemberInfo = computed(() => {
+  return studyStore.currentStudy?.members?.find(m => m.userEmail === myEmail.value);
+});
+
+const amILeader = computed(() => myMemberInfo.value?.role === 'LEADER');
+const amIMember = computed(() => !!myMemberInfo.value);
+
+const otherMembers = computed(() => {
+  return studyStore.currentStudy?.members?.filter(m => m.userEmail !== myEmail.value) || [];
+});
+
+const toggleSettings = () => {
+  isSettingsOpen.value = !isSettingsOpen.value;
+};
 
 watch(activeTab, () => {
   loadData();
@@ -503,6 +675,7 @@ async function viewEssay(essayId) {
   isDetailModalOpen.value = true;
   feedbackContent.value = '';
   await studyStore.loadSharedEssayDetail(studyId, essayId);
+  await studyStore.readSharedEssay(studyId, essayId);
 }
 
 function closeDetailModal() {
@@ -528,6 +701,7 @@ async function recommendJob() {
   isRecommendModalOpen.value = true;
   isLoadingRecommendJobs.value = true;
   selectedRecommendJobs.value = [];
+  recommendReason.value = '';
   try {
     const allJobs = await basketApi.listJobs();
     recommendJobsList.value = allJobs;
@@ -547,7 +721,8 @@ async function submitRecommendJobs() {
         positionTitle: job.positionTitle,
         deadlineLabel: job.deadlineLabel,
         deadlineDate: job.deadlineDate || null,
-        sourceUrl: job.sourceUrl || ''
+        sourceUrl: job.sourceUrl || '',
+        reason: recommendReason.value
       });
     });
     await Promise.all(promises);
@@ -560,6 +735,49 @@ async function submitRecommendJobs() {
     isRecommending.value = false;
   }
 }
+
+const openLeaveModal = () => {
+  isSettingsOpen.value = false;
+  delegateEmail.value = '';
+  isLeaveModalOpen.value = true;
+};
+const closeLeaveModal = () => {
+  isLeaveModalOpen.value = false;
+};
+const confirmLeave = async () => {
+  isLeaving.value = true;
+  try {
+    await studyStore.leaveStudy(studyId, delegateEmail.value);
+    alert('스터디를 성공적으로 탈퇴했습니다.');
+    closeLeaveModal();
+    router.push('/study');
+  } catch (err) {
+    alert(studyStore.errorMessage || '탈퇴 실패');
+  } finally {
+    isLeaving.value = false;
+  }
+};
+
+const openDeleteModal = () => {
+  isSettingsOpen.value = false;
+  isDeleteModalOpen.value = true;
+};
+const closeDeleteModal = () => {
+  isDeleteModalOpen.value = false;
+};
+const confirmDelete = async () => {
+  isDeleting.value = true;
+  try {
+    await studyStore.deleteStudy(studyId);
+    alert('스터디가 완전히 삭제되었습니다.');
+    closeDeleteModal();
+    router.push('/study');
+  } catch (err) {
+    alert(studyStore.errorMessage || '삭제 실패');
+  } finally {
+    isDeleting.value = false;
+  }
+};
 </script>
 
 <style scoped>
@@ -579,6 +797,55 @@ async function submitRecommendJobs() {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.dropdown-container {
+  position: relative;
+}
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  min-width: 150px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 10;
+}
+.dropdown-item {
+  padding: 12px 16px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+.dropdown-item:hover {
+  background: var(--surface-hover);
+}
+.danger-text {
+  color: var(--color-danger, #dc2626);
+  font-weight: bold;
+}
+.settings-button {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
 }
 .study-layout {
   display: flex;
@@ -707,9 +974,28 @@ async function submitRecommendJobs() {
   flex-grow: 1;
 }
 .error-message {
-  color: #ef4444;
+  color: var(--color-danger, #ef4444);
   font-size: 0.85rem;
   margin-top: 8px;
+}
+.text-danger {
+  color: var(--color-danger, #dc2626);
+}
+.danger-button {
+  background: var(--color-danger, #ef4444);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.danger-button:hover:not(:disabled) {
+  background: #dc2626;
+}
+.danger-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 .user-profile-card {
   padding: 20px;

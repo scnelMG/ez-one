@@ -69,10 +69,59 @@
             <label>스터디 설명</label>
             <textarea v-model="createForm.description" placeholder="스터디 설명을 입력하세요 (선택)" rows="3"></textarea>
           </div>
+          <div class="form-group checkbox-group">
+            <label>대시보드 표시 설정</label>
+            <div class="checkbox-options">
+              <label><input type="checkbox" v-model="createForm.settings.showDashboard" /> 스터디원 전체 대시보드 통계 표시</label>
+              <label><input type="checkbox" v-model="createForm.settings.showTeamComparison" /> 팀원 대비 내 진척도 차트 표시</label>
+              <label><input type="checkbox" v-model="createForm.settings.showUnreadBadge" /> 안 읽은 자소서 NEW 뱃지 표시</label>
+            </div>
+            <button class="ghost-button small-button" @click="openPreviewModal" style="margin-top:8px;">미리보기</button>
+          </div>
         </div>
         <footer class="modal-footer">
           <button class="ghost-button" @click="closeCreateModal">취소</button>
           <button class="primary-button" @click="submitCreateStudy" :disabled="!createForm.name.trim()">만들기</button>
+        </footer>
+      </div>
+    </div>
+
+    <!-- 미리보기 모달 -->
+    <div v-if="isPreviewModalOpen" class="modal-backdrop" @click.self="closePreviewModal" style="z-index: 1010;">
+      <div class="modal-content preview-modal">
+        <header class="modal-header">
+          <h2>대시보드 미리보기</h2>
+          <button class="icon-button" @click="closePreviewModal">×</button>
+        </header>
+        <div class="modal-body preview-body">
+          <div class="preview-section" v-if="createForm.settings.showDashboard">
+            <h3>대시보드 통계</h3>
+            <div class="preview-stats">
+              <div class="stat-box">진행중<br/><strong>3</strong></div>
+              <div class="stat-box">지원전<br/><strong>1</strong></div>
+              <div class="stat-box">이번달<br/><strong>5</strong></div>
+            </div>
+          </div>
+          <div class="preview-section" v-if="createForm.settings.showTeamComparison">
+            <h3>팀원 진척도 비교</h3>
+            <div class="preview-chart">
+              <div class="bar-row"><span class="label">나</span><div class="bar" style="width: 60%; background: var(--primary);"></div></div>
+              <div class="bar-row"><span class="label">팀원A</span><div class="bar" style="width: 80%;"></div></div>
+            </div>
+          </div>
+          <div class="preview-section" v-if="createForm.settings.showUnreadBadge">
+            <h3>공유 자소서</h3>
+            <div class="preview-essay">
+              <span>팀원B의 네이버 자소서</span>
+              <span class="badge new-badge">NEW</span>
+            </div>
+          </div>
+          <div v-if="!createForm.settings.showDashboard && !createForm.settings.showTeamComparison && !createForm.settings.showUnreadBadge" class="empty-state">
+            선택된 표시 설정이 없습니다. 기본 기능만 제공됩니다.
+          </div>
+        </div>
+        <footer class="modal-footer">
+          <button class="primary-button" @click="closePreviewModal">닫기</button>
         </footer>
       </div>
     </div>
@@ -90,7 +139,16 @@ const router = useRouter();
 const studyStore = useStudyStore();
 
 const isCreateModalOpen = ref(false);
-const createForm = reactive({ name: '', description: '' });
+const isPreviewModalOpen = ref(false);
+const createForm = reactive({ 
+  name: '', 
+  description: '',
+  settings: {
+    showDashboard: true,
+    showTeamComparison: true,
+    showUnreadBadge: true
+  }
+});
 const fileInputs = ref({});
 
 function setFileInput(id, el) {
@@ -106,6 +164,7 @@ onMounted(() => {
 function openCreateModal() {
   createForm.name = '';
   createForm.description = '';
+  createForm.settings = { showDashboard: true, showTeamComparison: true, showUnreadBadge: true };
   isCreateModalOpen.value = true;
 }
 
@@ -113,10 +172,18 @@ function closeCreateModal() {
   isCreateModalOpen.value = false;
 }
 
+function openPreviewModal() {
+  isPreviewModalOpen.value = true;
+}
+
+function closePreviewModal() {
+  isPreviewModalOpen.value = false;
+}
+
 async function submitCreateStudy() {
   if (!createForm.name.trim()) return;
   try {
-    await studyStore.createStudy(createForm.name, createForm.description);
+    await studyStore.createStudy(createForm.name, createForm.description, createForm.settings);
     closeCreateModal();
     alert('스터디가 생성되었습니다!');
   } catch (e) {
@@ -299,5 +366,100 @@ async function respondInvite(inviteId, accept) {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+}
+.checkbox-group {
+  margin-top: 16px;
+  background: var(--surface-hover);
+  padding: 16px;
+  border-radius: 8px;
+}
+.checkbox-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+.checkbox-options label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: normal;
+  cursor: pointer;
+}
+.preview-modal {
+  max-width: 400px;
+}
+.preview-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: #f9fafb;
+  padding: 24px;
+}
+.preview-section h3 {
+  font-size: 1rem;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+.preview-stats {
+  display: flex;
+  gap: 12px;
+}
+.stat-box {
+  flex: 1;
+  background: white;
+  padding: 12px;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  border: 1px solid var(--line);
+}
+.stat-box strong {
+  display: block;
+  font-size: 1.25rem;
+  color: var(--primary);
+  margin-top: 4px;
+}
+.preview-chart {
+  background: white;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+.bar-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.bar-row:last-child {
+  margin-bottom: 0;
+}
+.bar-row .label {
+  width: 40px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+.bar-row .bar {
+  height: 12px;
+  background: var(--line);
+  border-radius: 6px;
+}
+.preview-essay {
+  background: white;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+}
+.new-badge {
+  background: #ef4444;
+  color: white;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 12px;
 }
 </style>

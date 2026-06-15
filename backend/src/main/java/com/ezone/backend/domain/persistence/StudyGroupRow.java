@@ -10,6 +10,7 @@ public class StudyGroupRow {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String imageUrl;
+    private String settingsJson;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -25,4 +26,6 @@ public class StudyGroupRow {
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
     public String getImageUrl() { return imageUrl; }
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+    public String getSettingsJson() { return settingsJson; }
+    public void setSettingsJson(String settingsJson) { this.settingsJson = settingsJson; }
 }

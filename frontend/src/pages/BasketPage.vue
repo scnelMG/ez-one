@@ -280,10 +280,10 @@ const selectedMonthKey = ref(toMonthKey(today));
 const priorityJobIds = computed(() => basketStore.priorityJobIds);
 const openStatusJobId = ref(null);
 const statusOptions = [
-    { value: 'NOT_STARTED', label: '지원 전' },
+    { value: 'READY', label: '지원 전' },
     { value: 'NOT_APPLIED', label: '미지원' },
     { value: 'IN_PROGRESS', label: '진행중' },
-    { value: 'SUBMITTED', label: '지원완료' }
+    { value: 'COMPLETED', label: '지원완료' }
 ];
 const selectableMonths = computed(() => {
     const months = new Map();
@@ -325,16 +325,16 @@ const calendarMonthLabel = computed(() => new Intl.DateTimeFormat('ko-KR', {
 const isManualAddModalOpen = ref(false);
 const statusFilters = [
     { label: '전체', value: undefined },
-    { label: '지원 전', value: 'NOT_STARTED' },
+    { label: '지원 전', value: 'READY' },
     { label: '진행중', value: 'IN_PROGRESS' },
-    { label: '지원완료', value: 'SUBMITTED' },
+    { label: '지원완료', value: 'COMPLETED' },
     { label: '미지원', value: 'NOT_APPLIED' }
 ];
 
 
 const selectedStatus = computed(() => {
     const status = route.query.status;
-    return status === 'NOT_STARTED' || status === 'NOT_APPLIED' || status === 'IN_PROGRESS' || status === 'SUBMITTED'
+    return status === 'READY' || status === 'NOT_APPLIED' || status === 'IN_PROGRESS' || status === 'COMPLETED'
         ? status
         : undefined;
 });
@@ -358,10 +358,10 @@ const pagedJobs = computed(() => {
     return sortedJobs.value.slice(start, start + pageSize);
 });
 const statusCounts = computed(() => ({
-    NOT_STARTED: basketStore.jobs.filter((job) => job.status === 'NOT_STARTED').length,
-    NOT_APPLIED: basketStore.jobs.filter((job) => job.status === 'NOT_APPLIED').length,
-    IN_PROGRESS: basketStore.jobs.filter((job) => job.status === 'IN_PROGRESS').length,
-    SUBMITTED: basketStore.jobs.filter((job) => job.status === 'SUBMITTED').length
+    NOT_STARTED: basketStore.jobs.filter((job) => job.applicationStatus === 'READY' || job.status === 'NOT_STARTED' || job.status === 'READY').length,
+    NOT_APPLIED: basketStore.jobs.filter((job) => job.applicationStatus === 'NOT_APPLIED' || job.status === 'NOT_APPLIED').length,
+    IN_PROGRESS: basketStore.jobs.filter((job) => job.applicationStatus === 'IN_PROGRESS' || job.status === 'IN_PROGRESS').length,
+    SUBMITTED: basketStore.jobs.filter((job) => job.applicationStatus === 'COMPLETED' || job.status === 'SUBMITTED' || job.status === 'COMPLETED').length
 }));
 const jobsByDay = computed(() => {
     return [...basketStore.jobs]

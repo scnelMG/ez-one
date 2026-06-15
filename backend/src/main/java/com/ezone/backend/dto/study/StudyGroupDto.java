@@ -13,6 +13,7 @@ public class StudyGroupDto {
     private List<StudyMemberDto> members;
     private int memberCount;
     private String imageUrl;
+    private String settingsJson;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -32,4 +33,6 @@ public class StudyGroupDto {
     public void setMemberCount(int memberCount) { this.memberCount = memberCount; }
     public String getImageUrl() { return imageUrl; }
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+    public String getSettingsJson() { return settingsJson; }
+    public void setSettingsJson(String settingsJson) { this.settingsJson = settingsJson; }
 }
