@@ -75,3 +75,34 @@ export function formatDateTime(dateStr) {
   }
   return str.replace(/-/g, '.') + ' 23:59';
 }
+
+export function formatAbsoluteDeadline(job) {
+  if (job.deadlineDate) {
+    return formatDateTime(job.deadlineDate);
+  }
+  if (!job.deadlineLabel || job.deadlineLabel === '기한없음' || job.deadlineLabel === '상시채용') {
+    return job.deadlineLabel || '-';
+  }
+  
+  const today = new Date();
+  today.setHours(23, 59, 0, 0); // Assuming deadlines are usually 23:59
+  
+  if (job.deadlineLabel === '오늘') {
+    return `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')} 23:59`;
+  }
+  
+  const dDayMatch = job.deadlineLabel.match(/D-(\d+)/i);
+  if (dDayMatch) {
+    const diffDays = parseInt(dDayMatch[1], 10);
+    const targetDate = new Date(today);
+    targetDate.setDate(today.getDate() + diffDays);
+    return `${targetDate.getFullYear()}.${String(targetDate.getMonth() + 1).padStart(2, '0')}.${String(targetDate.getDate()).padStart(2, '0')} 23:59`;
+  }
+  
+  const dateMatch = job.deadlineLabel.match(/(20\d{2})[-.](\d{1,2})[-.](\d{1,2})/);
+  if (dateMatch) {
+    return `${dateMatch[1]}.${dateMatch[2].padStart(2, '0')}.${dateMatch[3].padStart(2, '0')} 23:59`;
+  }
+  
+  return job.deadlineLabel;
+}

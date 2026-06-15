@@ -154,7 +154,7 @@
               </div>
             </div>
             <RouterLink class="job-main-link" :to="`/workspaces/${job.workspaceId}`" style="display: flex; gap: 8px; align-items: center;">
-              <span>{{ formatDateTime(job.deadlineDate) || job.deadlineLabel }}</span>
+              <span>{{ formatAbsoluteDeadline(job) }}</span>
             </RouterLink>
             <a
               class="source-link"
@@ -261,7 +261,8 @@ import {
   normalizedSourceUrl,
   companyInitial,
   formatDDay,
-  formatDateTime
+  formatDateTime,
+  formatAbsoluteDeadline
 } from '@/shared/utils/jobUtils';
 import AppLayout from '@/shared/AppLayout.vue';
 import StatePanel from '@/shared/StatePanel.vue';
