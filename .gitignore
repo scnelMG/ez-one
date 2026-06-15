@@ -16,6 +16,7 @@ Thumbs.db
 # Logs
 *.log
 logs/
+.codex-run-logs/
 
 # Java / Spring
 backend/build/
