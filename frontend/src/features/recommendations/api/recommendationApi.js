@@ -2,16 +2,16 @@ import { defaultHttpClient, unwrapApiData } from '@/shared/apiClient';
 import { logoUrlFor, resolveCompanyLogoUrl } from '@/features/jobs/companyLogo';
 export function createRecommendationApi(httpClient = defaultHttpClient) {
     return {
-        async listJobs() {
+        async listJobs(source = 'recommendation') {
             try {
-                const response = await httpClient.get('/api/recommendations/jobs', readConfig(httpClient));
+                const response = await httpClient.get(recommendationPath(source), readConfig(httpClient));
                 return unwrapApiData(response.data).map(toRecommendationJob);
             } catch {
                 return mockRecommendationJobs;
             }
         },
-        async saveJob(recommendationId) {
-            const response = await httpClient.post(`/api/recommendations/jobs/${recommendationId}/save`);
+        async saveJob(recommendationId, source = 'recommendation') {
+            const response = await httpClient.post(saveRecommendationPath(recommendationId, source));
             const data = unwrapApiData(response.data);
             return {
                 basketJobId: String(data.id),
@@ -21,6 +21,18 @@ export function createRecommendationApi(httpClient = defaultHttpClient) {
             };
         }
     };
+}
+
+function recommendationPath(source) {
+    return source === 'mattermost'
+        ? '/api/recommendations/jobs?source=mattermost'
+        : '/api/recommendations/jobs';
+}
+
+function saveRecommendationPath(recommendationId, source) {
+    return source === 'mattermost'
+        ? `/api/recommendations/jobs/${recommendationId}/save?source=mattermost`
+        : `/api/recommendations/jobs/${recommendationId}/save`;
 }
 function toRecommendationJob(dto) {
     return {

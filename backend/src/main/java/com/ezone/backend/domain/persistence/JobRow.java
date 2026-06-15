@@ -13,6 +13,7 @@ public class JobRow {
     private String positionTitle;
     private String deadlineLabel;
     private String sourceUrl;
+    private String source;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -38,4 +39,6 @@ public class JobRow {
     public void setDeadlineLabel(String deadlineLabel) { this.deadlineLabel = deadlineLabel; }
     public String getSourceUrl() { return sourceUrl; }
     public void setSourceUrl(String sourceUrl) { this.sourceUrl = sourceUrl; }
+    public String getSource() { return source; }
+    public void setSource(String source) { this.source = source; }
 }

@@ -121,7 +121,7 @@
 
   <insert id="insertJob" useGeneratedKeys="true" keyProperty="id">
     INSERT INTO jobs (company_id, title, role, deadline_label, source, url, created_at)
-    VALUES (#{companyId}, #{positionTitle}, #{positionTitle}, #{deadlineLabel}, 'DIRECT', #{sourceUrl}, CURRENT_TIMESTAMP)
+    VALUES (#{companyId}, #{positionTitle}, #{positionTitle}, #{deadlineLabel}, COALESCE(#{source}, 'DIRECT'), #{sourceUrl}, CURRENT_TIMESTAMP)
   </insert>
 
   <update id="updateJob">
@@ -214,6 +214,21 @@
       j.id
   </select>
 
+  <select id="listRecommendationJobsBySource" resultMap="jobRowMap">
+    SELECT j.id, j.company_id, c.name AS company_name, c.domain AS company_domain,
+           c.company_type, c.size AS company_size, c.logo_url AS company_logo_url,
+           j.title AS position_title, j.deadline_label, j.url AS source_url, j.source
+    FROM jobs j
+    JOIN companies c ON c.id = j.company_id
+    WHERE j.source = #{source}
+    ORDER BY
+      CASE
+        WHEN j.deadline_label LIKE 'D-%' THEN CAST(SUBSTRING(j.deadline_label, 3) AS UNSIGNED)
+        ELSE 999999
+      END,
+      j.id
+  </select>
+
   <select id="findRecommendationJob" resultMap="jobRowMap">
     SELECT j.id, j.company_id, c.name AS company_name, c.domain AS company_domain,
            c.company_type, c.size AS company_size, c.logo_url AS company_logo_url,
@@ -221,6 +236,17 @@
     FROM jobs j
     JOIN companies c ON c.id = j.company_id
     WHERE j.source = 'RECOMMENDATION'
+      AND j.id = #{recommendationId}
+    LIMIT 1
+  </select>
+
+  <select id="findRecommendationJobBySource" resultMap="jobRowMap">
+    SELECT j.id, j.company_id, c.name AS company_name, c.domain AS company_domain,
+           c.company_type, c.size AS company_size, c.logo_url AS company_logo_url,
+           j.title AS position_title, j.deadline_label, j.url AS source_url, j.source
+    FROM jobs j
+    JOIN companies c ON c.id = j.company_id
+    WHERE j.source = #{source}
       AND j.id = #{recommendationId}
     LIMIT 1
   </select>

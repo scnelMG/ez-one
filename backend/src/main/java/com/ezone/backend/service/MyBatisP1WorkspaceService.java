@@ -133,6 +133,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
             job.setPositionTitle(request.positionTitle());
             job.setDeadlineLabel(normalizeDeadline(request.deadlineLabel()));
             job.setSourceUrl(request.sourceUrl());
+            job.setSource(normalizeJobSource(request.savedSource()));
             // No need to upsertCompany if companyId is provided, just record info and insert job
             recordUnverifiedCompanyInfoSource(job);
             mapper.insertJob(job);
@@ -143,6 +144,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
             job.setPositionTitle(request.positionTitle());
             job.setDeadlineLabel(normalizeDeadline(request.deadlineLabel()));
             job.setSourceUrl(request.sourceUrl());
+            job.setSource(normalizeJobSource(request.savedSource()));
             mapper.upsertCompany(job);
             recordUnverifiedCompanyInfoSource(job);
             mapper.insertJob(job);
@@ -455,14 +457,24 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
 
     @Override
     public List<DashboardJobResponse> listRecommendationJobs(Long userId) {
-        return mapper.listRecommendationJobs().stream()
+        return listRecommendationJobs(userId, "RECOMMENDATION");
+    }
+
+    @Override
+    public List<DashboardJobResponse> listRecommendationJobs(Long userId, String source) {
+        return mapper.listRecommendationJobsBySource(resolveRecommendationSource(source)).stream()
             .map(this::toRecommendationResponse)
             .toList();
     }
 
     @Override
     public BasketJobResponse saveRecommendation(Long userId, Long recommendationId) {
-        JobRow recommendation = mapper.findRecommendationJob(recommendationId)
+        return saveRecommendation(userId, recommendationId, "RECOMMENDATION");
+    }
+
+    @Override
+    public BasketJobResponse saveRecommendation(Long userId, Long recommendationId, String source) {
+        JobRow recommendation = mapper.findRecommendationJobBySource(recommendationId, resolveRecommendationSource(source))
             .orElseThrow(() -> new IllegalArgumentException("Recommendation not found"));
         return createBasketJob(userId, new CreateBasketJobRequest(
             null,
@@ -471,7 +483,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
             recommendation.getDeadlineLabel(),
             recommendation.getSourceUrl(),
             recommendation.getCompanyLogoUrl(),
-            "RECOMMENDATION"
+            resolveRecommendationSource(source)
         ));
     }
 
@@ -646,6 +658,22 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
 
     private String normalizeDeadline(String deadlineLabel) {
         return deadlineLabel == null || deadlineLabel.isBlank() ? "미정" : deadlineLabel;
+    }
+
+    private String normalizeJobSource(String savedSource) {
+        if ("MATTERMOST".equalsIgnoreCase(savedSource)) {
+            return "MATTERMOST";
+        }
+        if ("RECOMMENDATION".equalsIgnoreCase(savedSource)) {
+            return "RECOMMENDATION";
+        }
+        return "DIRECT";
+    }
+
+    private String resolveRecommendationSource(String source) {
+        return "mattermost".equalsIgnoreCase(source) || "MATTERMOST".equalsIgnoreCase(source)
+            ? "MATTERMOST"
+            : "RECOMMENDATION";
     }
 
     private boolean isDeadlineSoon(String deadlineLabel) {

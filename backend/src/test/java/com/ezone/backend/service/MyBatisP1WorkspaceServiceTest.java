@@ -11,6 +11,7 @@ import com.ezone.backend.domain.persistence.JobRow;
 import com.ezone.backend.domain.persistence.WorkspaceRow;
 import com.ezone.backend.dto.basket.CreateBasketJobRequest;
 import com.ezone.backend.dto.dashboard.DashboardJobResponse;
+import com.ezone.backend.mapper.ActivityMapper;
 import com.ezone.backend.mapper.P1WorkspaceMapper;
 import java.util.List;
 import java.util.Optional;
@@ -25,6 +26,9 @@ class MyBatisP1WorkspaceServiceTest {
 
     @Mock
     private P1WorkspaceMapper mapper;
+
+    @Mock
+    private ActivityMapper activityMapper;
 
     @InjectMocks
     private MyBatisP1WorkspaceService service;
@@ -59,29 +63,18 @@ class MyBatisP1WorkspaceServiceTest {
             return null;
         }).when(mapper).insertEssayQuestion(org.mockito.ArgumentMatchers.any());
 
-        CreateBasketJobRequest request = new CreateBasketJobRequest(
-            null,
-            "현대모비스",
-            "SW 엔지니어",
-            "D-10",
-            "https://wanted.co.kr/123",
-            "https://logo.com",
-            "MANUAL"
-        );
-
         service.createBasketJob(1L, new CreateBasketJobRequest(
             null,
             "Example Labs",
             "Backend Developer",
             "D-15",
-            "https://example.com/job",
+            sourceUrl,
             "https://example.com/logo.png",
-            "MANUAL",
-            "DIRECT"
+            "MANUAL"
         ));
 
         verify(mapper).upsertCompany(argThat(row ->
-            "https://static.example.com/example-logo.png".equals(row.getCompanyLogoUrl())
+            "https://example.com/logo.png".equals(row.getCompanyLogoUrl())
                 && sourceUrl.equals(row.getLogoSourceUrl())
                 && "DISCOVERED".equals(row.getLogoStatus())
         ));
@@ -104,7 +97,7 @@ class MyBatisP1WorkspaceServiceTest {
             "D-10",
             "https://static.example.com/ohou-logo.png"
         );
-        when(mapper.listRecommendationJobs()).thenReturn(List.of(line, todayHouse));
+        when(mapper.listRecommendationJobsBySource("RECOMMENDATION")).thenReturn(List.of(line, todayHouse));
 
         List<DashboardJobResponse> recommendations = service.listRecommendationJobs(1L);
 
@@ -130,7 +123,7 @@ class MyBatisP1WorkspaceServiceTest {
             "https://static.example.com/line-logo.png"
         );
         recommendation.setSourceUrl("https://www.jasoseol.com/recruit/line-platform");
-        when(mapper.findRecommendationJob(9001L)).thenReturn(Optional.of(recommendation));
+        when(mapper.findRecommendationJobBySource(9001L, "RECOMMENDATION")).thenReturn(Optional.of(recommendation));
         when(mapper.findDuplicateBasketJob(
             1L,
             "LINE",

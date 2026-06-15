@@ -61,8 +61,20 @@
 | 메서드 | 경로 | 목적 |
 | --- | --- | --- |
 | GET | `/api/recommendations/jobs` | 입력 정보와 저장 이력 기반 추천 공고 목록 |
+| GET | `/api/recommendations/jobs?source=mattermost` | SSAFY 사용자 전용 Mattermost 승인 공고 목록 |
 | POST | `/api/recommendations/jobs/{recommendationId}/save` | 추천 공고 장바구니 저장 |
+| POST | `/api/recommendations/jobs/{recommendationId}/save?source=mattermost` | SSAFY 사용자 전용 Mattermost 추천 공고 장바구니 저장 |
 | GET | `/api/recommendations/jobs/{recommendationId}/summary` | P2 추천 hover 기업 요약 |
+
+Mattermost source는 서버에서 `user_profiles.is_ssafy = true`를 재검증한다. 비SSAFY 사용자 또는 프로필 미작성 사용자는 `403 FORBIDDEN`을 반환한다.
+
+## Mattermost P2 수집/검토
+
+| 메서드 | 경로 | 목적 |
+| --- | --- | --- |
+| POST | `/api/integrations/mattermost/webhook` | `X-MM-Webhook-Secret` 검증 후 Mattermost 원문을 저장하고 채용공고 후보를 생성 |
+| GET | `/api/admin/mattermost/job-candidates?status=NEEDS_REVIEW` | 검토 대기 Mattermost 후보 조회 |
+| PATCH | `/api/admin/mattermost/job-candidates/{candidateId}/review` | 후보를 `APPROVED` 또는 `REJECTED`로 검토. 승인 시 추천 공고로 승격 |
 
 ## 서류 입력 정보
 

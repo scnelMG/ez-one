@@ -434,7 +434,13 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
 
     @Override
     public List<DashboardJobResponse> listRecommendationJobs(Long userId) {
+        return listRecommendationJobs(userId, "RECOMMENDATION");
+    }
+
+    @Override
+    public List<DashboardJobResponse> listRecommendationJobs(Long userId, String source) {
         return recommendationSamples().stream()
+            .filter(sample -> resolveRecommendationSource(source).equals(sample.source()))
             .map(sample -> new DashboardJobResponse(
                 sample.id(),
                 null,
@@ -448,10 +454,17 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
 
     @Override
     public BasketJobResponse saveRecommendation(Long userId, Long recommendationId) {
+        return saveRecommendation(userId, recommendationId, "RECOMMENDATION");
+    }
+
+    @Override
+    public BasketJobResponse saveRecommendation(Long userId, Long recommendationId, String source) {
+        String resolvedSource = resolveRecommendationSource(source);
         RecommendationSample sample = recommendationSamples().stream()
+            .filter(item -> resolvedSource.equals(item.source()))
             .filter(item -> item.id().equals(recommendationId))
             .findFirst()
-            .orElseGet(() -> recommendationSamples().get(0));
+            .orElseThrow(() -> new IllegalArgumentException("Recommendation not found"));
         return createBasketJob(userId, new CreateBasketJobRequest(
             null,
             sample.companyName(),
@@ -459,7 +472,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             sample.deadlineLabel(),
             sample.sourceUrl(),
             sample.logoUrl(),
-            "RECOMMENDATION"
+            resolvedSource
         ));
     }
 
@@ -471,7 +484,8 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
                 "Frontend Developer",
                 "2026.06.28",
                 "https://www.wanted.co.kr/wd/204081",
-                "https://www.google.com/s2/favicons?domain=toss.im&sz=128"
+                "https://www.google.com/s2/favicons?domain=toss.im&sz=128",
+                "RECOMMENDATION"
             ),
             new RecommendationSample(
                 9001L,
@@ -479,7 +493,8 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
                 "Frontend Developer",
                 "2026.06.25",
                 "https://www.wanted.co.kr/wd/355373",
-                "https://www.google.com/s2/favicons?domain=serveone.co.kr&sz=128"
+                "https://www.google.com/s2/favicons?domain=serveone.co.kr&sz=128",
+                "RECOMMENDATION"
             ),
             new RecommendationSample(
                 9002L,
@@ -487,7 +502,8 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
                 "시니어 Java 백엔드 엔지니어 (신규서비스)",
                 "2026.06.24",
                 "https://www.wanted.co.kr/wd/101761",
-                "https://www.google.com/s2/favicons?domain=purpledog.co.kr&sz=128"
+                "https://www.google.com/s2/favicons?domain=purpledog.co.kr&sz=128",
+                "RECOMMENDATION"
             ),
             new RecommendationSample(
                 9004L,
@@ -495,7 +511,17 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
                 "Frontend Developer",
                 "2026.06.30",
                 "https://www.wanted.co.kr/wd/279145",
-                "https://www.google.com/s2/favicons?domain=planfit.ai&sz=128"
+                "https://www.google.com/s2/favicons?domain=planfit.ai&sz=128",
+                "RECOMMENDATION"
+            ),
+            new RecommendationSample(
+                9101L,
+                "라인",
+                "Server Platform Engineer",
+                "D-7",
+                "https://careers.linecorp.com/jobs/101",
+                "https://www.google.com/s2/favicons?domain=linecorp.com&sz=128",
+                "MATTERMOST"
             )
         );
     }
@@ -904,8 +930,15 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
         String positionTitle,
         String deadlineLabel,
         String sourceUrl,
-        String logoUrl
+        String logoUrl,
+        String source
     ) {
+    }
+
+    private String resolveRecommendationSource(String source) {
+        return "mattermost".equalsIgnoreCase(source) || "MATTERMOST".equalsIgnoreCase(source)
+            ? "MATTERMOST"
+            : "RECOMMENDATION";
     }
 
     @Override

@@ -98,4 +98,19 @@ describe('recommendationApi', () => {
             positionTitle: 'Server Platform Engineer'
         });
     });
+
+    it('MM-009: loads Mattermost recommendations with source query', async () => {
+        const get = vi.fn().mockResolvedValue({
+            data: {
+                success: true,
+                data: [],
+                error: null
+            }
+        });
+        const api = createRecommendationApi({ get, post: vi.fn() });
+
+        await api.listJobs('mattermost');
+
+        expect(get).toHaveBeenCalledWith('/api/recommendations/jobs?source=mattermost', {});
+    });
 });

@@ -10,7 +10,7 @@
         <RouterLink to="/document-profile">서류 입력 정보</RouterLink>
         <RouterLink to="/study">취업 스터디</RouterLink>
         <span class="nav-disabled" aria-disabled="true">과거 지원 내역</span>
-        <RouterLink v-if="profileStore.profile?.ssafy" to="/recommendations">MM 추천 공고</RouterLink>
+        <RouterLink v-if="profileStore.profile?.ssafy" to="/recommendations?source=mattermost">MM 추천 공고</RouterLink>
       </nav>
 
       <div class="header-actions">

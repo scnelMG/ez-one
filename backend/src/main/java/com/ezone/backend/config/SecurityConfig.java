@@ -53,6 +53,7 @@ public class SecurityConfig {
                     "/api/auth/google",
                     "/api/auth/refresh",
                     "/api/auth/logout",
+                    "/api/integrations/mattermost/webhook",
                     "/api/health",
                     "/swagger-ui/**",
                     "/swagger-ui.html",

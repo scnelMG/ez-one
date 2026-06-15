@@ -55,6 +55,14 @@
 | TC-REF-AUTO-P2 | References | 자동 JD/news/DART/인재상 수집 |
 | TC-NOTION-SCOPE-P2 | Notion | job+essay, job+essay+canvas 동기화 |
 
+## Mattermost P2 테스트 상세
+
+- `TC-MM-P2-RAW`: webhook secret 검증 후 원문을 `mm_messages`에 저장한다.
+- `TC-MM-P2-FILTER`: 합격 후기/일반 공지는 raw만 저장하고 후보 공고를 만들지 않는다.
+- `TC-MM-P2-CANDIDATE`: 채용공고 메시지는 `mm_parsed_job_posts` 후보를 생성한다.
+- `TC-MM-P2-SSAFY`: `source=mattermost` 추천 조회/저장은 SSAFY 사용자에게만 허용한다.
+- `TC-MM-P2-PROMOTE`: 승인된 후보만 `jobs.source = 'MATTERMOST'`로 승격되어 추천 목록에 노출된다.
+
 ## 검증 규칙
 
 - 모든 P1 요구사항은 화면, API, DB, 테스트 연결을 가진다.
