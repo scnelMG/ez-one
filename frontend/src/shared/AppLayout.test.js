@@ -37,6 +37,7 @@ function makeRouter() {
             { path: '/basket', component: { template: '<div>basket</div>' } },
             { path: '/document-profile', component: { template: '<div>document profile</div>' } },
             { path: '/recommendations', component: { template: '<div>recommendations</div>' } },
+            { path: '/study', component: { template: '<div>study</div>' } },
             { path: '/mypage', component: { template: '<div>mypage</div>' } },
             { path: '/mypage/notion', component: { template: '<div>notion</div>' } },
             { path: '/mypage/onboarding', component: { template: '<div>onboarding</div>' } },
@@ -82,7 +83,7 @@ describe('AppLayout', () => {
         expect(wrapper.findAll('.primary-nav a').map((link) => link.attributes('href'))).toEqual([
             '/basket',
             '/document-profile',
-            '/recommendations'
+            '/study'
         ]);
         expect(wrapper.get('[data-testid="global-trademark-notice"]').text()).toContain('채용공고 식별 목적');
         expect(wrapper.get('.app-footer a').attributes('href')).toBe('/mypage/terms');

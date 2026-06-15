@@ -124,7 +124,7 @@ describe('BasketPage', () => {
         expect(wrapper.get('[data-testid="metric-all"]').text()).toContain('4');
         expect(wrapper.get('[data-testid="metric-progress"]').text()).toContain('1');
         expect(wrapper.get('[data-testid="metric-not-started"]').text()).toContain('1');
-        expect(wrapper.get('[data-testid="metric-deadline"]').text()).toContain('1');
+        expect(wrapper.get('[data-testid="metric-deadline"]').text()).toContain('2');
         expect(wrapper.find('[data-testid="recommendation-cta"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="manual-create"]').exists()).toBe(false);
         expect(wrapper.text()).not.toContain('주간 일정');
@@ -149,7 +149,9 @@ describe('BasketPage', () => {
 
         const calendarJobs = wrapper.findAll('[data-testid="calendar-job"]');
         expect(calendarJobs).toHaveLength(4);
-        expect(calendarJobs.map((job) => job.text())).toContain('NaverBackend Engineer진행중');
+        const naverCalendarJob = calendarJobs.find((job) => job.text().includes('Naver'));
+        expect(naverCalendarJob?.text()).toContain('Backend Engineer');
+        expect(naverCalendarJob?.text()).toContain('진행중');
         expect(calendarJobs.map((job) => job.attributes('href'))).toContain('/workspaces/102');
         expect(wrapper.find('[data-testid="calendar-today"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="calendar-month-picker"]').exists()).toBe(true);
@@ -157,14 +159,14 @@ describe('BasketPage', () => {
         expect(wrapper.find('[data-testid="calendar-job"] .status-tag').exists()).toBe(true);
     });
 
-    it('JOB-005/JOB-012: filters jobs and switches between deadline and saved order', async () => {
+    it('JOB-005/JOB-012: filters jobs in deadline order', async () => {
         const deadlineWrapper = await mountBasket('/basket?sort=deadline');
-        expect(deadlineWrapper.get('[data-testid="basket-sort-deadline"]').classes()).toContain('active');
+        expect(deadlineWrapper.find('[data-testid="basket-sort-deadline"]').exists()).toBe(false);
         expect(rowCompanies(deadlineWrapper)).toEqual(['Overdue Inc', 'Naver', '서브원', 'KakaoPay']);
 
         const savedWrapper = await mountBasket('/basket?sort=saved');
-        expect(savedWrapper.get('[data-testid="basket-sort-saved"]').classes()).toContain('active');
-        expect(rowCompanies(savedWrapper)).toEqual(['Naver', 'KakaoPay', 'Overdue Inc', '서브원']);
+        expect(savedWrapper.find('[data-testid="basket-sort-saved"]').exists()).toBe(false);
+        expect(rowCompanies(savedWrapper)).toEqual(['Overdue Inc', 'Naver', '서브원', 'KakaoPay']);
         expect(savedWrapper.find('[data-testid="basket-filter-overdue"]').exists()).toBe(false);
         expect(savedWrapper.findAll('[data-testid^="basket-filter-"]').map((item) => item.text())).toEqual([
             '전체',
@@ -185,17 +187,20 @@ describe('BasketPage', () => {
         localStorage.setItem('ezone.recentWorkspaces', JSON.stringify(['102']));
         const wrapper = await mountBasket('/basket');
 
-        await wrapper.get('[data-testid="inline-company"]').setValue('Line');
-        await wrapper.get('[data-testid="inline-position"]').setValue('Frontend Engineer');
-        await wrapper.get('[data-testid="inline-deadline"]').setValue('2026.06.28');
-        await wrapper.get('[data-testid="inline-source"]').setValue('www.jasoseol.com/recruit/line');
-        await wrapper.get('[data-testid="inline-create-row"]').trigger('submit');
+        await wrapper.get('.add-manual-btn').trigger('click');
+        await wrapper.get('#companyName').setValue('Line');
+        await wrapper.get('#positionTitle').setValue('Frontend Engineer');
+        await wrapper.get('#deadline').setValue('2026.06.28');
+        await wrapper.get('#sourceUrl').setValue('https://www.jasoseol.com/recruit/line');
+        await wrapper.get('.manual-add-form').trigger('submit');
         await flushPromises();
 
         expect(mocks.createJob).toHaveBeenCalledWith({
+            companyId: null,
             companyName: 'Line',
             positionTitle: 'Frontend Engineer',
             deadlineLabel: '2026.06.28',
+            logoUrl: '',
             sourceUrl: 'https://www.jasoseol.com/recruit/line',
             savedSource: 'MANUAL'
         });

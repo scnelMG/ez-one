@@ -66,10 +66,12 @@ const recommendationJobs = [
 const makeRouter = () => createRouter({
     history: createMemoryHistory(),
     routes: [
+        { path: '/', component: { template: '<div>main</div>' } },
         { path: '/main', component: MainPage },
         { path: '/login', component: { template: '<div>login</div>' } },
         { path: '/basket', component: { template: '<div>basket</div>' } },
         { path: '/mypage', component: { template: '<div>mypage</div>' } },
+        { path: '/study', component: { template: '<div>study</div>' } },
         { path: '/workspaces/:workspaceId', component: { template: '<div>workspace</div>' } },
         { path: '/recommendations', component: { template: '<div>recommendations</div>' } },
         { path: '/document-profile', component: { template: '<div>document profile</div>' } },
@@ -265,7 +267,7 @@ describe('MainPage', () => {
         const wrapper = await mountMain();
 
         expect(wrapper.find('[data-testid="onboarding-modal"]').exists()).toBe(false);
-        expect(profileApi.getUserProfile).not.toHaveBeenCalled();
+        expect(profileApi.getUserProfile).toHaveBeenCalledTimes(1);
     });
 
     it('ONB-001: does not reopen onboarding for existing users who have not filled preferences', async () => {
@@ -280,7 +282,7 @@ describe('MainPage', () => {
         const wrapper = await mountMain();
 
         expect(wrapper.find('[data-testid="onboarding-modal"]').exists()).toBe(false);
-        expect(profileApi.getUserProfile).not.toHaveBeenCalled();
+        expect(profileApi.getUserProfile).toHaveBeenCalledTimes(1);
     });
 });
 

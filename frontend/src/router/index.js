@@ -140,10 +140,22 @@ router.beforeEach((to) => {
         return true;
     }
     if (hasAccessToken()) {
-        if (to.name !== 'main' && to.name !== 'study-list' && to.name !== 'study-detail' && requiresOnboarding()) {
+        if (to.name !== 'main' &&
+            to.name !== 'extension-connect' &&
+            to.name !== 'study-list' &&
+            to.name !== 'study-detail' &&
+            requiresOnboarding()) {
             return '/';
         }
         return true;
+    }
+    if (to.name === 'main') {
+        const redirect = typeof to.query.redirect === 'string' && isSafeRedirectPath(to.query.redirect)
+            ? to.query.redirect
+            : undefined;
+        return redirect
+            ? { name: 'login', query: { redirect } }
+            : { name: 'login' };
     }
     return {
         name: 'login',
@@ -156,6 +168,9 @@ function hasAccessToken() {
     return isAuthenticated();
 }
 function getAuthenticatedHomePath(redirect = undefined) {
+    if (typeof redirect === 'string' && isExtensionConnectRedirectPath(redirect)) {
+        return redirect;
+    }
     if (requiresOnboarding()) {
         return '/';
     }
@@ -163,4 +178,7 @@ function getAuthenticatedHomePath(redirect = undefined) {
 }
 function isSafeRedirectPath(path) {
     return path.startsWith('/') && !path.startsWith('//') && !path.startsWith('/login');
+}
+function isExtensionConnectRedirectPath(path) {
+    return isSafeRedirectPath(path) && path.startsWith('/extension/connect');
 }

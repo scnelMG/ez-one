@@ -17,7 +17,7 @@ export async function handleExternalAuthMessage(storage, message, navigation = {
         return false;
     }
     await saveStoredSession(storage, message);
-    await returnToSourceTab(navigation.tabs, message.sourceTabId, navigation.senderTabId);
+    await returnToSourceTab(navigation.tabs, message.sourceTabId);
     return true;
 }
 export async function saveStoredSession(storage, session) {
@@ -53,16 +53,13 @@ function isAuthMessage(message) {
         typeof value.refreshToken === 'string';
 }
 
-async function returnToSourceTab(tabs, sourceTabId, senderTabId) {
+async function returnToSourceTab(tabs, sourceTabId) {
     const tabId = parsePositiveInteger(sourceTabId);
     if (!tabs || tabId === null) {
         return;
     }
     try {
         await tabs.update(tabId, { active: true });
-        if (Number.isInteger(senderTabId) && senderTabId > 0 && senderTabId !== tabId) {
-            await tabs.remove(senderTabId);
-        }
     }
     catch {
         // The web page still falls back to sourceUrl when the original tab is gone.

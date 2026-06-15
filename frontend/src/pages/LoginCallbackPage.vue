@@ -44,10 +44,14 @@ onMounted(async () => {
             redirectUri: getGoogleRedirectUri()
         });
         saveAuthSession(authSession);
-        await router.replace(authSession.user.onboardingRequired ? '/' : redirectPath);
+        await router.replace(authSession.user.onboardingRequired && !isExtensionConnectRedirectPath(redirectPath) ? '/' : redirectPath);
     }
     catch (error) {
         errorMessage.value = error instanceof Error ? error.message : 'Google 로그인 처리에 실패했습니다.';
     }
 });
+
+function isExtensionConnectRedirectPath(path) {
+    return typeof path === 'string' && path.startsWith('/extension/connect');
+}
 </script>

@@ -84,7 +84,7 @@ public class ExtensionJobController {
                     request.logoUrl(),
                     "EXTENSION"
                 ),
-                questions
+                questionsForRole(request, role, questions)
             ))
             .toList();
         savedJobs.forEach(savedJob -> notionIntegrationService.recordJobOnlySync(userId, savedJob));
@@ -97,6 +97,20 @@ public class ExtensionJobController {
 
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
+    }
+
+    private List<CreateEssayQuestionRequest> questionsForRole(
+        ExtensionJobSaveRequest request,
+        String role,
+        List<CreateEssayQuestionRequest> fallbackQuestions
+    ) {
+        List<CreateEssayQuestionRequest> roleQuestions = request.roleEssayQuestions()
+            .getOrDefault(role, List.of())
+            .stream()
+            .filter(question -> hasText(question.prompt()))
+            .map(question -> new CreateEssayQuestionRequest(question.prompt(), question.maxLengthOrDefault()))
+            .toList();
+        return roleQuestions.isEmpty() ? fallbackQuestions : roleQuestions;
     }
 
     private boolean isHttpUrl(String value) {

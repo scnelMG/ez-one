@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import LoginCallbackPage from './LoginCallbackPage.vue';
 import { getAccessToken } from '@/features/auth/session/authSession';
 const mocks = vi.hoisted(() => ({
+    consumeOAuthState: vi.fn(() => '/basket'),
     loginWithGoogle: vi.fn()
 }));
 vi.mock('@/features/auth/api/authApi', () => ({
@@ -12,7 +13,7 @@ vi.mock('@/features/auth/api/authApi', () => ({
     }
 }));
 vi.mock('@/features/auth/oauth/googleOAuth', () => ({
-    consumeOAuthState: vi.fn(() => '/basket'),
+    consumeOAuthState: mocks.consumeOAuthState,
     getGoogleRedirectUri: vi.fn(() => 'http://localhost:5173/login/callback')
 }));
 function makeRouter() {
@@ -28,6 +29,8 @@ function makeRouter() {
 describe('LoginCallbackPage', () => {
     beforeEach(() => {
         localStorage.clear();
+        mocks.consumeOAuthState.mockReset();
+        mocks.consumeOAuthState.mockReturnValue('/basket');
         mocks.loginWithGoogle.mockReset();
     });
     it('AUTH-001: exchanges Google code, stores issued tokens, and returns to the protected page', async () => {
@@ -86,6 +89,43 @@ describe('LoginCallbackPage', () => {
         });
         await new Promise((resolve) => setTimeout(resolve));
         expect(router.currentRoute.value.fullPath).toBe('/');
+    });
+    it('EXT-003: preserves extension connect redirects after Google login even when onboarding is pending', async () => {
+        mocks.consumeOAuthState.mockReturnValue('/extension/connect?sourceUrl=https%3A%2F%2Fwww.jasoseol.com%2Frecruit%2F1&sourceTabId=42');
+        mocks.loginWithGoogle.mockResolvedValue({
+            accessToken: 'access-token',
+            refreshToken: 'refresh-token',
+            tokenType: 'Bearer',
+            expiresIn: 3600,
+            user: {
+                id: 1,
+                email: 'user@example.com',
+                name: 'Hong Gil Dong',
+                nickname: 'Gil Dong',
+                profileCompleted: false,
+                onboardingRequired: true
+            }
+        });
+        const router = createRouter({
+            history: createMemoryHistory(),
+            routes: [
+                { path: '/login/callback', component: LoginCallbackPage },
+                { path: '/extension/connect', component: { template: '<div>extension connect</div>' } },
+                { path: '/', component: { template: '<div>main</div>' } }
+            ]
+        });
+        router.push('/login/callback?code=google-code&state=state-123');
+        await router.isReady();
+        mount(LoginCallbackPage, {
+            global: {
+                plugins: [router]
+            }
+        });
+        await new Promise((resolve) => setTimeout(resolve));
+        expect(router.currentRoute.value.name).toBeUndefined();
+        expect(router.currentRoute.value.path).toBe('/extension/connect');
+        expect(router.currentRoute.value.query.sourceUrl).toBe('https://www.jasoseol.com/recruit/1');
+        expect(router.currentRoute.value.query.sourceTabId).toBe('42');
     });
     it('AUTH-001: shows a clear message when Google returns an OAuth error', async () => {
         const router = makeRouter();

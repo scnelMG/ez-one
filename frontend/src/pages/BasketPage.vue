@@ -187,8 +187,6 @@
             </button>
           </article>
 
-
-
           <div v-if="totalPages > 1" class="pagination-row" aria-label="장바구니 페이지 이동">
             <button
               class="ghost-button small"

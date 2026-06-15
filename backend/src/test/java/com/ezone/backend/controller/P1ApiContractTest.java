@@ -33,6 +33,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest({
@@ -55,6 +56,7 @@ import org.springframework.test.web.servlet.MockMvc;
     NotionIntegrationService.class
 })
 @WithMockUser(username = "1")
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 class P1ApiContractTest {
 
     @Autowired
@@ -648,6 +650,56 @@ class P1ApiContractTest {
             .andExpect(jsonPath("$.data[0].positionTitle").value("Backend"))
             .andExpect(jsonPath("$.data[1].workspaceId", notNullValue()))
             .andExpect(jsonPath("$.data[1].positionTitle").value("Platform"));
+    }
+
+    @Test
+    void extensionSaveUsesRoleSpecificEssayQuestions() throws Exception {
+        String savedBody = mockMvc.perform(post("/api/extension/jobs/save")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "companyName": "Taewoong Logistics",
+                      "positionTitle": "2026 Hiring",
+                      "deadlineLabel": "2026-06-21 23:59",
+                      "sourceUrl": "https://www.jasoseol.com/recruit/taewoong",
+                      "selectedRoles": ["Robot Automation", "Algorithm Developer"],
+                      "essayQuestions": [
+                        { "prompt": "Common fallback question", "maxLength": 300 }
+                      ],
+                      "roleEssayQuestions": {
+                        "Robot Automation": [
+                          { "prompt": "Summarize your core job competency.", "maxLength": 300 },
+                          { "prompt": "Why are you applying to Taewoong Logistics?", "maxLength": 700 }
+                        ],
+                        "Algorithm Developer": [
+                          { "prompt": "Describe your algorithm development experience.", "maxLength": 500 }
+                        ]
+                      }
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data", hasSize(2)))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        JsonNode saved = objectMapper.readTree(savedBody);
+        long robotWorkspaceId = saved.at("/data/0/workspaceId").asLong();
+        long algorithmWorkspaceId = saved.at("/data/1/workspaceId").asLong();
+
+        mockMvc.perform(get("/api/workspaces/%d".formatted(robotWorkspaceId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.positionTitle").value("Robot Automation"))
+            .andExpect(jsonPath("$.data.questions[0].prompt").value("Summarize your core job competency."))
+            .andExpect(jsonPath("$.data.questions[0].maxLength").value(300))
+            .andExpect(jsonPath("$.data.questions[1].prompt").value("Why are you applying to Taewoong Logistics?"))
+            .andExpect(jsonPath("$.data.questions[1].maxLength").value(700));
+
+        mockMvc.perform(get("/api/workspaces/%d".formatted(algorithmWorkspaceId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.positionTitle").value("Algorithm Developer"))
+            .andExpect(jsonPath("$.data.questions[0].prompt").value("Describe your algorithm development experience."))
+            .andExpect(jsonPath("$.data.questions[0].maxLength").value(500));
     }
 
     @Test

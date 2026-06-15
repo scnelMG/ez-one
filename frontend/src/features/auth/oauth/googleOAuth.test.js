@@ -20,6 +20,7 @@ describe('googleOAuth', () => {
         expect(url.searchParams.get('scope')).toContain('openid');
         expect(url.searchParams.get('state')).toBe('state-123');
         expect(url.searchParams.has('prompt')).toBe(false);
+        expect(url.searchParams.has('access_type')).toBe(false);
         expect(consumeOAuthState('state-123')).toBe('/basket');
     });
     it('AUTH-001: stores OAuth states by nonce so parallel login tabs do not overwrite each other', () => {

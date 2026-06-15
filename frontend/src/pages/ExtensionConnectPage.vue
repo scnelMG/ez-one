@@ -27,7 +27,7 @@ const statusMessage = computed(() => {
         return errorMessage.value;
     }
     return completed.value
-        ? '확장프로그램 연결이 완료되었습니다. 공고 페이지에서 팝업을 다시 열어 주세요.'
+        ? '확장프로그램 연결이 완료되었습니다. 원래 공고 탭으로 돌아갑니다.'
         : '로그인 세션을 확장프로그램에 연결하고 있습니다.';
 });
 onMounted(async () => {
@@ -57,12 +57,23 @@ onMounted(async () => {
             throw new Error(response?.message ?? '확장프로그램이 로그인 세션을 받지 못했습니다.');
         }
         completed.value = true;
-        returnToSourceUrl(route.query.sourceUrl);
+        if (sourceTabId === null) {
+            returnToSourceUrl(route.query.sourceUrl);
+        }
     }
     catch (error) {
-        errorMessage.value = error instanceof Error ? error.message : '확장프로그램 연결에 실패했습니다.';
+        errorMessage.value = normalizeExtensionConnectError(error);
     }
 });
+
+function normalizeExtensionConnectError(error) {
+    const message = error instanceof Error ? error.message : '';
+    if (/401|unauthorized|로그인이 만료|authentication is required/i.test(message)) {
+        return '로그인 시간이 만료되었습니다. 다시 로그인해 주세요.';
+    }
+    return message || '확장프로그램 연결에 실패했습니다.';
+}
+
 function sendExtensionMessage(extensionId, message) {
     return new Promise((resolve, reject) => {
         const runtime = window.chrome?.runtime;

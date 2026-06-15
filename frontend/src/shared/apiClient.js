@@ -16,7 +16,7 @@ defaultHttpClient.interceptors.response.use((response) => response, async (error
         !originalRequest ||
         originalRequest._retry ||
         originalRequest.skipAuthRefresh ||
-        isAuthEndpoint(originalRequest.url)) {
+        isAuthRefreshExcludedEndpoint(originalRequest.url)) {
         throw error;
     }
     const refreshToken = getRefreshToken();
@@ -63,6 +63,6 @@ export function resolveApiBaseUrl(value) {
     }
     return value.replace(/\/api\/?$/, '');
 }
-function isAuthEndpoint(url) {
-    return Boolean(url?.startsWith('/api/auth/'));
+function isAuthRefreshExcludedEndpoint(url) {
+    return Boolean(url?.startsWith('/api/auth/') && url !== '/api/auth/extension-session');
 }

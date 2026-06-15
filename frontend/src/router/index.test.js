@@ -29,6 +29,16 @@ describe('router', () => {
         expect(routes.find((route) => route.path === '/main')?.redirect).toBe('/');
         expect(routes.find((route) => route.path === '/basket/:basketJobId')?.name).toBe('basket-detail');
     });
+    it('uses the login page as the default start page when the user is not authenticated', async () => {
+        await router.push('/');
+        expect(router.currentRoute.value.name).toBe('login');
+        expect(router.currentRoute.value.query.redirect).toBeUndefined();
+    });
+    it('preserves extension connect redirects when the extension starts login from the main route', async () => {
+        await router.push('/?redirect=%2Fextension%2Fconnect%3FsourceUrl%3Dhttps%253A%252F%252Fwww.jasoseol.com%252Frecruit%252F1%26sourceTabId%3D42');
+        expect(router.currentRoute.value.name).toBe('login');
+        expect(router.currentRoute.value.query.redirect).toBe('/extension/connect?sourceUrl=https%3A%2F%2Fwww.jasoseol.com%2Frecruit%2F1&sourceTabId=42');
+    });
     it('redirects protected P1 pages to login when the user is not authenticated', async () => {
         await router.push('/basket');
         expect(router.currentRoute.value.name).toBe('login');
@@ -86,6 +96,21 @@ describe('router', () => {
         }));
         await router.push('/login');
         expect(router.currentRoute.value.name).toBe('main');
+    });
+    it('keeps extension login redirects on the extension connect page even when onboarding is pending', async () => {
+        localStorage.setItem('ezone.accessToken', 'test-token');
+        localStorage.setItem('ezone.currentUser', JSON.stringify({
+            id: 1,
+            email: 'user@example.com',
+            name: 'Hong Gil Dong',
+            nickname: 'Gil Dong',
+            profileCompleted: false,
+            onboardingRequired: true
+        }));
+        await router.push('/login?redirect=%2Fextension%2Fconnect%3FsourceUrl%3Dhttps%253A%252F%252Fwww.jasoseol.com%252Frecruit%252F1%26sourceTabId%3D42');
+        expect(router.currentRoute.value.name).toBe('extension-connect');
+        expect(router.currentRoute.value.query.sourceUrl).toBe('https://www.jasoseol.com/recruit/1');
+        expect(router.currentRoute.value.query.sourceTabId).toBe('42');
     });
     it('sends authenticated users from extension login redirect to the extension connect page', async () => {
         localStorage.setItem('ezone.accessToken', 'test-token');

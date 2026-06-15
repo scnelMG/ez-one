@@ -13,21 +13,32 @@ import './popup.css';
 const apiBaseUrl = import.meta.env.VITE_EXTENSION_API_BASE_URL ?? 'http://localhost:8080/api';
 const webAppUrl = import.meta.env.VITE_EXTENSION_WEB_APP_URL ?? 'http://localhost:5173';
 const AUTH_EXPIRED_MESSAGE = '\uB85C\uADF8\uC778\uC774 \uB9CC\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4';
+const UNSUPPORTED_JOB_PAGE_MESSAGE = '채용공고 목록이나 캘린더에서는 저장할 공고를 정확히 찾을 수 없어요.';
+const JOB_EXTRACTOR_VERSION = '2026-06-12-role-essay-v11';
+const POSTING_WATCH_INTERVAL_MS = 1200;
+const LOGIN_SESSION_POLL_INTERVAL_MS = 800;
+const LOGIN_SESSION_POLL_TIMEOUT_MS = 120000;
+const PANEL_RESIZE_MESSAGE = 'EZONE_PANEL_RESIZE';
 const statusPanel = requireElement('status-panel');
 const loginPanel = requireElement('login-panel');
 const featurePanel = requireElement('feature-panel');
 const previewPanel = requireElement('preview-panel');
 const resultPanel = requireElement('result-panel');
 const documentResultPanel = requireElement('document-result-panel');
+const statusTitle = requireElement('status-title');
 const statusMessage = requireElement('status-message');
 const loginButton = requireElement('login-button');
 const jobSaveModeButton = requireElement('job-save-mode-button');
 const documentInputModeButton = requireElement('document-input-mode-button');
 const saveButton = requireElement('save-button');
+const reloadPreviewButton = requireElement('reload-preview-button');
 const companyNameInput = requireElement('company-name-input');
 const positionTitleInput = requireElement('position-title-input');
 const deadlineLabelInput = requireElement('deadline-label-input');
+const essayQuestionList = requireElement('essay-question-list');
+const essayQuestionStatus = requireElement('essay-question-status');
 const roleOptions = requireElement('role-options');
+const roleCount = requireElement('role-count');
 const basketLink = requireElement('basket-link');
 const savedJobList = requireElement('saved-job-list');
 const autofillSummary = requireElement('autofill-summary');
@@ -35,6 +46,18 @@ const autofillFilledList = requireElement('autofill-filled-list');
 const autofillFailedList = requireElement('autofill-failed-list');
 const autofillCopyList = requireElement('autofill-copy-list');
 let currentPosting = null;
+let activeEssayRole = null;
+let essayQuestionRequestId = 0;
+let waitingForWebLogin = false;
+let hasExtensionSession = false;
+let isReadingPreview = false;
+let isSavingJob = false;
+let lastObservedPostingUrl = null;
+let postingWatchTimer = null;
+let loginSessionPollTimer = null;
+let loginSessionPollStartedAt = 0;
+let panelResizeFrame = null;
+const contentScriptLoadPromises = new Map();
 
 const jobApi = createExtensionJobApi({
     apiBaseUrl,
@@ -52,6 +75,8 @@ const documentProfileApi = createExtensionDocumentProfileApi({
 });
 
 setStaticLinks();
+setupPanelAutoResize();
+chrome.storage.onChanged?.addListener(handleSessionStorageChanged);
 loginButton.addEventListener('click', async () => {
     const tab = await getActiveTab();
     const loginUrl = buildWebLoginUrl({
@@ -59,14 +84,19 @@ loginButton.addEventListener('click', async () => {
         currentUrl: tab.url ?? '',
         sourceTabId: tab.id
     });
+    waitingForWebLogin = true;
+    startLoginSessionPolling();
     await chrome.tabs.create({ url: loginUrl.toString() });
-    setStatus('로그인 완료 후 팝업을 다시 열어 주세요.');
+    setStatus('Google 로그인을 완료하면 자동으로 이어집니다.');
 });
 jobSaveModeButton.addEventListener('click', () => {
-    void loadPreview();
+    void loadPreview({ showUnsupportedMessage: true });
 });
 documentInputModeButton.addEventListener('click', () => {
     void runDocumentAutoFill();
+});
+reloadPreviewButton.addEventListener('click', () => {
+    void loadPreview({ force: true, showUnsupportedMessage: true });
 });
 saveButton.addEventListener('click', async () => {
     if (!currentPosting) {
@@ -79,6 +109,7 @@ saveButton.addEventListener('click', async () => {
         return;
     }
     try {
+        isSavingJob = true;
         saveButton.disabled = true;
         saveButton.textContent = '저장 중';
         const savedJobs = await jobApi.save({
@@ -86,13 +117,15 @@ saveButton.addEventListener('click', async () => {
             companyName: normalizeInput(companyNameInput.value),
             positionTitle: normalizeInput(positionTitleInput.value),
             deadlineLabel: normalizeInput(deadlineLabelInput.value),
+            essayQuestions: collectEssayQuestions(),
+            roleEssayQuestions: buildRoleEssayQuestionsPayload(selectedRoles),
             selectedRoles
         });
         const firstWorkspaceId = savedJobs[0]?.workspaceId;
         basketLink.href = `${webAppUrl}/basket`;
         requireElement('result-message').textContent = firstWorkspaceId
-            ? '선택한 직무가 장바구니와 워크스페이스에 저장되었습니다.'
-            : '이미 저장된 공고를 확인했습니다.';
+            ? '선택한 직무가 저장되었습니다.'
+            : '이미 저장된 공고입니다.';
         renderSavedJobs(savedJobs, currentPosting);
         showPanel(resultPanel);
     }
@@ -103,35 +136,114 @@ saveButton.addEventListener('click', async () => {
         setStatus(error instanceof Error ? error.message : '저장에 실패했습니다.', true);
     }
     finally {
+        isSavingJob = false;
         saveButton.disabled = false;
         saveButton.textContent = '선택한 공고 장바구니에 담기';
     }
 });
 
 void init();
+startPostingChangeWatcher();
 
 async function init() {
     const session = await getStoredSession(chrome.storage.local);
     if (!session) {
+        hasExtensionSession = false;
         showPanel(loginPanel);
         return;
     }
-    showPanel(featurePanel);
+    hasExtensionSession = true;
+    await loadPreview({ fallbackPanel: featurePanel });
 }
 
-async function loadPreview() {
+async function handleSessionStorageChanged(changes, areaName) {
+    if (!waitingForWebLogin || areaName !== 'local' || !hasSessionTokenChange(changes)) {
+        return;
+    }
+    const session = await getStoredSession(chrome.storage.local);
+    if (!session) {
+        return;
+    }
+    await resumeAfterWebLogin();
+}
+
+function hasSessionTokenChange(changes) {
+    return Boolean(changes?.[ACCESS_TOKEN_KEY] || changes?.[REFRESH_TOKEN_KEY]);
+}
+
+function startLoginSessionPolling() {
+    stopLoginSessionPolling();
+    loginSessionPollStartedAt = Date.now();
+    loginSessionPollTimer = setInterval(() => {
+        void reconcileWebLoginSession();
+    }, LOGIN_SESSION_POLL_INTERVAL_MS);
+}
+
+function stopLoginSessionPolling() {
+    if (loginSessionPollTimer === null) {
+        return;
+    }
+    clearInterval(loginSessionPollTimer);
+    loginSessionPollTimer = null;
+    loginSessionPollStartedAt = 0;
+}
+
+async function reconcileWebLoginSession() {
+    if (!waitingForWebLogin) {
+        stopLoginSessionPolling();
+        return;
+    }
+    if (Date.now() - loginSessionPollStartedAt > LOGIN_SESSION_POLL_TIMEOUT_MS) {
+        stopLoginSessionPolling();
+        setStatus('로그인 연결이 지연되고 있습니다. Google 로그인 완료 후 다시 시도해 주세요.', true);
+        return;
+    }
+    const session = await getStoredSession(chrome.storage.local);
+    if (!session) {
+        return;
+    }
+    await resumeAfterWebLogin();
+}
+
+async function resumeAfterWebLogin() {
+    stopLoginSessionPolling();
+    waitingForWebLogin = false;
+    hasExtensionSession = true;
+    await loadPreview({ force: true, fallbackPanel: featurePanel });
+}
+
+async function loadPreview(options = {}) {
+    if (isReadingPreview && !options.force) {
+        return;
+    }
     try {
-        setStatus('현재 페이지에서 공고 정보를 읽고 있습니다.');
+        isReadingPreview = true;
         const tab = await getActiveTab();
-        if (!tab.id || !tab.url?.includes('jasoseol.com')) {
-            setStatus('자소설닷컴 공고 페이지에서 사용할 수 있습니다.', true);
+        lastObservedPostingUrl = tab.url ?? lastObservedPostingUrl;
+        if (!tab.id) {
+            setStatus('현재 탭을 찾지 못했습니다.', true);
             return;
         }
+        if (!isSupportedJobPostingPage(tab.url)) {
+            if (options.fallbackPanel) {
+                showPanel(options.fallbackPanel);
+                return;
+            }
+            if (options.showUnsupportedMessage ?? true) {
+                setStatus(UNSUPPORTED_JOB_PAGE_MESSAGE, true);
+            }
+            return;
+        }
+        setStatus(options.statusMessage ?? '현재 페이지에서 공고 정보를 읽고 있습니다.');
         const posting = await extractCurrentTabPosting(tab.id);
+        if (!hasMinimumPostingData(posting)) {
+            throw new Error(UNSUPPORTED_JOB_PAGE_MESSAGE);
+        }
         currentPosting = posting;
         await jobApi.preview(posting);
         renderPosting(posting);
         showPanel(previewPanel);
+        void loadEssayQuestionsForSelectedRole();
     }
     catch (error) {
         if (await handleAuthExpired(error)) {
@@ -139,21 +251,93 @@ async function loadPreview() {
         }
         setStatus(error instanceof Error ? error.message : '공고 정보를 추출하지 못했습니다.', true);
     }
+    finally {
+        isReadingPreview = false;
+    }
+}
+
+function startPostingChangeWatcher() {
+    if (postingWatchTimer || !chrome.tabs?.query) {
+        return;
+    }
+    postingWatchTimer = setInterval(() => {
+        void refreshPreviewWhenPostingChanges();
+    }, POSTING_WATCH_INTERVAL_MS);
+}
+
+async function refreshPreviewWhenPostingChanges() {
+    if (!hasExtensionSession || waitingForWebLogin || isReadingPreview || isSavingJob || !loginPanel.hidden || !documentResultPanel.hidden) {
+        return;
+    }
+    try {
+        const tab = await getActiveTab();
+        const currentUrl = tab.url ?? '';
+        if (!isSupportedJobPostingPage(currentUrl) || currentUrl === lastObservedPostingUrl) {
+            return;
+        }
+        lastObservedPostingUrl = currentUrl;
+        await loadPreview({
+            force: true,
+            showUnsupportedMessage: false,
+            statusMessage: '새 공고를 읽고 있습니다.'
+        });
+    }
+    catch {
+        // Keep the current panel stable when Chrome briefly cannot report the active tab.
+    }
+}
+
+function isSupportedJobPostingPage(url) {
+    if (!url) {
+        return false;
+    }
+    try {
+        const parsedUrl = new URL(url);
+        if (!parsedUrl.hostname.endsWith('jasoseol.com')) {
+            return false;
+        }
+        return parsedUrl.pathname.startsWith('/recruit/') ||
+            parsedUrl.pathname === '/' ||
+            parsedUrl.searchParams.has('campaignid') ||
+            parsedUrl.searchParams.has('ec');
+    } catch {
+        return false;
+    }
+}
+
+function hasMinimumPostingData(posting) {
+    return Boolean(posting?.companyName &&
+        posting?.positionTitle &&
+        posting?.deadlineLabel &&
+        Array.isArray(posting?.roleOptions) &&
+        posting.roleOptions.length > 0);
 }
 
 async function extractCurrentTabPosting(tabId) {
-    await chrome.scripting.executeScript({
-        target: { tabId },
-        files: ['assets/jobExtractor.js']
-    });
+    await ensureContentScriptLoaded(tabId, 'assets/jobExtractor.js', () => window.ezOneJobExtractorVersion === JOB_EXTRACTOR_VERSION);
     const [result] = await chrome.scripting.executeScript({
         target: { tabId },
-        func: () => window.ezOneExtractJobPosting?.() ?? null
+        func: async () => await window.ezOneExtractJobPosting?.() ?? null
     });
     if (!result?.result) {
-        throw new Error('현재 페이지에서 공고 정보를 찾지 못했습니다.');
+        throw new Error(UNSUPPORTED_JOB_PAGE_MESSAGE);
     }
     return result.result;
+}
+
+async function extractEssayQuestionsForRole(tabId, role) {
+    await ensureContentScriptLoaded(tabId, 'assets/jobExtractor.js', () => window.ezOneJobExtractorVersion === JOB_EXTRACTOR_VERSION);
+    const [result] = await chrome.scripting.executeScript({
+        target: { tabId },
+        func: async (targetRole) => await window.ezOneExtractJobPosting?.({
+            withEssayQuestions: true,
+            targetRoles: [targetRole],
+            hoverDelayMs: 50,
+            maxEssayTriggers: 1
+        }) ?? null,
+        args: [role]
+    });
+    return result?.result ?? null;
 }
 
 async function runDocumentAutoFill() {
@@ -165,10 +349,7 @@ async function runDocumentAutoFill() {
             return;
         }
         const profile = await documentProfileApi.getDocumentProfile();
-        await chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            files: ['assets/applicationAutoFill.js']
-        });
+        await ensureContentScriptLoaded(tab.id, 'assets/applicationAutoFill.js', () => Boolean(window.ezOneAutoFillApplicationLoaded));
         const result = await chrome.tabs.sendMessage(tab.id, {
             type: 'EZONE_AUTOFILL_APPLICATION',
             profile
@@ -184,29 +365,343 @@ async function runDocumentAutoFill() {
     }
 }
 
+async function ensureContentScriptLoaded(tabId, file, isLoaded) {
+    const loadKey = `${tabId}:${file}`;
+    if (contentScriptLoadPromises.has(loadKey)) {
+        await contentScriptLoadPromises.get(loadKey);
+        return;
+    }
+    const loadPromise = loadContentScript(tabId, file, isLoaded)
+        .finally(() => contentScriptLoadPromises.delete(loadKey));
+    contentScriptLoadPromises.set(loadKey, loadPromise);
+    await loadPromise;
+}
+
+async function loadContentScript(tabId, file, isLoaded) {
+    const [loaded] = await chrome.scripting.executeScript({
+        target: { tabId },
+        func: isLoaded
+    });
+    if (loaded?.result) {
+        return;
+    }
+    await chrome.scripting.executeScript({
+        target: { tabId },
+        files: [file]
+    });
+}
+
 function renderPosting(posting) {
+    activeEssayRole = null;
+    essayQuestionRequestId += 1;
     companyNameInput.value = posting.companyName ?? '';
     positionTitleInput.value = posting.positionTitle ?? '';
     deadlineLabelInput.value = posting.deadlineLabel ?? '';
     const roles = posting.roleOptions.length > 0
         ? posting.roleOptions
         : [posting.positionTitle ?? '선택 직무'];
+    roleCount.textContent = `${roles.length}개`;
     roleOptions.replaceChildren(...roles.map((role, index) => {
         const label = document.createElement('label');
         const input = document.createElement('input');
         const labelText = document.createElement('span');
+        const parsedRole = parseDisplayRole(role);
         input.type = 'checkbox';
         input.value = role;
         input.checked = index === 0;
-        labelText.textContent = role;
+        if (input.checked) {
+            activeEssayRole = role;
+        }
+        input.addEventListener('change', () => {
+            updateEssayQuestionsForSelectedRoles(role);
+            if (input.checked) {
+                void loadEssayQuestionsForSelectedRole(role);
+            }
+        });
+        labelText.className = 'role-option-text';
+        if (parsedRole.employmentType) {
+            const badge = document.createElement('span');
+            const title = document.createElement('span');
+            labelText.classList.add('role-option-text--with-badge');
+            badge.className = 'role-employment-badge';
+            badge.classList.add(getEmploymentBadgeClass(parsedRole.employmentType));
+            title.className = 'role-title';
+            badge.textContent = parsedRole.employmentType;
+            title.textContent = parsedRole.title;
+            labelText.append(badge, title);
+        }
+        else {
+            labelText.classList.add('role-option-text--plain');
+            labelText.textContent = parsedRole.title;
+        }
         label.append(input, labelText);
         return label;
     }));
+    updateEssayQuestionsForSelectedRoles();
+}
+
+function parseDisplayRole(role) {
+    const text = normalizeInput(role) ?? '';
+    const match = text.match(/^(신입\/경력|신입|경력|인턴|계약직)\s*·\s*(.+)$/);
+    if (!match) {
+        return { employmentType: null, title: text };
+    }
+    return {
+        employmentType: match[1],
+        title: match[2]
+    };
+}
+
+function getEmploymentBadgeClass(employmentType) {
+    switch (employmentType) {
+        case '신입':
+            return 'role-employment-badge--new';
+        case '경력':
+            return 'role-employment-badge--career';
+        case '신입/경력':
+            return 'role-employment-badge--mixed';
+        case '계약직':
+            return 'role-employment-badge--contract';
+        case '인턴':
+            return 'role-employment-badge--intern';
+        default:
+            return 'role-employment-badge--default';
+    }
+}
+
+async function loadEssayQuestionsForSelectedRole(role = activeEssayRole) {
+    if (!currentPosting || !role) {
+        return;
+    }
+    if (Array.isArray(currentPosting.roleEssayQuestions?.[role]) && currentPosting.roleEssayQuestions[role].length > 0) {
+        updateEssayQuestionsForSelectedRoles(role);
+        return;
+    }
+    const requestId = ++essayQuestionRequestId;
+    renderEssayQuestionLoading(role);
+    try {
+        const tab = await getActiveTab();
+        if (!tab.id) {
+            return;
+        }
+        const posting = await extractEssayQuestionsForRole(tab.id, role);
+        if (requestId !== essayQuestionRequestId || !posting) {
+            return;
+        }
+        currentPosting = {
+            ...currentPosting,
+            essayQuestions: (posting.essayQuestions ?? []).length > 0
+                ? posting.essayQuestions
+                : currentPosting.essayQuestions ?? [],
+            roleEssayQuestions: {
+                ...(currentPosting.roleEssayQuestions ?? {}),
+                ...(posting.roleEssayQuestions ?? {})
+            },
+            essayQuestionAvailability: {
+                ...(currentPosting.essayQuestionAvailability ?? {}),
+                ...(posting.essayQuestionAvailability ?? {})
+            }
+        };
+        updateEssayQuestionsForSelectedRoles(role);
+    }
+    catch {
+        if (requestId === essayQuestionRequestId) {
+            renderEssayQuestionStatus(null, [], getSelectedRoles());
+        }
+    }
 }
 
 function normalizeInput(value) {
     const trimmed = value.trim();
     return trimmed.length > 0 ? trimmed : null;
+}
+
+function updateEssayQuestionsForSelectedRoles(changedRole = null) {
+    if (!currentPosting) {
+        return;
+    }
+    const selectedRoles = getSelectedRoles();
+    const roleQuestionMap = currentPosting.roleEssayQuestions ?? {};
+    if (changedRole && selectedRoles.includes(changedRole)) {
+        activeEssayRole = changedRole;
+    }
+    activeEssayRole = selectedRoles.includes(activeEssayRole) ? activeEssayRole : selectedRoles[0] ?? null;
+    const matchedRole = selectedRoles.find((role) => role === activeEssayRole && Array.isArray(roleQuestionMap[role]) && roleQuestionMap[role].length > 0) ??
+        selectedRoles.find((role) => Array.isArray(roleQuestionMap[role]) && roleQuestionMap[role].length > 0);
+    activeEssayRole = matchedRole ?? activeEssayRole;
+    const questions = matchedRole
+        ? roleQuestionMap[matchedRole]
+        : currentPosting.essayQuestions ?? [];
+    const selectedRoleAvailability = activeEssayRole
+        ? currentPosting.essayQuestionAvailability?.[activeEssayRole]
+        : null;
+    const hasNoEssayQuestions = !matchedRole && selectedRoleAvailability === 'none' && questions.length === 0;
+    renderEssayQuestionInputs(questions, { showFallback: !hasNoEssayQuestions });
+    renderEssayQuestionStatus(matchedRole, questions, selectedRoles, hasNoEssayQuestions);
+}
+
+function renderEssayQuestionLoading(role) {
+    essayQuestionList.replaceChildren();
+    essayQuestionStatus.textContent = `"${role}" 자소서 문항을 확인하고 있습니다.`;
+    essayQuestionStatus.classList.remove('is-warning');
+    schedulePanelResize();
+}
+
+function renderEssayQuestionInputs(questions = [], options = {}) {
+    const showFallback = options.showFallback ?? true;
+    const validQuestions = questions
+        .map((question) => ({
+        prompt: normalizeInput(question?.prompt ?? ''),
+        maxLength: Number.isFinite(Number(question?.maxLength)) ? Number(question.maxLength) : null
+    }))
+        .filter((question) => question.prompt);
+    const items = validQuestions.length > 0
+        ? validQuestions
+        : showFallback ? [{ prompt: '', maxLength: null }] : [];
+    essayQuestionList.replaceChildren(...items.map(createEssayQuestionInput));
+    schedulePanelResize();
+}
+
+function createEssayQuestionInput(question, index) {
+    const item = document.createElement('details');
+    const summary = document.createElement('summary');
+    const header = document.createElement('span');
+    const title = document.createElement('strong');
+    const meta = document.createElement('small');
+    const action = document.createElement('span');
+    const preview = document.createElement('span');
+    const textarea = document.createElement('textarea');
+    const hasPrompt = Boolean(question.prompt);
+
+    item.className = 'essay-question-item';
+    item.open = !hasPrompt;
+    summary.className = 'essay-question-summary';
+    header.className = 'essay-question-item-header';
+    action.className = 'essay-question-action';
+    action.setAttribute('aria-hidden', 'true');
+    title.textContent = `문항 ${index + 1}`;
+    meta.textContent = question.maxLength ? `${question.maxLength}자` : '글자 수 제한 없음';
+    preview.className = 'essay-question-preview';
+    preview.textContent = hasPrompt ? question.prompt : '문항을 직접 입력하세요.';
+    textarea.className = 'essay-question-input';
+    textarea.setAttribute('data-max-length', question.maxLength ? String(question.maxLength) : '');
+    textarea.rows = getEssayQuestionRows(question.prompt);
+    textarea.placeholder = '자소서 문항을 입력하세요.';
+    textarea.value = question.prompt;
+    textarea.addEventListener('input', () => {
+        autoResizeEssayQuestionInput(textarea);
+    });
+    item.addEventListener('toggle', () => {
+        if (!item.open) {
+            return;
+        }
+        requestAnimationFrame(() => {
+            autoResizeEssayQuestionInput(textarea);
+            schedulePanelResize();
+            item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        });
+    });
+
+    title.append(meta);
+    header.append(title, action);
+    summary.append(header, preview);
+    item.append(summary, textarea);
+    requestAnimationFrame(() => {
+        autoResizeEssayQuestionInput(textarea);
+        schedulePanelResize();
+    });
+    return item;
+}
+
+function autoResizeEssayQuestionInput(textarea) {
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight + 2}px`;
+    schedulePanelResize();
+}
+
+function getEssayQuestionRows(prompt) {
+    if (prompt.length > 260) {
+        return 8;
+    }
+    if (prompt.length > 160) {
+        return 6;
+    }
+    return 4;
+}
+
+function buildRoleEssayQuestionsPayload(selectedRoles) {
+    const source = currentPosting?.roleEssayQuestions ?? {};
+    const payload = selectedRoles.reduce((accumulator, role) => {
+        if (Array.isArray(source[role])) {
+            accumulator[role] = source[role];
+        }
+        return accumulator;
+    }, {});
+    if (activeEssayRole && selectedRoles.includes(activeEssayRole)) {
+        payload[activeEssayRole] = collectEssayQuestions();
+    }
+    return payload;
+}
+
+function getSelectedRoles() {
+    return Array.from(roleOptions.querySelectorAll('input:checked'))
+        .map((item) => item.value);
+}
+
+function renderLegacyEssayQuestionStatus(matchedRole, questions, selectedRoles) {
+    if (matchedRole && questions.length > 0) {
+        essayQuestionStatus.textContent = `${questions.length}개 문항을 가져왔습니다.`;
+        essayQuestionStatus.classList.remove('is-warning');
+        return;
+    }
+    if ((currentPosting?.essayQuestions ?? []).length > 0) {
+        essayQuestionStatus.textContent = `공통 문항 ${questions.length}개를 사용합니다.`;
+        essayQuestionStatus.classList.remove('is-warning');
+        return;
+    }
+    const roleLabel = selectedRoles[0] ? `"${selectedRoles[0]}" ` : '';
+    essayQuestionStatus.textContent = `${roleLabel}문항을 자동으로 확인하지 못했습니다. 직접 입력할 수 있습니다.`;
+    essayQuestionStatus.classList.add('is-warning');
+}
+
+function renderEssayQuestionStatus(matchedRole, questions, selectedRoles, hasNoEssayQuestions = false) {
+    if (matchedRole && questions.length > 0) {
+        essayQuestionStatus.textContent = `${questions.length}개 문항을 가져왔습니다.`;
+        essayQuestionStatus.classList.remove('is-warning');
+        return;
+    }
+    if (hasNoEssayQuestions) {
+        const roleLabel = selectedRoles[0] ? `"${selectedRoles[0]}" ` : '';
+        essayQuestionStatus.textContent = `${roleLabel}자소서 문항이 없는 공고입니다.`;
+        essayQuestionStatus.classList.remove('is-warning');
+        return;
+    }
+    if ((currentPosting?.essayQuestions ?? []).length > 0) {
+        essayQuestionStatus.textContent = `공통 문항 ${questions.length}개를 사용합니다.`;
+        essayQuestionStatus.classList.remove('is-warning');
+        return;
+    }
+    const roleLabel = selectedRoles[0] ? `"${selectedRoles[0]}" ` : '';
+    essayQuestionStatus.textContent = `${roleLabel}문항을 자동으로 확인하지 못했습니다. 직접 입력할 수 있습니다.`;
+    essayQuestionStatus.classList.add('is-warning');
+}
+
+function collectEssayQuestions() {
+    return Array.from(essayQuestionList.querySelectorAll('.essay-question-input'))
+        .map((input) => ({
+        prompt: normalizeInput(input.value),
+        maxLength: normalizeMaxLength(input.getAttribute('data-max-length'))
+    }))
+        .filter((question) => question.prompt)
+        .map((question) => ({
+        prompt: question.prompt,
+        maxLength: question.maxLength
+    }));
+}
+
+function normalizeMaxLength(value) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
 function renderSavedJobs(savedJobs, posting) {
@@ -295,6 +790,7 @@ async function handleAuthExpired(error) {
         return false;
     }
     await clearExtensionSession();
+    hasExtensionSession = false;
     showPanel(loginPanel);
     return true;
 }
@@ -307,12 +803,33 @@ function showPanel(panel) {
     for (const item of [statusPanel, loginPanel, featurePanel, previewPanel, resultPanel, documentResultPanel]) {
         item.hidden = item !== panel;
     }
+    schedulePanelResize();
 }
 
 function setStatus(message, isError = false) {
-    statusMessage.textContent = message;
+    const normalizedMessage = normalizeStatusMessage(message, isError);
+    statusTitle.textContent = getStatusTitle(normalizedMessage, isError);
+    statusMessage.textContent = normalizedMessage;
     statusPanel.classList.toggle('is-error', isError);
+    statusPanel.classList.toggle('is-guidance', normalizedMessage === UNSUPPORTED_JOB_PAGE_MESSAGE);
     showPanel(statusPanel);
+}
+
+function getStatusTitle(message, isError = false) {
+    if (message === UNSUPPORTED_JOB_PAGE_MESSAGE) {
+        return '공고 상세 화면에서 실행해 주세요';
+    }
+    return isError ? '확인해 주세요' : '처리 중';
+}
+
+function normalizeStatusMessage(message, isError = false) {
+    const text = String(message ?? '').replace(/\s+/g, ' ').trim();
+    const fallback = isError ? '문제가 발생했습니다. 잠시 후 다시 시도해 주세요.' : '처리 중입니다.';
+    const normalized = text || fallback;
+    if (isError && /failed to fetch/i.test(normalized)) {
+        return '서버에 연결하지 못했습니다. EZ-ONE 서버가 켜져 있는지 확인해 주세요.';
+    }
+    return normalized.length > 160 ? `${normalized.slice(0, 157)}...` : normalized;
 }
 
 function setStaticLinks() {
@@ -320,6 +837,67 @@ function setStaticLinks() {
         const link = requireElement(id);
         link.href = webAppUrl;
     }
+}
+
+function setupPanelAutoResize() {
+    if (window.parent === window) {
+        return;
+    }
+    if (typeof ResizeObserver === 'function') {
+        const observer = new ResizeObserver(() => {
+            schedulePanelResize();
+        });
+        [
+            document.body,
+            statusPanel,
+            loginPanel,
+            featurePanel,
+            previewPanel,
+            resultPanel,
+            documentResultPanel,
+            roleOptions,
+            essayQuestionList
+        ].forEach((item) => observer.observe(item));
+    }
+    window.addEventListener('load', schedulePanelResize);
+    schedulePanelResize();
+}
+
+function schedulePanelResize() {
+    if (window.parent === window) {
+        return;
+    }
+    if (panelResizeFrame !== null) {
+        cancelAnimationFrame(panelResizeFrame);
+    }
+    panelResizeFrame = requestAnimationFrame(() => {
+        panelResizeFrame = null;
+        reportPanelHeight();
+    });
+}
+
+function reportPanelHeight() {
+    const activePanel = [statusPanel, loginPanel, featurePanel, previewPanel, resultPanel, documentResultPanel]
+        .find((item) => !item.hidden);
+    if (!activePanel) {
+        return;
+    }
+    const bodyStyle = getComputedStyle(document.body);
+    const shellStyle = getComputedStyle(document.querySelector('.popup-shell'));
+    const header = document.querySelector('.popup-header');
+    const bodyPadding = parsePixelValue(bodyStyle.paddingTop) + parsePixelValue(bodyStyle.paddingBottom);
+    const shellGap = parsePixelValue(shellStyle.rowGap || shellStyle.gap);
+    const headerHeight = header?.getBoundingClientRect().height ?? 0;
+    const panelHeight = Math.max(activePanel.scrollHeight, activePanel.getBoundingClientRect().height);
+    window.parent.postMessage({
+        type: PANEL_RESIZE_MESSAGE,
+        height: Math.ceil(bodyPadding + headerHeight + shellGap + panelHeight + 2)
+    }, '*');
+}
+
+function parsePixelValue(value) {
+    const parsed = Number.parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function requireElement(id) {
