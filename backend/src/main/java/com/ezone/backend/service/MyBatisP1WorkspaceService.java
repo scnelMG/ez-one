@@ -187,7 +187,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         reference.setUrl(request.sourceUrl());
         mapper.insertReferenceMaterial(reference);
 
-        activityMapper.insertActivity(userId, workspace.getId(), "BASKET_ADD", 1);
+        activityMapper.insertActivity(userId, workspace.getId(), "BASKET_ADD", 1, java.time.LocalDateTime.now());
 
         return toBasketResponse(basketJob);
     }
@@ -266,7 +266,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         }
         
         if (status == ApplicationStatus.IN_PROGRESS || status == ApplicationStatus.COMPLETED) {
-            activityMapper.insertActivity(userId, requireBasketJob(userId, basketJobId).getWorkspaceId(), "STATUS_CHANGE", 2);
+            activityMapper.insertActivity(userId, requireBasketJob(userId, basketJobId).getWorkspaceId(), "STATUS_CHANGE", 2, java.time.LocalDateTime.now());
         }
         
         return getBasketJob(userId, basketJobId);
@@ -353,7 +353,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         mapper.markWorkspaceBasketJobInProgress(userId, workspaceId);
         question.setDraft(request.body());
         
-        activityMapper.insertActivity(userId, workspaceId, "DRAFT_UPDATE", 1);
+        activityMapper.insertActivity(userId, workspaceId, "DRAFT_UPDATE", 1, java.time.LocalDateTime.now());
         
         return toQuestionResponse(question);
     }
@@ -420,7 +420,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         mapper.insertReferenceMaterial(reference);
         mapper.markWorkspaceBasketJobInProgress(userId, workspaceId);
         
-        activityMapper.insertActivity(userId, workspaceId, "REFERENCE_ADD", 1);
+        activityMapper.insertActivity(userId, workspaceId, "REFERENCE_ADD", 1, java.time.LocalDateTime.now());
         
         return toReferenceResponse(reference);
     }
