@@ -12,7 +12,7 @@ describe('extension in-page panel host', () => {
         expect(script).toContain("'iframe'");
         expect(script).toContain("chrome.runtime.getURL('popup.html?embedded=1')");
         expect(script).toContain('position: fixed');
-        expect(script).toContain('const PANEL_WIDTH = 360');
+        expect(script).toContain('const PANEL_DEFAULT_WIDTH = 360');
         expect(script).toContain('const PANEL_RIGHT = 12');
         expect(script).toContain('right: ${PANEL_RIGHT}px');
         expect(script).toContain('z-index: 2147483647');
@@ -21,5 +21,21 @@ describe('extension in-page panel host', () => {
     it('adds an in-page close control instead of relying on a browser window close button', () => {
         expect(script).toContain("aria-label', 'EZ-ONE close'");
         expect(script).toContain('removePanel');
+    });
+
+    it('lets users resize the in-page panel from the left edge and remembers the width', () => {
+        expect(script).toContain("const PANEL_WIDTH_STORAGE_KEY = 'ezonePanelWidth'");
+        expect(script).toContain('const PANEL_MIN_WIDTH = 320');
+        expect(script).toContain('const PANEL_MAX_WIDTH = 520');
+        expect(script).toContain("document.createElement('div')");
+        expect(script).toContain("resizeHandle.className = 'resize-handle'");
+        expect(script).toContain("resizeHandle.setAttribute('role', 'separator')");
+        expect(script).toContain("resizeHandle.addEventListener('pointerdown'");
+        expect(script).toContain('function startResize');
+        expect(script).toContain("panel.classList.add('is-resizing')");
+        expect(script).toContain("document.addEventListener('pointermove'");
+        expect(script).toContain('function setPanelWidth');
+        expect(script).toContain('chrome.storage.local.set');
+        expect(script).toContain('chrome.storage.local.get');
     });
 });

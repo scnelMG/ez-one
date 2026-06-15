@@ -78,6 +78,78 @@ describe('apiClient', () => {
         expect(getAccessToken()).toBe('new-access-token');
         expect(calls).toEqual(['GET /api/me', 'POST /api/auth/refresh', 'GET /api/me']);
     });
+    it('EXT-003/AUTH-007: refreshes before retrying extension session issuance after a 401', async () => {
+        saveAuthSession({
+            accessToken: 'expired-access-token',
+            refreshToken: 'refresh-token',
+            tokenType: 'Bearer',
+            expiresIn: 1,
+            user: {
+                id: 1,
+                email: 'user@example.com',
+                name: 'Hong Gil Dong',
+                nickname: 'Gil Dong',
+                profileCompleted: true
+            }
+        });
+        const calls = [];
+        const adapter = async (config) => {
+            calls.push(`${config.method?.toUpperCase()} ${config.url}`);
+            if (config.url === '/api/auth/extension-session' && calls.length === 1) {
+                const response = makeResponse(config, 401, {
+                    success: false,
+                    data: null,
+                    error: { code: 'UNAUTHORIZED', message: 'Authentication is required.' }
+                });
+                throw new AxiosError('Unauthorized', 'ERR_BAD_REQUEST', config, null, response);
+            }
+            if (config.url === '/api/auth/refresh') {
+                return makeResponse(config, 200, {
+                    success: true,
+                    data: {
+                        accessToken: 'new-access-token',
+                        refreshToken: 'new-refresh-token',
+                        tokenType: 'Bearer',
+                        expiresIn: 1800,
+                        user: {
+                            id: 1,
+                            email: 'user@example.com',
+                            name: 'Hong Gil Dong',
+                            nickname: 'Gil Dong',
+                            profileCompleted: true
+                        }
+                    },
+                    error: null
+                });
+            }
+            return makeResponse(config, 200, {
+                success: true,
+                data: {
+                    accessToken: 'extension-access-token',
+                    refreshToken: 'extension-refresh-token',
+                    tokenType: 'Bearer',
+                    expiresIn: 1800,
+                    user: {
+                        id: 1,
+                        email: 'user@example.com',
+                        name: 'Hong Gil Dong',
+                        nickname: 'Gil Dong',
+                        profileCompleted: true
+                    }
+                },
+                error: null
+            });
+        };
+        defaultHttpClient.defaults.adapter = adapter;
+        const response = await defaultHttpClient.post('/api/auth/extension-session');
+        expect(response.data.data.accessToken).toBe('extension-access-token');
+        expect(getAccessToken()).toBe('new-access-token');
+        expect(calls).toEqual([
+            'POST /api/auth/extension-session',
+            'POST /api/auth/refresh',
+            'POST /api/auth/extension-session'
+        ]);
+    });
     it('AUTH-005/AUTH-007: clears the local session when refresh token reuse fails', async () => {
         saveAuthSession({
             accessToken: 'expired-access-token',

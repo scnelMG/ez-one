@@ -18,6 +18,10 @@ describe('extension popup markup', () => {
         expect(featurePanel).toContain('서류 정보 입력하기');
         expect(featurePanel).toContain('id="job-save-mode-button"');
         expect(featurePanel).toContain('id="document-input-mode-button"');
+        expect(featurePanel).toContain('class="mode-icon"');
+        expect(featurePanel).not.toContain('채용공고');
+        expect(featurePanel).not.toContain('서류입력');
+        expect(featurePanel).not.toContain('작업 선택');
         expect(featurePanel).not.toContain('mode-card active');
         expect(featurePanel).not.toContain('disabled aria-disabled="true"');
     });
@@ -36,8 +40,17 @@ describe('extension popup markup', () => {
         expect(markup).toContain('회사');
         expect(markup).toContain('공고');
         expect(markup).toContain('마감');
+        expect(markup).toContain('회사, 공고명, 마감일과 직무를 확인하세요.');
         expect(markup).toContain('선택한 공고 장바구니에 담기');
+        expect(markup).toContain('id="reload-preview-button"');
+        expect(markup).toContain('현재 공고 다시 읽기');
         expect(markup).toContain('장바구니에 담았습니다');
+        expect(markup).toContain('id="save-another-button"');
+        expect(markup).toContain('현재 열린 공고 읽기');
+        expect(markup).toContain('다른 공고를 열면 자동으로 다시 읽습니다.');
+        expect(markup).not.toContain('저장 전 확인');
+        expect(markup).not.toContain('저장 완료');
+        expect(markup).not.toMatch(/<span class="section-kicker">/);
         expect(markup).not.toMatch(/[�]/);
         expect(markup).not.toMatch(/[?][가-힣]?/);
         expect(markup).not.toMatch(/>[^<]*\/(?:h1|h2|strong|button)>/);
@@ -52,7 +65,16 @@ describe('extension popup markup', () => {
 
     it('EXT-005: shows whether essay questions were collected for the selected role', () => {
         expect(markup).toContain('id="essay-question-status"');
-        expect(markup).toContain('id="essay-questions-input"');
+        expect(markup).toContain('id="essay-question-list"');
+        expect(markup).toContain('가져온 문항 개수만큼');
+        expect(markup).not.toContain('선택 직무 기준');
+        expect(markup).not.toContain('id="essay-questions-input"');
+    });
+
+    it('makes long role lists understandable before selection', () => {
+        expect(markup).toContain('id="role-count"');
+        expect(markup).toContain('직무를 선택하면 해당 직무의 자소서 문항을 확인합니다.');
+        expect(markup).toContain('class="action-stack"');
     });
 
     it('keeps internal requirement ids out of user-facing popup copy', () => {

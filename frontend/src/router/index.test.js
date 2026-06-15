@@ -92,6 +92,21 @@ describe('router', () => {
         await router.push('/login');
         expect(router.currentRoute.value.name).toBe('main');
     });
+    it('keeps extension login redirects on the extension connect page even when onboarding is pending', async () => {
+        localStorage.setItem('ezone.accessToken', 'test-token');
+        localStorage.setItem('ezone.currentUser', JSON.stringify({
+            id: 1,
+            email: 'user@example.com',
+            name: 'Hong Gil Dong',
+            nickname: 'Gil Dong',
+            profileCompleted: false,
+            onboardingRequired: true
+        }));
+        await router.push('/login?redirect=%2Fextension%2Fconnect%3FsourceUrl%3Dhttps%253A%252F%252Fwww.jasoseol.com%252Frecruit%252F1%26sourceTabId%3D42');
+        expect(router.currentRoute.value.name).toBe('extension-connect');
+        expect(router.currentRoute.value.query.sourceUrl).toBe('https://www.jasoseol.com/recruit/1');
+        expect(router.currentRoute.value.query.sourceTabId).toBe('42');
+    });
     it('sends authenticated users from extension login redirect to the extension connect page', async () => {
         localStorage.setItem('ezone.accessToken', 'test-token');
         localStorage.setItem('ezone.currentUser', JSON.stringify({

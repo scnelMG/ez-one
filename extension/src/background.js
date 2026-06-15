@@ -33,10 +33,26 @@ chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => 
         tabs: chrome.tabs,
         senderTabId: sender.tab?.id
     })
-        .then((accepted) => sendResponse({ accepted }))
+        .then((accepted) => {
+        sendResponse({ accepted });
+        if (accepted) {
+            closeAuthTabAfterResponse(chrome.tabs, sender.tab?.id, message?.sourceTabId);
+        }
+    })
         .catch((error) => sendResponse({
         accepted: false,
         message: error instanceof Error ? error.message : 'Auth session could not be stored.'
     }));
     return true;
 });
+
+function closeAuthTabAfterResponse(tabs, senderTabId, sourceTabId) {
+    if (!Number.isInteger(senderTabId) || senderTabId <= 0 || String(senderTabId) === String(sourceTabId)) {
+        return;
+    }
+    setTimeout(() => {
+        tabs.remove(senderTabId).catch(() => {
+            // The user may close the auth tab before cleanup runs.
+        });
+    }, 120);
+}

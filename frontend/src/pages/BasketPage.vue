@@ -209,7 +209,7 @@
               data-testid="inline-company"
               name="companyName"
               autocomplete="organization"
-              placeholder="+ 회사명"
+              placeholder="회사명"
               required
             />
             <input

@@ -21,4 +21,12 @@ describe('extension background in-page panel behavior', () => {
         expect(backgroundScript).toContain("url.protocol === 'http:' || url.protocol === 'https:'");
         expect(backgroundScript).toContain('canInjectPanel(tab)');
     });
+
+    it('responds to the web auth handoff before closing the temporary login tab', () => {
+        expect(backgroundScript).toContain('sendResponse({ accepted });');
+        expect(backgroundScript).toContain('closeAuthTabAfterResponse(chrome.tabs, sender.tab?.id, message?.sourceTabId);');
+        expect(backgroundScript).toContain('function closeAuthTabAfterResponse');
+        expect(backgroundScript).toContain('setTimeout(() =>');
+        expect(backgroundScript).toContain('tabs.remove(senderTabId)');
+    });
 });

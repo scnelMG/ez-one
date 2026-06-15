@@ -1,14 +1,23 @@
 const KOREAN_ROLE_LABELS = ['\uBAA8\uC9D1 \uC9C1\uBB34', '\uBAA8\uC9D1 \uBD80\uBB38', '\uC9C0\uC6D0 \uBD84\uC57C'];
 const KOREAN_ESSAY_LABEL = '\uC790\uAE30\uC18C\uAC1C\uC11C';
+const KOREAN_SHORT_ESSAY_LABEL = '\uC790\uC18C\uC11C';
 const KOREAN_ESSAY_WRITE = '\uC790\uAE30\uC18C\uAC1C\uC11C \uC4F0\uAE30';
 const KOREAN_ESSAY_CREATE = '\uC790\uAE30\uC18C\uAC1C\uC11C \uC791\uC131';
+const KOREAN_ESSAY_QUESTION_VIEW = '\uC790\uC18C\uC11C \uBB38\uD56D \uBCF4\uAE30';
+const KOREAN_ESSAY_QUESTION_LABEL = '\uC790\uC18C\uC11C \uBB38\uD56D';
+const KOREAN_ESSAY_LATER_ADD = '\uB098\uC911\uC5D0 \uC4F8 \uC790\uAE30\uC18C\uAC1C\uC11C\uB85C \uCD94\uAC00';
 const KOREAN_COMPANY_ICON = '\uAE30\uC5C5 \uC544\uC774\uCF58';
+const JOB_EXTRACTOR_VERSION = '2026-06-12-role-essay-v11';
 
 export function extractJobPosting(documentRef = document, sourceUrl = documentRef.location.href) {
+    if (isPlainJasoseolRecruitListUrl(sourceUrl)) {
+        return emptyJobPosting(sourceUrl);
+    }
     const postingRoot = findPostingRoot(documentRef, sourceUrl);
     const jasoseolData = extractJasoseolPageData(documentRef);
     const roleOptions = extractRoleOptions(postingRoot, jasoseolData);
     const roleEssayQuestions = extractRoleEssayQuestions(postingRoot, roleOptions, documentRef);
+    const essayQuestionAvailability = normalizeEssayQuestionAvailability(documentRef.__ezOneEssayQuestionAvailability);
     const essayQuestions = resolveDefaultEssayQuestions(roleOptions, roleEssayQuestions, postingRoot);
     const title = cleanText(postingRoot.querySelector('[data-ezone-title]')?.textContent) ||
         cleanText(postingRoot.querySelector('h1')?.textContent) ||
@@ -22,7 +31,22 @@ export function extractJobPosting(documentRef = document, sourceUrl = documentRe
         logoUrl: extractLogoUrl(postingRoot, sourceUrl) || extractLogoUrl(documentRef, sourceUrl),
         roleOptions,
         essayQuestions,
-        roleEssayQuestions
+        roleEssayQuestions,
+        essayQuestionAvailability
+    };
+}
+
+function emptyJobPosting(sourceUrl) {
+    return {
+        companyName: null,
+        positionTitle: null,
+        deadlineLabel: null,
+        sourceUrl,
+        logoUrl: null,
+        roleOptions: [],
+        essayQuestions: [],
+        roleEssayQuestions: {},
+        essayQuestionAvailability: {}
     };
 }
 
@@ -42,27 +66,38 @@ function extractCompanyName(documentRef, jasoseolData) {
 
 async function revealEssayQuestions(documentRef, options = {}) {
     const hoverDelayMs = options.hoverDelayMs ?? 50;
+    const essayQuestionTimeoutMs = options.essayQuestionTimeoutMs ?? 500;
     const maxEssayTriggers = options.maxEssayTriggers ?? 12;
     const targetRoles = Array.isArray(options.targetRoles)
         ? options.targetRoles.map(cleanText).filter(Boolean)
         : [];
     const roleEssayQuestions = {};
-    const candidates = findEssayTriggerCandidates(documentRef)
+    const essayQuestionAvailability = {};
+    const allCandidates = findEssayTriggerCandidates(documentRef);
+    const candidates = allCandidates
         .filter((candidate) => matchesTargetRole(extractRoleFromEssayTrigger(candidate), targetRoles))
         .slice(0, maxEssayTriggers);
+    const hasEssaySignal = hasPotentialEssaySignal(documentRef);
+    if (targetRoles.length > 0 && allCandidates.length === 0 && !hasEssaySignal) {
+        targetRoles.forEach((role) => {
+            essayQuestionAvailability[role] = 'none';
+        });
+    }
     for (const candidate of candidates) {
-        const role = extractRoleFromEssayTrigger(candidate);
-        dispatchHoverEvents(candidate, documentRef);
-        if (hoverDelayMs > 0) {
-            await delay(hoverDelayMs);
-        }
-        const questions = extractEssayQuestions(documentRef);
+        const extractedRole = extractRoleFromEssayTrigger(candidate);
+        const role = resolveMatchedTargetRole(extractedRole, targetRoles) ?? extractedRole;
+        dispatchEssayHoverEvents(candidate, documentRef);
+        const questions = await waitForEssayQuestions(documentRef, hoverDelayMs, essayQuestionTimeoutMs);
         if (role && questions.length > 0) {
             roleEssayQuestions[role] = questions;
+            essayQuestionAvailability[role] = 'found';
         }
     }
     if (Object.keys(roleEssayQuestions).length > 0) {
         documentRef.__ezOneRoleEssayQuestions = roleEssayQuestions;
+    }
+    if (Object.keys(essayQuestionAvailability).length > 0 || (targetRoles.length > 0 && allCandidates.length === 0)) {
+        documentRef.__ezOneEssayQuestionAvailability = essayQuestionAvailability;
     }
 }
 
@@ -70,8 +105,43 @@ function matchesTargetRole(role, targetRoles) {
     if (targetRoles.length === 0) {
         return true;
     }
+    return Boolean(resolveMatchedTargetRole(role, targetRoles));
+}
+
+function resolveMatchedTargetRole(role, targetRoles) {
     const cleanRole = cleanText(role);
-    return Boolean(cleanRole && targetRoles.includes(cleanRole));
+    if (!cleanRole || targetRoles.length === 0) {
+        return null;
+    }
+    return targetRoles.find((targetRole) => roleTextsMatch(cleanRole, targetRole)) ?? null;
+}
+
+function roleTextsMatch(left, right) {
+    const cleanLeft = cleanText(left);
+    const cleanRight = cleanText(right);
+    if (!cleanLeft || !cleanRight) {
+        return false;
+    }
+    if (cleanLeft === cleanRight) {
+        return true;
+    }
+    const normalizedLeft = normalizeRoleForMatch(cleanLeft);
+    const normalizedRight = normalizeRoleForMatch(cleanRight);
+    return normalizedLeft === normalizedRight ||
+        normalizedLeft.includes(normalizedRight) ||
+        normalizedRight.includes(normalizedLeft);
+}
+
+function normalizeRoleForMatch(value) {
+    return (cleanText(value) ?? '')
+        .normalize('NFKC')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/^(?:신입\s*\/\s*경력|신입·경력|신입∕경력|계약직|인턴|신입|경력)\s*(?:·|-|\/)?\s*/u, '')
+        .replace(/^\[[^\]]+\]\s*/, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
 }
 
 function findEssayTriggerCandidates(documentRef) {
@@ -81,15 +151,44 @@ function findEssayTriggerCandidates(documentRef) {
         return controls.length > 0 ? controls : [row];
     });
     return uniqueElements([...directTriggers, ...roleRowTriggers]).filter((item) => {
-        const text = cleanText(item.textContent) ?? '';
-        return text.includes(KOREAN_ESSAY_WRITE) ||
-            text.includes(KOREAN_ESSAY_CREATE) ||
-            (text.includes(KOREAN_ESSAY_LABEL) && /작성|쓰기|문항|보기/.test(text));
+        return hasEssayActionText(getElementSearchText(item));
     });
+}
+
+function getElementSearchText(element) {
+    return [
+        element?.textContent,
+        element?.getAttribute?.('aria-label'),
+        element?.getAttribute?.('title'),
+        element?.getAttribute?.('value')
+    ].map((value) => cleanText(value))
+        .filter(Boolean)
+        .join(' ');
+}
+
+function hasEssayActionText(text) {
+    const value = cleanText(text) ?? '';
+    return value.includes(KOREAN_ESSAY_WRITE) ||
+        value.includes(KOREAN_ESSAY_CREATE) ||
+        value.includes(KOREAN_ESSAY_QUESTION_VIEW) ||
+        value.includes(KOREAN_ESSAY_LATER_ADD) ||
+        ((value.includes(KOREAN_ESSAY_LABEL) || value.includes(KOREAN_SHORT_ESSAY_LABEL)) &&
+            /\uC791\uC131|\uC4F0\uAE30|\uBB38\uD56D|\uBCF4\uAE30|\uCD94\uAC00/.test(value));
+}
+
+function hasPotentialEssaySignal(documentRef) {
+    return Array.from(documentRef.querySelectorAll('button, a, [role="button"], tr, li'))
+        .some((item) => hasEssayActionText(getElementSearchText(item)));
 }
 
 function uniqueElements(elements) {
     return Array.from(new Set(elements));
+}
+
+function dispatchEssayHoverEvents(candidate, documentRef) {
+    const roleRow = candidate.closest?.('tr, li');
+    uniqueElements([candidate, roleRow].filter(Boolean))
+        .forEach((element) => dispatchHoverEvents(element, documentRef));
 }
 
 function dispatchHoverEvents(element, documentRef) {
@@ -113,13 +212,26 @@ function delay(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function waitForEssayQuestions(documentRef, initialDelayMs, timeoutMs) {
+    const startedAt = Date.now();
+    if (initialDelayMs > 0) {
+        await delay(initialDelayMs);
+    }
+    let questions = extractEssayQuestions(documentRef);
+    while (questions.length === 0 && Date.now() - startedAt < timeoutMs) {
+        await delay(50);
+        questions = extractEssayQuestions(documentRef);
+    }
+    return questions;
+}
+
 function extractDeadlineLabel(documentRef, jasoseolData) {
     const datetime = documentRef.querySelector('time')?.getAttribute('datetime');
     return normalizeDeadlineLabel(cleanText(documentRef.querySelector('[data-ezone-deadline]')?.textContent)) ||
+        normalizeDeadlineLabel(jasoseolData.deadlineLabel) ||
         normalizeDeadlineLabel(cleanText(documentRef.querySelector('time')?.textContent)) ||
         normalizeDeadlineLabel(datetime) ||
         extractDeadlineText(documentRef) ||
-        normalizeDeadlineLabel(jasoseolData.deadlineLabel) ||
         null;
 }
 
@@ -140,7 +252,7 @@ function extractRoleOptions(documentRef, jasoseolData) {
     const roleSection = findSection(documentRef, [...KOREAN_ROLE_LABELS, 'Recruiting roles']) ??
         findLikelyRoleSection(documentRef);
     const roleTexts = roleSection
-        ? Array.from(roleSection.querySelectorAll('label, li')).map((item) => cleanText(item.textContent))
+        ? Array.from(roleSection.querySelectorAll('label, li')).map((item) => extractRoleFromRoleRow(item))
         : [];
     return unique(roleTexts.filter((value) => Boolean(value) && !isActionText(value)));
 }
@@ -148,11 +260,16 @@ function extractRoleOptions(documentRef, jasoseolData) {
 function extractEssayQuestions(documentRef) {
     const questionSection = isEssayQuestionSection(documentRef)
         ? documentRef
-        : findSection(documentRef, [KOREAN_ESSAY_LABEL, 'Essay']);
+        : findSection(documentRef, [KOREAN_ESSAY_LABEL, KOREAN_ESSAY_QUESTION_LABEL, 'Essay']) ??
+            findEssayQuestionLayer(documentRef);
     if (!questionSection) {
         return [];
     }
-    return Array.from(questionSection.querySelectorAll('article, li')).flatMap((item) => {
+    const structuredQuestions = Array.from(questionSection.querySelectorAll('article, li')).flatMap((item) => {
+        const compactQuestions = splitCompactEssayQuestionsV2(cleanText(item.textContent));
+        if (compactQuestions.length > 0) {
+            return compactQuestions;
+        }
         const prompt = cleanText(item.querySelector('p, strong, h3')?.textContent);
         if (!prompt) {
             return [];
@@ -162,13 +279,59 @@ function extractEssayQuestions(documentRef) {
             maxLength: extractMaxLength(cleanText(item.textContent))
         }];
     });
+    if (structuredQuestions.length > 0) {
+        return structuredQuestions;
+    }
+    return splitCompactEssayQuestionsV2(cleanText(questionSection.textContent));
 }
 
 function isEssayQuestionSection(element) {
     return Boolean(element?.matches?.('section, article, div, [role="region"]') &&
         (element.getAttribute('aria-label')?.includes(KOREAN_ESSAY_LABEL) ||
+            element.getAttribute('aria-label')?.includes(KOREAN_ESSAY_QUESTION_LABEL) ||
             element.hasAttribute('data-ezone-essay-role') ||
-            cleanText(element.querySelector('h2, h3')?.textContent)?.includes(KOREAN_ESSAY_LABEL)));
+            hasEssayQuestionLabel(cleanText(element.querySelector('h2, h3')?.textContent))));
+}
+
+function findEssayQuestionLayer(documentRef) {
+    const layerSelector = [
+        '[role="dialog"]',
+        '[aria-label]',
+        '[class*="tooltip"]',
+        '[class*="Tooltip"]',
+        '[class*="popover"]',
+        '[class*="Popover"]',
+        '[class*="z-above"]',
+        'li [class*="absolute"]',
+        'tr [class*="absolute"]',
+        'body > div',
+        'body > section',
+        'body > article'
+    ].join(', ');
+    return Array.from(documentRef.querySelectorAll(layerSelector))
+        .find((candidate) => {
+            const labelText = [
+                candidate.getAttribute('aria-label'),
+                cleanText(candidate.querySelector('h2, h3')?.textContent)
+            ].filter(Boolean).join(' ');
+            const text = cleanText(candidate.textContent) ?? '';
+            const isPlainPortalLayer = candidate.parentElement === candidate.ownerDocument?.body && text.length <= 3000;
+            const isFloatingLayer = candidate.matches('[role="dialog"], [class*="tooltip"], [class*="Tooltip"], [class*="popover"], [class*="Popover"]');
+            const isInlineFloatingLayer = candidate.matches('[class*="z-above"], li [class*="absolute"], tr [class*="absolute"]') &&
+                text.length <= 3000;
+            const looksLikeRoleList = /\d+\s*명\s*작성/.test(text) && text.includes(KOREAN_ESSAY_QUESTION_VIEW);
+            const looksLikeCompactQuestions = looksLikeCompactEssayTextV2(text);
+            return (candidate.querySelector('article, li') || looksLikeCompactQuestions) &&
+                (hasEssayQuestionLabel(labelText) ||
+                    (isFloatingLayer && (hasEssayQuestionLabel(text) || looksLikeCompactQuestions)) ||
+                    (isPlainPortalLayer && looksLikeCompactQuestions) ||
+                    (isInlineFloatingLayer && looksLikeCompactQuestions)) &&
+                (isFloatingLayer || isPlainPortalLayer || isInlineFloatingLayer || !looksLikeRoleList);
+        }) ?? null;
+}
+
+function hasEssayQuestionLabel(text) {
+    return Boolean(text?.includes(KOREAN_ESSAY_LABEL) || text?.includes(KOREAN_ESSAY_QUESTION_LABEL));
 }
 
 function extractRoleEssayQuestions(postingRoot, roleOptions = [], documentRef = postingRoot) {
@@ -192,7 +355,7 @@ function extractRoleEssayQuestions(postingRoot, roleOptions = [], documentRef = 
 
     const rows = getRoleRowCandidates(postingRoot);
     const mapped = rows.reduce((accumulator, row) => {
-        const role = parseRoleFromRowText(cleanText(row.textContent));
+        const role = extractRoleFromRoleRow(row);
         const questions = extractEssayQuestions(row);
         if (role && questions.length > 0) {
             accumulator[role] = questions;
@@ -226,6 +389,19 @@ function normalizeRoleEssayQuestionMap(source) {
     }, {});
 }
 
+function normalizeEssayQuestionAvailability(source) {
+    if (!source || typeof source !== 'object') {
+        return {};
+    }
+    return Object.entries(source).reduce((accumulator, [role, status]) => {
+        const cleanRole = cleanText(role);
+        if (cleanRole && (status === 'found' || status === 'none')) {
+            accumulator[cleanRole] = status;
+        }
+        return accumulator;
+    }, {});
+}
+
 function resolveDefaultEssayQuestions(roleOptions, roleEssayQuestions, postingRoot) {
     const firstRoleQuestions = roleOptions
         .map((role) => roleEssayQuestions[role])
@@ -236,12 +412,7 @@ function resolveDefaultEssayQuestions(roleOptions, roleEssayQuestions, postingRo
 function extractRoleFromEssayTrigger(candidate) {
     const row = candidate.closest('tr, li');
     if (row) {
-        const cells = Array.from(row.querySelectorAll('td, th'))
-            .map((cell) => cleanText(cell.textContent))
-            .filter(Boolean);
-        return cells.length >= 2
-            ? cells.find(isRoleText) ?? parseRoleFromRowText(cleanText(row.textContent))
-            : parseRoleFromRowText(cleanText(row.textContent));
+        return extractRoleFromRoleRow(row);
     }
     return null;
 }
@@ -350,6 +521,19 @@ function isJasoseolRecruitUrl(sourceUrl) {
     }
 }
 
+function isPlainJasoseolRecruitListUrl(sourceUrl) {
+    try {
+        const url = new URL(sourceUrl);
+        return url.hostname.endsWith('jasoseol.com') &&
+            url.pathname === '/recruit' &&
+            !url.searchParams.has('ec') &&
+            !url.searchParams.has('campaignid');
+    }
+    catch {
+        return false;
+    }
+}
+
 function hasRecruitRoleTable(root) {
     return getRoleRowCandidates(root).some((row) => /\d+\s*명\s*작성/.test(cleanText(row.textContent) ?? '') ||
         (cleanText(row.textContent) ?? '').includes(KOREAN_ESSAY_LABEL));
@@ -408,32 +592,99 @@ function normalizeDeadlineLabel(text) {
     if (!text) {
         return null;
     }
-    return extractDeadlineEnd(text) || text;
+    const deadline = extractDeadlineEnd(text) || text;
+    return formatDeadlineDateOnly(deadline) || deadline;
+}
+
+function formatDeadlineDateOnly(text) {
+    if (!text) {
+        return null;
+    }
+    const isoMatch = text.match(/(20\d{2})[-.](\d{1,2})[-.](\d{1,2})/);
+    const koreanMatch = text.match(/(20\d{2})\s*\uB144\s*(\d{1,2})\s*\uC6D4\s*(\d{1,2})\s*\uC77C/);
+    const match = isoMatch ?? koreanMatch;
+    if (!match) {
+        return null;
+    }
+    return [
+        match[1],
+        match[2].padStart(2, '0'),
+        match[3].padStart(2, '0')
+    ].join('.');
 }
 
 function extractModalTableRoles(documentRef) {
     return unique(getRoleRowCandidates(documentRef).flatMap((row) => {
-        const cells = Array.from(row.querySelectorAll('td, th'))
-            .map((cell) => cleanText(cell.textContent))
-            .filter(Boolean);
-        const role = cells.length >= 2
-            ? cells.find(isRoleText)
-            : parseRoleFromRowText(cleanText(row.textContent));
+        const role = extractRoleFromRoleRow(row);
         return role ? [role] : [];
     }));
+}
+
+function extractRoleFromRoleRow(row) {
+    const cells = Array.from(row.querySelectorAll('td, th'))
+        .map((cell) => cleanText(cell.textContent))
+        .filter(Boolean);
+    const rowText = cleanText(row.textContent);
+    if (cells.length >= 2) {
+        const employmentType = extractEmploymentTypeFromCells(cells) ?? extractEmploymentTypeFromText(rowText);
+        const role = cells.find(isRoleText) ?? parseRoleFromRowText(rowText);
+        return formatRoleOption(role, employmentType);
+    }
+    const explicit = Array.from(row.querySelectorAll('[data-ezone-role], strong, b'))
+        .map((item) => cleanText(item.textContent))
+        .find(isRoleText);
+    const employmentType = extractEmploymentTypeFromText(rowText);
+    return formatRoleOption(explicit ?? parseRoleFromRowText(rowText), employmentType);
+}
+
+function formatRoleOption(role, employmentType) {
+    const cleanRole = cleanText(role);
+    const cleanEmploymentType = normalizeEmploymentType(employmentType);
+    if (!cleanRole) {
+        return null;
+    }
+    if (!cleanEmploymentType || cleanRole.startsWith(`${cleanEmploymentType} · `)) {
+        return cleanRole;
+    }
+    return `${cleanEmploymentType} · ${cleanRole}`;
+}
+
+function extractEmploymentTypeFromCells(cells) {
+    return cells.map(extractEmploymentTypeFromText).find(Boolean) ?? null;
+}
+
+function extractEmploymentTypeFromText(text) {
+    const value = cleanText(text) ?? '';
+    const exact = normalizeEmploymentType(value);
+    if (exact) {
+        return exact;
+    }
+    return normalizeEmploymentType(value.match(/^(신입\s*\/\s*경력|신입·경력|신입∕경력|계약직|인턴|신입|경력)\s*/u)?.[1]);
+}
+
+function normalizeEmploymentType(text) {
+    const value = (cleanText(text) ?? '').normalize('NFKC').replace(/\s+/g, '');
+    if (/^신입\/경력$|^신입·경력$|^신입∕경력$/u.test(value)) {
+        return '신입/경력';
+    }
+    if (value === '신입' || value === '경력' || value === '인턴' || value === '계약직') {
+        return value;
+    }
+    return null;
 }
 
 function getRoleRowCandidates(root) {
     return Array.from(root.querySelectorAll('tr, li')).filter((row) => {
         const text = cleanText(row.textContent) ?? '';
-        return /\d+\s*명\s*작성/.test(text) || text.includes(KOREAN_ESSAY_WRITE);
+        return /\d+\s*명\s*작성/.test(text) ||
+            hasEssayActionText(getElementSearchText(row));
     });
 }
 
 function isRoleText(text) {
     return Boolean(text) &&
-        text.length > 3 &&
-        !/^(인턴|신입|경력|신입\/경력)$/.test(text) &&
+        text.length >= 2 &&
+        !isEmploymentTypeText(text) &&
         !/\d+\s*명\s*작성/.test(text) &&
         !isActionText(text);
 }
@@ -442,25 +693,109 @@ function parseRoleFromRowText(text) {
     if (!text) {
         return null;
     }
-    const cleaned = text
+    const cleaned = stripEssayQuestionTail(text)
         .replace(KOREAN_ESSAY_WRITE, '')
+        .replace(KOREAN_ESSAY_CREATE, '')
+        .replace(KOREAN_ESSAY_QUESTION_VIEW, '')
+        .replace(/\uB098\uC911\uC5D0\s*\uC4F8\s*(?:\uC790\uAE30\uC18C\uAC1C\uC11C|\uC790\uC18C\uC11C)\uB85C\s*\uCD94\uAC00.*$/g, '')
+        .replace(/\d+\s*\uBA85\s*\uC791\uC131/g, '')
         .replace(/\d+\s*명\s*작성/g, '')
-        .replace(/^(인턴|신입|경력|신입\/경력)\s*/, '')
+        .replace(/^(신입\s*\/\s*경력|신입·경력|신입∕경력|계약직|인턴|신입|경력)\s*/, '')
         .trim();
     return isRoleText(cleaned) ? cleaned : null;
 }
 
+function stripEssayQuestionTail(text) {
+    if (!text) {
+        return '';
+    }
+    const numberedEssayBoundary = text.search(/[·•ㆍ・]\s*\d{1,2}\.\s*/);
+    if (numberedEssayBoundary >= 0) {
+        return text.slice(0, numberedEssayBoundary);
+    }
+    const essayBoundary = text.search(/[·•ㆍ・][^·•ㆍ・]{8,}?(?:\d{2,5}\s*\uC790|\uC11C\uC220|\uAE30\uC220|\uC791\uC131|\uC124\uBA85|\uC18C\uAC1C|\uAC15\uC810|\uC9C0\uC6D0|\uACBD\uD5D8)/);
+    return essayBoundary >= 0 ? text.slice(0, essayBoundary) : text;
+}
+
 function isActionText(text) {
-    return text.includes(KOREAN_ESSAY_WRITE) ||
+    return hasEssayActionText(text) ||
         /\uC81C\uCD9C\s*\uC11C\uB958\s*\uBC1B\uAE30|\uACF5\uACE0\s*\uACF5\uC720|\uC990\uACA8\uCC3E\uAE30|\uC624\uB958\s*\uC2E0\uACE0|\uCC44\uC6A9\s*\uC0AC\uC774\uD2B8/.test(text);
+}
+
+function isEmploymentTypeText(text) {
+    return Boolean(normalizeEmploymentType(text));
 }
 
 function extractMaxLength(text) {
     if (!text) {
         return null;
     }
-    const match = text.match(/(\d{2,5})/);
-    return match ? Number(match[1]) : null;
+    const match = text.match(/\((\d{2,5})\s*자\)|(\d{2,5})\s*자/);
+    if (match) {
+        return Number(match[1] ?? match[2]);
+    }
+    const fallback = text.match(/(\d{2,5})/);
+    return fallback ? Number(fallback[1]) : null;
+}
+
+function looksLikeCompactEssayText(text) {
+    return Boolean(text && /(?:^|\s|·|•)\d{1,2}\.\s*\S/.test(text));
+}
+
+function splitCompactEssayQuestions(text) {
+    if (!looksLikeCompactEssayText(text)) {
+        return [];
+    }
+    const normalized = text
+        .replace(/나중에\s*쓸\s*(?:자기소개서|자소서)로\s*추가.*/g, ' ')
+        .replaceAll(KOREAN_ESSAY_QUESTION_LABEL, ' ')
+        .replaceAll(KOREAN_ESSAY_LABEL, ' ')
+        .replaceAll(KOREAN_SHORT_ESSAY_LABEL, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    return normalized
+        .split(/(?:^|[·•]\s*)\d{1,2}\.\s*/)
+        .slice(1)
+        .map((chunk) => {
+            const cleanChunk = chunk.trim();
+            const maxLength = extractMaxLength(cleanChunk);
+            const prompt = cleanText(cleanChunk
+                .replace(/\(\d{2,5}\s*자\)/g, '')
+                .replace(/\d{2,5}\s*자/g, ''));
+            return prompt ? { prompt, maxLength } : null;
+        })
+        .filter(Boolean);
+}
+
+function looksLikeCompactEssayTextV2(text) {
+    return Boolean(text && (/[·•ㆍ・]\s*\S/.test(text) || /(?:^|\s)\d{1,2}\.\s*\S/.test(text)));
+}
+
+function splitCompactEssayQuestionsV2(text) {
+    if (!looksLikeCompactEssayTextV2(text)) {
+        return [];
+    }
+    const normalized = text
+        .replace(/\uB098\uC911\uC5D0\s*\uC4F8\s*(?:\uC790\uAE30\uC18C\uAC1C\uC11C|\uC790\uC18C\uC11C)\uB85C\s*\uCD94\uAC00.*$/g, ' ')
+        .replaceAll(KOREAN_ESSAY_QUESTION_LABEL, ' ')
+        .replaceAll(KOREAN_ESSAY_LABEL, ' ')
+        .replaceAll(KOREAN_SHORT_ESSAY_LABEL, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    const chunks = /[·•ㆍ・]/.test(normalized)
+        ? normalized.split(/\s*[·•ㆍ・]\s*/).slice(1)
+        : normalized.split(/(?:^|\s)\d{1,2}\.\s*/).slice(1);
+    return chunks
+        .map((chunk) => {
+            const cleanChunk = chunk.replace(/^\d{1,2}\.\s*/, '').trim();
+            const maxLength = extractMaxLength(cleanChunk);
+            const prompt = cleanText(cleanChunk
+                .replace(/\(\s*\d{2,5}\s*\uC790\s*(?:\uC774\uB0B4|\uB0B4\uC678)?\s*\)/g, '')
+                .replace(/\s*\(?\d{2,5}\s*\uC790\s*(?:\uC774\uB0B4|\uB0B4\uC678)?\)?\s*$/g, '')
+                .replace(/\s+/g, ' '));
+            return prompt ? { prompt, maxLength } : null;
+        })
+        .filter(Boolean);
 }
 
 function cleanText(value) {
@@ -490,7 +825,10 @@ function extractJasoseolPageData(documentRef) {
             companyName: readString(company, 'name'),
             deadlineLabel: readString(company, 'end_time'),
             roleOptions: unique(employments
-                .map((employment) => readString(asRecord(employment), 'field'))
+                .map((employment) => {
+                    const record = asRecord(employment);
+                    return formatRoleOption(readString(record, 'field'), readEmploymentType(record));
+                })
                 .filter(Boolean))
         };
     }
@@ -513,6 +851,21 @@ function readString(source, key) {
     return typeof value === 'string' ? cleanText(value) : null;
 }
 
+function readEmploymentType(source) {
+    return [
+        'employmentType',
+        'employment_type',
+        'careerType',
+        'career_type',
+        'career',
+        'type',
+        'jobType',
+        'job_type'
+    ].map((key) => readString(source, key))
+        .map(normalizeEmploymentType)
+        .find(Boolean) ?? null;
+}
+
 function asRecord(value) {
     return value && typeof value === 'object' ? value : null;
 }
@@ -523,6 +876,7 @@ window.ezOneExtractJobPosting = (options = {}) => {
     }
     return extractJobPosting(document, document.location.href);
 };
+window.ezOneJobExtractorVersion = JOB_EXTRACTOR_VERSION;
 if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage && !window.ezOneJobExtractorListenerReady) {
     window.ezOneJobExtractorListenerReady = true;
     chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {

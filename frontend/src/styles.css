@@ -7752,7 +7752,7 @@ li {
     minmax(170px, 1.12fr)
     minmax(170px, 1.2fr)
     minmax(116px, 0.72fr)
-    minmax(112px, 0.72fr)
+    minmax(148px, 0.82fr)
     minmax(126px, 0.74fr)
     minmax(108px, 0.62fr)
     44px;
@@ -7848,6 +7848,118 @@ li {
 
 .status-menu:has(.status-option-list) {
   z-index: 60;
+}
+
+.basket-title-row h2 {
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.basket-tools .ghost-button.small {
+  min-height: 34px;
+  border-color: #dbe3ee;
+  color: #334155;
+  font-size: 0.8rem;
+  font-weight: 850;
+  padding-inline: 14px;
+}
+
+.filter-bar.compact {
+  min-height: 44px;
+  gap: 7px;
+  padding: 8px 10px;
+}
+
+.filter-bar.compact .filter-chip {
+  min-height: 32px;
+  font-size: 0.78rem;
+  font-weight: 850;
+  padding-inline: 13px;
+}
+
+.filter-bar.compact .search-field {
+  min-height: 34px;
+  font-size: 0.84rem;
+  font-weight: 650;
+}
+
+.basket-data-head {
+  min-height: 44px;
+  color: #667085;
+  font-size: 0.78rem;
+  font-weight: 850;
+  letter-spacing: 0;
+}
+
+.basket-data-row {
+  min-height: 58px;
+  color: #344054;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.basket-data-row .job-main-link {
+  font-weight: 700;
+}
+
+.basket-data-row .company-cell strong {
+  color: #101828;
+  font-size: 0.9rem;
+  font-weight: 850;
+}
+
+.basket-data-row .status-tag,
+.basket-data-row .deadline-pill,
+.main-basket-row .deadline-pill {
+  min-height: 30px;
+  font-size: 0.78rem;
+  font-weight: 850;
+  white-space: nowrap;
+  min-width: max-content;
+  padding-inline: 14px;
+}
+
+.inline-create-row {
+  min-height: 54px;
+  background: #f8fafc;
+}
+
+.inline-create-row input {
+  min-height: 36px;
+  border-color: transparent;
+  background: #f8fafc;
+  color: #344054;
+  font-size: 0.84rem;
+  font-weight: 700;
+  padding: 0 8px;
+}
+
+.inline-create-row input:focus {
+  border-color: #c9bfff;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(109, 77, 255, 0.12);
+}
+
+.inline-create-row input::placeholder {
+  color: #667085;
+  font-weight: 800;
+}
+
+.inline-create-row .text-button {
+  min-height: 34px;
+  border-color: #d8dee8;
+  border-radius: 7px;
+  color: #344054;
+  font-size: 0.84rem;
+  font-weight: 850;
+  padding-inline: 15px;
+}
+
+.inline-placeholder {
+  color: #667085;
+  font-size: 0.84rem;
+  font-weight: 800;
 }
 
 .status-option-list {

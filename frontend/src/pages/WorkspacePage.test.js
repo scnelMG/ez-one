@@ -41,10 +41,13 @@ vi.mock('@/features/workspace/api/workspaceApi', () => ({
 const makeRouter = () => createRouter({
     history: createMemoryHistory(),
     routes: [
+        { path: '/', component: { template: '<div>main</div>' } },
         { path: '/workspaces/:workspaceId', component: WorkspacePage },
         { path: '/main', component: { template: '<div>main</div>' } },
         { path: '/basket', component: { template: '<div>basket</div>' } },
         { path: '/mypage', component: { template: '<div>mypage</div>' } },
+        { path: '/study', component: { template: '<div>study</div>' } },
+        { path: '/mypage/terms', component: { template: '<div>terms</div>' } },
         { path: '/recommendations', component: { template: '<div>recommendations</div>' } },
         { path: '/document-profile', component: { template: '<div>document profile</div>' } }
     ]
@@ -252,7 +255,7 @@ describe('WorkspacePage', () => {
             ['NEWS', '뉴스기사 게시판'],
             ['DART', 'DART 게시판'],
             ['TALENT_PROFILE', '인재상 게시판'],
-            ['AWARDS_PROJECTS', '서류 / 프로젝트'],
+            ['AWARDS_PROJECTS', '수상/프로젝트'],
             ['PROMPT', '프롬프트 게시판'],
             ['FREE_MEMO', '메모 게시판']
         ]) {
@@ -319,12 +322,10 @@ describe('WorkspacePage', () => {
         await wrapper.get('[data-testid="workspace-side-drawer"]').findAll('button').find((button) => button.text() === '+ 프롬프트 추가').trigger('click');
         const promptInputs = wrapper.get('[data-testid="workspace-side-drawer"]').findAll('input');
         await promptInputs.find((input) => input.attributes('placeholder') === '프롬프트 이름').setValue('지원동기 포인트 정리');
-        await promptInputs.find((input) => input.attributes('placeholder')?.includes('직접 입력')).setValue('지원동기');
-        await promptInputs.find((input) => input.attributes('placeholder') === '이 프롬프트를 언제 쓰는지').setValue('지원동기 정리');
+        await promptInputs.find((input) => input.attributes('placeholder') === '이 프롬프트를 언제·왜 쓰는지').setValue('지원동기 정리');
         await setEditorText(wrapper, 'prompt-body-editor', '> 기업 정보를 바탕으로 지원동기 키워드를 정리해줘.');
         await wrapper.get('[data-testid="workspace-side-drawer"]').findAll('button').find((button) => button.text() === '저장').trigger('click');
         expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('지원동기 포인트 정리');
-        await wrapper.get('[data-testid="workspace-side-drawer"]').findAll('button').find((button) => button.text() === '지원동기').trigger('click');
         expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('지원동기 정리');
 
         await wrapper.get('[data-testid="panel-trigger-AWARDS_PROJECTS"]').trigger('click');

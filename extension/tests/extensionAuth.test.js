@@ -55,7 +55,7 @@ describe('extensionAuth', () => {
             senderTabId: 99
         });
         expect(tabs.update).toHaveBeenCalledWith(42, { active: true });
-        expect(tabs.remove).toHaveBeenCalledWith(99);
+        expect(tabs.remove).not.toHaveBeenCalled();
     });
     it('rejects unrelated external messages', async () => {
         const storage = {

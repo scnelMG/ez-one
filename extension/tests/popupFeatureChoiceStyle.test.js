@@ -8,8 +8,11 @@ describe('extension popup feature choice styling', () => {
 
     it('presents feature choices as equal actions without a preselected purple card', () => {
         expect(modeCardSection).toContain('.mode-card::after');
-        expect(modeCardSection).toContain('min-height: 92px');
+        expect(modeCardSection).toContain('grid-template-columns: 32px minmax(0, 1fr)');
+        expect(modeCardSection).toContain('min-height: 82px');
+        expect(modeCardSection).toContain('.mode-icon');
+        expect(modeCardSection).toContain('.mode-copy');
+        expect(modeCardSection).toContain('background: var(--surface);');
         expect(modeCardSection).not.toContain('.mode-card.active');
-        expect(modeCardSection).not.toContain('background: var(--accent-soft);');
     });
 });

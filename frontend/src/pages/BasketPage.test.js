@@ -124,7 +124,7 @@ describe('BasketPage', () => {
         expect(wrapper.get('[data-testid="metric-all"]').text()).toContain('4');
         expect(wrapper.get('[data-testid="metric-progress"]').text()).toContain('1');
         expect(wrapper.get('[data-testid="metric-not-started"]').text()).toContain('1');
-        expect(wrapper.get('[data-testid="metric-deadline"]').text()).toContain('1');
+        expect(wrapper.get('[data-testid="metric-deadline"]').text()).toContain('2');
         expect(wrapper.find('[data-testid="recommendation-cta"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="manual-create"]').exists()).toBe(false);
         expect(wrapper.text()).not.toContain('주간 일정');

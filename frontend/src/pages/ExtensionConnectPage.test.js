@@ -79,6 +79,8 @@ describe('ExtensionConnectPage', () => {
         }, expect.any(Function));
         expect(mocks.issueExtensionSession).toHaveBeenCalled();
         expect(wrapper.text()).toContain('확장프로그램 연결이 완료되었습니다.');
+        expect(wrapper.text()).toContain('원래 공고 탭으로 돌아갑니다.');
+        expect(wrapper.text()).not.toContain('팝업을 다시 열어 주세요.');
     });
     it('EXT-003: uses the local unpacked extension id when VITE_EXTENSION_ID is not set', async () => {
         const sendMessage = vi.fn((_extensionId, _message, callback) => callback({ accepted: true }));
@@ -131,6 +133,30 @@ describe('ExtensionConnectPage', () => {
         await new Promise((resolve) => setTimeout(resolve));
         expect(replace).toHaveBeenCalledWith('https://jasoseol.com/?campaignid=15830248521');
     });
+    it('EXT-003: does not redirect the web login tab when the extension can focus the source tab', async () => {
+        vi.stubEnv('VITE_EXTENSION_ID', 'extension-id');
+        const replace = vi.fn();
+        vi.stubGlobal('location', { replace });
+        const sendMessage = vi.fn((_extensionId, _message, callback) => callback({ accepted: true }));
+        vi.stubGlobal('chrome', {
+            runtime: {
+                sendMessage
+            }
+        });
+        localStorage.setItem('ezone.accessToken', 'access-token');
+        mocks.routeQuery = {
+            sourceUrl: 'https://jasoseol.com/?campaignid=15830248521',
+            sourceTabId: '42'
+        };
+
+        mount(ExtensionConnectPage, {
+            global: {
+                stubs: ['RouterLink']
+            }
+        });
+        await new Promise((resolve) => setTimeout(resolve));
+        expect(replace).not.toHaveBeenCalled();
+    });
     it('EXT-003: asks the extension to focus the original posting tab after login', async () => {
         vi.stubEnv('VITE_EXTENSION_ID', 'extension-id');
         vi.stubGlobal('location', { replace: vi.fn() });
@@ -166,5 +192,19 @@ describe('ExtensionConnectPage', () => {
         });
         await new Promise((resolve) => setTimeout(resolve));
         expect(wrapper.text()).toContain('로그인 세션을 찾지 못했습니다.');
+    });
+    it('EXT-003: shows a friendly login retry message when extension session issuance is unauthorized', async () => {
+        vi.stubEnv('VITE_EXTENSION_ID', 'extension-id');
+        localStorage.setItem('ezone.accessToken', 'expired-access-token');
+        localStorage.setItem('ezone.refreshToken', 'expired-refresh-token');
+        mocks.issueExtensionSession.mockRejectedValue(new Error('Request failed with status code 401'));
+        const wrapper = mount(ExtensionConnectPage, {
+            global: {
+                stubs: ['RouterLink']
+            }
+        });
+        await new Promise((resolve) => setTimeout(resolve));
+        expect(wrapper.text()).toContain('로그인 시간이 만료되었습니다. 다시 로그인해 주세요.');
+        expect(wrapper.text()).not.toContain('Request failed with status code 401');
     });
 });

@@ -1,3 +1,5 @@
+const SERVER_UNAVAILABLE_MESSAGE = '\uC11C\uBC84\uC5D0 \uC5F0\uACB0\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. EZ-ONE \uC11C\uBC84\uAC00 \uCF1C\uC838 \uC788\uB294\uC9C0 \uD655\uC778\uD574 \uC8FC\uC138\uC694.';
+
 export function createExtensionJobApi({
     apiBaseUrl,
     getAccessToken,
@@ -25,7 +27,7 @@ async function request(client, path, payload, retrying = false) {
         },
         body: JSON.stringify(payload)
     });
-    const envelope = await response.json();
+    const envelope = await readEnvelope(response);
     if (response.status === 401 && !retrying) {
         const refreshed = await refreshExtensionSession(client);
         if (refreshed) {
@@ -48,7 +50,7 @@ async function refreshExtensionSession(client) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken })
     });
-    const envelope = await response.json();
+    const envelope = await readEnvelope(response);
     if (!response.ok || !envelope.success || !envelope.data?.accessToken || !envelope.data?.refreshToken) {
         await client.clearSession?.();
         throw new Error('로그인이 만료되었습니다. 다시 로그인해 주세요.');
@@ -71,4 +73,13 @@ function callFetch(client, url, init) {
         throw new Error('서버에 연결하지 못했습니다. EZ-ONE 서버가 켜져 있는지 확인해 주세요.');
     })
         .finally(() => clearTimeout(timeoutId));
+}
+
+async function readEnvelope(response) {
+    try {
+        return await response.json();
+    }
+    catch {
+        throw new Error(SERVER_UNAVAILABLE_MESSAGE);
+    }
 }

@@ -1,5 +1,11 @@
 import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
+
+const reinjectableContentScripts = new Set([
+    'assets/jobExtractor.js',
+    'assets/applicationAutoFill.js'
+]);
+
 export default defineConfig({
     build: {
         emptyOutDir: true,
@@ -15,5 +21,20 @@ export default defineConfig({
                 entryFileNames: 'assets/[name].js'
             }
         }
-    }
+    },
+    plugins: [wrapReinjectableContentScripts()]
 });
+
+function wrapReinjectableContentScripts() {
+    return {
+        name: 'wrap-reinjectable-content-scripts',
+        generateBundle(_options, bundle) {
+            for (const [fileName, chunk] of Object.entries(bundle)) {
+                if (chunk.type !== 'chunk' || !reinjectableContentScripts.has(fileName)) {
+                    continue;
+                }
+                chunk.code = `(() => {\n${chunk.code}\n})();\n`;
+            }
+        }
+    };
+}

@@ -62,6 +62,20 @@ class AuthControllerTest {
     }
 
     @Test
+    void extensionApiAllowsAnyLocalChromeExtensionCorsPreflight() throws Exception {
+        mockMvc.perform(options("/api/extension/jobs/save")
+                .header("Origin", "chrome-extension://abcdefghijklmnopabcdefghijklmnop")
+                .header("Access-Control-Request-Method", "POST")
+                .header("Access-Control-Request-Headers", "authorization,content-type"))
+            .andExpect(status().isOk())
+            .andExpect(header().string(
+                "Access-Control-Allow-Origin",
+                "chrome-extension://abcdefghijklmnopabcdefghijklmnop"
+            ))
+            .andExpect(header().string("Access-Control-Allow-Methods", Matchers.containsString("POST")));
+    }
+
+    @Test
     void googleLoginReturnsTokenEnvelope() throws Exception {
         when(authService.loginWithGoogle(any())).thenReturn(
             new AuthTokenResponse(
