@@ -21,7 +21,8 @@ export function createDashboardApi(httpClient = defaultHttpClient) {
                         totalApplications: data.totalApplications,
                         inProgress: data.inProgress,
                         notStarted: data.notStarted,
-                        deadlineSoon: data.deadlineSoon
+                        deadlineSoon: data.deadlineSoon,
+                        recentActivity: data.recentActivity
                     },
                     todayJobs: data.todayJobs.map((job) => ({
                         companyName: job.companyName,

@@ -76,7 +76,8 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
                 .sorted(dashboardDeadlineComparator())
                 .limit(5)
                 .map(this::toDashboardJob)
-                .toList()
+                .toList(),
+            activityMapper.findRecentActivity(userId)
         );
     }
 
@@ -186,7 +187,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         reference.setUrl(request.sourceUrl());
         mapper.insertReferenceMaterial(reference);
 
-        activityMapper.insertActivity(userId, "BASKET_ADD", 1);
+        activityMapper.insertActivity(userId, workspace.getId(), "BASKET_ADD", 1);
 
         return toBasketResponse(basketJob);
     }
@@ -265,7 +266,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         }
         
         if (status == ApplicationStatus.IN_PROGRESS || status == ApplicationStatus.COMPLETED) {
-            activityMapper.insertActivity(userId, "STATUS_CHANGE", 2);
+            activityMapper.insertActivity(userId, requireBasketJob(userId, basketJobId).getWorkspaceId(), "STATUS_CHANGE", 2);
         }
         
         return getBasketJob(userId, basketJobId);
@@ -352,7 +353,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         mapper.markWorkspaceBasketJobInProgress(userId, workspaceId);
         question.setDraft(request.body());
         
-        activityMapper.insertActivity(userId, "DRAFT_UPDATE", 1);
+        activityMapper.insertActivity(userId, workspaceId, "DRAFT_UPDATE", 1);
         
         return toQuestionResponse(question);
     }
@@ -419,7 +420,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         mapper.insertReferenceMaterial(reference);
         mapper.markWorkspaceBasketJobInProgress(userId, workspaceId);
         
-        activityMapper.insertActivity(userId, "REFERENCE_ADD", 1);
+        activityMapper.insertActivity(userId, workspaceId, "REFERENCE_ADD", 1);
         
         return toReferenceResponse(reference);
     }

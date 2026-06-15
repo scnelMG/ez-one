@@ -109,30 +109,7 @@ async function selectDay(day) {
   isLoadingLogs.value = true;
   try {
     const realLogs = await dashboardStore.loadActivityLogs(day.dateStr);
-    if (!realLogs || realLogs.length === 0) {
-      if (day.score > 0) {
-        // 더미 로그 생성
-        const dummy = [];
-        const actions = ['자소서 1번 문항 작성', '자소서 수정 완료', '면접 준비 자료 정리', '기업 정보 스크랩', '이력서 업데이트', '지원 완료'];
-        for (let i = 0; i < day.score; i++) {
-          const hour = 10 + Math.floor(Math.random() * 10);
-          const min = String(Math.floor(Math.random() * 60)).padStart(2, '0');
-          const type = Math.random() > 0.5 ? 'COMMIT' : 'DOC';
-          dummy.push({
-            time: `${hour}:${min}`,
-            description: `[네이버] ${actions[Math.floor(Math.random() * actions.length)]}`,
-            type: type
-          });
-        }
-        // 시간순 정렬
-        dummy.sort((a, b) => a.time.localeCompare(b.time));
-        selectedDateLogs.value = dummy;
-      } else {
-        selectedDateLogs.value = [];
-      }
-    } else {
-      selectedDateLogs.value = realLogs;
-    }
+    selectedDateLogs.value = realLogs || [];
   } finally {
     isLoadingLogs.value = false;
   }

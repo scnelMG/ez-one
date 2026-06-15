@@ -1,13 +1,15 @@
 <template>
   <AppLayout>
     <section class="study-page">
-      <header class="page-header">
-        <h1>취업 스터디</h1>
-        <p>함께 취업을 준비할 팀원을 모집하고, 서로의 공고와 자소서를 공유해보세요.</p>
-        <div class="header-actions">
-          <button class="primary-button" type="button" @click="openCreateModal">
-            새 스터디 만들기
-          </button>
+      <header class="page-hero">
+        <div class="page-hero-content">
+          <h1>취업 스터디</h1>
+          <p>함께 취업을 준비할 팀원을 모집하고, 서로의 공고와 자소서를 공유해보세요.</p>
+          <div class="header-actions" style="margin-top: 16px;">
+            <button class="primary-button" type="button" @click="openCreateModal">
+              새 스터디 만들기
+            </button>
+          </div>
         </div>
       </header>
 

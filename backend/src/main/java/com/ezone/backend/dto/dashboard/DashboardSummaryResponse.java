@@ -7,6 +7,7 @@ public record DashboardSummaryResponse(
     long inProgress,
     long notStarted,
     long deadlineSoon,
-    List<DashboardJobResponse> todayJobs
+    List<DashboardJobResponse> todayJobs,
+    RecentActivityResponse recentActivity
 ) {
 }

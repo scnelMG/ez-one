@@ -95,7 +95,7 @@ public class StudyService {
 
                 int activeJobCount = 0;
                 if (userId != null) {
-                    activeJobCount = (int) p1WorkspaceService.getDashboardSummary(userId).inProgressJobs();
+                    activeJobCount = (int) p1WorkspaceService.getDashboardSummary(userId).inProgress();
                 }
 
                 StudyMemberDto mDto = new StudyMemberDto();

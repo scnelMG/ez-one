@@ -48,3 +48,30 @@ export function formatParticipantCount(value) {
   const count = Number(value);
   return Number.isFinite(count) ? count.toLocaleString('ko-KR') : '0';
 }
+
+export function formatDDay(job) {
+  if (/^D-\d+/i.test(job.deadlineLabel) || job.deadlineLabel === '오늘') {
+      return job.deadlineLabel;
+  }
+  if (job.deadlineDate) {
+      const d = new Date(job.deadlineDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      d.setHours(0, 0, 0, 0);
+      const diffTime = d - today;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      if (diffDays === 0) return '오늘';
+      if (diffDays > 0) return `D-${diffDays}`;
+      return `D+${-diffDays}`;
+  }
+  return null;
+}
+
+export function formatDateTime(dateStr) {
+  if (!dateStr) return null;
+  const str = dateStr.replace('T', ' ');
+  if (str.includes(':')) {
+    return str.replace(/-/g, '.').substring(0, 16);
+  }
+  return str.replace(/-/g, '.') + ' 23:59';
+}
