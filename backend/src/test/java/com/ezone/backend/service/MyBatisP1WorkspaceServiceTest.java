@@ -76,8 +76,7 @@ class MyBatisP1WorkspaceServiceTest {
             "D-15",
             "https://example.com/job",
             "https://example.com/logo.png",
-            "MANUAL",
-            "DIRECT"
+            "MANUAL"
         ));
 
         verify(mapper).upsertCompany(argThat(row ->

@@ -112,7 +112,7 @@
               {{ statusLabel(job.applicationStatus, job.applicationStatusLabel) }}
             </span>
             <RouterLink class="job-main-link" :to="`/workspaces/${job.workspaceId}`" style="display: flex; gap: 8px; align-items: center; text-decoration: none;">
-              <span style="color: var(--ink); font-weight: 500;">{{ formatDateTime(job.deadlineDate) || job.deadlineLabel }}</span>
+              <span style="color: var(--ink); font-weight: 500;">{{ formatAbsoluteDeadline(job) }}</span>
             </RouterLink>
             <a
               class="main-apply-link"
@@ -178,7 +178,8 @@ import {
   companyInitial,
   formatParticipantCount,
   formatDDay,
-  formatDateTime
+  formatDateTime,
+  formatAbsoluteDeadline
 } from '@/shared/utils/jobUtils';
 import StatePanel from '@/shared/StatePanel.vue';
 import OnboardingPage from '@/pages/OnboardingPage.vue';
