@@ -1,12 +1,12 @@
 <template>
   <AppLayout>
     <section class="study-detail-page">
-      <header class="study-header">
+      <header class="study-header" :style="studyStore.currentStudy?.imageUrl ? { backgroundImage: `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url(${studyStore.currentStudy.imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center', color: 'white' } : {}">
         <div class="breadcrumb">
-          <RouterLink to="/study">← 취업 스터디 목록으로</RouterLink>
+          <RouterLink to="/study" :style="studyStore.currentStudy?.imageUrl ? { color: 'white' } : {}">← 취업 스터디 목록으로</RouterLink>
         </div>
         <h1>{{ studyStore.currentStudy?.name || '로딩 중...' }}</h1>
-        <p class="study-description">{{ studyStore.currentStudy?.description }}</p>
+        <p class="study-description" :style="studyStore.currentStudy?.imageUrl ? { color: '#f3f4f6' } : {}">{{ studyStore.currentStudy?.description }}</p>
         <div class="header-actions">
           <button class="primary-button" type="button" @click="openInviteModal">팀원 초대</button>
           
@@ -58,8 +58,8 @@
                 <div class="chart-container">
                   <div class="chart-bar-row" v-for="member in studyStore.currentStudy?.members || []" :key="'chart-'+member.id">
                     <div class="chart-label">
-                      <div class="member-avatar-small">{{ member.userEmail.charAt(0).toUpperCase() }}</div>
-                      <span class="member-name">{{ member.userEmail.split('@')[0] }}</span>
+                      <div class="member-avatar-small">{{ (member.userName || member.userEmail).charAt(0).toUpperCase() }}</div>
+                      <span class="member-name" :title="member.userName || member.userEmail.split('@')[0]">{{ member.userName || member.userEmail.split('@')[0] }}</span>
                     </div>
                     <div class="chart-track">
                       <div class="chart-fill" :style="{ width: Math.min((member.activeJobCount || 0) * 10, 100) + '%' }">
@@ -76,30 +76,33 @@
                 <div class="member-grid">
                   <div class="member-card-new" v-for="member in studyStore.currentStudy?.members || []" :key="member.id">
                     <div class="member-card-header">
-                      <div class="member-avatar-large">{{ member.userEmail.charAt(0).toUpperCase() }}</div>
+                      <div class="member-avatar-large">{{ (member.userName || member.userEmail).charAt(0).toUpperCase() }}</div>
                       <div class="member-info-new">
-                        <strong>{{ member.userEmail.split('@')[0] }}</strong>
-                        <span class="text-secondary text-sm">{{ member.userEmail }}</span>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                          <strong>{{ member.userName || member.userEmail.split('@')[0] }}</strong>
+                          <span v-if="hasUnreadEssays(member.userEmail)" class="new-badge">NEW!</span>
+                        </div>
+                        <span class="text-secondary text-sm" style="word-break: break-all;">{{ member.userEmail }}</span>
                         <span class="role-badge" v-if="member.role === 'LEADER'">스터디장</span>
                       </div>
                     </div>
                     
                     <div v-if="studySettings.showDashboard" class="member-stats-grid">
-                      <div class="stat-box-new">
+                      <div class="stat-box-new bg-primary-light">
                         <span class="stat-label">진행중</span>
                         <strong class="stat-value text-primary">{{ member.activeJobCount || 0 }}</strong>
                       </div>
-                      <div class="stat-box-new">
+                      <div class="stat-box-new bg-gray">
                         <span class="stat-label">지원전</span>
                         <strong class="stat-value">{{ member.notStartedCount || 0 }}</strong>
                       </div>
-                      <div class="stat-box-new">
+                      <div class="stat-box-new bg-green-light">
                         <span class="stat-label">이번주</span>
-                        <strong class="stat-value">{{ member.appsThisWeekCount || 0 }}</strong>
+                        <strong class="stat-value text-green">{{ member.appsThisWeekCount || 0 }}</strong>
                       </div>
-                      <div class="stat-box-new">
+                      <div class="stat-box-new bg-purple-light">
                         <span class="stat-label">이번달</span>
-                        <strong class="stat-value">{{ member.appsThisMonthCount || 0 }}</strong>
+                        <strong class="stat-value text-purple">{{ member.appsThisMonthCount || 0 }}</strong>
                       </div>
                     </div>
                     <div v-else class="member-stats-basic">
@@ -344,9 +347,9 @@
             <div v-else-if="recommendJobsList.length === 0" class="empty-state">
               장바구니에 담긴 공고가 없습니다.
             </div>
-            <ul v-else class="workspace-list" style="max-height: 200px; overflow-y: auto;">
-              <li v-for="basket in recommendJobsList" :key="basket.id" class="workspace-item checkbox-item">
-                <label class="checkbox-label">
+            <ul v-else class="workspace-list recommend-list" style="max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;">
+              <li v-for="basket in recommendJobsList" :key="basket.id" class="workspace-item checkbox-item" style="flex-direction: column; align-items: stretch; padding: 16px; gap: 12px; height: auto;">
+                <label class="checkbox-label" style="display: flex; align-items: center; gap: 12px; cursor: pointer; width: 100%;">
                   <input type="checkbox" :value="basket" v-model="selectedRecommendJobs">
                   <div class="company-logo-badge">
                     <img v-if="basket.companyLogoUrl" :src="basket.companyLogoUrl" :alt="basket.companyName" />
@@ -358,12 +361,13 @@
                     <small>마감일: {{ basket.deadlineDate ? basket.deadlineDate + ' (' + basket.deadlineLabel + ')' : basket.deadlineLabel }}</small>
                   </div>
                 </label>
+                <!-- Inline Reason Input (Accordion) -->
+                <div v-if="selectedRecommendJobs.includes(basket)" class="reason-accordion">
+                  <div class="reason-arrow">↳</div>
+                  <textarea v-model="basket.recommendReason" placeholder="이 공고를 팀원들에게 추천하는 이유를 적어주세요! (선택)" rows="2" class="reason-textarea"></textarea>
+                </div>
               </li>
             </ul>
-            <div class="form-group" v-if="recommendJobsList.length > 0" style="margin-top: 16px;">
-              <label>추천 사유 (선택)</label>
-              <textarea v-model="recommendReason" placeholder="팀원들에게 이 공고를 추천하는 이유를 적어주세요!" rows="2"></textarea>
-            </div>
           </div>
 
           <footer class="modal-footer">
@@ -454,11 +458,11 @@ const studyId = route.params.studyId;
 
 const studySettings = computed(() => {
   const json = studyStore.currentStudy?.settingsJson;
-  if (!json) return { showDashboard: false, showTeamComparison: false, showUnreadBadge: false };
+  if (!json) return { showDashboard: true, showTeamComparison: true, showUnreadBadge: true };
   try {
     return JSON.parse(json);
   } catch(e) {
-    return { showDashboard: false, showTeamComparison: false, showUnreadBadge: false };
+    return { showDashboard: true, showTeamComparison: true, showUnreadBadge: true };
   }
 });
 
@@ -537,6 +541,12 @@ const otherMembers = computed(() => {
 
 const toggleSettings = () => {
   isSettingsOpen.value = !isSettingsOpen.value;
+};
+
+// NEW 뱃지 로직
+const hasUnreadEssays = (memberEmail) => {
+  if (memberEmail === myEmail.value) return false;
+  return studyStore.sharedEssays?.some(e => e.userEmail === memberEmail && e.isNew);
 };
 
 watch(activeTab, () => {
@@ -701,10 +711,9 @@ async function recommendJob() {
   isRecommendModalOpen.value = true;
   isLoadingRecommendJobs.value = true;
   selectedRecommendJobs.value = [];
-  recommendReason.value = '';
   try {
     const allJobs = await basketApi.listJobs();
-    recommendJobsList.value = allJobs;
+    recommendJobsList.value = allJobs.map(job => ({ ...job, recommendReason: '' }));
   } catch (e) {
     alert('목록을 불러오는 중 오류가 발생했습니다.');
   } finally {
@@ -722,7 +731,7 @@ async function submitRecommendJobs() {
         deadlineLabel: job.deadlineLabel,
         deadlineDate: job.deadlineDate || null,
         sourceUrl: job.sourceUrl || '',
-        reason: recommendReason.value
+        reason: job.recommendReason || ''
       });
     });
     await Promise.all(promises);
@@ -792,11 +801,18 @@ const confirmDelete = async () => {
 }
 .study-header {
   margin-bottom: 32px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid var(--line);
+  padding: 32px 40px;
+  border-radius: 16px;
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
+  background: linear-gradient(135deg, #ede9fe 0%, #f3f4f6 100%);
+  position: relative;
+  overflow: hidden;
+}
+.study-header h1 {
+  font-size: 2rem;
+  margin-bottom: 8px;
 }
 .header-actions {
   display: flex;
@@ -1232,5 +1248,233 @@ const confirmDelete = async () => {
   border-radius: 4px;
   font-size: 0.8rem;
   font-weight: bold;
+}
+
+/* Dashboard Redesign Styles */
+.dashboard-pane {
+  background: transparent;
+  padding: 0;
+  border: none;
+}
+.dashboard-section {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+}
+.dashboard-section h3 {
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin-bottom: 16px;
+  color: var(--text-primary);
+}
+.chart-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.chart-bar-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.chart-label {
+  width: 130px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: bold;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+.chart-bar-bg, .chart-track {
+  flex-grow: 1;
+  background: var(--surface-hover);
+  height: 24px;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+}
+.chart-bar-fill, .chart-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary) 0%, #a78bfa 100%);
+  border-radius: 12px;
+  transition: width 0.5s ease-out;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 8px;
+}
+.chart-value {
+  text-align: right;
+  font-weight: bold;
+  font-size: 0.9rem;
+  color: white;
+}
+.member-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+.member-card-new {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.member-card-new:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+}
+.member-header, .member-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.member-avatar-large {
+  width: 48px;
+  height: 48px;
+  border-radius: 24px;
+  background: var(--surface-hover);
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.member-avatar-small {
+  width: 28px;
+  height: 28px;
+  border-radius: 14px;
+  background: var(--surface-hover);
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.member-info-new {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+.member-name {
+  font-weight: bold;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.member-role {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  background: var(--surface-hover);
+  padding: 2px 8px;
+  border-radius: 12px;
+  width: fit-content;
+  margin-top: 4px;
+}
+.role-leader, .role-badge {
+  background: #ede9fe;
+  color: var(--color-primary);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  width: fit-content;
+}
+.member-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.stat-box-new {
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.bg-primary-light { background: #eff6ff; }
+.bg-gray { background: #f3f4f6; }
+.bg-green-light { background: #f0fdf4; }
+.bg-purple-light { background: #faf5ff; }
+.text-green { color: #16a34a; }
+.text-purple { color: #9333ea; }
+.new-badge {
+  background: #ef4444;
+  color: white;
+  font-size: 0.65rem;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 10px;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+.stat-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+.stat-value {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--text-primary);
+}
+.stat-value.highlight {
+  color: var(--color-primary);
+}
+.chart-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.reason-accordion {
+  display: flex;
+  gap: 12px;
+  margin-left: 28px;
+  margin-top: 8px;
+  animation: slideDown 0.2s ease-out forwards;
+}
+.reason-arrow {
+  color: var(--color-primary);
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+.reason-textarea {
+  flex-grow: 1;
+  padding: 12px;
+  border: 1px solid var(--primary-light);
+  border-radius: 8px;
+  resize: none;
+  font-family: inherit;
+  font-size: 0.9rem;
+  background: #f8fafc;
+  transition: border-color 0.2s;
+}
+.reason-textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  background: white;
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 </style>

@@ -14,7 +14,7 @@ public interface StudyMapper {
     void insertStudyMember(StudyMemberRow row);
     List<StudyMemberRow> findMembersByStudyId(@Param("studyId") String studyId);
 
-    @org.apache.ibatis.annotations.Select("SELECT COUNT(*) FROM basket_jobs bj JOIN users u ON bj.user_id = u.id WHERE u.email = #{userEmail} AND bj.application_status = 'IN_PROGRESS' AND bj.deleted_at IS NULL")
+    @org.apache.ibatis.annotations.Select("SELECT COUNT(*) FROM basket_jobs bj JOIN users u ON bj.user_id = u.id WHERE u.email = #{userEmail} AND bj.application_status = 'PROGRESS' AND bj.deleted_at IS NULL")
     int countActiveJobsByUserEmail(@Param("userEmail") String userEmail);
 
     @org.apache.ibatis.annotations.Select("SELECT COUNT(*) FROM basket_jobs bj JOIN users u ON bj.user_id = u.id WHERE u.email = #{userEmail} AND bj.application_status IN ('READY', 'NOT_APPLIED') AND bj.deleted_at IS NULL")

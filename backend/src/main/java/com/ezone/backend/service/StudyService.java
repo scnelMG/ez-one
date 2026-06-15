@@ -106,6 +106,8 @@ public class StudyService {
                 mDto.setNotStartedCount(notStartedCount);
                 mDto.setAppsThisMonthCount(appsThisMonthCount);
                 mDto.setAppsThisWeekCount(appsThisWeekCount);
+                mDto.setUserName(m.getUserName());
+                mDto.setUserNickname(m.getUserNickname());
                 return mDto;
             }).collect(Collectors.toList());
         dto.setMembers(members);

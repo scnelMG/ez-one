@@ -26,8 +26,11 @@
     </insert>
 
     <select id="findMembersByStudyId" resultType="com.ezone.backend.domain.persistence.StudyMemberRow">
-        SELECT id, study_id AS studyId, user_email AS userEmail, role, joined_at AS joinedAt
-        FROM study_member WHERE study_id = #{studyId}
+        SELECT sm.id, sm.study_id AS studyId, sm.user_email AS userEmail, sm.role, sm.joined_at AS joinedAt,
+               u.name AS userName, u.nickname AS userNickname
+        FROM study_member sm
+        LEFT JOIN users u ON u.email = sm.user_email
+        WHERE sm.study_id = #{studyId}
     </select>
 
     <insert id="insertStudyInvite" parameterType="com.ezone.backend.domain.persistence.StudyInviteRow">
