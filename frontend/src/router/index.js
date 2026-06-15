@@ -13,6 +13,7 @@ import RecommendationPage from '@/pages/RecommendationPage.vue';
 import WorkspacePage from '@/pages/WorkspacePage.vue';
 import StudyListPage from '@/pages/StudyListPage.vue';
 import StudyDetailPage from '@/pages/StudyDetailPage.vue';
+import PastHistoryPage from '@/pages/PastHistoryPage.vue';
 
 export const router = createRouter({
     history: createWebHistory(),
@@ -83,6 +84,12 @@ export const router = createRouter({
             path: '/study/:studyId',
             name: 'study-detail',
             component: StudyDetailPage,
+            meta: { requiresAuth: true }
+        },
+        {
+            path: '/history',
+            name: 'history',
+            component: PastHistoryPage,
             meta: { requiresAuth: true }
         },
         {

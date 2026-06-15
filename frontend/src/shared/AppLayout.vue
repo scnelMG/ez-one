@@ -9,7 +9,7 @@
         <RouterLink to="/basket">공고 장바구니</RouterLink>
         <RouterLink to="/document-profile">서류 입력 정보</RouterLink>
         <RouterLink to="/study">취업 스터디</RouterLink>
-        <span class="nav-disabled" aria-disabled="true">과거 지원 내역</span>
+        <RouterLink to="/history">과거 지원 내역</RouterLink>
         <RouterLink v-if="profileStore.profile?.ssafy" to="/recommendations?source=mattermost">MM 추천 공고</RouterLink>
       </nav>
 
@@ -87,7 +87,7 @@
 
     <footer class="app-footer" aria-label="서비스 고지">
       <p data-testid="global-trademark-notice">
-        표시된 회사명과 로고는 채용공고 식별 목적으로만 사용하며, 각 상표는 해당 소유자의 자산입니다.
+        표시된 회사명과 로고는 채용공고 식별 목적으로만 사용되며, 각 상표는 해당 소유자의 자산입니다.
         EZ-ONE은 표시된 기업과 제휴 또는 후원 관계가 아닙니다.
       </p>
       <RouterLink to="/mypage/terms">이용약관</RouterLink>
@@ -97,7 +97,7 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import bellIconUrl from '@/assets/bell.svg';
 import logoUrl from '@/assets/ez-one-logo-final.png';

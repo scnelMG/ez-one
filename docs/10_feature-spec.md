@@ -89,3 +89,12 @@ flowchart LR
 | 장바구니 캘린더/주간 일정 | P2 | P1 장바구니 목록/정렬 이후 마감 일정 표시로 검토 |
 | 고객지원 | P2 | QnA, FAQ, 1:1 문의, 제휴 문의, 이용약관 운영 범위 확정 후 구현 |
 | Mattermost 채용공고 수집 | P2 | webhook 원문 raw 저장, 채용공고 후보 파싱, 검토 승인 후 SSAFY 사용자에게만 추천 노출 |
+## 2026-06-16 Past Application History
+
+- The history feature reads imported, user-owned application records from `application_history`.
+- The default `/history` view loads all records. The period selector filters by `ALL`, `YYYY-H1`, or `YYYY-H2`.
+- Summary metrics are calculated for the selected period before optional result-stage row filtering.
+- Supported result stages are `DOCUMENT_FAILED`, `TEST_FAILED`, `INTERVIEW_FAILED`, `NOT_APPLIED`, and `IN_PROGRESS`.
+- Company-type counts are returned with the same selected-period scope as the summary.
+- Clicking a row opens `/workspaces/{workspaceId}`.
+- AI commentary and anonymous percentile comparison are excluded from this implementation.

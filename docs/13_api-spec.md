@@ -150,3 +150,10 @@ Mattermost source는 서버에서 `user_profiles.is_ssafy = true`를 재검증�
 - `GET /api/workspaces/{workspaceId}` includes `companyDetails.logoUrl`.
 - Invalid or missing `logoUrl` values must not fail the core job save flow; the server ignores invalid logo candidates.
 - `GET /api/extension/document-profile` is part of the approved P1 extension auto-fill scope. It uses the existing Bearer token and returns the current user's document profile for the active-tab injection flow.
+## 2026-06-16 History API
+
+| Method | Path | Description |
+| --- | --- | --- |
+| GET | `/api/history/applications?period=ALL&resultStage=` | Returns past application periods, selected-period summary, company-type counts, and rows with `workspaceId` links. `period` uses `ALL` or `YYYY-H1`/`YYYY-H2`. `resultStage` is optional and may be `DOCUMENT_FAILED`, `TEST_FAILED`, `INTERVIEW_FAILED`, `NOT_APPLIED`, or `IN_PROGRESS`. |
+
+Imported history rows are stored separately in `application_history`. The import process creates linked `basket_jobs` and `workspaces` for workspace navigation, but `basket_jobs.saved_source = 'HISTORY_IMPORT'` is excluded from the active basket list.

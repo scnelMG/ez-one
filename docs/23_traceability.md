@@ -55,3 +55,13 @@
 | EXT-008, JOB-021 | UC-06 | Chrome Extension job save | `POST /api/extension/jobs/preview`, `POST /api/extension/jobs/save` | `companies.logo_url`, `jobs`, `basket_jobs` | `extension/tests/jobExtractor.test.js`, `extension/tests/extensionJobApi.test.js`, `P1ApiContractTest` |
 | JOB-016 | UC-08 | Basket and workspace company display | `GET /api/basket/jobs`, `GET /api/workspaces/{id}` | `companies.logo_url`, `companies.logo_source_url`, `companies.logo_status`, `companies.logo_updated_at` | `MyBatisP1WorkspaceServiceTest`, `P1ApiContractTest` |
 | EXT-013, EXT-021, EXT-022, EXT-023, PROFILE-026 | UC-12, UC-13 | Extension document auto-fill | `GET /api/extension/document-profile` | `document_profile_sections`, `document_custom_fields` | `applicationAutoFill.test.js`, `extensionDocumentProfileApi.test.js`, `P1ApiContractTest` |
+## 2026-06-16 History Traceability Update
+
+| Requirement | Implementation | Verification |
+| --- | --- | --- |
+| `HISTORY-001` | `/history` route and nav entry; rows link to `/workspaces/{workspaceId}` | `router/index.test.js`, `AppLayout.test.js`, `PastHistoryPage.test.js` |
+| `HISTORY-003` | `GET /api/history/applications` and `PastHistoryPage` default full list | `historyApi.test.js`, `PastHistoryPage.test.js`, `P1ApiContractTest` |
+| `HISTORY-004`/`HISTORY-005` | `ALL` and `YYYY-H1`/`YYYY-H2` period options | `PastHistoryPage.test.js`, `P1ApiContractTest` |
+| `HISTORY-006`/`HISTORY-007` | selected-period summary metrics | `PastHistoryPage.test.js`, `P1ApiContractTest` |
+| `HISTORY-008` | company-type aggregation | `PastHistoryPage.test.js`, `P1ApiContractTest` |
+| `HISTORY-009`/`HISTORY-010` | intentionally not implemented | Out of scope |

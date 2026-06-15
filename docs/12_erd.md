@@ -93,3 +93,10 @@ erDiagram
 - P1 overwrite policy: when a save request includes a valid optional `logoUrl`, the server stores it only if `companies.logo_url` is empty. Existing company logos are preserved.
 - Basket and workspace API responses expose the company logo as `companyLogoUrl` and `companyDetails.logoUrl`; clients should fall back to an initials badge when the URL is missing or broken.
 - `V9__seed_demo_jobs_and_recommendations.sql` temporarily seeds demo basket jobs and `jobs.source = 'RECOMMENDATION'` rows with company logos for local UI verification. These rows use `ez-one-demo-*` source URLs so they can be removed later.
+## 2026-06-16 Application History Update
+
+- Added `application_history` for imported past application rows.
+- `application_history.workspace_id` is unique and links each imported row to the existing workspace surface.
+- Import-created `basket_jobs` use `saved_source = 'HISTORY_IMPORT'`; active basket queries exclude that source while workspace lookup remains available.
+- Key columns: `user_id`, `workspace_id`, `company_name`, `position_title`, `application_status`, `result_stage`, `raw_result`, `deadline_date`, `period_key`, `period_year`, `period_half`, `source_url`, `company_type`.
+- Indexes: `idx_application_history_user_period (user_id, period_key)` and `idx_application_history_user_result (user_id, result_stage)`.

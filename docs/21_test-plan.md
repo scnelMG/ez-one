@@ -124,3 +124,12 @@
 - `TC-AUTH-OAUTH-STATE-001`: OAuth state is stored by nonce so parallel login tabs or retries do not overwrite each other.
 - `TC-AUTH-OAUTH-CANCEL-001`: Google OAuth error callbacks such as `access_denied` show a clear retry message without calling the backend token exchange.
 - `TC-AUTH-REFRESH-FAIL-001`: A revoked or expired refresh token clears the local session after a protected API returns 401.
+## 2026-06-16 History Tests
+
+- `TC-HISTORY-001`: Router registers `/history` and the common nav exposes the active history link while remaining P2 routes stay disabled.
+- `TC-HISTORY-002`: `historyApi.listApplications` calls `GET /api/history/applications` with period/result-stage params and normalizes row IDs.
+- `TC-HISTORY-003`: `PastHistoryPage` renders period options, selected-period metrics, company-type counts, and imported rows.
+- `TC-HISTORY-004`: Changing the half-year period reloads history data.
+- `TC-HISTORY-005`: Clicking a history row navigates to `/workspaces/{workspaceId}`.
+- `TC-HISTORY-006`: Backend contract returns periods, summary, rows, result-stage filtering, and keeps `HISTORY_IMPORT` rows out of active basket listing.
+- `TC-HISTORY-007`: Migration contract verifies `application_history` schema and confirms personal email/data are not embedded in migration SQL.

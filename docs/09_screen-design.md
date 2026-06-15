@@ -488,3 +488,9 @@ frontend/src/
 - `NOTION-001`: 노션 연동 관리 화면은 Google 로그인 계정과 연결된 Notion 계정을 분리해 보여주고, 공고 정보/자소서·도화지/과거 지원 내역 자동 동기화 토글과 대상 위치를 제공한다.
 - `MY-003/REC-001`: 온보딩 정보 화면은 맞춤 추천 입력값을 칩 기반 편집 UI로 제공하고, 직무/기업 유형/업종/지역/스킬/SSAFY 값을 추천 공고 입력값으로 저장한다.
 - `SUPPORT`: QnA, 1:1 문의, 제휴 문의, 이용약관은 마이페이지 하위의 독립 지원 페이지로 제공한다.
+## 2026-06-16 History Page Implementation Note
+
+- `/history` is now an active authenticated route rendered by `PastHistoryPage`.
+- The page follows the uploaded wireframe structure: period select, summary dashboard, company-type distribution, and table rows.
+- Each table row links to `/workspaces/{workspaceId}` so past applications reuse the existing workspace reading/editing surface.
+- Retrospective memo, AI summary, and percentile comparison remain out of scope.

@@ -191,6 +191,7 @@
     LEFT JOIN workspaces w ON w.basket_job_id = bj.id
     WHERE bj.user_id = #{userId}
       AND bj.deleted_at IS NULL
+      AND bj.saved_source != 'HISTORY_IMPORT'
       <if test="status != null">AND bj.application_status = #{status}</if>
     ORDER BY
       <choose>

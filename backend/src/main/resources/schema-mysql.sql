@@ -297,3 +297,29 @@ CREATE TABLE IF NOT EXISTS document_custom_fields (
   CONSTRAINT fk_document_custom_fields_user FOREIGN KEY (user_id) REFERENCES users(id),
   KEY idx_document_custom_fields_user_deleted (user_id, deleted_at)
 );
+
+CREATE TABLE IF NOT EXISTS application_history (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NOT NULL,
+  workspace_id BIGINT NOT NULL,
+  company_name VARCHAR(255) NOT NULL,
+  position_title VARCHAR(255) NOT NULL,
+  application_status VARCHAR(32) NOT NULL,
+  result_stage VARCHAR(32) NOT NULL,
+  result_label VARCHAR(64) NOT NULL,
+  raw_result VARCHAR(255) NULL,
+  deadline_label VARCHAR(64) NULL,
+  deadline_date DATE NULL,
+  period_key VARCHAR(16) NOT NULL,
+  period_year INT NULL,
+  period_half VARCHAR(8) NOT NULL,
+  source_url VARCHAR(1024) NULL,
+  company_type VARCHAR(64) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_application_history_user FOREIGN KEY (user_id) REFERENCES users(id),
+  CONSTRAINT fk_application_history_workspace FOREIGN KEY (workspace_id) REFERENCES workspaces(id),
+  UNIQUE KEY uk_application_history_workspace (workspace_id),
+  KEY idx_application_history_user_period (user_id, period_key),
+  KEY idx_application_history_user_result (user_id, result_stage)
+);

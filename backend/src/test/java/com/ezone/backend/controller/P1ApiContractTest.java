@@ -1,6 +1,8 @@
 package com.ezone.backend.controller;
 
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -17,6 +19,7 @@ import com.ezone.backend.domain.UserAccount;
 import com.ezone.backend.mapper.UserAccountMapper;
 import com.ezone.backend.security.JwtAccessTokenVerifier;
 import com.ezone.backend.security.JwtAuthenticationFilter;
+import com.ezone.backend.service.InMemoryHistoryService;
 import com.ezone.backend.service.InMemoryP1WorkspaceService;
 import com.ezone.backend.service.InMemoryProfileService;
 import com.ezone.backend.service.MattermostIngestionService;
@@ -47,6 +50,7 @@ import org.springframework.test.web.servlet.MockMvc;
     NotionIntegrationController.class,
     ExtensionJobController.class
     ,
+    HistoryController.class,
     MattermostIntegrationController.class,
     MattermostAdminController.class
 })
@@ -54,6 +58,7 @@ import org.springframework.test.web.servlet.MockMvc;
     SecurityConfig.class,
     JwtAuthenticationFilter.class,
     JwtAccessTokenVerifier.class,
+    InMemoryHistoryService.class,
     InMemoryP1WorkspaceService.class,
     InMemoryProfileService.class,
     MattermostIngestionService.class,
@@ -133,6 +138,27 @@ class P1ApiContractTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data[0].deadlineLabel").value("오늘 18:00"))
             .andExpect(jsonPath("$.data[1].deadlineLabel").value("D-1"));
+    }
+
+    @Test
+    void historyApplicationsExposeSummaryRowsAndWorkspaceLinksWithoutActiveBasketPollution() throws Exception {
+        mockMvc.perform(get("/api/history/applications"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.summary.total", greaterThanOrEqualTo(1)))
+            .andExpect(jsonPath("$.data.periods[0].value").value("ALL"))
+            .andExpect(jsonPath("$.data.companyTypes[0].type", notNullValue()))
+            .andExpect(jsonPath("$.data.rows[0].workspaceId", notNullValue()))
+            .andExpect(jsonPath("$.data.rows[0].resultStage", notNullValue()))
+            .andExpect(jsonPath("$.data.rows[0].resultLabel", notNullValue()));
+
+        mockMvc.perform(get("/api/history/applications?period=2025-H1&resultStage=DOCUMENT_FAILED"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.rows[0].resultStage").value("DOCUMENT_FAILED"));
+
+        mockMvc.perform(get("/api/basket/jobs"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data[0].companyName").value("네이버"));
     }
 
     @Test
