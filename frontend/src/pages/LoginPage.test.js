@@ -124,6 +124,19 @@ describe('LoginPage', () => {
         expect(wrapper.find('a[href="#extension-install"]').exists()).toBe(true);
         expect(wrapper.find('.extension-screenshot-card img').exists()).toBe(true);
     });
+    it('PAGE-001: shows section navigation without overlaying the hero screenshot', async () => {
+        const router = makeRouter();
+        router.push('/login');
+        await router.isReady();
+        const wrapper = mount(LoginPage, {
+            global: {
+                plugins: [router]
+            }
+        });
+        expect(wrapper.find('.landing-scroll-nav').exists()).toBe(true);
+        expect(wrapper.find('.landing-extension-badge').exists()).toBe(false);
+        expect(wrapper.find('.landing-flow-summary').exists()).toBe(true);
+    });
     it('AUTH-003: logs in with email credentials and redirects to the protected target', async () => {
         mocks.loginWithEmail.mockResolvedValue({
             accessToken: 'access-token',
