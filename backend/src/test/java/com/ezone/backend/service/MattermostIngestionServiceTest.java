@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -18,6 +19,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -71,12 +73,123 @@ class MattermostIngestionServiceTest {
     }
 
     @Test
+    void ingestCreatesCandidatesOnlyForWeeklyJobListingRowsWithRecruitmentUrls() {
+        MattermostWebhookRequest request = new MattermostWebhookRequest(
+            "employment-info",
+            "mm-weekly-1",
+            "career-center",
+            """
+            :hhappy_pang: 1월 3주차 IT인재 채용공고 :hhappy_pang:
+            안녕하세요. SSAFY취업지원센터입니다.
+            [SW개발직무]
+             :meow_rolling_back: 보스반도체 / SOC RTL Design Engineer [신입] / -01/26(월)
+            https://jumpit.saramin.co.kr/position/52664559
+
+             :meow_rolling_back: 채널코퍼레이션 / [채널톡] Software Engineer (Backend - Meet) / -상시/수시/채용 시 마감 공고
+            https://www.wanted.co.kr/wd/324638
+
+            :youtube_icon: SSAFY 【한국문화정보원】 온라인 채용설명회 안내 :youtube_icon:
+            모바일 접속 링크(실시간생중계) : https://youtu.be/wqyPNa7MShA
+            """,
+            List.of(),
+            Map.of("channel_name", "[취업] 취업정보")
+        );
+        when(mattermostMapper.findMessageId("mm-weekly-1")).thenReturn(Optional.empty());
+        doAnswer(invocation -> {
+            MattermostMessageRow row = invocation.getArgument(0);
+            row.setId(20L);
+            return null;
+        }).when(mattermostMapper).insertMessage(any());
+
+        var response = service.ingest(request);
+
+        assertThat(response.createdParsedJobPost()).isTrue();
+        assertThat(response.parseStatus()).isEqualTo("PARSED");
+
+        ArgumentCaptor<MattermostParsedJobPostRow> captor = ArgumentCaptor.forClass(MattermostParsedJobPostRow.class);
+        verify(mattermostMapper, times(2)).insertParsedJobPost(captor.capture());
+        assertThat(captor.getAllValues())
+            .extracting(MattermostParsedJobPostRow::getCompanyName)
+            .containsExactly("보스반도체", "채널코퍼레이션");
+        assertThat(captor.getAllValues())
+            .extracting(MattermostParsedJobPostRow::getUrl)
+            .containsExactly(
+                "https://jumpit.saramin.co.kr/position/52664559",
+                "https://www.wanted.co.kr/wd/324638"
+            );
+    }
+
+    @Test
+    void ingestStoresRecruitmentBriefingNoticeRawOnly() {
+        MattermostWebhookRequest request = new MattermostWebhookRequest(
+            "employment-notice",
+            "mm-notice-briefing",
+            "career-center",
+            """
+            :youtube_icon: SSAFY 【한국문화정보원】 온라인 채용설명회 안내 :youtube_icon:
+            SSAFY 온라인 채용설명회 통해 【한국문화정보원】 에서 함께할 인재를 찾습니다!
+            채용설명회를 통해 기업 소개, 직무 이야기, 실제 채용 프로세스까지 직접 확인해보세요.
+            모바일 접속 링크(실시간생중계) : https://youtu.be/wqyPNa7MShA
+            """,
+            List.of(),
+            Map.of("channel_name", "[취업] 공지사항")
+        );
+        when(mattermostMapper.findMessageId("mm-notice-briefing")).thenReturn(Optional.empty());
+        doAnswer(invocation -> {
+            MattermostMessageRow row = invocation.getArgument(0);
+            row.setId(21L);
+            return null;
+        }).when(mattermostMapper).insertMessage(any());
+
+        var response = service.ingest(request);
+
+        assertThat(response.createdParsedJobPost()).isFalse();
+        assertThat(response.messageType()).isEqualTo("JOB_RELATED_NOTICE");
+        assertThat(response.parseStatus()).isEqualTo("IGNORED");
+        verify(mattermostMapper, never()).insertParsedJobPost(any());
+    }
+
+    @Test
+    void ingestStoresHiddenLinkJobNoticeRawOnlyUntilUrlIsVisible() {
+        MattermostWebhookRequest request = new MattermostWebhookRequest(
+            "employment-info",
+            "mm-hidden-link",
+            "career-center",
+            """
+            [채용공고] AK아이에스
+            안녕하세요. SSAFY취업지원센터입니다. AK아이에스에서 신입사원 공개채용중 입니다.
+            채용공고
+            AK아이에스 공고 확인
+            채용 포지션
+            웹/앱 개발 및 운영
+            지원서 접수
+            1월 14일(수) ~ 1월 28일(수) 23:59 까지
+            """,
+            List.of(),
+            Map.of("channel_name", "[취업] 취업정보")
+        );
+        when(mattermostMapper.findMessageId("mm-hidden-link")).thenReturn(Optional.empty());
+        doAnswer(invocation -> {
+            MattermostMessageRow row = invocation.getArgument(0);
+            row.setId(22L);
+            return null;
+        }).when(mattermostMapper).insertMessage(any());
+
+        var response = service.ingest(request);
+
+        assertThat(response.createdParsedJobPost()).isFalse();
+        assertThat(response.messageType()).isEqualTo("JOB_RELATED_NOTICE");
+        assertThat(response.parseStatus()).isEqualTo("IGNORED");
+        verify(mattermostMapper, never()).insertParsedJobPost(any());
+    }
+
+    @Test
     void ingestStoresSuccessStoryRawOnly() {
         MattermostWebhookRequest request = new MattermostWebhookRequest(
             "jobs-channel",
             "mm-102",
             "writer",
-            "[SSAFY 취업성공후기] 5기 프론트엔드 개발자 합격 후기",
+            "[SSAFY 취업성공후기] 삼성전자 합격 후기",
             List.of(),
             Map.of()
         );
