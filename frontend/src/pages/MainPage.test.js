@@ -10,6 +10,7 @@ import MainPage from './MainPage.vue';
 vi.mock('@/features/basket/api/basketApi', () => ({
     basketApi: {
         listJobs: vi.fn(),
+        updateStatus: vi.fn(),
         archiveJob: vi.fn(),
         createJob: vi.fn()
     }
@@ -49,6 +50,7 @@ const makeRouter = () => createRouter({
         { path: '/mypage', component: { template: '<div>mypage</div>' } },
         { path: '/study', component: { template: '<div>study</div>' } },
         { path: '/workspaces/:workspaceId', component: { template: '<div>workspace</div>' } },
+        { path: '/history', component: { template: '<div>history</div>' } },
         { path: '/document-profile', component: { template: '<div>document profile</div>' } },
         { path: '/mypage/notion', component: { template: '<div>notion</div>' } },
         { path: '/mypage/terms', component: { template: '<div>terms</div>' } }
@@ -62,6 +64,12 @@ describe('MainPage', () => {
         vi.mocked(basketApi.listJobs).mockResolvedValue(basketJobs);
         vi.mocked(basketApi.archiveJob).mockReset();
         vi.mocked(basketApi.archiveJob).mockResolvedValue(undefined);
+        vi.mocked(basketApi.updateStatus).mockReset();
+        vi.mocked(basketApi.updateStatus).mockResolvedValue({
+            ...basketJobs[0],
+            status: 'SUBMITTED',
+            statusLabel: '지원완료'
+        });
         vi.mocked(basketApi.createJob).mockReset();
         vi.mocked(basketApi.createJob).mockResolvedValue({
             id: '201',
@@ -136,7 +144,8 @@ describe('MainPage', () => {
         localStorage.setItem('ezone.recentWorkspaces', JSON.stringify(['102']));
         const wrapper = await mountMain();
 
-        expect(wrapper.get('.main-basket-title-row').text()).toBe('공고 장바구니마감 임박순으로 제공됩니다.');
+        expect(wrapper.get('.main-basket-title-row').text()).toBe('공고 장바구니 마감 임박순으로 제공됩니다.');
+        expect(wrapper.get('[data-testid="main-basket-title-link"]').attributes('href')).toBe('/basket');
         expect(wrapper.findAll('.main-basket-head span').map((cell) => cell.text())).toEqual([
             '중요',
             '회사명',
@@ -149,10 +158,24 @@ describe('MainPage', () => {
         ]);
         const rows = wrapper.findAll('[data-testid="main-basket-preview-job"]');
         expect(rows).toHaveLength(5);
+        expect(rows[0].element.children.length).toBe(wrapper.get('.main-basket-head').element.children.length);
         expect(rows[0].get('[data-testid="main-basket-company"]').text()).toContain('Naver');
-        expect(rows[0].get('[data-testid="main-recent-work-101"]').text()).toBe('최근 작업');
+        expect(rows[0].get('[data-testid="main-status-101"]').text()).toBe(basketJobs[0].statusLabel);
+        expect(rows[0].get('[data-testid="main-recent-work-101"]').text()).toBe('이어가기');
+        expect(rows[0].get('[data-testid="main-recent-work-link-101"]').attributes('href')).toBe('/workspaces/102');
         expect(rows[0].get('[data-testid="main-basket-apply-link"]').text()).toBe('바로가기');
         expect(wrapper.find('[data-testid="main-archive-101"]').exists()).toBe(true);
+    });
+
+    it('JOB-010/MAIN-013: updates status from the main basket preview with the same basket behavior', async () => {
+        const wrapper = await mountMain();
+
+        await wrapper.get('[data-testid="main-status-101"]').trigger('click');
+        await wrapper.get('[data-testid="main-status-101-option-COMPLETED"]').trigger('click');
+        await flushPromises();
+
+        expect(basketApi.updateStatus).toHaveBeenCalledWith('101', 'COMPLETED');
+        expect(wrapper.get('[data-testid="main-status-101"]').text()).toBe('지원완료');
     });
 
     it('JOB-008: prompts confirm and reloads summary stats after deleting job in basket preview', async () => {

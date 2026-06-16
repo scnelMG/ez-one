@@ -1,14 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { AxiosError } from 'axios';
 import { clearAuthSession, getAccessToken, getRefreshToken, saveAuthSession } from '@/features/auth/session/authSession';
-import { defaultHttpClient, resolveApiBaseUrl } from './apiClient';
+import { defaultHttpClient, resolveApiBaseUrl, setLoginRedirectHandler } from './apiClient';
 describe('apiClient', () => {
     const originalAdapter = defaultHttpClient.defaults.adapter;
     beforeEach(() => {
         localStorage.clear();
+        setLoginRedirectHandler(() => {});
     });
     afterEach(() => {
         defaultHttpClient.defaults.adapter = originalAdapter;
+        setLoginRedirectHandler(undefined);
         clearAuthSession();
     });
     it('normalizes API base URLs because frontend request paths already include /api', () => {
@@ -186,6 +188,28 @@ describe('apiClient', () => {
 
         expect(getAccessToken()).toBeNull();
         expect(getRefreshToken()).toBeNull();
+    });
+
+    it('AUTH-007: delegates missing-refresh login navigation without importing the router module', async () => {
+        localStorage.setItem('ezone.accessToken', 'expired-access-token');
+        const redirects = [];
+        setLoginRedirectHandler((path) => {
+            redirects.push(path);
+        });
+        const adapter = async (config) => {
+            const response = makeResponse(config, 401, {
+                success: false,
+                data: null,
+                error: { code: 'UNAUTHORIZED', message: 'Authentication is required.' }
+            });
+            throw new AxiosError('Unauthorized', 'ERR_BAD_REQUEST', config, null, response);
+        };
+        defaultHttpClient.defaults.adapter = adapter;
+
+        await expect(defaultHttpClient.get('/api/me')).rejects.toThrow('Unauthorized');
+
+        expect(redirects).toEqual(['/login']);
+        expect(getAccessToken()).toBeNull();
     });
 });
 function makeResponse(config, status, data) {

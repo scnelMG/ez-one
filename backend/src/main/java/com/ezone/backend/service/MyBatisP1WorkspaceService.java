@@ -129,24 +129,26 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         if (request.companyId() != null) {
             job.setCompanyId(request.companyId());
             job.setCompanyName(request.companyName());
-            applyCompanyDetailDefaults(job, request.sourceUrl());
+            CompanyDetailDefaults.CompanyDefaults defaults = applyCompanyDetailDefaults(job, request.companyName(), request.sourceUrl());
             applyCompanyLogoCandidate(job, request.sourceUrl(), request.logoUrl());
             job.setPositionTitle(request.positionTitle());
             job.setDeadlineLabel(normalizeDeadline(request.deadlineLabel()));
             job.setSourceUrl(request.sourceUrl());
             job.setSource(normalizeJobSource(request.savedSource()));
             // No need to upsertCompany if companyId is provided, just record info and insert job
+            upsertRuleBasedCompanyProfile(job, defaults);
             recordUnverifiedCompanyInfoSource(job);
             mapper.insertJob(job);
         } else {
             job.setCompanyName(request.companyName());
-            applyCompanyDetailDefaults(job, request.sourceUrl());
+            CompanyDetailDefaults.CompanyDefaults defaults = applyCompanyDetailDefaults(job, request.companyName(), request.sourceUrl());
             applyCompanyLogoCandidate(job, request.sourceUrl(), request.logoUrl());
             job.setPositionTitle(request.positionTitle());
             job.setDeadlineLabel(normalizeDeadline(request.deadlineLabel()));
             job.setSourceUrl(request.sourceUrl());
             job.setSource(normalizeJobSource(request.savedSource()));
             mapper.upsertCompany(job);
+            upsertRuleBasedCompanyProfile(job, defaults);
             recordUnverifiedCompanyInfoSource(job);
             mapper.insertJob(job);
         }
@@ -204,10 +206,19 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         mapper.insertEssayDraft(question);
     }
 
-    private void applyCompanyDetailDefaults(JobRow job, String sourceUrl) {
-        job.setCompanyDomain(CompanyDetailDefaults.domainFromUrl(sourceUrl));
-        job.setCompanyType(CompanyDetailDefaults.UNKNOWN_KO);
-        job.setCompanySize(CompanyDetailDefaults.UNKNOWN_KO);
+    private CompanyDetailDefaults.CompanyDefaults applyCompanyDetailDefaults(JobRow job, String companyName, String sourceUrl) {
+        CompanyDetailDefaults.CompanyDefaults defaults = CompanyDetailDefaults.resolve(companyName, sourceUrl);
+        job.setCompanyDomain(defaults.domain());
+        job.setCompanyType(defaults.companyType());
+        job.setCompanySize(defaults.size());
+        return defaults;
+    }
+
+    private void upsertRuleBasedCompanyProfile(JobRow job, CompanyDetailDefaults.CompanyDefaults defaults) {
+        if (job.getCompanyId() == null || CompanyDetailDefaults.UNKNOWN_DOMAIN.equals(defaults.domain())) {
+            return;
+        }
+        mapper.upsertRuleBasedCompanyProfile(job.getCompanyId(), defaults.industry(), defaults.domain());
     }
 
     private void applyCompanyLogoCandidate(JobRow job, String sourceUrl, String logoUrl) {
@@ -241,12 +252,13 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         JobRow job = new JobRow();
         job.setId(current.getJobId());
         job.setCompanyName(request.companyName());
-        applyCompanyDetailDefaults(job, request.sourceUrl());
+        CompanyDetailDefaults.CompanyDefaults defaults = applyCompanyDetailDefaults(job, request.companyName(), request.sourceUrl());
         applyCompanyLogoCandidate(job, request.sourceUrl(), null);
         job.setPositionTitle(request.positionTitle());
         job.setDeadlineLabel(normalizeDeadline(request.deadlineLabel()));
         job.setSourceUrl(request.sourceUrl());
         mapper.upsertCompany(job);
+        upsertRuleBasedCompanyProfile(job, defaults);
         recordUnverifiedCompanyInfoSource(job);
         if (mapper.updateJob(job) == 0) {
             throw new IllegalArgumentException("Basket job not found");
@@ -275,8 +287,10 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
     }
 
     @Override
+    @Transactional
     public void archiveBasketJob(Long userId, Long basketJobId) {
         requireBasketJob(userId, basketJobId);
+        mapper.upsertApplicationHistoryFromBasketJob(userId, basketJobId);
         if (mapper.archiveBasketJob(userId, basketJobId) == 0) {
             throw new IllegalArgumentException("Basket job not found");
         }

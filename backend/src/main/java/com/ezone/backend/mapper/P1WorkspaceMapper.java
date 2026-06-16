@@ -22,6 +22,12 @@ public interface P1WorkspaceMapper {
 
     void upsertCompany(JobRow row);
 
+    void upsertRuleBasedCompanyProfile(
+        @Param("companyId") Long companyId,
+        @Param("industry") String industry,
+        @Param("homepageUrl") String homepageUrl
+    );
+
     void recordCompanyInfoSource(
         @Param("companyId") Long companyId,
         @Param("sourceName") String sourceName,
@@ -88,6 +94,8 @@ public interface P1WorkspaceMapper {
     int markWorkspaceBasketJobInProgress(@Param("userId") Long userId, @Param("workspaceId") Long workspaceId);
 
     int archiveBasketJob(@Param("userId") Long userId, @Param("basketJobId") Long basketJobId);
+
+    int upsertApplicationHistoryFromBasketJob(@Param("userId") Long userId, @Param("basketJobId") Long basketJobId);
 
     Optional<WorkspaceRow> findWorkspace(@Param("userId") Long userId, @Param("workspaceId") Long workspaceId);
 

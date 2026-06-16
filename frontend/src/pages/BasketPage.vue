@@ -33,6 +33,9 @@
             <h2 style="margin: 0;">공고 장바구니</h2>
           </div>
           <div class="basket-tools" aria-label="장바구니 관리">
+            <RouterLink class="basket-history-link" data-testid="basket-history-link" to="/history">
+              과거 지원 내역
+            </RouterLink>
             <button class="add-manual-btn" @click="isManualAddModalOpen = true">+ 직접 추가하기</button>
           </div>
         </div>
@@ -153,8 +156,9 @@
                 </button>
               </div>
             </div>
-            <RouterLink class="job-main-link" :to="`/workspaces/${job.workspaceId}`" style="display: flex; gap: 8px; align-items: center;">
+            <RouterLink class="job-main-link deadline-cell" :to="`/workspaces/${job.workspaceId}`">
               <span>{{ formatAbsoluteDeadline(job) }}</span>
+              <span v-if="formatDDay(job) || job.deadlineLabel?.startsWith('D-')" class="deadline-pill" :class="{ urgent: isDeadlineSoon(job) }">{{ formatDDay(job) || job.deadlineLabel }}</span>
             </RouterLink>
             <a
               class="source-link"
@@ -165,9 +169,16 @@
             >
               바로가기
             </a>
-            <span v-if="formatDDay(job) || job.deadlineLabel?.startsWith('D-')" class="deadline-pill" :class="{ urgent: isDeadlineSoon(job) }">{{ formatDDay(job) || job.deadlineLabel }}</span>
-            <span v-else></span>
-            <span :data-testid="`recent-work-${job.id}`">{{ isRecentWorkspace(job.workspaceId) ? '최근 작업' : '' }}</span>
+            <span class="recent-work-cell" :data-testid="`recent-work-${job.id}`">
+              <RouterLink
+                v-if="isRecentWorkspace(job.workspaceId)"
+                class="recent-work-badge"
+                :data-testid="`recent-work-link-${job.id}`"
+                :to="`/workspaces/${job.workspaceId}`"
+              >
+                이어가기
+              </RouterLink>
+            </span>
             <button
               class="delete-job-button"
               type="button"
@@ -484,11 +495,11 @@ watch(totalPages, (nextTotalPages) => {
   background: #8b5cf6;
   border: 1px solid #8b5cf6;
   color: #ffffff;
-  padding: 10px 18px;
-  min-height: 40px;
-  font-size: 0.9rem;
+  padding: 7px 13px;
+  min-height: 34px;
+  font-size: 0.82rem;
   font-weight: bold;
-  border-radius: 6px;
+  border-radius: 5px;
   white-space: nowrap;
   flex-shrink: 0;
   min-width: max-content;

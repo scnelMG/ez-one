@@ -29,6 +29,8 @@ const makeRouter = () => createRouter({
         { path: '/main', component: { template: '<div>main</div>' } },
         { path: '/mypage', component: { template: '<div>my page</div>' } },
         { path: '/workspaces/:workspaceId', component: { template: '<div>workspace</div>' } },
+        { path: '/history', component: { template: '<div>history</div>' } },
+        { path: '/study', component: { template: '<div>study</div>' } },
         { path: '/document-profile', component: { template: '<div>document profile</div>' } },
         { path: '/mypage/notion', component: { template: '<div>notion</div>' } },
         { path: '/mypage/terms', component: { template: '<div>terms</div>' } }
@@ -213,7 +215,9 @@ describe('BasketPage', () => {
 
         expect(wrapper.get('[data-testid="source-101"]').text()).toBe('바로가기');
         expect(wrapper.find('[data-testid="basket-management-head"]').exists()).toBe(false);
-        expect(wrapper.get('[data-testid="recent-work-101"]').text()).toBe('최근 작업');
+        expect(wrapper.get('.basket-data-row').element.children.length).toBe(wrapper.get('.basket-data-head').element.children.length);
+        expect(wrapper.get('[data-testid="recent-work-101"]').text()).toBe('이어가기');
+        expect(wrapper.get('[data-testid="recent-work-link-101"]').attributes('href')).toBe('/workspaces/102');
         expect(wrapper.get('[data-testid="status-101"]').classes()).toEqual(expect.arrayContaining(['status-select', 'status-tag']));
         await wrapper.get('[data-testid="status-101"]').trigger('click');
         expect(wrapper.findAll('[data-testid^="status-101-option-"]').map((option) => option.text())).toEqual([
@@ -262,6 +266,14 @@ describe('BasketPage', () => {
 
         expect(wrapper.get('[data-testid="basket-filter-priority"]').classes()).toContain('active');
         expect(rowCompanies(wrapper)).toEqual(['서브원']);
+    });
+
+    it('HISTORY-002: exposes a basket entry point to the past application history page', async () => {
+        const wrapper = await mountBasket('/basket');
+
+        const historyLink = wrapper.get('[data-testid="basket-history-link"]');
+        expect(historyLink.text()).toContain('과거 지원 내역');
+        expect(historyLink.attributes('href')).toBe('/history');
     });
 
     it('COMMON-001: paginates basket jobs after filtering and sorting', async () => {

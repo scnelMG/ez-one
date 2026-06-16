@@ -44,7 +44,6 @@
 | 참고자료 | 프롬프트 게시판 | workspace tab | `ReferenceBoardList`, type `PROMPT` | Yes | 프롬프트 저장/복사 |
 | 참고자료 | 메모 게시판 | workspace drawer | `ReferenceBoardList`, type `FREE_MEMO` | Yes | 자유 메모 |
 | 서류 입력 정보 | 서류 항목 입력 | `/document-profile` | `DocumentProfilePage`, `ProfileSectionForm` | Yes | 학력, 어학, 자격증, 수상, 경력 등 |
-| 서류 입력 정보 | 커스텀 항목 추가 | `/document-profile` | `CustomFieldEditor` | Yes | 기업별 특수 항목 |
 | 과거 지원 내역 | 기간 선택 | `/history` | `PastHistoryPage` | No | P2. 연도/반기 드롭다운 |
 | 과거 지원 내역 | 결과 대시보드 | `/history` | `PastResultDashboard` | No | P2. 합격/미지원/유저 대비 위치 |
 | 과거 지원 내역 | 지원 회고 메모 | `/history` | `RetrospectiveMemo` | No | P2. 기간별 결과 직접 정리 |
@@ -210,7 +209,7 @@ P1 확장 프로그램 팝업의 기능 선택 흐름에 포함한다. 공고 �
 
 완료 기준:
 - `/api/extension/document-profile`로 현재 사용자의 서류 입력 정보를 조회한다.
-- 기본정보, 표준 섹션, 커스텀 항목을 현재 페이지 입력칸 label/placeholder/name/id/주변 텍스트와 매칭한다.
+- 기본정보와 표준 섹션을 현재 페이지 입력칸 label/placeholder/name/id/주변 텍스트와 매칭한다.
 - 자기소개서와 장문 textarea는 자동 입력하지 않고 수동 검토 대상에 표시한다.
 - 자동 입력, 실패 항목, 복사 후보를 결과 패널에 표시하고 제출 전 직접 검토를 안내한다.
 
@@ -222,13 +221,11 @@ frontend/src/pages/document-profile/
 frontend/src/features/document-profile/
   components/ProfileSectionTabs.vue
   components/ProfileSectionForm.vue
-  components/CustomFieldList.vue
-  components/CustomFieldEditor.vue
 ```
 
 완료 기준:
-- 기본정보, 학력, 경력, 프로젝트, 자격/어학, 수상/활동, 커스텀 항목을 저장한다.
-- 섹션 단위 저장과 커스텀 항목 CRUD를 제공한다.
+- 기본정보, 병역/장애/보훈, 학력, 경력, 프로젝트, 자격/어학, 수상/교육/활동/해외경험 등 표준 섹션을 저장한다.
+- 섹션 단위 저장을 제공한다.
 - workspace 기본값과 extension 입력 보조가 같은 data model을 사용한다.
 
 ## Frontend Route Map
@@ -345,9 +342,9 @@ frontend/src/features/document-profile/
 | 항목 | 기준 |
 | --- | --- |
 | 목적 | 지원서 입력 정보 저장과 재사용 |
-| 섹션 | 기본정보, 학력, 경력, 프로젝트, 자격/어학, 수상/활동, 커스텀 항목 |
-| 주요 컴포넌트 | `ProfileSectionTabs`, `ProfileSectionForm`, `CustomFieldList`, `CustomFieldEditor` |
-| 저장 | 섹션 단위 저장. 커스텀 항목은 CRUD 제공 |
+| 섹션 | 기본정보, 병역/장애/보훈, 학력, 경력, 프로젝트, 자격/어학, 수상/교육/활동/해외경험 |
+| 주요 컴포넌트 | `ProfileSectionTabs`, `ProfileSectionForm` |
+| 저장 | 섹션 단위 저장 |
 
 ### MyPage / NotionSettingsPage
 
@@ -398,7 +395,7 @@ frontend/src/features/document-profile/
 | 공고 저장 popup | Yes | 현재 페이지 공고 감지, 직무 복수 선택, 미리보기, 저장 |
 | 저장 완료 | Yes | 장바구니/워크스페이스 이동 링크 제공 |
 | 추출 실패 | Yes | 실패 안내와 수동 입력 대안 제공 |
-| 서류 자동 입력 | Yes | 기본/문서/커스텀 항목 입력 보조, 자기소개서 자동 입력 제외, 실패/복사 후보 표시 |
+| 서류 자동 입력 | Yes | 기본/표준 문서 항목 입력 보조, 자기소개서 자동 입력 제외, 실패/복사 후보 표시 |
 
 ## 화면 동작 원칙
 
@@ -473,5 +470,7 @@ frontend/src/
 
 - `/history` is now an active authenticated route rendered by `PastHistoryPage`.
 - The page follows the uploaded wireframe structure: period select, summary dashboard, company-type distribution, and table rows.
-- Each table row links to `/workspaces/{workspaceId}` so past applications reuse the existing workspace reading/editing surface.
+- The summary dashboard exposes the standard status metrics 지원완료, 미지원, 진행 중, 지원 전. Result-stage chips remain as secondary row filters.
+- The company-type distribution doubles as a table filter, table search filters the loaded rows by company, position, result, or source URL, and the table toolbar provides separate status/result label filters plus sorting.
+- Each table row opens `/workspaces/{workspaceId}` so past applications reuse the existing workspace reading/editing surface. A separate 원본 공고 link opens the imported source URL.
 - Retrospective memo, AI summary, and percentile comparison remain out of scope.

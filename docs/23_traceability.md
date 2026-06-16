@@ -59,8 +59,9 @@
 | Requirement | Implementation | Verification |
 | --- | --- | --- |
 | `HISTORY-001` | `/history` route and nav entry; rows link to `/workspaces/{workspaceId}` | `router/index.test.js`, `AppLayout.test.js`, `PastHistoryPage.test.js` |
-| `HISTORY-003` | `GET /api/history/applications` and `PastHistoryPage` default full list | `historyApi.test.js`, `PastHistoryPage.test.js`, `P1ApiContractTest` |
+| `HISTORY-002` | Basket page exposes a `과거 지원 내역` link to `/history` | `BasketPage.test.js` |
+| `HISTORY-003` | `GET /api/history/applications` and `PastHistoryPage` default full list with search and sorting on the loaded rows; archived basket jobs are snapshotted into history | `historyApi.test.js`, `PastHistoryPage.test.js`, `P1ApiContractTest` |
 | `HISTORY-004`/`HISTORY-005` | `ALL` and `YYYY-H1`/`YYYY-H2` period options | `PastHistoryPage.test.js`, `P1ApiContractTest` |
-| `HISTORY-006`/`HISTORY-007` | selected-period summary metrics | `PastHistoryPage.test.js`, `P1ApiContractTest` |
-| `HISTORY-008` | company-type aggregation | `PastHistoryPage.test.js`, `P1ApiContractTest` |
+| `HISTORY-006`/`HISTORY-007` | selected-period summary metrics use the standard status counts 지원완료, 미지원, 진행 중, 지원 전 | `PastHistoryPage.test.js`, `HistoryApplicationAssemblerTest`, `P1ApiContractTest` |
+| `HISTORY-008` | company-type aggregation and table filters use explicit company/status/result labels | `PastHistoryPage.test.js`, `HistoryApplicationAssemblerTest`, `P1ApiContractTest` |
 | `HISTORY-009`/`HISTORY-010` | intentionally not implemented | Out of scope |

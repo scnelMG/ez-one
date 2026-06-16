@@ -3,6 +3,12 @@ import { clearAuthSession, getAccessToken, getRefreshToken, saveAuthSession } fr
 export const defaultHttpClient = axios.create({
     baseURL: resolveApiBaseUrl(import.meta.env.VITE_API_BASE_URL)
 });
+let loginRedirectHandler = defaultLoginRedirectHandler;
+
+export function setLoginRedirectHandler(handler) {
+    loginRedirectHandler = typeof handler === 'function' ? handler : defaultLoginRedirectHandler;
+}
+
 defaultHttpClient.interceptors.request.use((config) => {
     const accessToken = getAccessToken();
     if (accessToken) {
@@ -22,12 +28,7 @@ defaultHttpClient.interceptors.response.use((response) => response, async (error
     const refreshToken = getRefreshToken();
     if (!refreshToken) {
         clearAuthSession();
-        try {
-            const { router } = await import('@/router');
-            void router.push('/login');
-        } catch (routerError) {
-            window.location.href = '/login';
-        }
+        await redirectToLogin();
         throw error;
     }
     try {
@@ -42,12 +43,7 @@ defaultHttpClient.interceptors.response.use((response) => response, async (error
     }
     catch (refreshError) {
         clearAuthSession();
-        try {
-            const { router } = await import('@/router');
-            void router.push('/login');
-        } catch (routerError) {
-            window.location.href = '/login';
-        }
+        await redirectToLogin();
         throw refreshError;
     }
 });
@@ -65,4 +61,15 @@ export function resolveApiBaseUrl(value) {
 }
 function isAuthRefreshExcludedEndpoint(url) {
     return Boolean(url?.startsWith('/api/auth/') && url !== '/api/auth/extension-session');
+}
+async function redirectToLogin() {
+    try {
+        await loginRedirectHandler('/login');
+    }
+    catch {
+        defaultLoginRedirectHandler('/login');
+    }
+}
+function defaultLoginRedirectHandler(path) {
+    window.location.href = path;
 }

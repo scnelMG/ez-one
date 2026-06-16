@@ -146,11 +146,15 @@ class P1ApiContractTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data.summary.total", greaterThanOrEqualTo(1)))
+            .andExpect(jsonPath("$.data.summary.completed", greaterThanOrEqualTo(1)))
             .andExpect(jsonPath("$.data.periods[0].value").value("ALL"))
             .andExpect(jsonPath("$.data.companyTypes[0].type", notNullValue()))
+            .andExpect(jsonPath("$.data.industryStats", notNullValue()))
+            .andExpect(jsonPath("$.data.dataQuality.total", greaterThanOrEqualTo(1)))
             .andExpect(jsonPath("$.data.rows[0].workspaceId", notNullValue()))
             .andExpect(jsonPath("$.data.rows[0].resultStage", notNullValue()))
-            .andExpect(jsonPath("$.data.rows[0].resultLabel", notNullValue()));
+            .andExpect(jsonPath("$.data.rows[0].resultLabel", notNullValue()))
+            .andExpect(jsonPath("$.data.rows[0].companyDataSource", notNullValue()));
 
         mockMvc.perform(get("/api/history/applications?period=2025-H1&resultStage=DOCUMENT_FAILED"))
             .andExpect(status().isOk())
@@ -159,6 +163,46 @@ class P1ApiContractTest {
         mockMvc.perform(get("/api/basket/jobs"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data[0].companyName").value("네이버"));
+    }
+
+    @Test
+    void archivedBasketJobMovesIntoHistoryAndKeepsWorkspaceLink() throws Exception {
+        String createdBody = mockMvc.perform(post("/api/basket/jobs")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "companyName": "Archived History Company",
+                      "positionTitle": "Backend Developer",
+                      "deadlineLabel": "2026.06.30",
+                      "sourceUrl": "https://example.com/jobs/archive-history",
+                      "savedSource": "DIRECT"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+        JsonNode created = objectMapper.readTree(createdBody);
+        long basketJobId = created.at("/data/id").asLong();
+        long workspaceId = created.at("/data/workspaceId").asLong();
+
+        mockMvc.perform(delete("/api/basket/jobs/%d".formatted(basketJobId)))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/basket/jobs"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data[?(@.id == %d)]".formatted(basketJobId), hasSize(0)));
+
+        mockMvc.perform(get("/api/history/applications"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath(
+                "$.data.rows[?(@.workspaceId == %d && @.companyName == 'Archived History Company')]".formatted(workspaceId),
+                hasSize(1)
+            ));
+
+        mockMvc.perform(get("/api/workspaces/%d".formatted(workspaceId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.companyName").value("Archived History Company"));
     }
 
     @Test
@@ -208,6 +252,34 @@ class P1ApiContractTest {
             .andExpect(jsonPath("$.data.companyDetails.companyType").value("미확인"))
             .andExpect(jsonPath("$.data.companyDetails.size").value("미확인"))
             .andExpect(jsonPath("$.data.companyDetails.financialStatus").value("unverified"));
+    }
+
+    @Test
+    void workspaceDoesNotExposeJobBoardDomainAsKnownCompanyHomepage() throws Exception {
+        String createdBody = mockMvc.perform(post("/api/basket/jobs")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "companyName": "카카오뱅크",
+                      "positionTitle": "인턴 · 정보보호 데이터 엔지니어",
+                      "deadlineLabel": "2026.07.03",
+                      "sourceUrl": "https://jasoseol.com/recruit?rec=104614",
+                      "savedSource": "DIRECT"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+        long workspaceId = objectMapper.readTree(createdBody).at("/data/workspaceId").asLong();
+
+        mockMvc.perform(get("/api/workspaces/%d".formatted(workspaceId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.companyName").value("카카오뱅크"))
+            .andExpect(jsonPath("$.data.companyDetails.domain").value("kakaobank.com"))
+            .andExpect(jsonPath("$.data.companyDetails.homepage").value("kakaobank.com"))
+            .andExpect(jsonPath("$.data.companyDetails.companyType").value("대기업"))
+            .andExpect(jsonPath("$.data.companyDetails.size").value("대기업"));
     }
 
     @Test
@@ -438,8 +510,7 @@ class P1ApiContractTest {
 
         mockMvc.perform(get("/api/extension/document-profile"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.sections.basicInfo", notNullValue()))
-            .andExpect(jsonPath("$.data.customFields", notNullValue()));
+            .andExpect(jsonPath("$.data.sections.basicInfo", notNullValue()));
 
         mockMvc.perform(put("/api/document-profile/sections/basicInfo")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -453,35 +524,6 @@ class P1ApiContractTest {
                     """))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.lastSavedAt", notNullValue()));
-
-        mockMvc.perform(post("/api/document-profile/custom-fields")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                    {
-                      "label": "Portfolio",
-                      "fieldType": "URL",
-                      "value": "https://example.com"
-                    }
-                    """))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.label").value("Portfolio"))
-            .andExpect(jsonPath("$.data.fieldType").value("URL"));
-
-        mockMvc.perform(patch("/api/document-profile/custom-fields/301")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                    {
-                      "label": "Portfolio Updated",
-                      "fieldType": "URL",
-                      "value": "https://example.com/updated"
-                    }
-                    """))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.label").value("Portfolio Updated"));
-
-        mockMvc.perform(delete("/api/document-profile/custom-fields/301"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.success").value(true));
 
         mockMvc.perform(get("/api/integrations/notion"))
             .andExpect(status().isOk())

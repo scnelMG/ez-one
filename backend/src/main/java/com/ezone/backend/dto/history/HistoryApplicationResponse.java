@@ -8,6 +8,8 @@ public record HistoryApplicationResponse(
     List<HistoryPeriodResponse> periods,
     HistorySummaryResponse summary,
     List<HistoryCompanyTypeResponse> companyTypes,
+    List<HistoryIndustryResponse> industryStats,
+    HistoryDataQualityResponse dataQuality,
     List<HistoryApplicationRowResponse> rows
 ) {
     public record HistoryPeriodResponse(String value, String label) {
@@ -28,6 +30,12 @@ public record HistoryApplicationResponse(
     public record HistoryCompanyTypeResponse(String type, long count) {
     }
 
+    public record HistoryIndustryResponse(String industry, long count) {
+    }
+
+    public record HistoryDataQualityResponse(long total, long companyMaster, long ruleBased, long unknown) {
+    }
+
     public record HistoryApplicationRowResponse(
         Long id,
         Long workspaceId,
@@ -39,7 +47,9 @@ public record HistoryApplicationResponse(
         String rawResult,
         String deadlineLabel,
         String sourceUrl,
-        String companyType
+        String companyType,
+        String companyIndustry,
+        String companyDataSource
     ) {
     }
 }

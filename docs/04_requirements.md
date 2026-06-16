@@ -130,7 +130,7 @@
 | 저장 성공 안내 | EXT-010 | 저장 성공 시 장바구니 경로를 제공한다. | 확장 프로그램 | P1 | 기능 | 완료 |  |  | 저장 완료 화면에서 장바구니 링크를 제공한다. |
 | 추출 실패 처리 | EXT-011 | 정보 추출 실패 시 실패 사유와 직접 입력 방법을 안내한다. | 확장 프로그램 | P2 | 기능 | 시작 전 |  |  |  |
 | 미지원 페이지 처리 | EXT-012 | 수집 대상이 아닌 페이지에서는 미지원 페이지임을 안내한다. | 확장 프로그램 | P1 | 기능 | 완료 |  |  | 자소설닷컴이 아닌 active tab에서는 미지원 안내를 표시한다. |
-| 지원서 입력 칸 채우기 | EXT-013 | 사용자 정보를 바탕으로 지원서 입력 칸을 자동 또는 반자동으로 채운다. | 확장 프로그램 | P1 | 기능 | 완료 |  |  | 기본 인적사항/서류정보/커스텀 항목을 active tab 주입 방식으로 자동 입력하고, 자기소개서 자동 입력은 제외한다. |
+| 지원서 입력 칸 채우기 | EXT-013 | 사용자 정보를 바탕으로 지원서 입력 칸을 자동 또는 반자동으로 채운다. | 확장 프로그램 | P1 | 기능 | 완료 |  |  | 기본 인적사항/표준 서류정보를 active tab 주입 방식으로 자동 입력하고, 자기소개서 자동 입력은 제외한다. |
 | 자소설닷컴 접근 상태 확인 | EXT-014 | 확장 프로그램은 자소설닷컴 공고 또는 자소서 문항 페이지에 접근 가능한 상태인지 확인한다. | 확장 프로그램 | P1 | 기능 | 완료 |  |  | active tab URL과 host permissions로 지원 페이지를 확인한다. |
 | 자소설닷컴 공고 기본 정보 추출 | EXT-015 | 확장 프로그램은 자소설닷컴에서 회사명, 직무/공고명, 마감일자, 채용공고 URL을 추출한다. | 확장 프로그램 | P1 | 기능 | 완료 |  |  | `#__NEXT_DATA__`와 DOM fallback 기반으로 추출한다. |
 | 직무 후보 전체 추출 | EXT-016 | 공고에 복수 직무 또는 모집 부문이 있는 경우 확장 프로그램은 저장 가능한 직무 후보를 모두 추출한다. | 확장 프로그램 | P1 | 기능 | 완료 |  |  | 직무 후보 중복 제거와 실제 자소설 복수 직무 payload를 테스트했다. |
@@ -247,12 +247,12 @@
 | 설정 | PAGE-007 | 계정, Notion, 확장 프로그램 연동 관리 화면을 제공한다. | 화면 | P2 | 화면 | 시작 전 |  |  |  |
 | 관리자 페이지 제공 | PAGE-008 | 관리자는 최소 운영 범위에서 사용자, 공고, 기업 정보, 추천 데이터를 조회하고 필요한 항목을 수정할 수 있는 관리자 페이지에 접근할 수 있다. | 화면 | P3 | 화면 | 시작 전 |  |  |  |
 | 확장 프로그램 팝업 | PAGE-009 | 추출 정보 미리보기, 저장, 로그인 안내, 저장 결과 안내 화면을 제공한다. | 화면 | P1 | 화면 | 완료 |  |  | 로그인, 기능 선택, 미리보기, 저장 완료 상태를 제공한다. |
-| 서류 입력 정보 관리 | PROFILE-001 | 기본정보, 학력, 경력, 프로젝트, 자격/어학, 수상/활동, 커스텀 항목을 저장한다. | 서류 입력 정보 | P1 | 기능 | 완료 |  |  | 현재 04. 요구사항 정의서 기준으로 갱신 |
+| 서류 입력 정보 관리 | PROFILE-001 | 기본정보, 병역/장애/보훈, 학력, 경력, 프로젝트, 자격/어학, 수상/교육/활동/해외경험 등 표준 서류 입력 정보를 저장한다. | 서류 입력 정보 | P1 | 기능 | 완료 |  |  | 현재 04. 요구사항 정의서 기준으로 갱신 |
 | 과목 정보 등록 | PROFILE-002 | 사용자는 과목 정보를 등록할 수 있다. | 서류 입력 정보 | P1 | 기능 | 완료 |  |  | Verified by course section edit tests. |
 | 프로젝트 정보 등록 | PROFILE-003 | 사용자는 프로젝트 정보를 등록할 수 있다. | 서류 입력 정보 | P1 | 기능 | 완료 |  |  | Verified by project section edit tests. |
 | 서류 입력 정보 조회 | PROFILE-004 | 사용자는 서류 입력 정보 페이지에서 본인이 입력한 기본 정보, 학력, 경력, 자격증, 어학, 프로젝트, 수상 등 정보를 조회할 수 있다. | 서류 입력 정보 | P1 | 기능 | 완료 | 서류 입력 정보 | 서류 입력 정보 | Verified by document profile API/page read tests. |
 | 서류 입력 정보 수정 | PROFILE-005 | 사용자는 서류 입력 정보 페이지에서 본인이 입력한 정보를 수정할 수 있다. | 서류 입력 정보 | P1 | 기능 | 완료 | 서류 입력 정보 | 서류 입력 정보 | Verified by document profile section save tests. |
-| 서류 입력 정보 삭제 | PROFILE-006 | 사용자는 서류 입력 정보 페이지에서 본인이 입력한 항목을 삭제할 수 있다. | 서류 입력 정보 | P1 | 기능 | 완료 | 서류 입력 정보 | 서류 입력 정보 | Verified by custom field and repeatable item delete tests. |
+| 서류 입력 정보 삭제 | PROFILE-006 | 사용자는 서류 입력 정보 페이지에서 본인이 입력한 반복 항목을 삭제할 수 있다. | 서류 입력 정보 | P1 | 기능 | 완료 | 서류 입력 정보 | 서류 입력 정보 | Verified by repeatable item delete tests. |
 | 서류 입력 정보 유형 관리 | PROFILE-007 | 서류 입력 정보는 기본 정보, 병역/장애/보훈, 학교 정보, 경력, 자격증/어학, 자소서, 기타 정보 유형으로 구분하여 관리한다. | 서류 입력 정보 | P1 | 데이터 | 완료 | 서류 입력 정보 | 서류 입력 정보 | Verified by standard profile sections and reusable item model. |
 | 대표 경험 표시 | PROFILE-008 | 사용자는 자주 활용할 경험을 대표 경험으로 표시할 수 있다. | 서류 입력 정보 | P2 | 기능 | 시작 전 |  |  |  |
 | 서류 입력 정보 마지막 저장 시각 표시 | PROFILE-009 | 서류 입력 정보 입력 페이지는 사용자의 마지막 저장 시각을 표시한다. | 서류 입력 정보 | P1 | 기능 | 완료 | 서류 입력 정보 | 서류 입력 정보 | Verified by lastSavedAt API/page mapping. |
@@ -272,7 +272,7 @@
 | 섹션별 커스텀 필드 관리 | PROFILE-023 | 사용자는 기본 정보, 병역/장애/보훈, 학교 정보 등 주요 섹션에 커스텀 필드를 추가할 수 있다. | 서류 입력 정보 | P2 | 기능 | 시작 전 |  |  |  |
 | 다건 항목 추가/삭제 | PROFILE-024 | 경력, 학력, 프로젝트, 인턴/알바, 수상, 교육, 활동, 해외경험 등 반복 가능한 항목은 추가 및 삭제가 가능해야 한다. | 서류 입력 정보 | P1 | 기능 | 완료 |  |  | Verified by repeatable item add/delete tests. |
 | 희망 직무/기업/지역/스킬 관리 | PROFILE-025 | 사용자는 온보딩에서 입력한 희망 직무, 희망 기업 분류, 계열/업종, 희망 근무 지역, 보유 스킬 정보를 내정보에서 조회하고 수정할 수 있다. | 서류 입력 정보 | P1 | 기능 | 완료 |  |  | Verified by MyPage onboarding preference edit tests. |
-| 서류 입력 정보 자동 입력 활용 | PROFILE-026 | 서류 입력 정보는 크롬 확장 프로그램의 지원서 입력 보조 기능에서 자동 또는 반자동 입력에 활용될 수 있어야 한다. | 서류 입력 정보 | P1 | 기능 | 완료 | 서류 입력 정보 | 확장 프로그램 팝업 | `/api/extension/document-profile`과 확장 자동입력 파서가 basicInfo/customFields/반복 섹션 값을 활용한다. |
+| 서류 입력 정보 자동 입력 활용 | PROFILE-026 | 서류 입력 정보는 크롬 확장 프로그램의 지원서 입력 보조 기능에서 자동 또는 반자동 입력에 활용될 수 있어야 한다. | 서류 입력 정보 | P1 | 기능 | 완료 | 서류 입력 정보 | 확장 프로그램 팝업 | `/api/extension/document-profile`과 확장 자동입력 파서가 basicInfo/반복 표준 섹션 값을 활용한다. |
 | 서류 입력 정보 워크스페이스 조회 | PROFILE-027 | 사용자는 워크스페이스에서 수상, 프로젝트 등 본인의 서류 입력 정보를 조회할 수 있다. | 서류 입력 정보 | P1 | 기능 | 완료 | 서류 입력 정보 | 공고 워크스페이스 | Verified by WorkspacePage document profile panel tests. |
 | AI 프롬프트 보관함 제공 | PROMPT-001 | 시스템은 사용자가 자소서 작성에 자주 사용하는 프롬프트를 저장하고 외부 AI 도구에 복사할 수 있는 AI 프롬프트 보관함을 제공한다. | 워크스페이스/자소서 | P2 | 기능 | 시작 전 | 사용자, 워크스페이스 | 공고 워크스페이스 | 사용자 계정 단위로 관리한다. |
 | 내 프롬프트 관리 | PROMPT-002 | 사용자는 마이페이지에서 본인이 저장한 프롬프트를 추가, 조회, 수정, 삭제할 수 있다. | 워크스페이스/자소서 | P2 | 기능 | 시작 전 | 사용자 |  | 프롬프트 전체 관리는 마이페이지에서 수행한다. |
@@ -330,10 +330,10 @@
 
 - `EXT-008` / `JOB-021`: Extension job save now includes optional company logo extraction. The extension may send `logoUrl`; save must still succeed when the logo is absent or invalid.
 - `JOB-016`: Company information now includes reusable logo metadata on `companies`: `logo_url`, `logo_source_url`, `logo_status`, `logo_updated_at`. Existing logos are preserved unless a future trusted-source policy explicitly allows replacement.
-- `EXT-013`, `EXT-021`, `EXT-022`, `EXT-023`, `PROFILE-026`: Document auto-fill support is treated as P1 for basic document/profile/custom fields. Essay auto-fill remains excluded.
+- `EXT-013`, `EXT-021`, `EXT-022`, `EXT-023`, `PROFILE-026`: Document auto-fill support is treated as P1 for basic document/profile standard fields. Essay auto-fill remains excluded.
 ## 2026-06-16 History Scope Update
 
-- `HISTORY-001` through `HISTORY-008` are approved for implementation in branch `codex/history-page`.
-- Implemented scope: `/history` page, half-year period filter, selected-period summary metrics, company-type aggregation, imported history rows, and row navigation to `/workspaces/{workspaceId}`.
+- `HISTORY-001` through `HISTORY-008` are approved for implementation in branch `codex/history-past-applications`.
+- Implemented scope: `/history` page, basket-to-history entry point, half-year period filter, standard status summary metrics, company-type aggregation/filtering, imported history rows, archived basket history rows, table search, row navigation to `/workspaces/{workspaceId}`, and separate original posting links.
 - `HISTORY-009` and `HISTORY-010` remain out of scope: no AI summary and no anonymous percentile comparison.
 - Imported history data must not be hardcoded in Flyway migrations. Use `tools/import-history-csv.ps1` to generate reviewed SQL for a specific local account and CSV.
