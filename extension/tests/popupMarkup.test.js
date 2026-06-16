@@ -59,9 +59,16 @@ describe('extension popup markup', () => {
 
     it('EXT-022/EXT-023: renders document autofill result lists', () => {
         expect(markup).toContain('id="document-result-panel"');
+        expect(markup).toContain('class="autofill-summary-grid"');
+        expect(markup).toContain('id="autofill-filled-count"');
+        expect(markup).toContain('id="autofill-review-count"');
+        expect(markup).toContain('id="autofill-copy-count"');
         expect(markup).toContain('id="autofill-filled-list"');
         expect(markup).toContain('id="autofill-failed-list"');
         expect(markup).toContain('id="autofill-copy-list"');
+        expect(markup).toContain('data-tone="success"');
+        expect(markup).toContain('data-tone="warning"');
+        expect(markup).toContain('data-tone="neutral"');
     });
 
     it('EXT-005: shows whether essay questions were collected for the selected role', () => {

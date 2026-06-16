@@ -7,11 +7,8 @@
         </RouterLink>
 
         <p class="landing-eyebrow">지원 준비 워크스페이스</p>
-        <h1 id="login-title">공고부터 자소서까지 한 곳에서 준비하세요</h1>
-        <p>
-          저장한 공고, 마감 일정, 서류 정보, 자기소개서 초안을 공고별로 정리해
-          다음에 해야 할 일을 바로 보여줍니다.
-        </p>
+        <h1 id="login-title">공고를 저장하면 준비가 이어집니다</h1>
+        <p>확장 프로그램으로 담고, 장바구니에서 정리하고, 서류 정보로 빠르게 작성하세요.</p>
 
         <div class="landing-hero-actions">
           <button class="landing-primary" data-testid="google-login" type="button" @click="startGoogleLogin">
@@ -27,20 +24,11 @@
           >
             이메일로 로그인
           </button>
-          <button
-            v-if="showLocalDevLogin"
-            class="landing-secondary email-auth-trigger"
-            data-testid="local-dev-login"
-            type="button"
-            @click="loginAsLocalDevUser"
-          >
-            로컬 개발 로그인
-          </button>
         </div>
 
         <div class="landing-sub-actions" aria-label="보조 이동">
-          <a href="#features">작동 방식 보기</a>
-          <a href="#extension-install">확장 프로그램 보기</a>
+          <a href="#features">기능 보기</a>
+          <a href="#extension-install">확장 설치</a>
         </div>
 
         <div v-if="isAccountSwitchFlow" class="account-switch-callout" data-testid="account-switch-callout">
@@ -132,184 +120,101 @@
         <p v-if="errorMessage" class="auth-note error" role="alert">{{ errorMessage }}</p>
       </div>
 
-      <aside class="landing-preview" aria-label="EZ-ONE 미리보기">
-        <div class="preview-topbar">
-          <span>오늘의 지원 보드</span>
-          <strong>실시간 정리</strong>
-        </div>
-        <div class="preview-metrics">
-          <div>
-            <span>저장 공고</span>
-            <strong>12</strong>
+      <div class="landing-product-story" aria-label="EZ-ONE 지원 준비 흐름">
+        <figure class="landing-product-shot" aria-label="EZ-ONE 지원 워크스페이스 화면">
+          <div class="landing-extension-badge">
+            <span>Chrome Extension</span>
+            <strong>공고 페이지에서 바로 EZ-ONE에 저장</strong>
           </div>
-          <div>
-            <span>작성 중</span>
-            <strong>5</strong>
+          <img :src="loginWorkspacePreview" alt="공고 목록, 다음 작업, 자기소개서 작업 공간이 함께 보이는 EZ-ONE 화면" />
+          <figcaption>
+            <span>확장 저장</span>
+            <span>장바구니 정리</span>
+            <span>서류 정보 재사용</span>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="extension-install" class="landing-story-section story-extension ez-flow-section" aria-label="Chrome 확장프로그램 설치">
+      <div class="story-copy">
+        <span class="story-pill">EZ-ONE Extension</span>
+        <h2>보던 공고를<br />그 자리에서 담습니다.</h2>
+        <p>보고 있던 채용 공고를 EZ-ONE에 저장하면 회사, 직무, 마감일이 지원 준비 흐름으로 이어집니다.</p>
+        <a class="store-button" :href="extensionInstallUrl" target="_blank" rel="noreferrer">
+          Chrome 웹 스토어에서 설치하기
+        </a>
+      </div>
+
+      <figure class="story-visual product-screenshot-card extension-screenshot-card" aria-label="확장 프로그램 실제 저장 화면">
+        <img
+          :src="landingExtensionSave"
+          alt="자소설닷컴 채용공고 화면 위에서 EZ-ONE 확장 프로그램으로 공고와 자소서 문항을 저장하는 실제 화면"
+        />
+        <figcaption>실제 확장 프로그램 화면: 공고, 직무, 자소서 문항을 확인하고 장바구니에 담습니다.</figcaption>
+      </figure>
+    </section>
+
+    <section id="features" class="landing-story-section story-basket ez-flow-section" aria-label="공고 장바구니">
+      <div class="story-visual basket-composition" aria-label="공고 장바구니 예시">
+        <div class="basket-table-card">
+          <div class="basket-table-head">
+            <span>공고 장바구니</span>
+            <strong>마감 임박순</strong>
           </div>
-          <div>
-            <span>마감 임박</span>
-            <strong>3</strong>
-          </div>
-        </div>
-        <div class="preview-focus-card">
-          <span>다음 작업</span>
-          <strong>네이버 백엔드 개발자 자기소개서 2번 문항 이어쓰기</strong>
-          <p>참고자료 4개와 저장된 서류 정보가 연결되어 있습니다.</p>
-        </div>
-        <div class="preview-table">
-          <div class="preview-row head">
-            <span>회사명</span>
-            <span>직무</span>
-            <span>마감</span>
-          </div>
-          <div class="preview-row">
-            <span>네이버</span>
+          <div class="basket-demo-row active">
+            <strong>네이버</strong>
             <span>백엔드 개발자</span>
-            <strong>D-2</strong>
+            <em>D-2</em>
           </div>
-          <div class="preview-row">
-            <span>카카오페이</span>
+          <div class="basket-demo-row">
+            <strong>카카오페이</strong>
             <span>서버 개발자</span>
-            <strong>D-5</strong>
+            <em>D-5</em>
           </div>
-          <div class="preview-row">
-            <span>토스</span>
-            <span>플랫폼 엔지니어</span>
-            <strong>오늘</strong>
+          <div class="basket-demo-row">
+            <strong>토스</strong>
+            <span>프론트엔드 엔지니어</span>
+            <em>D-7</em>
           </div>
         </div>
-      </aside>
-    </section>
-
-    <section class="landing-proof-strip" aria-label="EZ-ONE이 정리하는 범위">
-      <article>
-        <span>01</span>
-        <strong>공고별로 묶기</strong>
-        <p>회사, 직무, 마감, 상태를 하나의 지원 단위로 정리합니다.</p>
-      </article>
-      <article>
-        <span>02</span>
-        <strong>작성 흐름 유지</strong>
-        <p>자기소개서 문항과 참고자료를 같은 작업 공간에서 이어봅니다.</p>
-      </article>
-      <article>
-        <span>03</span>
-        <strong>반복 입력 줄이기</strong>
-        <p>학력, 경력, 프로젝트 등 서류 정보를 재사용합니다.</p>
-      </article>
-    </section>
-
-    <section id="features" class="landing-section" aria-label="핵심 기능">
-      <div class="landing-section-heading">
-        <p class="landing-eyebrow">핵심 기능</p>
-        <h2>지원 준비에 필요한 화면만 깔끔하게 연결합니다</h2>
       </div>
 
-      <div class="landing-feature-grid">
-        <article>
-          <span>공고함</span>
-          <h3>저장한 공고와 마감일을 한눈에</h3>
-          <p>관심 공고를 모아 상태를 바꾸고, 마감이 가까운 지원을 먼저 확인합니다.</p>
-        </article>
-        <article>
-          <span>워크스페이스</span>
-          <h3>자기소개서와 참고자료를 공고별로</h3>
-          <p>공고마다 문항, 초안, 버전, 참고자료를 한 곳에서 이어서 작성합니다.</p>
-        </article>
-        <article>
-          <span>서류 정보</span>
-          <h3>반복 입력하는 내 정보를 저장</h3>
-          <p>프로필, 학력, 경력, 프로젝트, 자격증 정보를 지원서 작성에 재사용합니다.</p>
-        </article>
+      <div class="story-copy">
+        <span class="story-pill">공고 장바구니</span>
+        <h2>지원할 공고만<br />차분하게 정리합니다.</h2>
+        <p>마감일, 지원 상태, 최근 작업을 한눈에 보고 바로 워크스페이스로 이동합니다.</p>
       </div>
     </section>
 
-    <section id="extension-install" class="landing-section extension-install" aria-label="Chrome 확장프로그램 설치">
-      <div class="landing-section-heading">
-        <p class="landing-eyebrow">Chrome 확장 프로그램</p>
-        <h2>Chrome 웹 스토어에서 설치하고, 보고 있던 공고를 바로 저장하세요</h2>
+    <section class="landing-story-section story-document ez-flow-section" aria-label="서류 정보 재사용">
+      <div class="story-copy">
+        <span class="story-pill">서류 정보</span>
+        <h2>반복 입력 없이<br />작성에 집중합니다.</h2>
+        <p>기본 정보, 학력, 경력, 프로젝트를 저장해 공고별 자기소개서 작성에 재사용합니다.</p>
       </div>
 
-      <div class="extension-showcase">
-        <article class="extension-copy-card">
-          <span>Chrome Extension</span>
-          <h3>채용 공고를 발견한 순간, 지원 준비가 시작됩니다</h3>
-          <p>
-            공고 페이지에서 확장 버튼을 누르면 회사명, 직무, 마감일을 확인하고
-            EZ-ONE 공고함으로 저장합니다. 저장한 공고는 워크스페이스에서 자기소개서 작성으로 이어집니다.
-          </p>
-          <a class="store-button" :href="extensionInstallUrl" target="_blank" rel="noreferrer">
-            Chrome 웹 스토어에서 설치하기
-          </a>
-        </article>
-
-        <div class="extension-visual" aria-label="확장 프로그램 사용 예시">
-          <div class="mock-browser">
-            <div class="mock-browser-bar">
-              <span></span>
-              <span></span>
-              <span></span>
-              <strong>jasoseol.com/jobs/backend</strong>
-            </div>
-            <div class="mock-job-page">
-              <div>
-                <span class="mock-company">네이버</span>
-                <strong>백엔드 개발자</strong>
-                <p>마감 D-2 · 서버 플랫폼 · 신입/주니어</p>
-              </div>
-              <button type="button">EZ-ONE에 저장</button>
-            </div>
-          </div>
-
-          <div class="extension-flow-cards">
-            <div>
-              <span>1</span>
-              <strong>공고 정보 확인</strong>
-            </div>
-            <div>
-              <span>2</span>
-              <strong>공고함 저장</strong>
-            </div>
-            <div>
-              <span>3</span>
-              <strong>워크스페이스 생성</strong>
-            </div>
-          </div>
+      <div class="story-visual document-composition" aria-label="서류 정보 재사용 예시">
+        <div class="document-form-card">
+          <small>서류 정보</small>
+          <strong>프로젝트 · 경력 · 기본 정보</strong>
+          <span>홍길동 · Backend Project · MySQL Schema</span>
+        </div>
+        <div class="document-arrow" aria-hidden="true">↓</div>
+        <div class="draft-card">
+          <small>워크스페이스 초안</small>
+          <strong>지원 동기 문항</strong>
+          <p>저장된 프로젝트 경험을 바탕으로 초안을 이어 작성합니다.</p>
         </div>
       </div>
     </section>
 
-    <section id="workflow" class="landing-workflow" aria-label="사용 흐름">
-      <div>
-        <p class="landing-eyebrow">지원 준비 흐름</p>
-        <h2>공고를 저장하면 바로 작성 공간까지 이어집니다</h2>
-      </div>
-      <ol>
-        <li>
-          <span>01</span>
-          <strong>로그인</strong>
-        </li>
-        <li>
-          <span>02</span>
-          <strong>온보딩</strong>
-        </li>
-        <li>
-          <span>03</span>
-          <strong>공고 저장</strong>
-        </li>
-        <li>
-          <span>04</span>
-          <strong>공고함</strong>
-        </li>
-        <li>
-          <span>05</span>
-          <strong>워크스페이스</strong>
-        </li>
-        <li>
-          <span>06</span>
-          <strong>Notion 동기화</strong>
-        </li>
-      </ol>
+    <section class="landing-final-cta" aria-label="EZ-ONE 시작하기">
+      <p class="landing-eyebrow">READY TO APPLY?</p>
+      <h2>지원 준비는<br />지금부터 이어집니다.</h2>
+      <button class="landing-primary" data-testid="google-login-bottom" type="button" @click="startGoogleLogin">
+        Google로 시작하기
+      </button>
     </section>
   </main>
 </template>
@@ -317,6 +222,8 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import landingExtensionSave from '../assets/landing-extension-save.png';
+import loginWorkspacePreview from '../assets/login-workspace-preview.png';
 import { authApi } from '@/features/auth/api/authApi';
 import { buildGoogleOAuthUrl, createOAuthState, getGoogleClientId, getGoogleRedirectUri } from '@/features/auth/oauth/googleOAuth';
 import { saveAuthSession } from '@/features/auth/session/authSession';
@@ -328,7 +235,6 @@ const authMode = ref('login');
 const isSubmitting = ref(false);
 const showEmailAuth = ref(false);
 const isAccountSwitchFlow = computed(() => route.query.switch === 'account');
-const showLocalDevLogin = computed(() => import.meta.env.DEV && window.location.hostname === 'localhost');
 const extensionInstallUrl = import.meta.env.VITE_EXTENSION_INSTALL_URL || 'https://chromewebstore.google.com/';
 const emailForm = reactive({
     name: '',
@@ -385,23 +291,6 @@ async function submitEmailAuth() {
 function openEmailAuth() {
     showEmailAuth.value = true;
     errorMessage.value = '';
-}
-
-async function loginAsLocalDevUser() {
-    saveAuthSession({
-        accessToken: 'local-dev-access-token',
-        refreshToken: 'local-dev-refresh-token',
-        tokenType: 'Bearer',
-        expiresIn: 3600,
-        user: {
-            id: 2,
-            email: 'eunjaelee058@gmail.com',
-            name: '이은재',
-            nickname: '이은재',
-            profileCompleted: true
-        }
-    });
-    await router.push(getRedirectTarget());
 }
 
 function getRedirectTarget() {

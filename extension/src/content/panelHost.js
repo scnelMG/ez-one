@@ -65,8 +65,8 @@
                 position: absolute;
                 top: 14px;
                 bottom: 14px;
-                left: -6px;
-                width: 12px;
+                left: 0;
+                width: 10px;
                 cursor: ew-resize;
                 z-index: 2147483647;
             }
@@ -75,7 +75,7 @@
                 content: "";
                 position: absolute;
                 top: 50%;
-                left: 5px;
+                left: 3px;
                 width: 3px;
                 height: 44px;
                 border-radius: 999px;
@@ -232,8 +232,13 @@
             return;
         }
         const maxViewportHeight = Math.max(PANEL_MIN_HEIGHT, window.innerHeight - PANEL_TOP * 2);
-        const boundedHeight = Math.min(Math.max(height, PANEL_MIN_HEIGHT), maxViewportHeight);
-        panel.style.height = `${Math.round(boundedHeight)}px`;
+        const boundedHeight = Math.min(Math.max(height, PANEL_DEFAULT_HEIGHT), maxViewportHeight);
+        const nextHeight = Math.round(boundedHeight);
+        const currentHeight = Math.round(panel.getBoundingClientRect().height);
+        if (Math.abs(currentHeight - nextHeight) < 2) {
+            return;
+        }
+        panel.style.height = `${nextHeight}px`;
     }
 
     function savePanelWidth(panel) {

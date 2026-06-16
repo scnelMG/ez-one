@@ -5,6 +5,11 @@ import { describe, expect, it } from 'vitest';
 describe('extension popup script', () => {
     const script = readFileSync(resolve(__dirname, '../src/popup/popup.js'), 'utf-8');
 
+    it('starts the web login handoff on the default local frontend port used by dev', () => {
+        expect(script).toContain("const webAppUrl = import.meta.env.VITE_EXTENSION_WEB_APP_URL ?? 'http://localhost:5173'");
+        expect(script).not.toContain("VITE_EXTENSION_WEB_APP_URL ?? 'http://localhost:5174'");
+    });
+
     it('loads the job extractor on demand before reading the current tab', () => {
         expect(script).toContain('async function ensureContentScriptLoaded');
         expect(script).toContain('files: [file]');
@@ -71,7 +76,15 @@ describe('extension popup script', () => {
         expect(script).toContain('function schedulePanelResize');
         expect(script).toContain('function reportPanelHeight');
         expect(script).toContain('window.parent.postMessage');
-        expect(script).toContain('height: Math.ceil');
+        expect(script).toContain('const PANEL_RESIZE_EPSILON_PX = 2');
+        expect(script).toContain('let lastReportedPanelHeight = 0');
+        expect(script).toContain("document.querySelector('.popup-header')");
+        expect(script).toContain('].filter(Boolean).forEach((item) => observer.observe(item));');
+        expect(script).toContain('const panelHeight = activePanel.scrollHeight');
+        expect(script).toContain('Math.abs(height - lastReportedPanelHeight) < PANEL_RESIZE_EPSILON_PX');
+        expect(script).toContain('height');
+        expect(script).not.toContain('document.body,');
+        expect(script).not.toContain('Math.max(activePanel.scrollHeight, activePanel.getBoundingClientRect().height)');
     });
 
     it('includes manually entered essay questions in the save payload', () => {

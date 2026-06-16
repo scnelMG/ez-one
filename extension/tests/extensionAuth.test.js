@@ -6,7 +6,7 @@ describe('extensionAuth', () => {
             webAppUrl: 'http://localhost:5173',
             currentUrl: 'https://www.jasoseol.com/recruit/1'
         });
-        expect(url.toString()).toBe('http://localhost:5173/?redirect=%2Fextension%2Fconnect%3FsourceUrl%3Dhttps%253A%252F%252Fwww.jasoseol.com%252Frecruit%252F1');
+        expect(url.toString()).toBe('http://localhost:5173/login?redirect=%2Fextension%2Fconnect%3FsourceUrl%3Dhttps%253A%252F%252Fwww.jasoseol.com%252Frecruit%252F1');
     });
     it('includes the source tab id in the web login redirect when available', () => {
         const url = buildWebLoginUrl({
