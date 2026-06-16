@@ -151,6 +151,7 @@ router.beforeEach((to) => {
             to.name !== 'extension-connect' &&
             to.name !== 'study-list' &&
             to.name !== 'study-detail' &&
+            to.name !== 'history' &&
             requiresOnboarding()) {
             return '/';
         }

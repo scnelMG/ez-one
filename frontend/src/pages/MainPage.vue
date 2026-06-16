@@ -150,7 +150,7 @@
         />
       </section>
 
-      <section class="dashboard-panel main-recommendation-preview" aria-label="추천 공고 미리보기">
+      <section v-if="profileStore.profile?.ssafy" class="dashboard-panel main-recommendation-preview" aria-label="추천 공고 미리보기">
         <div class="section-heading">
           <div>
             <h2>추천 공고</h2>
@@ -220,7 +220,8 @@ import {
   formatParticipantCount,
   formatDDay,
   formatDateTime,
-  formatAbsoluteDeadline
+  formatAbsoluteDeadline,
+  isDeadlineWithinDays
 } from '@/shared/utils/jobUtils';
 import StatePanel from '@/shared/StatePanel.vue';
 import OnboardingPage from '@/pages/OnboardingPage.vue';
@@ -230,12 +231,14 @@ import { isRecentWorkspace } from '@/features/basket/recentWorkspaces';
 import { useBasketStore } from '@/stores/basketStore';
 import { useDashboardStore } from '@/stores/dashboardStore';
 import { useRecommendationStore } from '@/stores/recommendationStore';
+import { useProfileStore } from '@/stores/profileStore';
 import { showToast } from '@/shared/useToast';
 import ConfirmDialog from '@/shared/ConfirmDialog.vue';
 
 const dashboardStore = useDashboardStore();
 const basketStore = useBasketStore();
 const recommendationStore = useRecommendationStore();
+const profileStore = useProfileStore();
 const showOnboardingModal = ref(requiresOnboarding());
 const priorityJobIds = computed(() => basketStore.priorityJobIds);
 const failedLogos = ref(new Set());
@@ -275,6 +278,7 @@ const recentTaskJob = computed(() => {
 
 const basketPreviewJobs = computed(() => {
   return [...basketStore.jobs]
+    .filter(job => isDeadlineWithinDays(job, 7))
     .sort((left, right) => deadlineRank(left) - deadlineRank(right))
     .slice(0, 5);
 });
