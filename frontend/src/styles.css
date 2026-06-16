@@ -10835,6 +10835,60 @@ button.history-metric:hover {
   content: "";
 }
 
+.landing-scroll-nav {
+  position: fixed;
+  top: 50%;
+  right: clamp(20px, 2.5vw, 42px);
+  z-index: 20;
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  transform: translateY(-50%);
+}
+
+.scroll-nav-control {
+  appearance: none;
+  display: grid;
+  place-items: center;
+  width: 50px;
+  height: 50px;
+  border: 1px solid rgba(218, 225, 236, 0.94);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+  color: #475569;
+  font-size: 1.55rem;
+  font-weight: 500;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+}
+
+.scroll-nav-control:hover {
+  border-color: rgba(103, 71, 246, 0.32);
+  color: #6747f6;
+}
+
+.scroll-nav-dots {
+  display: grid;
+  justify-items: center;
+  gap: 9px;
+}
+
+.scroll-nav-dots a {
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  background: #cbd5e1;
+}
+
+.scroll-nav-dots a.is-active {
+  width: 12px;
+  height: 42px;
+  background: #172033;
+}
+
 .landing-page .landing-hero {
   background: transparent;
 }
@@ -10843,13 +10897,29 @@ button.history-metric:hover {
   width: min(100%, 940px);
 }
 
-.landing-page .landing-product-shot figcaption {
-  border-radius: 16px;
+.landing-flow-summary {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  width: min(590px, calc(100% - 52px));
+  margin: 18px auto 0;
+  padding: 0;
 }
 
-.landing-page .landing-product-shot figcaption span {
+.landing-flow-summary span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  border-radius: 999px;
   background: #f1edff;
   color: #6747f6;
+  padding: 0 16px;
+  font-size: 0.88rem;
+  font-weight: 950;
+  white-space: nowrap;
 }
 
 .landing-story-section.ez-flow-section {
@@ -11108,25 +11178,14 @@ button.history-metric:hover {
   border-radius: 16px;
 }
 
-.landing-page .landing-extension-badge {
-  top: -32px;
-  left: 28px;
-  padding: 12px 16px;
-}
-
-.landing-page .landing-extension-badge strong {
-  font-size: 0.9rem;
-}
-
-.landing-page .landing-product-shot figcaption {
+.landing-flow-summary {
   width: min(510px, calc(100% - 92px));
-  margin-top: -30px;
-  padding: 11px 14px;
+  margin-top: 16px;
 }
 
-.landing-page .landing-product-shot figcaption span {
-  min-height: 28px;
-  padding: 0 12px;
+.landing-flow-summary span {
+  min-height: 30px;
+  padding: 0 13px;
   font-size: 0.84rem;
 }
 
@@ -11153,5 +11212,82 @@ button.history-metric:hover {
   .landing-page .landing-product-story,
   .landing-page .landing-product-shot img {
     width: 100%;
+  }
+
+  .landing-scroll-nav {
+    display: none;
+  }
+
+  .landing-flow-summary {
+    flex-wrap: wrap;
+    width: calc(100% - 28px);
+  }
+}
+
+/* Login landing typography correction: prioritize Korean readability over poster heaviness. */
+.landing-page .landing-eyebrow,
+.landing-page .landing-sub-actions a,
+.landing-page .landing-sub-action-button,
+.landing-page .story-pill {
+  color: #526174;
+  font-weight: 600;
+}
+
+.landing-page .landing-hero-copy h1 {
+  max-width: 540px;
+  color: #1d2939;
+  font-size: clamp(2.75rem, 3.85vw, 4.12rem);
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.16;
+}
+
+.landing-page .landing-hero-copy > p,
+.landing-page .story-copy p {
+  color: #526174;
+  font-weight: 500;
+  line-height: 1.72;
+}
+
+.landing-page .story-copy h2,
+.landing-page .landing-final-cta h2,
+.landing-page .ez-flow-section .story-copy h2 {
+  color: #1d2939;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.14;
+}
+
+.landing-page .landing-primary,
+.landing-page .landing-secondary,
+.landing-page .store-button {
+  font-weight: 700;
+}
+
+.landing-page .landing-flow-summary span {
+  font-weight: 650;
+}
+
+.landing-page .product-screenshot-card figcaption {
+  font-weight: 600;
+}
+
+.landing-page .basket-table-head span,
+.landing-page .job-post-card small,
+.landing-page .document-form-card small,
+.landing-page .draft-card small {
+  font-weight: 600;
+}
+
+.landing-page .basket-demo-row strong,
+.landing-page .document-form-card strong,
+.landing-page .draft-card strong {
+  font-weight: 700;
+}
+
+@media (max-width: 1060px) {
+  .landing-page .landing-hero-copy h1 {
+    font-size: clamp(2.35rem, 10vw, 3.45rem);
+    line-height: 1.18;
   }
 }

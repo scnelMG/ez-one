@@ -1,6 +1,20 @@
 <template>
   <main class="landing-page">
-    <section class="landing-hero" aria-labelledby="login-title">
+    <nav class="landing-scroll-nav" aria-label="랜딩 섹션 이동">
+      <button class="scroll-nav-control" type="button" aria-label="이전 섹션으로 이동" @click="scrollLandingSection(-1)">↑</button>
+      <div class="scroll-nav-dots">
+        <a
+          v-for="(section, index) in landingSections"
+          :key="section.id"
+          :class="{ 'is-active': currentLandingSection === index }"
+          :href="`#${section.id}`"
+          :aria-label="section.label"
+        ></a>
+      </div>
+      <button class="scroll-nav-control" type="button" aria-label="다음 섹션으로 이동" @click="scrollLandingSection(1)">↓</button>
+    </nav>
+
+    <section id="login-hero" class="landing-hero" aria-labelledby="login-title">
       <div class="landing-hero-copy">
         <RouterLink class="landing-brand landing-brand-hero" to="/" aria-label="EZ-ONE">
           <img src="../assets/ez-one-logo-final.png" alt="" />
@@ -122,17 +136,13 @@
 
       <div class="landing-product-story" aria-label="EZ-ONE 지원 준비 흐름">
         <figure class="landing-product-shot" aria-label="EZ-ONE 지원 워크스페이스 화면">
-          <div class="landing-extension-badge">
-            <span>Chrome Extension</span>
-            <strong>공고 페이지에서 바로 EZ-ONE에 저장</strong>
-          </div>
           <img :src="loginWorkspacePreview" alt="공고 목록, 다음 작업, 자기소개서 작업 공간이 함께 보이는 EZ-ONE 화면" />
-          <figcaption>
-            <span>확장 저장</span>
-            <span>장바구니 정리</span>
-            <span>서류 정보 재사용</span>
-          </figcaption>
         </figure>
+        <div class="landing-flow-summary" aria-label="EZ-ONE 핵심 흐름">
+          <span>확장 저장</span>
+          <span>장바구니 정리</span>
+          <span>서류 정보 재사용</span>
+        </div>
       </div>
     </section>
 
@@ -187,7 +197,7 @@
       </div>
     </section>
 
-    <section class="landing-story-section story-document ez-flow-section" aria-label="서류 정보 재사용">
+    <section id="document-info" class="landing-story-section story-document ez-flow-section" aria-label="서류 정보 재사용">
       <div class="story-copy">
         <span class="story-pill">서류 정보</span>
         <h2>반복 입력 없이<br />작성에 집중합니다.</h2>
@@ -209,7 +219,7 @@
       </div>
     </section>
 
-    <section class="landing-final-cta" aria-label="EZ-ONE 시작하기">
+    <section id="login-final" class="landing-final-cta" aria-label="EZ-ONE 시작하기">
       <p class="landing-eyebrow">READY TO APPLY?</p>
       <h2>지원 준비는<br />지금부터 이어집니다.</h2>
       <button class="landing-primary" data-testid="google-login-bottom" type="button" @click="startGoogleLogin">
@@ -220,7 +230,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import landingExtensionSave from '../assets/landing-extension-save.png';
 import loginWorkspacePreview from '../assets/login-workspace-preview.png';
@@ -236,6 +246,14 @@ const isSubmitting = ref(false);
 const showEmailAuth = ref(false);
 const isAccountSwitchFlow = computed(() => route.query.switch === 'account');
 const extensionInstallUrl = import.meta.env.VITE_EXTENSION_INSTALL_URL || 'https://chromewebstore.google.com/';
+const landingSections = [
+    { id: 'login-hero', label: '첫 화면으로 이동' },
+    { id: 'extension-install', label: '확장 프로그램 섹션으로 이동' },
+    { id: 'features', label: '공고 장바구니 섹션으로 이동' },
+    { id: 'document-info', label: '서류 정보 섹션으로 이동' },
+    { id: 'login-final', label: '시작하기 섹션으로 이동' }
+];
+const currentLandingSection = ref(0);
 const emailForm = reactive({
     name: '',
     email: '',
@@ -244,6 +262,12 @@ const emailForm = reactive({
 
 onMounted(() => {
     redirectToConfiguredLocalOAuthOrigin();
+    updateCurrentLandingSection();
+    window.addEventListener('scroll', updateCurrentLandingSection, { passive: true });
+});
+
+onBeforeUnmount(() => {
+    window.removeEventListener('scroll', updateCurrentLandingSection);
 });
 
 function startGoogleLogin(selectAccount = false) {
@@ -291,6 +315,23 @@ async function submitEmailAuth() {
 function openEmailAuth() {
     showEmailAuth.value = true;
     errorMessage.value = '';
+}
+
+function scrollLandingSection(direction) {
+    const nextIndex = Math.min(Math.max(currentLandingSection.value + direction, 0), landingSections.length - 1);
+    document.getElementById(landingSections[nextIndex].id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function updateCurrentLandingSection() {
+    const viewportAnchor = window.scrollY + window.innerHeight * 0.42;
+    let activeIndex = 0;
+    landingSections.forEach((section, index) => {
+        const element = document.getElementById(section.id);
+        if (element && element.offsetTop <= viewportAnchor) {
+            activeIndex = index;
+        }
+    });
+    currentLandingSection.value = activeIndex;
 }
 
 function getRedirectTarget() {
