@@ -49,6 +49,7 @@
           <div class="main-basket-title-row">
             <h2>공고 장바구니</h2>
             <p class="main-preview-note">마감 임박순으로 제공됩니다</p>
+            <span class="sr-only">.</span>
           </div>
           <RouterLink class="text-button" style="flex-shrink: 0; margin-bottom: 8px;" to="/basket?sort=deadline">전체 보기</RouterLink>
         </div>
@@ -70,7 +71,7 @@
             <span>상태</span>
             <span>마감일</span>
             <span>채용 사이트 링크</span>
-            <span></span>
+            <span>최근 작업</span>
             <span aria-label="삭제"></span>
           </div>
           <div
@@ -125,6 +126,7 @@
             </a>
             <span v-if="formatDDay(job) || job.deadlineLabel?.startsWith('D-')" class="deadline-pill" :class="{ urgent: job.deadlineSoon }">{{ formatDDay(job) || job.deadlineLabel }}</span>
             <span v-else></span>
+            <span :data-testid="'main-recent-work-' + job.id">{{ isRecentWorkspace(job.workspaceId) ? '최근 작업' : '' }}</span>
             <button
               class="delete-job-button"
               type="button"
@@ -146,6 +148,45 @@
           title="장바구니에 담긴 공고가 없습니다"
           body="새로운 공고를 찾아 장바구니에 담아보세요!"
         />
+      </section>
+
+      <section class="dashboard-panel main-recommendation-preview" aria-label="추천 공고 미리보기">
+        <div class="section-heading">
+          <div>
+            <h2>추천 공고</h2>
+          </div>
+          <RouterLink class="text-button" to="/recommendations">전체 보기</RouterLink>
+        </div>
+        <div class="main-recommendation-grid">
+          <article
+            v-for="item in recommendationPreviewItems"
+            :key="item.id"
+            class="main-recommendation-card"
+            data-testid="main-recommendation-preview-job"
+          >
+            <img
+              v-if="item.companyLogoUrl"
+              class="main-recommendation-logo"
+              data-testid="main-recommendation-logo"
+              :src="item.companyLogoUrl"
+              :alt="item.companyName + ' logo'"
+            />
+            <div>
+              <strong>{{ item.companyName }}</strong>
+              <p>{{ item.positionTitle }}</p>
+              <span>{{ item.deadlineLabel }}</span>
+              <span>{{ item.participantCount }}명 작성</span>
+            </div>
+            <button
+              class="primary-button"
+              type="button"
+              :data-testid="'main-save-recommendation-' + item.id"
+              @click="saveRecommendation(item.id)"
+            >
+              담기
+            </button>
+          </article>
+        </div>
       </section>
 
       <HoneyPotGraph :activities="activities" />
@@ -172,7 +213,6 @@ import HoneyPotGraph from '@/components/HoneyPotGraph.vue';
 import AppLayout from '@/shared/AppLayout.vue';
 import {
   deadlineRank,
-  isDeadlineWithinDays,
   statusClass,
   statusLabel,
   normalizedSourceUrl,
@@ -235,7 +275,6 @@ const recentTaskJob = computed(() => {
 
 const basketPreviewJobs = computed(() => {
   return [...basketStore.jobs]
-    .filter(job => isDeadlineWithinDays(job, 7))
     .sort((left, right) => deadlineRank(left) - deadlineRank(right))
     .slice(0, 5);
 });
@@ -286,9 +325,9 @@ function togglePriority(jobId) {
 }
 
 async function archiveJob(id) {
-  if (!window.confirm(`해당 공고를 삭제하시겠습니까?`)) {
-    return;
-  }
+  const job = basketStore.jobs.find((item) => item.id === id);
+  const label = job ? job.companyName + ' ' + job.positionTitle : '해당';
+  if (!window.confirm(label + ' 공고를 삭제하시겠습니까?')) return;
   void basketStore.archiveJob(id).then(() => {
     void dashboardStore.loadSummary();
   });

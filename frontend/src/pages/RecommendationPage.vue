@@ -101,6 +101,7 @@
 
 <script setup>
 import { computed, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
 import { useRecommendationStore } from '@/stores/recommendationStore';
 import AppLayout from '@/shared/AppLayout.vue';
 import PageHeader from '@/shared/PageHeader.vue';
@@ -114,15 +115,17 @@ import {
 } from '@/shared/utils/jobUtils';
 
 const recommendationStore = useRecommendationStore();
+const route = useRoute();
 
 const sortedJobs = computed(() => [...recommendationStore.jobs].sort(compareByDeadline));
+const recommendationSource = computed(() => route.query.source === 'mattermost' ? 'mattermost' : 'recommendation');
 
 onMounted(() => {
-  void recommendationStore.loadRecommendations();
+  void recommendationStore.loadRecommendations(recommendationSource.value);
 });
 
 function saveRecommendation(recommendationId) {
-  void recommendationStore.saveRecommendation(recommendationId).then(() => {
+  void recommendationStore.saveRecommendation(recommendationId, recommendationSource.value).then(() => {
     if (recommendationStore.savedJob) {
       showToast(`${recommendationStore.savedJob.companyName} 공고를 담았습니다`, { tone: 'green' });
     }

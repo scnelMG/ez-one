@@ -207,9 +207,9 @@ describe('BasketPage', () => {
         expect(wrapper.text()).toContain('Line');
 
         await wrapper.get('[data-testid="status-101"]').trigger('click');
-        await wrapper.get('[data-testid="status-101-option-SUBMITTED"]').trigger('click');
+        await wrapper.get('[data-testid="status-101-option-COMPLETED"]').trigger('click');
         await flushPromises();
-        expect(mocks.updateStatus).toHaveBeenCalledWith('101', 'SUBMITTED');
+        expect(mocks.updateStatus).toHaveBeenCalledWith('101', 'COMPLETED');
         expect(wrapper.text()).toContain('지원완료');
 
         expect(wrapper.get('[data-testid="source-101"]').text()).toBe('바로가기');
@@ -242,16 +242,16 @@ describe('BasketPage', () => {
         }));
 
         await wrapper.get('[data-testid="status-101"]').trigger('click');
-        await wrapper.get('[data-testid="status-101-option-SUBMITTED"]').trigger('click');
+        await wrapper.get('[data-testid="status-101-option-COMPLETED"]').trigger('click');
 
-        expect(mocks.updateStatus).toHaveBeenCalledWith('101', 'SUBMITTED');
+        expect(mocks.updateStatus).toHaveBeenCalledWith('101', 'COMPLETED');
         expect(rowCompanies(wrapper)).toContain('Naver');
         expect(wrapper.find('[data-testid="basket-refreshing"]').exists()).toBe(true);
         expect(wrapper.find('.basket-loading').exists()).toBe(false);
 
         resolveStatusUpdate({
             ...defaultJobs[0],
-            status: 'SUBMITTED',
+            status: 'COMPLETED',
             statusLabel: '지원완료'
         });
         await flushPromises();

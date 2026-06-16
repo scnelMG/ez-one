@@ -331,3 +331,9 @@
 - `EXT-008` / `JOB-021`: Extension job save now includes optional company logo extraction. The extension may send `logoUrl`; save must still succeed when the logo is absent or invalid.
 - `JOB-016`: Company information now includes reusable logo metadata on `companies`: `logo_url`, `logo_source_url`, `logo_status`, `logo_updated_at`. Existing logos are preserved unless a future trusted-source policy explicitly allows replacement.
 - `EXT-013`, `EXT-021`, `EXT-022`, `EXT-023`, `PROFILE-026`: Document auto-fill support is treated as P1 for basic document/profile/custom fields. Essay auto-fill remains excluded.
+## 2026-06-16 History Scope Update
+
+- `HISTORY-001` through `HISTORY-008` are approved for implementation in branch `codex/history-page`.
+- Implemented scope: `/history` page, half-year period filter, selected-period summary metrics, company-type aggregation, imported history rows, and row navigation to `/workspaces/{workspaceId}`.
+- `HISTORY-009` and `HISTORY-010` remain out of scope: no AI summary and no anonymous percentile comparison.
+- Imported history data must not be hardcoded in Flyway migrations. Use `tools/import-history-csv.ps1` to generate reviewed SQL for a specific local account and CSV.

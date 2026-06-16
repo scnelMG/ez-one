@@ -113,7 +113,7 @@ describe('RecommendationPage', () => {
 
         await wrapper.get('[data-testid="save-recommendation-9001"]').trigger('click');
         await flushPromises();
-        expect(mocks.saveJob).toHaveBeenCalledWith('9001');
+        expect(mocks.saveJob).toHaveBeenCalledWith('9001', 'recommendation');
         expect(wrapper.text()).toContain('공고를 담았습니다');
         expect(wrapper.text()).toContain('서브원 Frontend Developer 워크스페이스가 준비되었습니다.');
         expect(wrapper.get('[data-testid="saved-workspace-link"]').text()).toContain('워크스페이스 열기');

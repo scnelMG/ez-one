@@ -14,6 +14,7 @@ describe('router', () => {
         expect(routeNames).toContain('workspace');
         expect(routeNames).toContain('document-profile');
         expect(routeNames).toContain('recommendations');
+        expect(routeNames).toContain('history');
         expect(routeNames).toContain('mypage-account');
         expect(routeNames).toContain('mypage-notion');
         expect(routeNames).toContain('mypage-onboarding');
@@ -126,9 +127,9 @@ describe('router', () => {
         expect(router.currentRoute.value.name).toBe('extension-connect');
         expect(router.currentRoute.value.query.sourceUrl).toBe('https://www.jasoseol.com/recruit/1');
     });
-    it('does not activate P2-only route shells', () => {
+    it('activates approved history and keeps remaining P2-only route shells disabled', () => {
         const routePaths = router.getRoutes().map((route) => route.path);
-        expect(routePaths).not.toContain('/history');
+        expect(routePaths).toContain('/history');
         expect(routePaths).not.toContain('/alerts');
         expect(routePaths).not.toContain('/basket/calendar');
         expect(routePaths).not.toContain('/mypage/support');

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ezone.backend.mapper.HistoryMapper">
+  <resultMap id="historyApplicationRowMap" type="com.ezone.backend.domain.persistence.HistoryApplicationRow">
+    <id property="id" column="id"/>
+    <result property="userId" column="user_id"/>
+    <result property="workspaceId" column="workspace_id"/>
+    <result property="companyName" column="company_name"/>
+    <result property="positionTitle" column="position_title"/>
+    <result property="applicationStatus" column="application_status"/>
+    <result property="resultStage" column="result_stage"/>
+    <result property="resultLabel" column="result_label"/>
+    <result property="rawResult" column="raw_result"/>
+    <result property="deadlineLabel" column="deadline_label"/>
+    <result property="periodKey" column="period_key"/>
+    <result property="periodYear" column="period_year"/>
+    <result property="periodHalf" column="period_half"/>
+    <result property="sourceUrl" column="source_url"/>
+    <result property="companyType" column="company_type"/>
+  </resultMap>
+
+  <select id="listApplications" resultMap="historyApplicationRowMap">
+    SELECT id, user_id, workspace_id, company_name, position_title, application_status,
+           result_stage, result_label, raw_result, deadline_label, period_key, period_year,
+           period_half, source_url, company_type
+    FROM application_history
+    WHERE user_id = #{userId}
+    ORDER BY period_year DESC, period_half DESC, deadline_date IS NULL, deadline_date ASC, id ASC
+  </select>
+</mapper>

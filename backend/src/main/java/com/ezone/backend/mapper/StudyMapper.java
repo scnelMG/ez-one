@@ -43,12 +43,6 @@ public interface StudyMapper {
     List<SharedJobRow> findSharedJobsByStudyId(@Param("studyId") String studyId);
     void updateStudyImageUrl(@Param("studyId") String studyId, @Param("imageUrl") String imageUrl);
 
-    void insertNotification(NotificationRow row);
-    List<NotificationRow> findNotificationsByUserEmail(@Param("userEmail") String userEmail);
-    void updateNotificationRead(@Param("id") String id, @Param("userEmail") String userEmail);
-    @org.apache.ibatis.annotations.Select("SELECT COUNT(*) FROM study_notification WHERE user_email = #{userEmail} AND is_read = false")
-    int countUnreadNotifications(@Param("userEmail") String userEmail);
-
     void insertEssayReadLog(StudyEssayReadLogRow row);
     @org.apache.ibatis.annotations.Select("SELECT COUNT(*) FROM study_essay_read_log WHERE essay_id = #{essayId} AND user_email = #{userEmail}")
     int countEssayReadLog(@Param("essayId") String essayId, @Param("userEmail") String userEmail);

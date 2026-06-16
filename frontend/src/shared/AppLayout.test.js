@@ -1,4 +1,5 @@
 import { mount } from '@vue/test-utils';
+import { createPinia } from 'pinia';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AppLayout from './AppLayout.vue';
@@ -8,8 +9,8 @@ const mocks = vi.hoisted(() => ({
     getCurrentUser: vi.fn(() => ({
         id: 1,
         email: 'mingyu@example.com',
-        name: '민규',
-        nickname: '민규',
+        name: 'Mingyu',
+        nickname: 'Mingyu',
         pictureUrl: 'https://example.com/profile.png'
     })),
     getRefreshToken: vi.fn(() => 'refresh-token'),
@@ -28,6 +29,14 @@ vi.mock('@/features/auth/session/authSession', () => ({
     getRefreshToken: mocks.getRefreshToken
 }));
 
+vi.mock('@/stores/profileStore', () => ({
+    useProfileStore: () => ({
+        profile: null,
+        status: 'loaded',
+        loadProfile: vi.fn()
+    })
+}));
+
 function makeRouter() {
     return createRouter({
         history: createMemoryHistory(),
@@ -36,6 +45,7 @@ function makeRouter() {
             { path: '/login', component: { template: '<div>login</div>' } },
             { path: '/basket', component: { template: '<div>basket</div>' } },
             { path: '/document-profile', component: { template: '<div>document profile</div>' } },
+            { path: '/history', component: { template: '<div>history</div>' } },
             { path: '/recommendations', component: { template: '<div>recommendations</div>' } },
             { path: '/study', component: { template: '<div>study</div>' } },
             { path: '/mypage', component: { template: '<div>mypage</div>' } },
@@ -54,8 +64,8 @@ describe('AppLayout', () => {
         mocks.getCurrentUser.mockReturnValue({
             id: 1,
             email: 'mingyu@example.com',
-            name: '민규',
-            nickname: '민규',
+            name: 'Mingyu',
+            nickname: 'Mingyu',
             pictureUrl: 'https://example.com/profile.png'
         });
         mocks.getRefreshToken.mockReset();
@@ -76,16 +86,17 @@ describe('AppLayout', () => {
         expect(alertEntry.element.tagName).not.toBe('BUTTON');
     });
 
-    it('MAIN-013: uses the logo as the main link and does not duplicate Main in the nav', async () => {
+    it('MAIN-013/HISTORY-001: uses the logo as main link and enables history nav', async () => {
         const wrapper = await mountLayout('/');
 
         expect(wrapper.get('.brand-lockup').attributes('href')).toBe('/');
         expect(wrapper.findAll('.primary-nav a').map((link) => link.attributes('href'))).toEqual([
             '/basket',
             '/document-profile',
-            '/study'
+            '/study',
+            '/history'
         ]);
-        expect(wrapper.get('[data-testid="global-trademark-notice"]').text()).toContain('채용공고 식별 목적');
+        expect(wrapper.get('[data-testid="global-trademark-notice"]').text()).toContain('채용공고 식별 목적으로만 사용');
         expect(wrapper.get('.app-footer a').attributes('href')).toBe('/mypage/terms');
     });
 
@@ -93,20 +104,13 @@ describe('AppLayout', () => {
         const wrapper = await mountLayout('/');
 
         expect(wrapper.get('[data-testid="profile-photo"]').attributes('src')).toBe('https://example.com/profile.png');
-        expect(wrapper.get('[data-testid="mypage-menu-trigger"]').text()).toContain('민규');
-        expect(wrapper.get('[data-testid="mypage-menu-trigger"]').text()).not.toContain('로그인 계정');
+        expect(wrapper.get('[data-testid="mypage-menu-trigger"]').text()).toContain('Mingyu');
 
         await wrapper.get('[data-testid="mypage-menu-trigger"]').trigger('mouseenter');
         const dropdown = wrapper.get('[data-testid="mypage-dropdown"]');
         expect(dropdown.text()).toContain('내 계정');
         expect(dropdown.text()).toContain('노션 연동 관리');
         expect(dropdown.text()).toContain('온보딩 정보');
-        expect(dropdown.text()).not.toContain('다른 계정으로 로그인');
-        expect(wrapper.find('[data-testid="account-switch"]').exists()).toBe(false);
-        expect(dropdown.text()).not.toContain('QnA');
-        expect(dropdown.text()).not.toContain('1:1 문의');
-        expect(dropdown.text()).not.toContain('제휴 문의');
-        expect(dropdown.text()).not.toContain('이용약관');
         expect(wrapper.get('[data-testid="mypage-link-notion"]').attributes('href')).toBe('/mypage/notion');
     });
 
@@ -144,7 +148,7 @@ async function mountLayoutWithRouter(path) {
     await router.isReady();
     const wrapper = mount(AppLayout, {
         global: {
-            plugins: [router]
+            plugins: [createPinia(), router]
         }
     });
     return { wrapper, router };

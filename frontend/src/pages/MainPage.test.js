@@ -18,7 +18,9 @@ vi.mock('@/features/basket/api/basketApi', () => ({
 
 vi.mock('@/features/dashboard/api/dashboardApi', () => ({
     dashboardApi: {
-        getSummary: vi.fn()
+        getSummary: vi.fn(),
+        getActivities: vi.fn(),
+        getActivityLogs: vi.fn()
     }
 }));
 
@@ -110,6 +112,10 @@ describe('MainPage', () => {
             },
             todayJobs: []
         });
+        vi.mocked(dashboardApi.getActivities).mockReset();
+        vi.mocked(dashboardApi.getActivities).mockResolvedValue([]);
+        vi.mocked(dashboardApi.getActivityLogs).mockReset();
+        vi.mocked(dashboardApi.getActivityLogs).mockResolvedValue([]);
 
         vi.mocked(profileApi.getUserProfile).mockReset();
         vi.mocked(profileApi.getUserProfile).mockResolvedValue({

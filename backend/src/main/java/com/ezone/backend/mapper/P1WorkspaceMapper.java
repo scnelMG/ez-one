@@ -60,6 +60,13 @@ public interface P1WorkspaceMapper {
 
     Optional<JobRow> findRecommendationJob(@Param("recommendationId") Long recommendationId);
 
+    List<JobRow> listRecommendationJobsBySource(@Param("source") String source);
+
+    Optional<JobRow> findRecommendationJobBySource(
+        @Param("recommendationId") Long recommendationId,
+        @Param("source") String source
+    );
+
     Optional<BasketJobRow> findBasketJob(@Param("userId") Long userId, @Param("basketJobId") Long basketJobId);
 
     Optional<Long> findBasketJobOwner(@Param("basketJobId") Long basketJobId);

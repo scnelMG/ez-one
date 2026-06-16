@@ -348,7 +348,7 @@
                       <div
                         v-for="(row, index) in versionDiffRows.leftRows"
                         :key="`l-${index}`"
-                        class="diff-row-line"
+                        class="diff-row diff-row-line"
                         :class="`is-${row.type}`"
                       >
                         <span class="diff-indicator">{{ row.type === 'remove' ? '-' : ' ' }}</span>
@@ -359,7 +359,7 @@
                       <div
                         v-for="(row, index) in versionDiffRows.rightRows"
                         :key="`r-${index}`"
-                        class="diff-row-line"
+                        class="diff-row diff-row-line"
                         :class="`is-${row.type}`"
                       >
                         <span class="diff-indicator">{{ row.type === 'add' ? '+' : ' ' }}</span>
@@ -547,6 +547,7 @@
               <button class="icon-button" type="button" aria-label="닫기" @click="closeBoardFullView">×</button>
             </header>
             <div class="floating-board-body">
+              <p class="sr-only">마크다운으로 입력하거나 이미지를 붙여넣으세요.</p>
               <component :is="activeBoardComponent" />
               <section v-if="workspaceStore.activeReference && showReferenceCreateButton" class="reference-editor-panel floating-editor">
                 <div class="section-heading compact-heading">
@@ -1261,7 +1262,7 @@ function addArticle(draft) {
   draft.articleBody = '';
   alert('저장되었습니다.');
   nextTick(() => {
-    document.querySelector('.drawer-board')?.scrollTo({ top: document.querySelector('.drawer-board').scrollHeight, behavior: 'smooth' });
+    scrollDrawerBoardToBottom();
   });
 }
 
@@ -1306,7 +1307,7 @@ function saveBoardEntry(draft, type = activeBoard.value) {
   syncActiveMarkdownEditor();
   alert('저장되었습니다.');
   nextTick(() => {
-    document.querySelector('.drawer-board')?.scrollTo({ top: document.querySelector('.drawer-board').scrollHeight, behavior: 'smooth' });
+    scrollDrawerBoardToBottom();
   });
 }
 
@@ -1349,8 +1350,14 @@ function addPromptCard(draft) {
   draft.isAddingPrompt = false;
   alert('저장되었습니다.');
   nextTick(() => {
-    document.querySelector('.drawer-board')?.scrollTo({ top: document.querySelector('.drawer-board').scrollHeight, behavior: 'smooth' });
+    scrollDrawerBoardToBottom();
   });
+}
+
+function scrollDrawerBoardToBottom() {
+  const board = document.querySelector('.drawer-board');
+  if (typeof board?.scrollTo !== 'function') return;
+  board.scrollTo({ top: board.scrollHeight, behavior: 'smooth' });
 }
 
 const MarkdownBoard = {
@@ -1561,6 +1568,13 @@ const MarkdownBoard = {
           })
         ]),
         h('div', { class: 'prompt-board-tools' }, [
+          h('button', {
+            type: 'button',
+            class: 'ghost-button board-add-button',
+            onClick: () => {
+              draft.isAddingPrompt = true;
+            }
+          }, '+ 프롬프트 추가')
         ]),
         h('div', { class: 'prompt-card-list' }, visiblePrompts.length ? visiblePrompts.map((prompt) => h('article', { class: 'prompt-board-card', key: prompt.id }, [
           h('header', [

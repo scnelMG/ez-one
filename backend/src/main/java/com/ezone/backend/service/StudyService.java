@@ -348,25 +348,6 @@ public class StudyService {
 
         studyMapper.insertSharedJob(row);
 
-        // Notify all study members except recommender
-        List<StudyMemberRow> members = studyMapper.findMembersByStudyId(studyId);
-        StudyGroupRow group = studyMapper.findStudyGroupById(studyId);
-        String msg = String.format("[%s] %s님이 %s %s 공고를 추천했습니다.", 
-                group.getName(), userEmail, request.getCompanyName(), request.getPositionTitle());
-        
-        for (StudyMemberRow m : members) {
-            if (!m.getUserEmail().equals(userEmail)) {
-                NotificationRow noti = new NotificationRow();
-                noti.setId(UUID.randomUUID().toString());
-                noti.setUserEmail(m.getUserEmail());
-                noti.setStudyId(studyId);
-                noti.setMessage(msg);
-                noti.setType("JOB_RECOMMEND");
-                noti.setRead(false);
-                noti.setCreatedAt(LocalDateTime.now());
-                studyMapper.insertNotification(noti);
-            }
-        }
     }
 
     public void uploadStudyImage(String studyId, org.springframework.web.multipart.MultipartFile file, String userEmail) {

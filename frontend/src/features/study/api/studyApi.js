@@ -94,21 +94,6 @@ export const studyApi = {
     });
   },
 
-  async getMyNotifications() {
-    const { data } = await apiClient.get('/api/notifications');
-    return data;
-  },
-
-  async getUnreadNotificationCount() {
-    const { data } = await apiClient.get('/api/notifications/unread-count');
-    return data;
-  },
-
-  async readNotification(id) {
-    const { data } = await apiClient.post(`/api/notifications/${id}/read`);
-    return data;
-  },
-
   async deleteStudy(studyId) {
     return await apiClient.delete(`/api/study/${studyId}`);
   },

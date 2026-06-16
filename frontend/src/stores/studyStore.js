@@ -10,9 +10,7 @@ export const useStudyStore = defineStore('study', {
     sharedJobs: [],
     currentSharedEssayDetail: null,
     status: 'idle',
-    errorMessage: '',
-    notifications: [],
-    unreadNotificationCount: 0
+    errorMessage: ''
   }),
   actions: {
     async loadMyStudies() {

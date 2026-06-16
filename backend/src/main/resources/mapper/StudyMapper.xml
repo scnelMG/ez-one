@@ -147,22 +147,6 @@
         UPDATE study_group SET image_url = #{imageUrl} WHERE id = #{studyId}
     </update>
 
-    <insert id="insertNotification" parameterType="com.ezone.backend.domain.persistence.NotificationRow">
-        INSERT INTO study_notification (id, user_email, study_id, message, type, is_read, created_at)
-        VALUES (#{id}, #{userEmail}, #{studyId}, #{message}, #{type}, #{isRead}, #{createdAt})
-    </insert>
-
-    <select id="findNotificationsByUserEmail" resultType="com.ezone.backend.domain.persistence.NotificationRow">
-        SELECT id, user_email AS userEmail, study_id AS studyId, message, type, is_read AS isRead, created_at AS createdAt
-        FROM study_notification
-        WHERE user_email = #{userEmail}
-        ORDER BY created_at DESC
-    </select>
-
-    <update id="updateNotificationRead">
-        UPDATE study_notification SET is_read = true WHERE id = #{id} AND user_email = #{userEmail}
-    </update>
-
     <insert id="insertEssayReadLog" parameterType="com.ezone.backend.domain.persistence.StudyEssayReadLogRow">
         INSERT INTO study_essay_read_log (study_id, essay_id, user_email, read_at)
         VALUES (#{studyId}, #{essayId}, #{userEmail}, #{readAt})

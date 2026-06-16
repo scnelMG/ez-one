@@ -19,8 +19,10 @@ import com.ezone.backend.domain.UserAccount;
 import com.ezone.backend.mapper.UserAccountMapper;
 import com.ezone.backend.security.JwtAccessTokenVerifier;
 import com.ezone.backend.security.JwtAuthenticationFilter;
+import com.ezone.backend.service.InMemoryHistoryService;
 import com.ezone.backend.service.InMemoryP1WorkspaceService;
 import com.ezone.backend.service.InMemoryProfileService;
+import com.ezone.backend.service.MattermostIngestionService;
 import com.ezone.backend.service.NotionIntegrationService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -33,6 +35,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -46,17 +49,24 @@ import org.springframework.test.web.servlet.MockMvc;
     CurrentUserController.class,
     NotionIntegrationController.class,
     ExtensionJobController.class
+    ,
+    HistoryController.class,
+    MattermostIntegrationController.class,
+    MattermostAdminController.class
 })
 @Import({
     SecurityConfig.class,
     JwtAuthenticationFilter.class,
     JwtAccessTokenVerifier.class,
+    InMemoryHistoryService.class,
     InMemoryP1WorkspaceService.class,
     InMemoryProfileService.class,
+    MattermostIngestionService.class,
     NotionIntegrationService.class
 })
 @WithMockUser(username = "1")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
+@TestPropertySource(properties = "mattermost.webhook.secret=test-mm-secret")
 class P1ApiContractTest {
 
     @Autowired
@@ -128,6 +138,27 @@ class P1ApiContractTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data[0].deadlineLabel").value("오늘 18:00"))
             .andExpect(jsonPath("$.data[1].deadlineLabel").value("D-1"));
+    }
+
+    @Test
+    void historyApplicationsExposeSummaryRowsAndWorkspaceLinksWithoutActiveBasketPollution() throws Exception {
+        mockMvc.perform(get("/api/history/applications"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.summary.total", greaterThanOrEqualTo(1)))
+            .andExpect(jsonPath("$.data.periods[0].value").value("ALL"))
+            .andExpect(jsonPath("$.data.companyTypes[0].type", notNullValue()))
+            .andExpect(jsonPath("$.data.rows[0].workspaceId", notNullValue()))
+            .andExpect(jsonPath("$.data.rows[0].resultStage", notNullValue()))
+            .andExpect(jsonPath("$.data.rows[0].resultLabel", notNullValue()));
+
+        mockMvc.perform(get("/api/history/applications?period=2025-H1&resultStage=DOCUMENT_FAILED"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.rows[0].resultStage").value("DOCUMENT_FAILED"));
+
+        mockMvc.perform(get("/api/basket/jobs"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data[0].companyName").value("네이버"));
     }
 
     @Test
@@ -803,6 +834,54 @@ class P1ApiContractTest {
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.error.message").value("At least one role is required."));
+    }
+
+    @Test
+    void mattermostWebhookRequiresSecretAndStoresJobCandidate() throws Exception {
+        mockMvc.perform(post("/api/integrations/mattermost/webhook")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "channelId": "jobs-channel",
+                      "messageId": "mm-contract-1",
+                      "senderName": "recruiter",
+                      "text": "[라인] Server Platform Engineer 채용 https://careers.linecorp.com/jobs/101 마감 D-7",
+                      "attachments": [],
+                      "rawPayload": { "team": "employment" }
+                    }
+                    """))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.success").value(false));
+
+        mockMvc.perform(post("/api/integrations/mattermost/webhook")
+                .header("X-MM-Webhook-Secret", "test-mm-secret")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "channelId": "jobs-channel",
+                      "messageId": "mm-contract-1",
+                      "senderName": "recruiter",
+                      "text": "[라인] Server Platform Engineer 채용 https://careers.linecorp.com/jobs/101 마감 D-7",
+                      "attachments": [],
+                      "rawPayload": { "team": "employment" }
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.messageType").value("JOB_POSTING"))
+            .andExpect(jsonPath("$.data.parseStatus").value("PARSED"))
+            .andExpect(jsonPath("$.data.createdParsedJobPost").value(true));
+    }
+
+    @Test
+    void mattermostRecommendationsAreOnlyAvailableToSsafyUsers() throws Exception {
+        mockMvc.perform(get("/api/recommendations/jobs?source=mattermost"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(get("/api/recommendations/jobs?source=mattermost").with(user("2")))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.error.code").value("FORBIDDEN"));
     }
 
     private void createDashboardJob(String companyName, String deadlineLabel) throws Exception {

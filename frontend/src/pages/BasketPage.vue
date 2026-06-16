@@ -88,7 +88,7 @@
             <span>상태</span>
             <span>마감일</span>
             <span>채용 사이트 링크</span>
-            <span></span>
+            <span>최근 작업</span>
             <span aria-label="삭제"></span>
           </div>
 
@@ -167,6 +167,7 @@
             </a>
             <span v-if="formatDDay(job) || job.deadlineLabel?.startsWith('D-')" class="deadline-pill" :class="{ urgent: isDeadlineSoon(job) }">{{ formatDDay(job) || job.deadlineLabel }}</span>
             <span v-else></span>
+            <span :data-testid="`recent-work-${job.id}`">{{ isRecentWorkspace(job.workspaceId) ? '최근 작업' : '' }}</span>
             <button
               class="delete-job-button"
               type="button"
@@ -451,10 +452,10 @@ function changeStatus(jobId, nextStatus) {
     void basketStore.updateStatus(jobId, nextStatus);
 }
 async function archiveJob(id) {
-  if (!window.confirm(`해당 공고를 삭제하시겠습니까?`)) {
-    return;
-  }
-  void basketStore.archiveJob(id);
+  const job = basketStore.jobs.find((item) => item.id === id);
+  const label = job ? `${job.companyName} ${job.positionTitle}` : '해당';
+  if (!window.confirm(`${label} 공고를 삭제하시겠습니까?`)) return;
+  await basketStore.archiveJob(id);
 }
 
 onMounted(() => {

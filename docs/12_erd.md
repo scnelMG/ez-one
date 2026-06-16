@@ -62,6 +62,12 @@ erDiagram
 | `mm_messages` | id, channel_id, message_id, raw_payload_json, received_at, parse_status | Mattermost raw-first 저장 |
 | `mm_parsed_job_posts` | id, mm_message_id, company_name, title, url, deadline_at, review_status | 관리자 검토용 후보 공고 |
 
+## Mattermost P2 구현 추가
+
+- `mm_messages`는 Mattermost webhook 원문을 raw-first로 저장한다. `message_id`는 중복 수신 방지를 위해 unique다.
+- `mm_parsed_job_posts`는 채용공고로 판단된 후보만 저장한다. `review_status = APPROVED`로 검토된 후보만 `jobs.source = 'MATTERMOST'` 공고로 승격한다.
+- Mattermost 추천은 `user_profiles.is_ssafy = true` 사용자에게만 조회/저장 가능하다.
+
 ## Enum 기준
 
 | Enum | 값 |
@@ -87,3 +93,10 @@ erDiagram
 - P1 overwrite policy: when a save request includes a valid optional `logoUrl`, the server stores it only if `companies.logo_url` is empty. Existing company logos are preserved.
 - Basket and workspace API responses expose the company logo as `companyLogoUrl` and `companyDetails.logoUrl`; clients should fall back to an initials badge when the URL is missing or broken.
 - `V9__seed_demo_jobs_and_recommendations.sql` temporarily seeds demo basket jobs and `jobs.source = 'RECOMMENDATION'` rows with company logos for local UI verification. These rows use `ez-one-demo-*` source URLs so they can be removed later.
+## 2026-06-16 Application History Update
+
+- Added `application_history` for imported past application rows.
+- `application_history.workspace_id` is unique and links each imported row to the existing workspace surface.
+- Import-created `basket_jobs` use `saved_source = 'HISTORY_IMPORT'`; active basket queries exclude that source while workspace lookup remains available.
+- Key columns: `user_id`, `workspace_id`, `company_name`, `position_title`, `application_status`, `result_stage`, `raw_result`, `deadline_date`, `period_key`, `period_year`, `period_half`, `source_url`, `company_type`.
+- Indexes: `idx_application_history_user_period (user_id, period_key)` and `idx_application_history_user_result (user_id, result_stage)`.

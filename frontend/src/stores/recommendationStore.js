@@ -7,11 +7,11 @@ export const useRecommendationStore = defineStore('recommendation', () => {
     const jobs = ref([]);
     const savedJob = ref(null);
     const errorMessage = ref('');
-    async function loadRecommendations() {
+    async function loadRecommendations(source = 'recommendation') {
         status.value = 'loading';
         errorMessage.value = '';
         try {
-            jobs.value = await recommendationApi.listJobs();
+            jobs.value = await recommendationApi.listJobs(source);
             status.value = 'ready';
         }
         catch (error) {
@@ -22,11 +22,13 @@ export const useRecommendationStore = defineStore('recommendation', () => {
             errorMessage.value = messageFromError(error, '추천 공고를 불러오지 못했습니다.');
         }
     }
-    async function saveRecommendation(recommendationId) {
+    async function saveRecommendation(recommendationId, source) {
         status.value = 'saving';
         errorMessage.value = '';
         try {
-            savedJob.value = await recommendationApi.saveJob(recommendationId);
+            savedJob.value = source === undefined
+                ? await recommendationApi.saveJob(recommendationId)
+                : await recommendationApi.saveJob(recommendationId, source);
             status.value = 'ready';
         }
         catch (error) {

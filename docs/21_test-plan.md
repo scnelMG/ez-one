@@ -55,6 +55,14 @@
 | TC-REF-AUTO-P2 | References | 자동 JD/news/DART/인재상 수집 |
 | TC-NOTION-SCOPE-P2 | Notion | job+essay, job+essay+canvas 동기화 |
 
+## Mattermost P2 테스트 상세
+
+- `TC-MM-P2-RAW`: webhook secret 검증 후 원문을 `mm_messages`에 저장한다.
+- `TC-MM-P2-FILTER`: 합격 후기/일반 공지는 raw만 저장하고 후보 공고를 만들지 않는다.
+- `TC-MM-P2-CANDIDATE`: 채용공고 메시지는 `mm_parsed_job_posts` 후보를 생성한다.
+- `TC-MM-P2-SSAFY`: `source=mattermost` 추천 조회/저장은 SSAFY 사용자에게만 허용한다.
+- `TC-MM-P2-PROMOTE`: 승인된 후보만 `jobs.source = 'MATTERMOST'`로 승격되어 추천 목록에 노출된다.
+
 ## 검증 규칙
 
 - 모든 P1 요구사항은 화면, API, DB, 테스트 연결을 가진다.
@@ -116,3 +124,12 @@
 - `TC-AUTH-OAUTH-STATE-001`: OAuth state is stored by nonce so parallel login tabs or retries do not overwrite each other.
 - `TC-AUTH-OAUTH-CANCEL-001`: Google OAuth error callbacks such as `access_denied` show a clear retry message without calling the backend token exchange.
 - `TC-AUTH-REFRESH-FAIL-001`: A revoked or expired refresh token clears the local session after a protected API returns 401.
+## 2026-06-16 History Tests
+
+- `TC-HISTORY-001`: Router registers `/history` and the common nav exposes the active history link while remaining P2 routes stay disabled.
+- `TC-HISTORY-002`: `historyApi.listApplications` calls `GET /api/history/applications` with period/result-stage params and normalizes row IDs.
+- `TC-HISTORY-003`: `PastHistoryPage` renders period options, selected-period metrics, company-type counts, and imported rows.
+- `TC-HISTORY-004`: Changing the half-year period reloads history data.
+- `TC-HISTORY-005`: Clicking a history row navigates to `/workspaces/{workspaceId}`.
+- `TC-HISTORY-006`: Backend contract returns periods, summary, rows, result-stage filtering, and keeps `HISTORY_IMPORT` rows out of active basket listing.
+- `TC-HISTORY-007`: Migration contract verifies `application_history` schema and confirms personal email/data are not embedded in migration SQL.

@@ -87,5 +87,13 @@ public interface P1WorkspaceService {
 
     List<DashboardJobResponse> listRecommendationJobs(Long userId);
 
+    default List<DashboardJobResponse> listRecommendationJobs(Long userId, String source) {
+        return listRecommendationJobs(userId);
+    }
+
     BasketJobResponse saveRecommendation(Long userId, Long recommendationId);
+
+    default BasketJobResponse saveRecommendation(Long userId, Long recommendationId, String source) {
+        return saveRecommendation(userId, recommendationId);
+    }
 }
