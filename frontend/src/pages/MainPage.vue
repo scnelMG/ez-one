@@ -150,45 +150,6 @@
         />
       </section>
 
-      <section class="dashboard-panel main-recommendation-preview" aria-label="추천 공고 미리보기">
-        <div class="section-heading">
-          <div>
-            <h2>추천 공고</h2>
-          </div>
-          <RouterLink class="text-button" to="/recommendations">전체 보기</RouterLink>
-        </div>
-        <div class="main-recommendation-grid">
-          <article
-            v-for="item in recommendationPreviewItems"
-            :key="item.id"
-            class="main-recommendation-card"
-            data-testid="main-recommendation-preview-job"
-          >
-            <img
-              v-if="item.companyLogoUrl"
-              class="main-recommendation-logo"
-              data-testid="main-recommendation-logo"
-              :src="item.companyLogoUrl"
-              :alt="item.companyName + ' logo'"
-            />
-            <div>
-              <strong>{{ item.companyName }}</strong>
-              <p>{{ item.positionTitle }}</p>
-              <span>{{ item.deadlineLabel }}</span>
-              <span>{{ item.participantCount }}명 작성</span>
-            </div>
-            <button
-              class="primary-button"
-              type="button"
-              :data-testid="'main-save-recommendation-' + item.id"
-              @click="saveRecommendation(item.id)"
-            >
-              담기
-            </button>
-          </article>
-        </div>
-      </section>
-
       <HoneyPotGraph :activities="activities" />
 
     </section>
@@ -217,7 +178,6 @@ import {
   statusLabel,
   normalizedSourceUrl,
   companyInitial,
-  formatParticipantCount,
   formatDDay,
   formatDateTime,
   formatAbsoluteDeadline
@@ -229,13 +189,10 @@ import { requiresOnboarding } from '@/features/auth/session/authSession';
 import { isRecentWorkspace } from '@/features/basket/recentWorkspaces';
 import { useBasketStore } from '@/stores/basketStore';
 import { useDashboardStore } from '@/stores/dashboardStore';
-import { useRecommendationStore } from '@/stores/recommendationStore';
-import { showToast } from '@/shared/useToast';
 import ConfirmDialog from '@/shared/ConfirmDialog.vue';
 
 const dashboardStore = useDashboardStore();
 const basketStore = useBasketStore();
-const recommendationStore = useRecommendationStore();
 const showOnboardingModal = ref(requiresOnboarding());
 const priorityJobIds = computed(() => basketStore.priorityJobIds);
 const failedLogos = ref(new Set());
@@ -279,11 +236,6 @@ const basketPreviewJobs = computed(() => {
     .slice(0, 5);
 });
 
-const recommendationPreviewItems = computed(() => [...recommendationStore.jobs]
-    .filter(isVisibleRecommendation)
-    .sort((left, right) => deadlineRank(left) - deadlineRank(right))
-    .slice(0, 4));
-
 const activities = ref([]);
 
 onMounted(async () => {
@@ -294,26 +246,10 @@ onMounted(async () => {
   
   const realActivities = await dashboardApi.getActivities();
   activities.value = realActivities || [];
-
-  void recommendationStore.loadRecommendations();
 });
-
-function isVisibleRecommendation(item) {
-    return item.deadlineLabel !== '상시' && item.deadlineLabel !== '상시채용';
-}
 
 function handleLogoError(id) {
     failedLogos.value.add(id);
-}
-
-function saveRecommendation(recommendationId) {
-    void recommendationStore.saveRecommendation(recommendationId).then(() => {
-        if (recommendationStore.savedJob) {
-            showToast(`${recommendationStore.savedJob.companyName} 공고를 담았습니다`, { tone: 'green' });
-        }
-        void dashboardStore.loadSummary();
-        void basketStore.loadJobs();
-    });
 }
 
 function isPriorityJob(job) {

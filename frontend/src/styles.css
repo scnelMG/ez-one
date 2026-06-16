@@ -3282,8 +3282,7 @@ li {
   line-height: 1;
 }
 
-.main-basket-preview,
-.main-recommendation-preview {
+.main-basket-preview {
   box-shadow: 0 14px 36px rgba(15, 23, 42, 0.055);
 }
 
@@ -3294,13 +3293,11 @@ li {
   gap: 9px;
 }
 
-.main-basket-title-row h2,
-.main-recommendation-preview h2 {
+.main-basket-title-row h2 {
   margin: 0;
 }
 
-.main-preview-note,
-.main-recommendation-preview .section-heading p {
+.main-preview-note {
   margin: 0;
   color: #a1a9b7;
   font-size: 0.82rem;

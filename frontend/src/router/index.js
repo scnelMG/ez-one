@@ -9,7 +9,6 @@ import ExtensionConnectPage from '@/pages/ExtensionConnectPage.vue';
 import MainPage from '@/pages/MainPage.vue';
 import MyPage from '@/pages/MyPage.vue';
 import NotionSettingsPage from '@/pages/NotionSettingsPage.vue';
-import RecommendationPage from '@/pages/RecommendationPage.vue';
 import WorkspacePage from '@/pages/WorkspacePage.vue';
 import StudyListPage from '@/pages/StudyListPage.vue';
 import StudyDetailPage from '@/pages/StudyDetailPage.vue';
@@ -66,12 +65,6 @@ export const router = createRouter({
             path: '/document-profile',
             name: 'document-profile',
             component: DocumentProfilePage,
-            meta: { requiresAuth: true }
-        },
-        {
-            path: '/recommendations',
-            name: 'recommendations',
-            component: RecommendationPage,
             meta: { requiresAuth: true }
         },
         {

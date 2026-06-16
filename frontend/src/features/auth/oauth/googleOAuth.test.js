@@ -29,10 +29,10 @@ describe('googleOAuth', () => {
             .mockReturnValueOnce('state-b');
 
         expect(createOAuthState('/basket')).toBe('state-a');
-        expect(createOAuthState('/recommendations')).toBe('state-b');
+        expect(createOAuthState('/document-profile')).toBe('state-b');
 
         expect(consumeOAuthState('state-a')).toBe('/basket');
-        expect(consumeOAuthState('state-b')).toBe('/recommendations');
+        expect(consumeOAuthState('state-b')).toBe('/document-profile');
     });
     it('AUTH-004: asks Google to show account selection only for explicit account switching', () => {
         const url = buildGoogleOAuthUrl({

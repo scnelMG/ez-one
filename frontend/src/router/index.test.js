@@ -13,7 +13,7 @@ describe('router', () => {
         expect(routeNames).toContain('basket-detail');
         expect(routeNames).toContain('workspace');
         expect(routeNames).toContain('document-profile');
-        expect(routeNames).toContain('recommendations');
+        expect(routeNames).not.toContain('recommendations');
         expect(routeNames).toContain('history');
         expect(routeNames).toContain('mypage-account');
         expect(routeNames).toContain('mypage-notion');

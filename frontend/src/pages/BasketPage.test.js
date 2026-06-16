@@ -29,7 +29,6 @@ const makeRouter = () => createRouter({
         { path: '/main', component: { template: '<div>main</div>' } },
         { path: '/mypage', component: { template: '<div>my page</div>' } },
         { path: '/workspaces/:workspaceId', component: { template: '<div>workspace</div>' } },
-        { path: '/recommendations', component: { template: '<div>recommendations</div>' } },
         { path: '/document-profile', component: { template: '<div>document profile</div>' } },
         { path: '/mypage/notion', component: { template: '<div>notion</div>' } },
         { path: '/mypage/terms', component: { template: '<div>terms</div>' } }
