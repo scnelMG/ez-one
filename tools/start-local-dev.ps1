@@ -346,7 +346,7 @@ if (Test-HttpReady $backendHealth) {
     $javaCommand = Resolve-RequiredCommand "java.exe"
     $backendProcess = Start-LoggedProcess `
         $javaCommand `
-        @("-jar", $backendJar) `
+        @("-jar", $backendJar, "--spring.profiles.active=mysql") `
         $backendDir `
         (Join-Path $backendDir "backend-server.log") `
         (Join-Path $backendDir "backend-server.err.log")

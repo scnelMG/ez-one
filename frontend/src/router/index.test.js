@@ -40,6 +40,11 @@ describe('router', () => {
         expect(router.currentRoute.value.name).toBe('login');
         expect(router.currentRoute.value.query.redirect).toBe('/extension/connect?sourceUrl=https%3A%2F%2Fwww.jasoseol.com%2Frecruit%2F1&sourceTabId=42');
     });
+    it('preserves extension connect redirects from the current local extension handoff URL', async () => {
+        await router.push('/?redirect=%2Fextension%2Fconnect%3FsourceUrl%3Dhttps%253A%252F%252Fjasoseol.com%252Frecruit%26sourceTabId%3D1361782977');
+        expect(router.currentRoute.value.name).toBe('login');
+        expect(router.currentRoute.value.query.redirect).toBe('/extension/connect?sourceUrl=https%3A%2F%2Fjasoseol.com%2Frecruit&sourceTabId=1361782977');
+    });
     it('redirects protected P1 pages to login when the user is not authenticated', async () => {
         await router.push('/basket');
         expect(router.currentRoute.value.name).toBe('login');

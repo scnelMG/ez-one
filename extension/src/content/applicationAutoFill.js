@@ -1,6 +1,6 @@
 const BASIC_FIELDS = [
     { key: 'basicInfo.nameKo', label: '이름', section: 'basicInfo', field: 'nameKo', terms: ['이름', '성명', '지원자명', 'applicantname', 'username', 'name'] },
-    { key: 'basicInfo.nameEn', label: '영문 이름', section: 'basicInfo', field: 'nameEn', terms: ['영문', '영어이름', 'englishname', 'nameen'] },
+    { key: 'basicInfo.nameEn', label: '영문 이름', section: 'basicInfo', field: 'nameEn', terms: ['영문이름', '영문', '영어이름', 'englishname', 'nameen'] },
     { key: 'basicInfo.email', label: '이메일', section: 'basicInfo', field: 'email', terms: ['이메일', '메일', 'emailaddress', 'email', 'mail'] },
     { key: 'basicInfo.phone', label: '휴대폰', section: 'basicInfo', field: 'phone', terms: ['휴대폰', '휴대전화', '전화번호', '연락처', '핸드폰', 'mobile', 'phone', 'tel'] },
     { key: 'basicInfo.birthdate', label: '생년월일', section: 'basicInfo', field: 'birthdate', terms: ['생년월일', '생년', 'birth', 'birthday', 'birthdate'] },
@@ -76,7 +76,12 @@ export function buildAutoFillPlan(documentRef = document, profile) {
     const fillable = [];
     const failed = [];
     const skipped = [];
+    const consumedControls = new Set();
+    addSplitPhoneItems(controls, values, fillable, consumedControls);
     for (const control of controls) {
+        if (consumedControls.has(control)) {
+            continue;
+        }
         const context = collectControlText(control);
         if (shouldSkipLongText(control, context)) {
             skipped.push({ label: context.displayLabel, reason: 'essay_or_long_text' });
@@ -95,15 +100,21 @@ export function buildAutoFillPlan(documentRef = document, profile) {
 
 export function applyAutoFillPlan(plan) {
     const filled = [];
+    const failed = [...plan.failed];
     for (const item of plan.fillable) {
-        setControlValue(item.element, item.value);
-        filled.push({ fieldKey: item.fieldKey, label: item.label, value: item.value });
+        const result = setControlValue(item.element, item.value);
+        if (result.success) {
+            filled.push({ fieldKey: item.fieldKey, label: item.label, value: result.value });
+        }
+        else {
+            failed.push({ label: item.label, reason: result.reason });
+        }
     }
     return {
         filledCount: filled.length,
-        failedCount: plan.failed.length + plan.skipped.length,
+        failedCount: failed.length + plan.skipped.length,
         filled,
-        failed: [...plan.failed, ...plan.skipped],
+        failed: [...failed, ...plan.skipped],
         copyCandidates: plan.copyCandidates
     };
 }
@@ -122,16 +133,19 @@ function findBestValue(context, values) {
 }
 
 function collectControlText(control) {
-    const texts = [
+    const visibleTexts = [
+        labelText(control),
+        tableHeaderText(control),
+        nearbyText(control),
+        previousSiblingText(control)
+    ].filter(Boolean);
+    const fallbackTexts = [
         control.getAttribute('aria-label'),
         control.getAttribute('placeholder'),
         control.getAttribute('name'),
-        control.id,
-        labelText(control),
-        tableHeaderText(control),
-        previousSiblingText(control),
-        nearbyText(control)
+        control.id
     ].filter(Boolean);
+    const texts = [...visibleTexts, ...fallbackTexts];
     return { displayLabel: cleanText(texts[0]) || '', normalized: normalize(texts.join(' ')) };
 }
 
@@ -173,10 +187,71 @@ function nearbyText(control) {
 }
 
 function setControlValue(control, value) {
-    control.value = value;
+    let displayValue = value;
+    if (control.tagName.toLowerCase() === 'select') {
+        const selectedValue = findMatchingSelectValue(control, value);
+        if (selectedValue === null) {
+            return { success: false, reason: 'select_option_not_found' };
+        }
+        control.value = selectedValue;
+        displayValue = value;
+    }
+    else {
+        control.value = value;
+    }
     const eventWindow = control.ownerDocument.defaultView ?? window;
     control.dispatchEvent(new eventWindow.Event('input', { bubbles: true }));
     control.dispatchEvent(new eventWindow.Event('change', { bubbles: true }));
+    return { success: true, value: displayValue };
+}
+
+function findMatchingSelectValue(select, value) {
+    const normalizedValue = normalize(value);
+    const options = Array.from(select.options ?? []);
+    const exact = options.find((option) => normalize(option.value) === normalizedValue || normalize(option.textContent) === normalizedValue);
+    if (exact) {
+        return exact.value;
+    }
+    const contained = options.find((option) => {
+        const optionText = normalize(option.textContent);
+        return optionText && (optionText.includes(normalizedValue) || normalizedValue.includes(optionText));
+    });
+    return contained?.value ?? null;
+}
+
+function addSplitPhoneItems(controls, values, fillable, consumedControls) {
+    const phoneValue = values.find((value) => value.key === 'basicInfo.phone');
+    if (!phoneValue) {
+        return;
+    }
+    const phoneSegments = phoneValue.value.match(/\d+/g);
+    if (!phoneSegments || phoneSegments.length < 3) {
+        return;
+    }
+    const labels = new Set(controls.map((control) => control.closest('label')).filter(Boolean));
+    for (const label of labels) {
+        const labelControls = Array.from(label.querySelectorAll('input')).filter((control) => controls.includes(control));
+        const maxLengths = labelControls.map((control) => Number(control.getAttribute('maxlength')));
+        const labelContext = normalize(labelTextWithoutControl(label));
+        const looksLikePhoneGroup = labelControls.length >= 3 &&
+            labelContext.includes(normalize('휴대폰')) &&
+            maxLengths[0] === 3 &&
+            maxLengths[1] === 4 &&
+            maxLengths[2] === 4;
+        if (!looksLikePhoneGroup) {
+            continue;
+        }
+        labelControls.slice(0, 3).forEach((control, index) => {
+            consumedControls.add(control);
+            fillable.push({
+                element: control,
+                fieldKey: phoneValue.key,
+                label: labelTextWithoutControl(label).trim() || phoneValue.label,
+                value: phoneSegments[index]
+            });
+        });
+        return;
+    }
 }
 
 function isFillableControl(control) {

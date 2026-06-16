@@ -64,6 +64,18 @@ describe('LoginPage', () => {
         expect(wrapper.find('button[data-testid="google-account-switch"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="account-switch-callout"]').exists()).toBe(false);
     });
+    it('PAGE-001: does not expose the local development login shortcut', async () => {
+        vi.stubGlobal('location', { assign: vi.fn(), origin: 'http://localhost:5173' });
+        const router = makeRouter();
+        router.push('/login');
+        await router.isReady();
+        const wrapper = mount(LoginPage, {
+            global: {
+                plugins: [router]
+            }
+        });
+        expect(wrapper.find('button[data-testid="local-dev-login"]').exists()).toBe(false);
+    });
     it('AUTH-001: redirects local alias access to the configured OAuth callback origin before login', async () => {
         vi.stubGlobal('location', {
             assign: vi.fn(),
@@ -110,6 +122,7 @@ describe('LoginPage', () => {
         expect(wrapper.text()).toContain('Chrome 웹 스토어에서 설치하기');
         expect(wrapper.text()).toContain('EZ-ONE에 저장');
         expect(wrapper.find('a[href="#extension-install"]').exists()).toBe(true);
+        expect(wrapper.find('.extension-screenshot-card img').exists()).toBe(true);
     });
     it('AUTH-003: logs in with email credentials and redirects to the protected target', async () => {
         mocks.loginWithEmail.mockResolvedValue({

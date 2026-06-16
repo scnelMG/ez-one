@@ -2,7 +2,7 @@ export const ACCESS_TOKEN_KEY = 'ezoneAccessToken';
 export const REFRESH_TOKEN_KEY = 'ezoneRefreshToken';
 export const CURRENT_USER_KEY = 'ezoneCurrentUser';
 export function buildWebLoginUrl({ webAppUrl, currentUrl, sourceTabId }) {
-    const url = new URL('/', webAppUrl);
+    const url = new URL('/login', webAppUrl);
     const connectUrl = new URL('/extension/connect', webAppUrl);
     connectUrl.searchParams.set('sourceUrl', currentUrl);
     if (Number.isInteger(sourceTabId) && sourceTabId > 0) {

@@ -19,6 +19,7 @@ const POSTING_WATCH_INTERVAL_MS = 1200;
 const LOGIN_SESSION_POLL_INTERVAL_MS = 800;
 const LOGIN_SESSION_POLL_TIMEOUT_MS = 120000;
 const PANEL_RESIZE_MESSAGE = 'EZONE_PANEL_RESIZE';
+const PANEL_RESIZE_EPSILON_PX = 2;
 const statusPanel = requireElement('status-panel');
 const loginPanel = requireElement('login-panel');
 const featurePanel = requireElement('feature-panel');
@@ -42,6 +43,9 @@ const roleCount = requireElement('role-count');
 const basketLink = requireElement('basket-link');
 const savedJobList = requireElement('saved-job-list');
 const autofillSummary = requireElement('autofill-summary');
+const autofillFilledCount = requireElement('autofill-filled-count');
+const autofillReviewCount = requireElement('autofill-review-count');
+const autofillCopyCount = requireElement('autofill-copy-count');
 const autofillFilledList = requireElement('autofill-filled-list');
 const autofillFailedList = requireElement('autofill-failed-list');
 const autofillCopyList = requireElement('autofill-copy-list');
@@ -57,6 +61,7 @@ let postingWatchTimer = null;
 let loginSessionPollTimer = null;
 let loginSessionPollStartedAt = 0;
 let panelResizeFrame = null;
+let lastReportedPanelHeight = 0;
 const contentScriptLoadPromises = new Map();
 
 const jobApi = createExtensionJobApi({
@@ -723,19 +728,32 @@ function renderAutoFillResult(result) {
     const filled = Array.isArray(result?.filled) ? result.filled : [];
     const failed = Array.isArray(result?.failed) ? result.failed : [];
     const copyCandidates = Array.isArray(result?.copyCandidates) ? result.copyCandidates : [];
-    autofillSummary.textContent = `${filled.length}개 항목을 자동 입력했고 ${failed.length}개 항목은 확인이 필요합니다. 제출 전에는 반드시 직접 검토하세요.`;
+    autofillFilledCount.textContent = String(filled.length);
+    autofillReviewCount.textContent = String(failed.length);
+    autofillCopyCount.textContent = String(copyCandidates.length);
+    autofillSummary.textContent = `${filled.length}개 항목을 자동 입력했습니다. ${failed.length}개 항목은 제출 전에 직접 확인하세요.`;
     renderResultList(autofillFilledList, filled, (item) => ({
         title: item.label ?? item.fieldKey,
         body: item.value
     }), '자동 입력된 항목이 없습니다.');
     renderResultList(autofillFailedList, failed, (item) => ({
         title: item.label ?? '알 수 없는 입력칸',
-        body: item.reason === 'essay_or_long_text' ? '자기소개서 또는 장문 입력칸은 자동 입력하지 않았습니다.' : '매칭되는 서류 정보를 찾지 못했습니다.'
+        body: getAutofillFailureMessage(item.reason)
     }), '실패 항목이 없습니다.');
     renderResultList(autofillCopyList, copyCandidates.slice(0, 8), (item) => ({
         title: item.label,
         body: item.value
     }), '복사 가능한 후보가 없습니다.');
+}
+
+function getAutofillFailureMessage(reason) {
+    if (reason === 'essay_or_long_text') {
+        return '자기소개서 또는 장문 입력칸은 자동 입력하지 않았습니다. 직접 검토해 주세요.';
+    }
+    if (reason === 'select_option_not_found') {
+        return '선택 가능한 옵션과 내 서류 정보가 맞지 않습니다. 직접 선택해 주세요.';
+    }
+    return '매칭되는 서류 정보를 찾지 못했습니다. 복사 후보에서 붙여넣어 주세요.';
 }
 
 function renderResultList(list, items, mapper, emptyText) {
@@ -803,6 +821,7 @@ function showPanel(panel) {
     for (const item of [statusPanel, loginPanel, featurePanel, previewPanel, resultPanel, documentResultPanel]) {
         item.hidden = item !== panel;
     }
+    lastReportedPanelHeight = 0;
     schedulePanelResize();
 }
 
@@ -848,7 +867,7 @@ function setupPanelAutoResize() {
             schedulePanelResize();
         });
         [
-            document.body,
+            document.querySelector('.popup-header'),
             statusPanel,
             loginPanel,
             featurePanel,
@@ -857,7 +876,7 @@ function setupPanelAutoResize() {
             documentResultPanel,
             roleOptions,
             essayQuestionList
-        ].forEach((item) => observer.observe(item));
+        ].filter(Boolean).forEach((item) => observer.observe(item));
     }
     window.addEventListener('load', schedulePanelResize);
     schedulePanelResize();
@@ -882,16 +901,25 @@ function reportPanelHeight() {
     if (!activePanel) {
         return;
     }
+    const popupShell = document.querySelector('.popup-shell');
+    if (!popupShell) {
+        return;
+    }
     const bodyStyle = getComputedStyle(document.body);
-    const shellStyle = getComputedStyle(document.querySelector('.popup-shell'));
+    const shellStyle = getComputedStyle(popupShell);
     const header = document.querySelector('.popup-header');
     const bodyPadding = parsePixelValue(bodyStyle.paddingTop) + parsePixelValue(bodyStyle.paddingBottom);
     const shellGap = parsePixelValue(shellStyle.rowGap || shellStyle.gap);
-    const headerHeight = header?.getBoundingClientRect().height ?? 0;
-    const panelHeight = Math.max(activePanel.scrollHeight, activePanel.getBoundingClientRect().height);
+    const headerHeight = header?.scrollHeight ?? header?.getBoundingClientRect().height ?? 0;
+    const panelHeight = activePanel.scrollHeight;
+    const height = Math.ceil(bodyPadding + headerHeight + shellGap + panelHeight + 2);
+    if (Math.abs(height - lastReportedPanelHeight) < PANEL_RESIZE_EPSILON_PX) {
+        return;
+    }
+    lastReportedPanelHeight = height;
     window.parent.postMessage({
         type: PANEL_RESIZE_MESSAGE,
-        height: Math.ceil(bodyPadding + headerHeight + shellGap + panelHeight + 2)
+        height
     }, '*');
 }
 

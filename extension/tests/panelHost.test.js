@@ -34,6 +34,8 @@ describe('extension in-page panel host', () => {
         expect(script).toContain("document.createElement('div')");
         expect(script).toContain("resizeHandle.className = 'resize-handle'");
         expect(script).toContain("resizeHandle.setAttribute('role', 'separator')");
+        expect(script).toContain('left: 0;');
+        expect(script).not.toContain('left: -6px;');
         expect(script).toContain("resizeHandle.addEventListener('pointerdown'");
         expect(script).toContain('function startResize');
         expect(script).toContain("panel.classList.add('is-resizing')");
@@ -50,6 +52,10 @@ describe('extension in-page panel host', () => {
         expect(script).toContain('event.source !== frame.contentWindow');
         expect(script).toContain('setPanelHeight(panel, Number(event.data.height))');
         expect(script).toContain('function setPanelHeight');
+        expect(script).toContain('Math.max(height, PANEL_DEFAULT_HEIGHT)');
+        expect(script).toContain('const currentHeight = Math.round(panel.getBoundingClientRect().height);');
+        expect(script).toContain('Math.abs(currentHeight - nextHeight) < 2');
+        expect(script).toContain('panel.style.height = `${nextHeight}px`;');
         expect(script).toContain('window.removeEventListener');
     });
 });
