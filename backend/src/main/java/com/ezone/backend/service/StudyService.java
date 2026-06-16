@@ -3,6 +3,8 @@ package com.ezone.backend.service;
 import com.ezone.backend.domain.persistence.*;
 import com.ezone.backend.dto.study.*;
 import com.ezone.backend.mapper.StudyMapper;
+import com.ezone.backend.mapper.UserAccountMapper;
+import com.ezone.backend.domain.UserAccount;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,12 +21,22 @@ import com.fasterxml.jackson.core.type.TypeReference;
 public class StudyService {
 
     private final StudyMapper studyMapper;
+    private final UserAccountMapper userAccountMapper;
     private final EmailService emailService;
+    private final P1WorkspaceService p1WorkspaceService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public StudyService(StudyMapper studyMapper, EmailService emailService) {
+    public StudyService(StudyMapper studyMapper, UserAccountMapper userAccountMapper, EmailService emailService, P1WorkspaceService p1WorkspaceService) {
         this.studyMapper = studyMapper;
+        this.userAccountMapper = userAccountMapper;
         this.emailService = emailService;
+        this.p1WorkspaceService = p1WorkspaceService;
+    }
+
+    public UserSearchDto searchUserByEmail(String email) {
+        return userAccountMapper.findByEmail(email)
+            .map(user -> new UserSearchDto(user.email(), user.name(), user.nickname()))
+            .orElse(null);
     }
 
     public StudyGroupDto createStudy(String userEmail, CreateStudyRequest request) {
@@ -35,6 +47,7 @@ public class StudyService {
         group.setId(studyId);
         group.setName(request.getName());
         group.setDescription(request.getDescription());
+        group.setSettingsJson(request.getSettingsJson());
         group.setCreatedBy(userEmail);
         group.setCreatedAt(now);
         group.setUpdatedAt(now);
@@ -55,6 +68,8 @@ public class StudyService {
         dto.setCreatedBy(group.getCreatedBy());
         dto.setCreatedAt(group.getCreatedAt());
         dto.setUpdatedAt(group.getUpdatedAt());
+        dto.setSettingsJson(group.getSettingsJson());
+        dto.setImageUrl(group.getImageUrl());
         return dto;
     }
 
@@ -75,15 +90,26 @@ public class StudyService {
             throw new RuntimeException("스터디를 찾을 수 없습니다.");
         }
         StudyGroupDto dto = mapToDto(group);
-        List<StudyMemberDto> members = studyMapper.findMembersByStudyId(studyId).stream().map(m -> {
-            StudyMemberDto mDto = new StudyMemberDto();
-            mDto.setId(m.getId());
-            mDto.setUserEmail(m.getUserEmail());
-            mDto.setRole(m.getRole());
-            mDto.setJoinedAt(m.getJoinedAt());
-            mDto.setActiveJobCount(studyMapper.countActiveJobsByUserEmail(m.getUserEmail()));
-            return mDto;
-        }).collect(Collectors.toList());
+        List<StudyMemberDto> members = studyMapper.findMembersByStudyId(studyId).stream()
+            .map(m -> {
+                int activeJobCount = studyMapper.countActiveJobsByUserEmail(m.getUserEmail());
+                int notStartedCount = studyMapper.countNotStartedJobsByUserEmail(m.getUserEmail());
+                int appsThisMonthCount = studyMapper.countJobsThisMonthByUserEmail(m.getUserEmail());
+                int appsThisWeekCount = studyMapper.countJobsThisWeekByUserEmail(m.getUserEmail());
+
+                StudyMemberDto mDto = new StudyMemberDto();
+                mDto.setId(m.getId());
+                mDto.setUserEmail(m.getUserEmail());
+                mDto.setRole(m.getRole());
+                mDto.setJoinedAt(m.getJoinedAt());
+                mDto.setActiveJobCount(activeJobCount);
+                mDto.setNotStartedCount(notStartedCount);
+                mDto.setAppsThisMonthCount(appsThisMonthCount);
+                mDto.setAppsThisWeekCount(appsThisWeekCount);
+                mDto.setUserName(m.getUserName());
+                mDto.setUserNickname(m.getUserNickname());
+                return mDto;
+            }).collect(Collectors.toList());
         dto.setMembers(members);
         dto.setMemberCount(members.size());
         return dto;
@@ -113,8 +139,28 @@ public class StudyService {
             dto.setCompanyName(e.getCompanyName());
             dto.setPositionTitle(e.getPositionTitle());
             dto.setDeadlineLabel(e.getDeadlineLabel());
+            
+            // 본인이 작성한 것이 아니고, 읽음 로그가 없으면 NEW
+            String currentUserEmail = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+            boolean isMine = currentUserEmail.equals(e.getUserEmail());
+            boolean hasRead = studyMapper.countEssayReadLog(e.getId(), currentUserEmail) > 0;
+            dto.setIsNew(!isMine && !hasRead);
+
             return dto;
         }).collect(Collectors.toList());
+    }
+
+    public void readEssay(String studyId, String essayId, String userEmail) {
+        StudyEssayReadLogRow row = new StudyEssayReadLogRow();
+        row.setStudyId(studyId);
+        row.setEssayId(essayId);
+        row.setUserEmail(userEmail);
+        row.setReadAt(LocalDateTime.now());
+        try {
+            studyMapper.insertEssayReadLog(row);
+        } catch (org.springframework.dao.DuplicateKeyException e) {
+            // Already read
+        }
     }
 
     @Transactional(readOnly = true)
@@ -127,6 +173,8 @@ public class StudyService {
             dto.setCompanyName(j.getCompanyName());
             dto.setPositionTitle(j.getPositionTitle());
             dto.setDeadlineLabel(j.getDeadlineLabel());
+            dto.setDeadlineDate(j.getDeadlineDate());
+            dto.setReason(j.getReason());
             dto.setSourceUrl(j.getSourceUrl());
             dto.setRecommendedAt(j.getRecommendedAt());
             return dto;
@@ -141,6 +189,8 @@ public class StudyService {
         dto.setCreatedBy(group.getCreatedBy());
         dto.setCreatedAt(group.getCreatedAt());
         dto.setUpdatedAt(group.getUpdatedAt());
+        dto.setSettingsJson(group.getSettingsJson());
+        dto.setImageUrl(group.getImageUrl());
         return dto;
     }
 
@@ -158,9 +208,40 @@ public class StudyService {
         invite.setStatus("PENDING");
         invite.setInvitedAt(LocalDateTime.now());
         studyMapper.insertStudyInvite(invite);
-        
-        // 실제 이메일 비동기 발송
-        emailService.sendStudyInviteEmail(request.getInviteeEmail(), study.getName());
+    }
+
+    @Transactional(readOnly = true)
+    public List<StudyInviteDto> listMyInvites(String email) {
+        return studyMapper.findInvitesByInviteeEmail(email).stream().map(i -> {
+            StudyInviteDto dto = new StudyInviteDto();
+            dto.setId(i.getId());
+            dto.setStudyId(i.getStudyId());
+            dto.setStudyName(i.getStudyName());
+            dto.setInviterEmail(i.getInviterEmail());
+            dto.setStatus(i.getStatus());
+            dto.setInvitedAt(i.getInvitedAt());
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
+    public void respondToInvite(String email, String inviteId, boolean accept) {
+        StudyInviteRow invite = studyMapper.findStudyInviteById(inviteId);
+        if (invite == null || !invite.getInviteeEmail().equals(email) || !"PENDING".equals(invite.getStatus())) {
+            throw new IllegalArgumentException("Invalid invite");
+        }
+
+        if (accept) {
+            studyMapper.updateStudyInviteStatus(inviteId, "ACCEPTED");
+            StudyMemberRow member = new StudyMemberRow();
+            member.setId(UUID.randomUUID().toString());
+            member.setStudyId(invite.getStudyId());
+            member.setUserEmail(email);
+            member.setRole("MEMBER");
+            member.setJoinedAt(LocalDateTime.now());
+            studyMapper.insertStudyMember(member);
+        } else {
+            studyMapper.updateStudyInviteStatus(inviteId, "DECLINED");
+        }
     }
 
     public void shareEssay(String userEmail, String studyId, ShareEssayRequest request) {
@@ -262,9 +343,11 @@ public class StudyService {
         row.setDeadlineLabel(request.getDeadlineLabel());
         row.setDeadlineDate(request.getDeadlineDate());
         row.setSourceUrl(request.getSourceUrl());
+        row.setReason(request.getReason());
         row.setRecommendedAt(LocalDateTime.now());
 
         studyMapper.insertSharedJob(row);
+
     }
 
     public void uploadStudyImage(String studyId, org.springframework.web.multipart.MultipartFile file, String userEmail) {
@@ -287,5 +370,57 @@ public class StudyService {
         } catch (java.io.IOException e) {
             throw new RuntimeException("이미지 업로드에 실패했습니다.", e);
         }
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public void deleteStudy(String studyId, String userEmail) {
+        StudyGroupRow study = studyMapper.findStudyGroupById(studyId);
+        if (study == null) {
+            throw new IllegalArgumentException("스터디를 찾을 수 없습니다.");
+        }
+        
+        List<StudyMemberRow> members = studyMapper.findMembersByStudyId(studyId);
+        StudyMemberRow me = members.stream()
+            .filter(m -> m.getUserEmail().equals(userEmail))
+            .findFirst()
+            .orElseThrow(() -> new IllegalArgumentException("해당 스터디의 멤버가 아닙니다."));
+
+        if (!"LEADER".equals(me.getRole())) {
+            throw new IllegalStateException("스터디장만 스터디를 삭제할 수 있습니다.");
+        }
+
+        studyMapper.deleteStudyGroup(studyId);
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public void leaveStudy(String studyId, String userEmail, String delegateEmail) {
+        StudyGroupRow study = studyMapper.findStudyGroupById(studyId);
+        if (study == null) {
+            throw new IllegalArgumentException("스터디를 찾을 수 없습니다.");
+        }
+        
+        List<StudyMemberRow> members = studyMapper.findMembersByStudyId(studyId);
+        StudyMemberRow me = members.stream()
+            .filter(m -> m.getUserEmail().equals(userEmail))
+            .findFirst()
+            .orElseThrow(() -> new IllegalArgumentException("해당 스터디의 멤버가 아닙니다."));
+
+        if ("LEADER".equals(me.getRole())) {
+            if (members.size() == 1) {
+                studyMapper.deleteStudyGroup(studyId);
+                return;
+            }
+            if (delegateEmail == null || delegateEmail.trim().isEmpty()) {
+                throw new IllegalStateException("스터디장은 탈퇴 시 다른 멤버에게 권한을 위임해야 합니다.");
+            }
+            StudyMemberRow newLeader = members.stream()
+                .filter(m -> m.getUserEmail().equals(delegateEmail))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("위임할 멤버를 찾을 수 없습니다."));
+            
+            studyMapper.updateStudyMemberRole(studyId, newLeader.getUserEmail(), "LEADER");
+        }
+
+        studyMapper.deleteStudyMember(studyId, userEmail);
     }
 }

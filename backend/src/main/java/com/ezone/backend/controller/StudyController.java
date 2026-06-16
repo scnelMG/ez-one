@@ -19,6 +19,15 @@ public class StudyController {
         this.studyService = studyService;
     }
 
+    @GetMapping("/users/search")
+    public ResponseEntity<UserSearchDto> searchUserByEmail(@RequestParam String email) {
+        UserSearchDto user = studyService.searchUserByEmail(email);
+        if (user == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(user);
+    }
+
     @PostMapping
     public ResponseEntity<StudyGroupDto> createStudy(@AuthenticationPrincipal JwtAuthenticatedUser user, @RequestBody CreateStudyRequest request) {
         String email = user.email();
@@ -42,6 +51,12 @@ public class StudyController {
         return ResponseEntity.ok(studyService.getSharedEssays(studyId));
     }
 
+    @PostMapping("/{studyId}/essays/{essayId}/read")
+    public ResponseEntity<Void> readEssay(@PathVariable String studyId, @PathVariable String essayId, @AuthenticationPrincipal org.springframework.security.core.userdetails.UserDetails user) {
+        studyService.readEssay(studyId, essayId, user.getUsername());
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/{studyId}/jobs")
     public ResponseEntity<List<SharedJobDto>> getSharedJobs(@PathVariable String studyId) {
         return ResponseEntity.ok(studyService.getSharedJobs(studyId));
@@ -50,6 +65,17 @@ public class StudyController {
     @PostMapping("/{studyId}/invite")
     public ResponseEntity<Void> inviteUser(@AuthenticationPrincipal JwtAuthenticatedUser user, @PathVariable String studyId, @RequestBody InviteUserRequest request) {
         studyService.inviteUser(user.email(), studyId, request);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/invites")
+    public ResponseEntity<List<StudyInviteDto>> listMyInvites(@AuthenticationPrincipal JwtAuthenticatedUser user) {
+        return ResponseEntity.ok(studyService.listMyInvites(user.email()));
+    }
+
+    @PostMapping("/invites/{inviteId}/respond")
+    public ResponseEntity<Void> respondToInvite(@AuthenticationPrincipal JwtAuthenticatedUser user, @PathVariable String inviteId, @RequestParam boolean accept) {
+        studyService.respondToInvite(user.email(), inviteId, accept);
         return ResponseEntity.ok().build();
     }
 
@@ -98,6 +124,18 @@ public class StudyController {
             @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
             @AuthenticationPrincipal JwtAuthenticatedUser user) {
         studyService.uploadStudyImage(studyId, file, user.email());
+        return ResponseEntity.ok().build();
+    }
+    @org.springframework.web.bind.annotation.DeleteMapping("/{studyId}")
+    public ResponseEntity<Void> deleteStudy(@AuthenticationPrincipal JwtAuthenticatedUser user, @PathVariable String studyId) {
+        studyService.deleteStudy(studyId, user.email());
+        return ResponseEntity.ok().build();
+    }
+
+    @org.springframework.web.bind.annotation.PostMapping("/{studyId}/leave")
+    public ResponseEntity<Void> leaveStudy(@AuthenticationPrincipal JwtAuthenticatedUser user, @PathVariable String studyId, @RequestBody(required = false) LeaveStudyRequest request) {
+        String delegateEmail = request != null ? request.getDelegateEmail() : null;
+        studyService.leaveStudy(studyId, user.email(), delegateEmail);
         return ResponseEntity.ok().build();
     }
 }

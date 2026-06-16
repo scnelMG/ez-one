@@ -14,10 +14,22 @@ public interface StudyMapper {
     void insertStudyMember(StudyMemberRow row);
     List<StudyMemberRow> findMembersByStudyId(@Param("studyId") String studyId);
 
-    @org.apache.ibatis.annotations.Select("SELECT COUNT(*) FROM basket_jobs bj JOIN users u ON bj.user_id = u.id WHERE u.email = #{userEmail} AND bj.application_status = 'IN_PROGRESS'")
+    @org.apache.ibatis.annotations.Select("SELECT COUNT(*) FROM basket_jobs bj JOIN users u ON bj.user_id = u.id WHERE u.email = #{userEmail} AND bj.application_status = 'PROGRESS' AND bj.deleted_at IS NULL")
     int countActiveJobsByUserEmail(@Param("userEmail") String userEmail);
 
+    @org.apache.ibatis.annotations.Select("SELECT COUNT(*) FROM basket_jobs bj JOIN users u ON bj.user_id = u.id WHERE u.email = #{userEmail} AND bj.application_status IN ('READY', 'NOT_APPLIED') AND bj.deleted_at IS NULL")
+    int countNotStartedJobsByUserEmail(@Param("userEmail") String userEmail);
+
+    @org.apache.ibatis.annotations.Select("SELECT COUNT(*) FROM basket_jobs bj JOIN users u ON bj.user_id = u.id WHERE u.email = #{userEmail} AND bj.created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH) AND bj.deleted_at IS NULL")
+    int countJobsThisMonthByUserEmail(@Param("userEmail") String userEmail);
+
+    @org.apache.ibatis.annotations.Select("SELECT COUNT(*) FROM basket_jobs bj JOIN users u ON bj.user_id = u.id WHERE u.email = #{userEmail} AND bj.created_at >= DATE_SUB(NOW(), INTERVAL 1 WEEK) AND bj.deleted_at IS NULL")
+    int countJobsThisWeekByUserEmail(@Param("userEmail") String userEmail);
+
     void insertStudyInvite(StudyInviteRow row);
+    List<StudyInviteRow> findInvitesByInviteeEmail(@Param("inviteeEmail") String inviteeEmail);
+    StudyInviteRow findStudyInviteById(@Param("id") String id);
+    void updateStudyInviteStatus(@Param("id") String id, @Param("status") String status);
     
     void insertSharedEssay(SharedEssayRow row);
     SharedEssayRow findSharedEssayById(@Param("id") String id);
@@ -30,4 +42,17 @@ public interface StudyMapper {
     void insertSharedJob(SharedJobRow row);
     List<SharedJobRow> findSharedJobsByStudyId(@Param("studyId") String studyId);
     void updateStudyImageUrl(@Param("studyId") String studyId, @Param("imageUrl") String imageUrl);
+
+    void insertEssayReadLog(StudyEssayReadLogRow row);
+    @org.apache.ibatis.annotations.Select("SELECT COUNT(*) FROM study_essay_read_log WHERE essay_id = #{essayId} AND user_email = #{userEmail}")
+    int countEssayReadLog(@Param("essayId") String essayId, @Param("userEmail") String userEmail);
+
+    @org.apache.ibatis.annotations.Delete("DELETE FROM study_group WHERE id = #{studyId}")
+    void deleteStudyGroup(@Param("studyId") String studyId);
+
+    @org.apache.ibatis.annotations.Delete("DELETE FROM study_member WHERE study_id = #{studyId} AND user_email = #{userEmail}")
+    void deleteStudyMember(@Param("studyId") String studyId, @Param("userEmail") String userEmail);
+
+    @org.apache.ibatis.annotations.Update("UPDATE study_member SET role = #{role} WHERE study_id = #{studyId} AND user_email = #{userEmail}")
+    void updateStudyMemberRole(@Param("studyId") String studyId, @Param("userEmail") String userEmail, @Param("role") String role);
 }

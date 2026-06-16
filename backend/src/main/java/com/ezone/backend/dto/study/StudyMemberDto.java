@@ -7,7 +7,12 @@ public class StudyMemberDto {
     private String userEmail;
     private String role;
     private LocalDateTime joinedAt;
-    private int activeJobCount; // To support frontend's activeJobCount
+    private int activeJobCount;
+    private int notStartedCount;
+    private int appsThisMonthCount;
+    private int appsThisWeekCount;
+    private String userName;
+    private String userNickname;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -19,4 +24,14 @@ public class StudyMemberDto {
     public void setJoinedAt(LocalDateTime joinedAt) { this.joinedAt = joinedAt; }
     public int getActiveJobCount() { return activeJobCount; }
     public void setActiveJobCount(int activeJobCount) { this.activeJobCount = activeJobCount; }
+    public int getNotStartedCount() { return notStartedCount; }
+    public void setNotStartedCount(int notStartedCount) { this.notStartedCount = notStartedCount; }
+    public int getAppsThisMonthCount() { return appsThisMonthCount; }
+    public void setAppsThisMonthCount(int appsThisMonthCount) { this.appsThisMonthCount = appsThisMonthCount; }
+    public int getAppsThisWeekCount() { return appsThisWeekCount; }
+    public void setAppsThisWeekCount(int appsThisWeekCount) { this.appsThisWeekCount = appsThisWeekCount; }
+    public String getUserName() { return userName; }
+    public void setUserName(String userName) { this.userName = userName; }
+    public String getUserNickname() { return userNickname; }
+    public void setUserNickname(String userNickname) { this.userNickname = userNickname; }
 }

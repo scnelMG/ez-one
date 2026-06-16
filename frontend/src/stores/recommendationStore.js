@@ -22,11 +22,13 @@ export const useRecommendationStore = defineStore('recommendation', () => {
             errorMessage.value = messageFromError(error, '추천 공고를 불러오지 못했습니다.');
         }
     }
-    async function saveRecommendation(recommendationId, source = 'recommendation') {
+    async function saveRecommendation(recommendationId, source) {
         status.value = 'saving';
         errorMessage.value = '';
         try {
-            savedJob.value = await recommendationApi.saveJob(recommendationId, source);
+            savedJob.value = source === undefined
+                ? await recommendationApi.saveJob(recommendationId)
+                : await recommendationApi.saveJob(recommendationId, source);
             status.value = 'ready';
         }
         catch (error) {

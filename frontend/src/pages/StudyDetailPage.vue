@@ -1,14 +1,22 @@
 <template>
   <AppLayout>
     <section class="study-detail-page">
-      <header class="study-header">
+      <header class="study-header" :style="studyStore.currentStudy?.imageUrl ? { backgroundImage: `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url(${studyStore.currentStudy.imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center', color: 'white' } : {}">
         <div class="breadcrumb">
-          <RouterLink to="/study">← 취업 스터디 목록으로</RouterLink>
+          <RouterLink to="/study" style="color: #000; font-weight: 600;">← 취업 스터디 목록으로</RouterLink>
         </div>
         <h1>{{ studyStore.currentStudy?.name || '로딩 중...' }}</h1>
-        <p class="study-description">{{ studyStore.currentStudy?.description }}</p>
+        <p class="study-description" :style="studyStore.currentStudy?.imageUrl ? { color: '#f3f4f6' } : {}">{{ studyStore.currentStudy?.description }}</p>
         <div class="header-actions">
-          <button class="ghost-button" type="button" @click="inviteMember">팀원 초대</button>
+          <button class="primary-button" type="button" @click="openInviteModal">팀원 초대</button>
+          
+          <div class="dropdown-container" v-if="amILeader || amIMember">
+            <button class="icon-button settings-button" type="button" @click="toggleSettings" title="스터디 설정">⚙️</button>
+            <div class="dropdown-menu" v-if="isSettingsOpen">
+              <button class="dropdown-item danger-text" v-if="amILeader" @click="openDeleteModal">스터디 삭제</button>
+              <button class="dropdown-item" @click="openLeaveModal">스터디 탈퇴</button>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -41,21 +49,69 @@
         <!-- 우측 메인 콘텐츠 -->
         <main class="study-main-content">
           <!-- 대시보드 탭 -->
-          <div v-if="activeTab === 'dashboard'" class="tab-pane">
-            <h2>멤버 현황</h2>
+          <div v-if="activeTab === 'dashboard'" class="tab-pane dashboard-pane">
             <div v-if="studyStore.status === 'loading'" class="loading-state">로딩 중...</div>
-            <div v-else class="member-list">
-              <div class="member-row" v-for="member in studyStore.currentStudy?.members || []" :key="member.id">
-                <div class="member-info">
-                  <span class="member-avatar">{{ member.userEmail.charAt(0).toUpperCase() }}</span>
-                  <strong>{{ member.userEmail }}</strong>
-                  <span class="role-badge" v-if="member.role === 'LEADER'">스터디장</span>
-                </div>
-                <div class="member-stats">
-                  <span>진행 중인 공고: <strong>{{ member.activeJobCount || 0 }}</strong>개</span>
+            <template v-else>
+              <!-- 팀원 진척도 차트 섹션 -->
+              <div v-if="studySettings.showTeamComparison" class="dashboard-section chart-section">
+                <h2>팀원 진척도 비교 <span class="subtitle">(진행중인 공고 수 기준)</span></h2>
+                <div class="chart-container">
+                  <div class="chart-bar-row" v-for="member in studyStore.currentStudy?.members || []" :key="'chart-'+member.id">
+                    <div class="chart-label">
+                      <div class="member-avatar-small">{{ (member.userName || member.userEmail).charAt(0).toUpperCase() }}</div>
+                      <span class="member-name" :title="member.userName || member.userEmail.split('@')[0]">{{ member.userName || member.userEmail.split('@')[0] }}</span>
+                    </div>
+                    <div class="chart-track">
+                      <div class="chart-fill" :style="{ width: Math.min((member.activeJobCount || 0) * 10, 100) + '%' }">
+                        <span class="chart-value" v-if="(member.activeJobCount || 0) > 0">{{ member.activeJobCount }}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
+
+              <!-- 멤버 현황 그리드 섹션 -->
+              <div class="dashboard-section">
+                <h2>멤버 상세 현황</h2>
+                <div class="member-grid">
+                  <div class="member-card-new" v-for="member in studyStore.currentStudy?.members || []" :key="member.id">
+                    <div class="member-card-header">
+                      <div class="member-avatar-large">{{ (member.userName || member.userEmail).charAt(0).toUpperCase() }}</div>
+                      <div class="member-info-new">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                          <strong>{{ member.userName || member.userEmail.split('@')[0] }}</strong>
+                          <span v-if="hasUnreadEssays(member.userEmail)" class="new-badge">NEW!</span>
+                        </div>
+                        <span class="text-secondary text-sm" style="word-break: break-all;">{{ member.userEmail }}</span>
+                        <span class="role-badge" :class="{'role-member': member.role !== 'LEADER'}">{{ member.role === 'LEADER' ? '스터디장' : '팀원' }}</span>
+                      </div>
+                    </div>
+                    
+                    <div v-if="studySettings.showDashboard" class="member-stats-grid">
+                      <div class="stat-box-new bg-primary-light">
+                        <span class="stat-label">진행중</span>
+                        <strong class="stat-value text-primary">{{ member.activeJobCount || 0 }}</strong>
+                      </div>
+                      <div class="stat-box-new bg-gray">
+                        <span class="stat-label">지원전</span>
+                        <strong class="stat-value">{{ member.notStartedCount || 0 }}</strong>
+                      </div>
+                      <div class="stat-box-new bg-green-light">
+                        <span class="stat-label">이번주</span>
+                        <strong class="stat-value text-green">{{ member.appsThisWeekCount || 0 }}</strong>
+                      </div>
+                      <div class="stat-box-new bg-purple-light">
+                        <span class="stat-label">이번달</span>
+                        <strong class="stat-value text-purple">{{ member.appsThisMonthCount || 0 }}</strong>
+                      </div>
+                    </div>
+                    <div v-else class="member-stats-basic">
+                      진행 중인 공고: <strong>{{ member.activeJobCount || 0 }}</strong>개
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>
           </div>
 
           <!-- 자소서 피드백 탭 -->
@@ -73,7 +129,10 @@
                   <p><strong>{{ essay.userEmail }}</strong>님의 자소서</p>
                   <small>{{ new Date(essay.sharedAt).toLocaleString() }}</small>
                 </div>
-                <h3>{{ essay.companyName || '회사명 정보 없음' }} - {{ essay.positionTitle || '직무 정보 없음' }}</h3>
+                <h3 style="display:flex; align-items:center; gap:8px;">
+                  {{ essay.companyName || '회사명 정보 없음' }} - {{ essay.positionTitle || '직무 정보 없음' }}
+                  <span v-if="studySettings.showUnreadBadge && essay.isNew" class="badge new-badge">NEW</span>
+                </h3>
                 <p>마감일: {{ essay.deadlineLabel || '-' }}</p>
                 <button class="text-button" @click="viewEssay(essay.id)">자세히 보기</button>
               </div>
@@ -91,11 +150,13 @@
             </div>
             <div v-else class="shared-list">
               <div class="shared-card" v-for="job in studyStore.sharedJobs" :key="job.id">
-                <p><strong>{{ job.recommenderName }}</strong>님이 추천했습니다.</p>
+                <p><strong>{{ job.recommenderName || job.recommenderEmail }}</strong>님이 추천했습니다.</p>
+                <div v-if="job.reason" class="job-reason">"{{ job.reason }}"</div>
                 <h3>{{ job.companyName }} - {{ job.positionTitle }}</h3>
                 <p class="deadline-row">
                   마감일: 
-                  <strong v-if="job.deadlineLabel !== '상시' && job.deadlineLabel !== '상시채용'">{{ job.deadlineLabel || '-' }}</strong>
+                  <strong v-if="job.deadlineDate">{{ job.deadlineDate }}</strong>
+                  <strong v-else-if="job.deadlineLabel !== '상시' && job.deadlineLabel !== '상시채용'">{{ job.deadlineLabel || '-' }}</strong>
                   <span v-else class="deadline-badge">상시</span>
                 </p>
                 <a v-if="job.sourceUrl" :href="job.sourceUrl" target="_blank" class="text-button">공고 보러가기</a>
@@ -103,6 +164,57 @@
             </div>
           </div>
         </main>
+      </div>
+
+      <!-- 팀원 초대 모달 -->
+      <div v-if="isInviteModalOpen" class="modal-backdrop" @click.self="closeInviteModal">
+        <div class="modal-content invite-modal">
+          <header class="modal-header">
+            <h2>팀원 초대하기</h2>
+            <button class="icon-button" @click="closeInviteModal">×</button>
+          </header>
+          
+          <div class="modal-body">
+            <div class="form-group" v-if="!searchedUser">
+              <label>초대할 팀원의 이메일</label>
+              <div class="search-input-group">
+                <input 
+                  type="email" 
+                  v-model="inviteEmail" 
+                  placeholder="ez-one@example.com" 
+                  @keyup.enter="searchUserToInvite"
+                />
+                <button class="primary-button" @click="searchUserToInvite" :disabled="isSearchingUser || !inviteEmail.trim()">
+                  검색
+                </button>
+              </div>
+              <p v-if="searchUserError" class="error-message">{{ searchUserError }}</p>
+            </div>
+
+            <div class="user-profile-card" v-else>
+              <div class="user-profile-info">
+                <div class="user-avatar">{{ searchedUser.name.charAt(0).toUpperCase() }}</div>
+                <div class="user-details">
+                  <strong>{{ searchedUser.name }} ({{ searchedUser.nickname }})</strong>
+                  <span>{{ searchedUser.email }}</span>
+                </div>
+              </div>
+              <p class="confirm-message">이 분을 스터디에 초대하시겠습니까?</p>
+            </div>
+          </div>
+
+          <footer class="modal-footer">
+            <button class="ghost-button" @click="closeInviteModal">취소</button>
+            <button 
+              v-if="searchedUser" 
+              class="primary-button" 
+              @click="confirmInvite" 
+              :disabled="isInviting"
+            >
+              {{ isInviting ? '초대 중...' : '초대 보내기' }}
+            </button>
+          </footer>
+        </div>
       </div>
 
       <!-- 내 자소서 공유하기 모달 -->
@@ -235,9 +347,9 @@
             <div v-else-if="recommendJobsList.length === 0" class="empty-state">
               장바구니에 담긴 공고가 없습니다.
             </div>
-            <ul v-else class="workspace-list">
-              <li v-for="basket in recommendJobsList" :key="basket.id" class="workspace-item checkbox-item">
-                <label class="checkbox-label">
+            <ul v-else class="workspace-list recommend-list" style="max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;">
+              <li v-for="basket in recommendJobsList" :key="basket.id" class="workspace-item checkbox-item" style="flex-direction: column; align-items: stretch; padding: 16px; gap: 12px; height: auto;">
+                <label class="checkbox-label" style="display: flex; align-items: center; gap: 12px; cursor: pointer; width: 100%;">
                   <input type="checkbox" :value="basket" v-model="selectedRecommendJobs">
                   <div class="company-logo-badge">
                     <img v-if="basket.companyLogoUrl" :src="basket.companyLogoUrl" :alt="basket.companyName" />
@@ -249,6 +361,11 @@
                     <small>마감일: {{ basket.deadlineDate ? basket.deadlineDate + ' (' + basket.deadlineLabel + ')' : basket.deadlineLabel }}</small>
                   </div>
                 </label>
+                <!-- Inline Reason Input (Accordion) -->
+                <div v-if="selectedRecommendJobs.includes(basket)" class="reason-accordion">
+                  <div class="reason-arrow">↳</div>
+                  <textarea v-model="basket.recommendReason" placeholder="이 공고를 팀원들에게 추천하는 이유를 적어주세요! (선택)" rows="2" class="reason-textarea"></textarea>
+                </div>
               </li>
             </ul>
           </div>
@@ -261,12 +378,72 @@
           </footer>
         </div>
       </div>
+
+      <!-- 스터디 탈퇴 모달 -->
+      <div v-if="isLeaveModalOpen" class="modal-backdrop" @click.self="closeLeaveModal">
+        <div class="modal-content">
+          <header class="modal-header">
+            <h2>스터디 탈퇴</h2>
+            <button class="icon-button" @click="closeLeaveModal">×</button>
+          </header>
+          <div class="modal-body">
+            <p v-if="amILeader && otherMembers.length > 0">
+              스터디장 권한을 위임할 팀원을 선택해야 탈퇴할 수 있습니다.
+            </p>
+            <p v-else>
+              정말로 스터디를 탈퇴하시겠습니까?<br/>
+              <span v-if="amILeader && otherMembers.length === 0" class="text-danger">
+                마지막 남은 스터디장이므로, 탈퇴 시 스터디가 완전히 삭제됩니다.
+              </span>
+            </p>
+            <div class="form-group" v-if="amILeader && otherMembers.length > 0">
+              <label>권한 위임 대상</label>
+              <select v-model="delegateEmail">
+                <option value="">-- 위임할 팀원 선택 --</option>
+                <option v-for="m in otherMembers" :key="m.id" :value="m.userEmail">
+                  {{ m.userEmail }}
+                </option>
+              </select>
+            </div>
+          </div>
+          <footer class="modal-footer">
+            <button class="ghost-button" @click="closeLeaveModal">취소</button>
+            <button class="danger-button" @click="confirmLeave" :disabled="isLeaving || (amILeader && otherMembers.length > 0 && !delegateEmail)">
+              {{ isLeaving ? '처리 중...' : '탈퇴하기' }}
+            </button>
+          </footer>
+        </div>
+      </div>
+
+      <!-- 스터디 삭제 모달 -->
+      <div v-if="isDeleteModalOpen" class="modal-backdrop" @click.self="closeDeleteModal">
+        <div class="modal-content">
+          <header class="modal-header">
+            <h2>스터디 삭제</h2>
+            <button class="icon-button" @click="closeDeleteModal">×</button>
+          </header>
+          <div class="modal-body">
+            <p class="text-danger" style="font-weight: bold; margin-bottom: 12px;">
+              정말로 스터디를 삭제하시겠습니까?
+            </p>
+            <p>
+              스터디를 삭제하면 공유된 자소서, 피드백, 공고 추천 등 모든 데이터가 완전히 삭제되며 <strong>복구할 수 없습니다</strong>.
+            </p>
+          </div>
+          <footer class="modal-footer">
+            <button class="ghost-button" @click="closeDeleteModal">취소</button>
+            <button class="danger-button" @click="confirmDelete" :disabled="isDeleting">
+              {{ isDeleting ? '삭제 중...' : '삭제하기' }}
+            </button>
+          </footer>
+        </div>
+      </div>
     </section>
   </AppLayout>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import AppLayout from '@/shared/AppLayout.vue';
 import { useStudyStore } from '@/stores/studyStore';
@@ -279,7 +456,24 @@ const studyStore = useStudyStore();
 const activeTab = ref('dashboard');
 const studyId = route.params.studyId;
 
+const studySettings = computed(() => {
+  const json = studyStore.currentStudy?.settingsJson;
+  if (!json) return { showDashboard: true, showTeamComparison: true, showUnreadBadge: true };
+  try {
+    return JSON.parse(json);
+  } catch(e) {
+    return { showDashboard: true, showTeamComparison: true, showUnreadBadge: true };
+  }
+});
+
 // 모달 상태
+const isInviteModalOpen = ref(false);
+const inviteEmail = ref('');
+const searchedUser = ref(null);
+const searchUserError = ref('');
+const isSearchingUser = ref(false);
+const isInviting = ref(false);
+
 const isShareModalOpen = ref(false);
 const shareStep = ref(1);
 const isLoadingBaskets = ref(false);
@@ -302,12 +496,58 @@ const isSubmittingFeedback = ref(false);
 const isRecommendModalOpen = ref(false);
 const recommendJobsList = ref([]);
 const selectedRecommendJobs = ref([]);
+const recommendReason = ref('');
 const isLoadingRecommendJobs = ref(false);
 const isRecommending = ref(false);
 
+// 설정 드롭다운 및 탈퇴/삭제 모달 상태
+const isSettingsOpen = ref(false);
+const isLeaveModalOpen = ref(false);
+const isDeleteModalOpen = ref(false);
+const delegateEmail = ref('');
+const isLeaving = ref(false);
+const isDeleting = ref(false);
+
 onMounted(() => {
   loadData();
+  
+  // 모달 닫을 때 설정창도 닫음
+  const closeDropdowns = (e) => {
+    if (!e.target.closest('.dropdown-container')) {
+      isSettingsOpen.value = false;
+    }
+  };
+  document.addEventListener('click', closeDropdowns);
+  return () => {
+    document.removeEventListener('click', closeDropdowns);
+  };
 });
+
+// 권한 확인
+const myEmail = computed(() => {
+  return localStorage.getItem('ez_one_user_email') || 'eunjaelee058@gmail.com'; // TODO: auth store
+});
+
+const myMemberInfo = computed(() => {
+  return studyStore.currentStudy?.members?.find(m => m.userEmail === myEmail.value);
+});
+
+const amILeader = computed(() => myMemberInfo.value?.role === 'LEADER');
+const amIMember = computed(() => !!myMemberInfo.value);
+
+const otherMembers = computed(() => {
+  return studyStore.currentStudy?.members?.filter(m => m.userEmail !== myEmail.value) || [];
+});
+
+const toggleSettings = () => {
+  isSettingsOpen.value = !isSettingsOpen.value;
+};
+
+// NEW 뱃지 로직
+const hasUnreadEssays = (memberEmail) => {
+  if (memberEmail === myEmail.value) return false;
+  return studyStore.sharedEssays?.some(e => e.userEmail === memberEmail && e.isNew);
+};
 
 watch(activeTab, () => {
   loadData();
@@ -323,15 +563,50 @@ function loadData() {
   }
 }
 
-async function inviteMember() {
-  const email = prompt('초대할 팀원의 이메일을 입력하세요:');
-  if (email) {
-    try {
-      await studyApi.inviteMember(studyId, email);
-      alert(`${email} 님에게 초대 메일을 보냈습니다!`);
-    } catch (e) {
-      alert(e.message || '초대 실패');
+function openInviteModal() {
+  inviteEmail.value = '';
+  searchedUser.value = null;
+  searchUserError.value = '';
+  isInviteModalOpen.value = true;
+}
+
+function closeInviteModal() {
+  isInviteModalOpen.value = false;
+}
+
+async function searchUserToInvite() {
+  if (!inviteEmail.value.trim()) return;
+  
+  isSearchingUser.value = true;
+  searchUserError.value = '';
+  searchedUser.value = null;
+  
+  try {
+    const user = await studyApi.searchUser(inviteEmail.value.trim());
+    searchedUser.value = user;
+  } catch (e) {
+    if (e.response && e.response.status === 404) {
+      searchUserError.value = '가입 내역이 없습니다. 이메일을 다시 한 번 확인해 주세요.';
+    } else {
+      searchUserError.value = '사용자 검색 중 오류가 발생했습니다.';
     }
+  } finally {
+    isSearchingUser.value = false;
+  }
+}
+
+async function confirmInvite() {
+  if (!searchedUser.value) return;
+  
+  isInviting.value = true;
+  try {
+    await studyApi.inviteMember(studyId, searchedUser.value.email);
+    alert(`${searchedUser.value.name}님에게 스터디 초대 알림을 발송했어요!`);
+    closeInviteModal();
+  } catch (e) {
+    alert(e.message || '초대 실패');
+  } finally {
+    isInviting.value = false;
   }
 }
 
@@ -410,6 +685,7 @@ async function viewEssay(essayId) {
   isDetailModalOpen.value = true;
   feedbackContent.value = '';
   await studyStore.loadSharedEssayDetail(studyId, essayId);
+  await studyStore.readSharedEssay(studyId, essayId);
 }
 
 function closeDetailModal() {
@@ -437,7 +713,7 @@ async function recommendJob() {
   selectedRecommendJobs.value = [];
   try {
     const allJobs = await basketApi.listJobs();
-    recommendJobsList.value = allJobs;
+    recommendJobsList.value = allJobs.map(job => ({ ...job, recommendReason: '' }));
   } catch (e) {
     alert('목록을 불러오는 중 오류가 발생했습니다.');
   } finally {
@@ -454,7 +730,8 @@ async function submitRecommendJobs() {
         positionTitle: job.positionTitle,
         deadlineLabel: job.deadlineLabel,
         deadlineDate: job.deadlineDate || null,
-        sourceUrl: job.sourceUrl || ''
+        sourceUrl: job.sourceUrl || '',
+        reason: job.recommendReason || ''
       });
     });
     await Promise.all(promises);
@@ -467,6 +744,49 @@ async function submitRecommendJobs() {
     isRecommending.value = false;
   }
 }
+
+const openLeaveModal = () => {
+  isSettingsOpen.value = false;
+  delegateEmail.value = '';
+  isLeaveModalOpen.value = true;
+};
+const closeLeaveModal = () => {
+  isLeaveModalOpen.value = false;
+};
+const confirmLeave = async () => {
+  isLeaving.value = true;
+  try {
+    await studyStore.leaveStudy(studyId, delegateEmail.value);
+    alert('스터디를 성공적으로 탈퇴했습니다.');
+    closeLeaveModal();
+    router.push('/study');
+  } catch (err) {
+    alert(studyStore.errorMessage || '탈퇴 실패');
+  } finally {
+    isLeaving.value = false;
+  }
+};
+
+const openDeleteModal = () => {
+  isSettingsOpen.value = false;
+  isDeleteModalOpen.value = true;
+};
+const closeDeleteModal = () => {
+  isDeleteModalOpen.value = false;
+};
+const confirmDelete = async () => {
+  isDeleting.value = true;
+  try {
+    await studyStore.deleteStudy(studyId);
+    alert('스터디가 완전히 삭제되었습니다.');
+    closeDeleteModal();
+    router.push('/study');
+  } catch (err) {
+    alert(studyStore.errorMessage || '삭제 실패');
+  } finally {
+    isDeleting.value = false;
+  }
+};
 </script>
 
 <style scoped>
@@ -481,11 +801,66 @@ async function submitRecommendJobs() {
 }
 .study-header {
   margin-bottom: 32px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid var(--line);
+  padding: 32px 40px;
+  border-radius: 16px;
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
+  background: linear-gradient(135deg, #ede9fe 0%, #f3f4f6 100%);
+  position: relative;
+}
+.study-header h1 {
+  font-size: 2rem;
+  margin-bottom: 8px;
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.dropdown-container {
+  position: relative;
+}
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  min-width: 150px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 10;
+}
+.dropdown-item {
+  padding: 12px 16px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+.dropdown-item:hover {
+  background: var(--surface-hover);
+}
+.danger-text {
+  color: var(--color-danger, #dc2626);
+  font-weight: bold;
+}
+.settings-button {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
 }
 .study-layout {
   display: flex;
@@ -540,6 +915,10 @@ async function submitRecommendJobs() {
   color: var(--color-primary);
   padding: 2px 6px;
   border-radius: 4px;
+}
+.role-member {
+  background: var(--gray);
+  color: var(--text-secondary);
 }
 .shared-list {
   display: flex;
@@ -605,6 +984,73 @@ async function submitRecommendJobs() {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+}
+.search-input-group {
+  display: flex;
+  gap: 8px;
+}
+.search-input-group input {
+  flex-grow: 1;
+}
+.error-message {
+  color: var(--color-danger, #ef4444);
+  font-size: 0.85rem;
+  margin-top: 8px;
+}
+.text-danger {
+  color: var(--color-danger, #dc2626);
+}
+.danger-button {
+  background: var(--color-danger, #ef4444);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.danger-button:hover:not(:disabled) {
+  background: #dc2626;
+}
+.danger-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.user-profile-card {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-hover);
+  text-align: center;
+}
+.user-profile-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.user-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+.user-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.confirm-message {
+  font-weight: 600;
+  color: var(--text-primary);
 }
 .workspace-list {
   list-style: none;
@@ -805,5 +1251,233 @@ async function submitRecommendJobs() {
   border-radius: 4px;
   font-size: 0.8rem;
   font-weight: bold;
+}
+
+/* Dashboard Redesign Styles */
+.dashboard-pane {
+  background: transparent;
+  padding: 0;
+  border: none;
+}
+.dashboard-section {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+}
+.dashboard-section h3 {
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin-bottom: 16px;
+  color: var(--text-primary);
+}
+.chart-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.chart-bar-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.chart-label {
+  width: 130px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: bold;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+.chart-bar-bg, .chart-track {
+  flex-grow: 1;
+  background: var(--surface-hover);
+  height: 24px;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+}
+.chart-bar-fill, .chart-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary) 0%, #a78bfa 100%);
+  border-radius: 12px;
+  transition: width 0.5s ease-out;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 8px;
+}
+.chart-value {
+  text-align: right;
+  font-weight: bold;
+  font-size: 0.9rem;
+  color: white;
+}
+.member-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+.member-card-new {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.member-card-new:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+}
+.member-header, .member-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.member-avatar-large {
+  width: 48px;
+  height: 48px;
+  border-radius: 24px;
+  background: var(--surface-hover);
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.member-avatar-small {
+  width: 28px;
+  height: 28px;
+  border-radius: 14px;
+  background: var(--surface-hover);
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.member-info-new {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+.member-name {
+  font-weight: bold;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.member-role {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  background: var(--surface-hover);
+  padding: 2px 8px;
+  border-radius: 12px;
+  width: fit-content;
+  margin-top: 4px;
+}
+.role-leader, .role-badge {
+  background: #ede9fe;
+  color: var(--color-primary);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  width: fit-content;
+}
+.member-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.stat-box-new {
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.bg-primary-light { background: #eff6ff; }
+.bg-gray { background: #f3f4f6; }
+.bg-green-light { background: #f0fdf4; }
+.bg-purple-light { background: #faf5ff; }
+.text-green { color: #16a34a; }
+.text-purple { color: #9333ea; }
+.new-badge {
+  background: #ef4444;
+  color: white;
+  font-size: 0.65rem;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 10px;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+.stat-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+.stat-value {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--text-primary);
+}
+.stat-value.highlight {
+  color: var(--color-primary);
+}
+.chart-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.reason-accordion {
+  display: flex;
+  gap: 12px;
+  margin-left: 28px;
+  margin-top: 8px;
+  animation: slideDown 0.2s ease-out forwards;
+}
+.reason-arrow {
+  color: var(--color-primary);
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+.reason-textarea {
+  flex-grow: 1;
+  padding: 12px;
+  border: 1px solid var(--primary-light);
+  border-radius: 8px;
+  resize: none;
+  font-family: inherit;
+  font-size: 0.9rem;
+  background: #f8fafc;
+  transition: border-color 0.2s;
+}
+.reason-textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  background: white;
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 </style>

@@ -1,8 +1,8 @@
 <template>
   <AppLayout>
     <section class="basket-page">
-      <header class="basket-hero">
-        <div>
+      <header class="page-hero">
+        <div class="page-hero-content">
           <h1>공고 장바구니</h1>
           <p>담아둔 공고의 마감일과 지원 상태를 한 화면에서 확인하고 바로 워크스페이스로 이동합니다.</p>
         </div>
@@ -153,8 +153,8 @@
                 </button>
               </div>
             </div>
-            <RouterLink class="job-main-link" :to="`/workspaces/${job.workspaceId}`">
-              <span class="deadline-pill" :class="{ urgent: isDeadlineSoon(job) }">{{ job.deadlineLabel }}</span>
+            <RouterLink class="job-main-link" :to="`/workspaces/${job.workspaceId}`" style="display: flex; gap: 8px; align-items: center;">
+              <span>{{ formatAbsoluteDeadline(job) }}</span>
             </RouterLink>
             <a
               class="source-link"
@@ -165,14 +165,9 @@
             >
               바로가기
             </a>
-            <span
-              v-if="isRecentWorkspace(job.workspaceId)"
-              class="recent-visit-badge"
-              :data-testid="`recent-work-${job.id}`"
-            >
-              최근 작업
-            </span>
-            <span v-else class="recent-visit-empty" aria-hidden="true">-</span>
+            <span v-if="formatDDay(job) || job.deadlineLabel?.startsWith('D-')" class="deadline-pill" :class="{ urgent: isDeadlineSoon(job) }">{{ formatDDay(job) || job.deadlineLabel }}</span>
+            <span v-else></span>
+            <span :data-testid="`recent-work-${job.id}`">{{ isRecentWorkspace(job.workspaceId) ? '최근 작업' : '' }}</span>
             <button
               class="delete-job-button"
               type="button"
@@ -263,7 +258,10 @@ import {
   statusClass,
   statusLabel,
   normalizedSourceUrl,
-  companyInitial
+  companyInitial,
+  formatDDay,
+  formatDateTime,
+  formatAbsoluteDeadline
 } from '@/shared/utils/jobUtils';
 import AppLayout from '@/shared/AppLayout.vue';
 import StatePanel from '@/shared/StatePanel.vue';
@@ -283,10 +281,10 @@ const selectedMonthKey = ref(toMonthKey(today));
 const priorityJobIds = computed(() => basketStore.priorityJobIds);
 const openStatusJobId = ref(null);
 const statusOptions = [
-    { value: 'NOT_STARTED', label: '지원 전' },
+    { value: 'READY', label: '지원 전' },
     { value: 'NOT_APPLIED', label: '미지원' },
     { value: 'IN_PROGRESS', label: '진행중' },
-    { value: 'SUBMITTED', label: '지원완료' }
+    { value: 'COMPLETED', label: '지원완료' }
 ];
 const selectableMonths = computed(() => {
     const months = new Map();
@@ -328,16 +326,16 @@ const calendarMonthLabel = computed(() => new Intl.DateTimeFormat('ko-KR', {
 const isManualAddModalOpen = ref(false);
 const statusFilters = [
     { label: '전체', value: undefined },
-    { label: '지원 전', value: 'NOT_STARTED' },
+    { label: '지원 전', value: 'READY' },
     { label: '진행중', value: 'IN_PROGRESS' },
-    { label: '지원완료', value: 'SUBMITTED' },
+    { label: '지원완료', value: 'COMPLETED' },
     { label: '미지원', value: 'NOT_APPLIED' }
 ];
 
 
 const selectedStatus = computed(() => {
     const status = route.query.status;
-    return status === 'NOT_STARTED' || status === 'NOT_APPLIED' || status === 'IN_PROGRESS' || status === 'SUBMITTED'
+    return status === 'READY' || status === 'NOT_APPLIED' || status === 'IN_PROGRESS' || status === 'COMPLETED'
         ? status
         : undefined;
 });
@@ -361,10 +359,10 @@ const pagedJobs = computed(() => {
     return sortedJobs.value.slice(start, start + pageSize);
 });
 const statusCounts = computed(() => ({
-    NOT_STARTED: basketStore.jobs.filter((job) => job.status === 'NOT_STARTED').length,
-    NOT_APPLIED: basketStore.jobs.filter((job) => job.status === 'NOT_APPLIED').length,
-    IN_PROGRESS: basketStore.jobs.filter((job) => job.status === 'IN_PROGRESS').length,
-    SUBMITTED: basketStore.jobs.filter((job) => job.status === 'SUBMITTED').length
+    NOT_STARTED: basketStore.jobs.filter((job) => job.applicationStatus === 'READY' || job.status === 'NOT_STARTED' || job.status === 'READY').length,
+    NOT_APPLIED: basketStore.jobs.filter((job) => job.applicationStatus === 'NOT_APPLIED' || job.status === 'NOT_APPLIED').length,
+    IN_PROGRESS: basketStore.jobs.filter((job) => job.applicationStatus === 'IN_PROGRESS' || job.status === 'IN_PROGRESS').length,
+    SUBMITTED: basketStore.jobs.filter((job) => job.applicationStatus === 'COMPLETED' || job.status === 'SUBMITTED' || job.status === 'COMPLETED').length
 }));
 const jobsByDay = computed(() => {
     return [...basketStore.jobs]
@@ -426,13 +424,6 @@ function daysUntilDeadline(job) {
     }
     return Math.ceil((date.getTime() - today.getTime()) / 86400000);
 }
-function formatDDay(job) {
-    const days = daysUntilDeadline(job);
-    if (days === null) return '';
-    if (days === 0) return 'D-Day';
-    if (days > 0) return `D-${days}`;
-    return `D+${-days}`;
-}
 function isDeadlineSoon(job) {
     const daysLeft = daysUntilDeadline(job);
     return daysLeft !== null && daysLeft >= 0 && daysLeft <= 7;
@@ -460,13 +451,11 @@ function changeStatus(jobId, nextStatus) {
     openStatusJobId.value = null;
     void basketStore.updateStatus(jobId, nextStatus);
 }
-function archiveJob(jobId) {
-    const job = basketStore.jobs.find((basketJob) => basketJob.id === jobId);
-    const label = job ? `${job.companyName} ${job.positionTitle}` : '공고';
-    if (!window.confirm(`${label} 공고를 삭제하시겠습니까?`)) {
-        return;
-    }
-    void basketStore.archiveJob(jobId);
+async function archiveJob(id) {
+  const job = basketStore.jobs.find((item) => item.id === id);
+  const label = job ? `${job.companyName} ${job.positionTitle}` : '해당';
+  if (!window.confirm(`${label} 공고를 삭제하시겠습니까?`)) return;
+  await basketStore.archiveJob(id);
 }
 
 onMounted(() => {

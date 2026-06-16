@@ -4,17 +4,17 @@
 <mapper namespace="com.ezone.backend.mapper.StudyMapper">
 
     <insert id="insertStudyGroup" parameterType="com.ezone.backend.domain.persistence.StudyGroupRow">
-        INSERT INTO study_group (id, name, description, created_by, created_at, updated_at)
-        VALUES (#{id}, #{name}, #{description}, #{createdBy}, #{createdAt}, #{updatedAt})
+        INSERT INTO study_group (id, name, description, created_by, created_at, updated_at, settings_json)
+        VALUES (#{id}, #{name}, #{description}, #{createdBy}, #{createdAt}, #{updatedAt}, #{settingsJson})
     </insert>
 
     <select id="findStudyGroupById" resultType="com.ezone.backend.domain.persistence.StudyGroupRow">
-        SELECT id, name, description, created_by AS createdBy, created_at AS createdAt, updated_at AS updatedAt, image_url AS imageUrl
+        SELECT id, name, description, created_by AS createdBy, created_at AS createdAt, updated_at AS updatedAt, image_url AS imageUrl, settings_json AS settingsJson
         FROM study_group WHERE id = #{id}
     </select>
 
     <select id="findStudyGroupsByUserEmail" resultType="com.ezone.backend.domain.persistence.StudyGroupRow">
-        SELECT g.id, g.name, g.description, g.created_by AS createdBy, g.created_at AS createdAt, g.updated_at AS updatedAt, g.image_url AS imageUrl
+        SELECT g.id, g.name, g.description, g.created_by AS createdBy, g.created_at AS createdAt, g.updated_at AS updatedAt, g.image_url AS imageUrl, g.settings_json AS settingsJson
         FROM study_group g
         JOIN study_member m ON g.id = m.study_id
         WHERE m.user_email = #{userEmail}
@@ -26,14 +26,34 @@
     </insert>
 
     <select id="findMembersByStudyId" resultType="com.ezone.backend.domain.persistence.StudyMemberRow">
-        SELECT id, study_id AS studyId, user_email AS userEmail, role, joined_at AS joinedAt
-        FROM study_member WHERE study_id = #{studyId}
+        SELECT sm.id, sm.study_id AS studyId, sm.user_email AS userEmail, sm.role, sm.joined_at AS joinedAt,
+               u.name AS userName, u.nickname AS userNickname
+        FROM study_member sm
+        LEFT JOIN users u ON u.email = sm.user_email
+        WHERE sm.study_id = #{studyId}
     </select>
 
     <insert id="insertStudyInvite" parameterType="com.ezone.backend.domain.persistence.StudyInviteRow">
         INSERT INTO study_invite (id, study_id, inviter_email, invitee_email, status, invited_at)
         VALUES (#{id}, #{studyId}, #{inviterEmail}, #{inviteeEmail}, #{status}, #{invitedAt})
     </insert>
+
+    <select id="findInvitesByInviteeEmail" resultType="com.ezone.backend.domain.persistence.StudyInviteRow">
+        SELECT i.id, i.study_id AS studyId, i.inviter_email AS inviterEmail, i.invitee_email AS inviteeEmail, i.status, i.invited_at AS invitedAt, g.name AS studyName
+        FROM study_invite i
+        JOIN study_group g ON i.study_id = g.id
+        WHERE i.invitee_email = #{inviteeEmail} AND i.status = 'PENDING'
+        ORDER BY i.invited_at DESC
+    </select>
+
+    <select id="findStudyInviteById" resultType="com.ezone.backend.domain.persistence.StudyInviteRow">
+        SELECT id, study_id AS studyId, inviter_email AS inviterEmail, invitee_email AS inviteeEmail, status, invited_at AS invitedAt
+        FROM study_invite WHERE id = #{id}
+    </select>
+
+    <update id="updateStudyInviteStatus">
+        UPDATE study_invite SET status = #{status} WHERE id = #{id}
+    </update>
 
     <insert id="insertSharedEssay" parameterType="com.ezone.backend.domain.persistence.SharedEssayRow">
         INSERT INTO shared_essay (id, study_id, user_email, workspace_id, version_ids, shared_at)
@@ -106,8 +126,8 @@
     </select>
 
     <insert id="insertSharedJob" parameterType="com.ezone.backend.domain.persistence.SharedJobRow">
-        INSERT INTO shared_job (id, study_id, recommender_email, company_name, position_title, deadline_label, deadline_date, source_url, recommended_at)
-        VALUES (#{id}, #{studyId}, #{recommenderEmail}, #{companyName}, #{positionTitle}, #{deadlineLabel}, #{deadlineDate}, #{sourceUrl}, #{recommendedAt})
+        INSERT INTO shared_job (id, study_id, recommender_email, company_name, position_title, deadline_label, deadline_date, source_url, reason, recommended_at)
+        VALUES (#{id}, #{studyId}, #{recommenderEmail}, #{companyName}, #{positionTitle}, #{deadlineLabel}, #{deadlineDate}, #{sourceUrl}, #{reason}, #{recommendedAt})
     </insert>
 
     <select id="findSharedJobsByStudyId" resultType="com.ezone.backend.domain.persistence.SharedJobRow">
@@ -115,7 +135,7 @@
             sj.id, sj.study_id AS studyId, sj.recommender_email AS recommenderEmail, 
             sj.company_name AS companyName, sj.position_title AS positionTitle, 
             sj.deadline_label AS deadlineLabel, sj.deadline_date AS deadlineDate, 
-            sj.source_url AS sourceUrl, sj.recommended_at AS recommendedAt,
+            sj.source_url AS sourceUrl, sj.reason, sj.recommended_at AS recommendedAt,
             u.name AS recommenderName
         FROM shared_job sj
         LEFT JOIN users u ON sj.recommender_email = u.email
@@ -126,5 +146,10 @@
     <update id="updateStudyImageUrl">
         UPDATE study_group SET image_url = #{imageUrl} WHERE id = #{studyId}
     </update>
+
+    <insert id="insertEssayReadLog" parameterType="com.ezone.backend.domain.persistence.StudyEssayReadLogRow">
+        INSERT INTO study_essay_read_log (study_id, essay_id, user_email, read_at)
+        VALUES (#{studyId}, #{essayId}, #{userEmail}, #{readAt})
+    </insert>
 
 </mapper>

@@ -21,15 +21,19 @@ export const studyApi = {
     return data;
   },
 
+  async searchUser(email) {
+    const { data } = await apiClient.get(`/api/study/users/search?email=${encodeURIComponent(email)}`);
+    return data;
+  },
+
   async getMyInvites() {
-    // 백엔드 API 부재로 빈 배열 리턴
-    return [];
+    const { data } = await apiClient.get('/api/study/invites');
+    return data;
   },
 
   async respondToInvite(inviteId, accept) {
-    // 백엔드 API 부재
-    console.log(`응답: ${accept}`);
-    return {};
+    const { data } = await apiClient.post(`/api/study/invites/${inviteId}/respond?accept=${accept}`);
+    return data;
   },
 
   async getSharedEssays(studyId) {
@@ -75,13 +79,26 @@ export const studyApi = {
     return data;
   },
 
+  async readEssay(studyId, essayId) {
+    const { data } = await apiClient.post(`/api/study/${studyId}/essays/${essayId}/read`);
+    return data;
+  },
+
   async uploadStudyImage(studyId, file) {
     const formData = new FormData();
     formData.append('file', file);
-    return apiClient.post(`/study/${studyId}/image`, formData, {
+    return apiClient.post(`/api/study/${studyId}/image`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
     });
+  },
+
+  async deleteStudy(studyId) {
+    return await apiClient.delete(`/api/study/${studyId}`);
+  },
+
+  async leaveStudy(studyId, delegateEmail) {
+    return await apiClient.post(`/api/study/${studyId}/leave`, { delegateEmail });
   }
 };

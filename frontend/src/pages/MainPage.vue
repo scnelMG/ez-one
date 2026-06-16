@@ -1,10 +1,10 @@
 <template>
   <AppLayout>
     <section class="dashboard-page main-dashboard-page">
-      <header class="dashboard-header main-dashboard-header">
-        <div class="dashboard-title">
+      <header class="page-hero">
+        <div class="page-hero-content">
           <h1>지원 현황</h1>
-          <p>저장한 공고와 추천 공고를 빠르게 확인하고 다음 작업으로 이동합니다</p>
+          <p>저장한 공고와 진행 중인 전형을 한눈에 파악하세요.</p>
         </div>
       </header>
 
@@ -13,7 +13,7 @@
           <span>전체 공고</span>
           <strong>{{ dashboardStore.summary?.totalApplications ?? 0 }}</strong>
         </RouterLink>
-        <RouterLink to="/basket" data-testid="metric-not-started">
+        <RouterLink to="/basket?status=READY" data-testid="metric-not-started">
           <span>지원 전</span>
           <strong>{{ dashboardStore.summary?.notStarted ?? 0 }}</strong>
         </RouterLink>
@@ -27,17 +27,20 @@
         </RouterLink>
       </section>
 
-      <section v-if="recentTaskJob" class="recent-task-widget" aria-label="최근 작업 이어서 하기">
+      <section v-if="dashboardStore.summary?.recentActivity" class="recent-task-widget" aria-label="최근 작업 이어서 하기">
         <div class="recent-task-info">
           <div class="recent-task-pulse"></div>
           <div class="recent-task-text">
             <span>진행 중</span>
-            <strong>{{ recentTaskJob.companyName }} {{ recentTaskJob.positionTitle }} 자소서 이어쓰기</strong>
+            <strong>[{{ dashboardStore.summary.recentActivity.companyName }} {{ dashboardStore.summary.recentActivity.positionTitle }}] {{ dashboardStore.summary.recentActivity.actionName }}</strong>
+            <span class="recent-task-date" style="font-size: 0.85em; color: var(--text-tertiary); margin-top: 4px;">{{ dashboardStore.summary.recentActivity.updatedAt }}</span>
           </div>
         </div>
-        <RouterLink :to="`/workspaces/${recentTaskJob.workspaceId}`" class="recent-task-button">
+        <RouterLink class="recent-task-action" :to="`/workspaces/${dashboardStore.summary.recentActivity.workspaceId}`">
           이어서 하기
-          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
         </RouterLink>
       </section>
 
@@ -46,6 +49,7 @@
           <div class="main-basket-title-row">
             <h2>공고 장바구니</h2>
             <p class="main-preview-note">마감 임박순으로 제공됩니다</p>
+            <span class="sr-only">.</span>
           </div>
           <RouterLink class="text-button" style="flex-shrink: 0; margin-bottom: 8px;" to="/basket?sort=deadline">전체 보기</RouterLink>
         </div>
@@ -108,7 +112,9 @@
             <span class="status-tag" :class="statusClass(job.applicationStatus)" data-testid="main-basket-status">
               {{ statusLabel(job.applicationStatus, job.applicationStatusLabel) }}
             </span>
-            <span class="deadline-pill" :class="{ urgent: job.deadlineSoon }">{{ job.deadlineLabel }}</span>
+            <RouterLink class="job-main-link" :to="`/workspaces/${job.workspaceId}`" style="display: flex; gap: 8px; align-items: center; text-decoration: none;">
+              <span style="color: var(--ink); font-weight: 500; white-space: nowrap;">{{ formatAbsoluteDeadline(job) }}</span>
+            </RouterLink>
             <a
               class="main-apply-link"
               data-testid="main-basket-apply-link"
@@ -118,14 +124,9 @@
             >
               바로가기
             </a>
-            <span
-              v-if="isRecentWorkspace(job.workspaceId)"
-              class="recent-visit-badge"
-              :data-testid="`main-recent-work-${job.id}`"
-            >
-              최근 작업
-            </span>
-            <span v-else class="recent-visit-empty" aria-hidden="true">-</span>
+            <span v-if="formatDDay(job) || job.deadlineLabel?.startsWith('D-')" class="deadline-pill" :class="{ urgent: job.deadlineSoon }">{{ formatDDay(job) || job.deadlineLabel }}</span>
+            <span v-else></span>
+            <span :data-testid="'main-recent-work-' + job.id">{{ isRecentWorkspace(job.workspaceId) ? '최근 작업' : '' }}</span>
             <button
               class="delete-job-button"
               type="button"
@@ -147,6 +148,45 @@
           title="장바구니에 담긴 공고가 없습니다"
           body="새로운 공고를 찾아 장바구니에 담아보세요!"
         />
+      </section>
+
+      <section class="dashboard-panel main-recommendation-preview" aria-label="추천 공고 미리보기">
+        <div class="section-heading">
+          <div>
+            <h2>추천 공고</h2>
+          </div>
+          <RouterLink class="text-button" to="/recommendations">전체 보기</RouterLink>
+        </div>
+        <div class="main-recommendation-grid">
+          <article
+            v-for="item in recommendationPreviewItems"
+            :key="item.id"
+            class="main-recommendation-card"
+            data-testid="main-recommendation-preview-job"
+          >
+            <img
+              v-if="item.companyLogoUrl"
+              class="main-recommendation-logo"
+              data-testid="main-recommendation-logo"
+              :src="item.companyLogoUrl"
+              :alt="item.companyName + ' logo'"
+            />
+            <div>
+              <strong>{{ item.companyName }}</strong>
+              <p>{{ item.positionTitle }}</p>
+              <span>{{ item.deadlineLabel }}</span>
+              <span>{{ item.participantCount }}명 작성</span>
+            </div>
+            <button
+              class="primary-button"
+              type="button"
+              :data-testid="'main-save-recommendation-' + item.id"
+              @click="saveRecommendation(item.id)"
+            >
+              담기
+            </button>
+          </article>
+        </div>
       </section>
 
       <HoneyPotGraph :activities="activities" />
@@ -177,7 +217,10 @@ import {
   statusLabel,
   normalizedSourceUrl,
   companyInitial,
-  formatParticipantCount
+  formatParticipantCount,
+  formatDDay,
+  formatDateTime,
+  formatAbsoluteDeadline
 } from '@/shared/utils/jobUtils';
 import StatePanel from '@/shared/StatePanel.vue';
 import OnboardingPage from '@/pages/OnboardingPage.vue';
@@ -227,63 +270,13 @@ function handleCancel() {
 }
 
 const recentTaskJob = computed(() => {
-  const recent = basketStore.jobs.find(job => isRecentWorkspace(job.workspaceId));
-  if (recent) return recent;
-  
-  // Fallback to the closest deadline job if no recent workspace exists
-  const sorted = [...basketStore.jobs].sort((left, right) => deadlineRank(left) - deadlineRank(right));
-  if (sorted.length > 0) return sorted[0];
-
-  // If the basket is completely empty, show a beautiful placeholder so the user can see the UI!
-  return {
-    id: 'dummy',
-    workspaceId: 'dummy',
-    companyName: '네이버',
-    positionTitle: '백엔드 개발자'
-  };
+  return dashboardStore.summary?.recentActivity || null;
 });
 
 const basketPreviewJobs = computed(() => {
-  const sorted = [...basketStore.jobs]
+  return [...basketStore.jobs]
     .sort((left, right) => deadlineRank(left) - deadlineRank(right))
     .slice(0, 5);
-    
-  if (sorted.length === 0) {
-    // Show beautiful dummy data so the user can see the UI
-    return [
-      {
-        id: 'dummy1',
-        workspaceId: 'dummy1',
-        companyName: '네이버',
-        positionTitle: '백엔드 개발자',
-        applicationStatus: 'IN_PROGRESS',
-        statusLabel: '진행 중',
-        deadlineLabel: 'D-2',
-        deadlineSoon: true
-      },
-      {
-        id: 'dummy2',
-        workspaceId: 'dummy2',
-        companyName: '카카오페이',
-        positionTitle: '서버 개발자',
-        applicationStatus: 'NOT_STARTED',
-        statusLabel: '지원 전',
-        deadlineLabel: 'D-5',
-        deadlineSoon: false
-      },
-      {
-        id: 'dummy3',
-        workspaceId: 'dummy3',
-        companyName: '토스',
-        positionTitle: '플랫폼 엔지니어',
-        applicationStatus: 'IN_PROGRESS',
-        statusLabel: '진행 중',
-        deadlineLabel: '오늘',
-        deadlineSoon: true
-      }
-    ];
-  }
-  return sorted;
 });
 
 const recommendationPreviewItems = computed(() => [...recommendationStore.jobs]
@@ -300,25 +293,7 @@ onMounted(async () => {
   ]);
   
   const realActivities = await dashboardApi.getActivities();
-  if (!realActivities || realActivities.length === 0) {
-    // 꿀통채우기 테스트용 더미 데이터 생성
-    const dummy = [];
-    const today = new Date();
-    for (let i = 0; i < 30; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() - i);
-      const score = Math.floor(Math.random() * 5); // 0~4
-      if (score > 0) {
-        dummy.push({
-          date: d.toISOString().split('T')[0],
-          score: score
-        });
-      }
-    }
-    activities.value = dummy;
-  } else {
-    activities.value = realActivities;
-  }
+  activities.value = realActivities || [];
 
   void recommendationStore.loadRecommendations();
 });
@@ -349,15 +324,13 @@ function togglePriority(jobId) {
     basketStore.togglePriority(jobId);
 }
 
-function archiveJob(jobId) {
-    const job = basketStore.jobs.find((basketJob) => basketJob.id === jobId);
-    const label = job ? `${job.companyName} ${job.positionTitle}` : '공고';
-    if (!window.confirm(`${label} 공고를 삭제하시겠습니까?`)) {
-        return;
-    }
-    void basketStore.archiveJob(jobId).then(() => {
-        void dashboardStore.loadSummary();
-    });
+async function archiveJob(id) {
+  const job = basketStore.jobs.find((item) => item.id === id);
+  const label = job ? job.companyName + ' ' + job.positionTitle : '해당';
+  if (!window.confirm(label + ' 공고를 삭제하시겠습니까?')) return;
+  void basketStore.archiveJob(id).then(() => {
+    void dashboardStore.loadSummary();
+  });
 }
 </script>
 
@@ -422,9 +395,17 @@ function archiveJob(jobId) {
   font-size: 1.15rem;
   color: var(--ink);
   font-weight: 700;
+  margin-bottom: 2px;
 }
 
-.recent-task-button {
+.recent-task-date {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+.recent-task-action {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -440,7 +421,7 @@ function archiveJob(jobId) {
   white-space: nowrap;
 }
 
-.recent-task-button:hover {
+.recent-task-action:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(79, 70, 229, 0.4);
 }

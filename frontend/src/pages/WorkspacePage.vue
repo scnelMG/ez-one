@@ -202,7 +202,7 @@
                     </label>
                   </div>
                   <span
-                    class="sr-only"
+                    class="auto-save-badge"
                     data-testid="auto-save-status"
                     :data-save-state="autoSaveStatus"
                   >
@@ -260,15 +260,13 @@
               <div class="version-workspace">
                 <div class="section-heading">
                   <div>
-                    <h2>{{ activeQuestionIndex + 1 }}번 문항 변경점 비교</h2>
+                    <h2 style="color: #8b5cf6;">{{ activeQuestionIndex + 1 }}번 문항 변경점 비교</h2>
                   </div>
                 </div>
 
                 <section class="final-essay-panel">
                   <div class="section-heading compact-heading">
                     <div>
-                      <p class="section-kicker">{{ activeQuestionIndex + 1 }}번 문항</p>
-                      <h3>새 버전 저장</h3>
                     </div>
                     <button
                       class="primary-button"
@@ -345,20 +343,34 @@
                       </header>
                     </article>
                   </div>
-                  <div class="version-diff-table" data-testid="version-diff">
-                    <div class="diff-row diff-header" aria-hidden="true">
-                      <span>이전</span>
-                      <span>변경 후</span>
+                  <div class="version-diff-table github-split-diff" data-testid="version-diff">
+                    <div class="diff-split-pane left-pane">
+                      <div
+                        v-for="(row, index) in versionDiffRows.leftRows"
+                        :key="`l-${index}`"
+                        class="diff-row diff-row-line"
+                        :class="`is-${row.type}`"
+                      >
+                        <span class="diff-indicator">{{ row.type === 'remove' ? '-' : ' ' }}</span>
+                        <pre>{{ row.content }}</pre>
+                      </div>
                     </div>
-                    <div
-                      v-for="(row, index) in versionDiffRows"
-                      :key="`${row.type}-${index}`"
-                      class="diff-row"
-                      :class="`is-${row.type}`"
-                    >
-                      <pre>{{ row.left }}</pre>
-                      <pre>{{ row.right }}</pre>
+                    <div class="diff-split-pane right-pane">
+                      <div
+                        v-for="(row, index) in versionDiffRows.rightRows"
+                        :key="`r-${index}`"
+                        class="diff-row diff-row-line"
+                        :class="`is-${row.type}`"
+                      >
+                        <span class="diff-indicator">{{ row.type === 'add' ? '+' : ' ' }}</span>
+                        <pre>{{ row.content }}</pre>
+                      </div>
                     </div>
+                  </div>
+                  <div class="diff-legend">
+                    <span class="legend-item remove"><span class="box"></span> 삭제됨</span>
+                    <span class="legend-item add"><span class="box"></span> 추가됨</span>
+                    <span class="legend-item same"><span class="box"></span> 변경없음</span>
                   </div>
                 </div>
 
@@ -491,8 +503,8 @@
                   URL
                   <input v-model="referenceForm.url" data-testid="reference-url" />
                 </label>
-                <button class="primary-button" type="button" data-testid="save-reference" @click="saveReference">
-                  참고자료 저장
+                <button class="primary-button small-button" type="button" data-testid="save-reference" @click="saveReference">
+                  저장
                 </button>
               </form>
             </section>
@@ -535,6 +547,7 @@
               <button class="icon-button" type="button" aria-label="닫기" @click="closeBoardFullView">×</button>
             </header>
             <div class="floating-board-body">
+              <p class="sr-only">마크다운으로 입력하거나 이미지를 붙여넣으세요.</p>
               <component :is="activeBoardComponent" />
               <section v-if="workspaceStore.activeReference && showReferenceCreateButton" class="reference-editor-panel floating-editor">
                 <div class="section-heading compact-heading">
@@ -572,8 +585,8 @@
                     URL
                     <input v-model="referenceForm.url" data-testid="floating-reference-url" />
                   </label>
-                  <button class="primary-button" type="button" data-testid="floating-save-reference" @click="saveReference">
-                    참고자료 저장
+                  <button class="primary-button small-button" type="button" data-testid="floating-save-reference" @click="saveReference">
+                    저장
                   </button>
                 </form>
               </section>
@@ -587,6 +600,7 @@
 
 <script setup>
 import { computed, h, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import * as Diff from 'diff';
 import { useRoute } from 'vue-router';
 import { rememberRecentWorkspace } from '@/features/basket/recentWorkspaces';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
@@ -816,11 +830,11 @@ function displayValue(value) {
 
 function statusClassFromLabel(label) {
   const text = String(label ?? '').trim();
-  if (text.includes('진행')) return 'in-progress';
-  if (text.includes('제출') || text.includes('완료')) return 'submitted';
-  if (text.includes('미지원') || text.includes('지원전') || text.includes('지원 전')) return 'not-started';
-  if (text.includes('포기') || text.includes('제외')) return 'not-applied';
-  return 'not-started';
+  if (text.includes('진행')) return 'is-in-progress';
+  if (text.includes('제출') || text.includes('완료')) return 'is-submitted';
+  if (text.includes('미지원') || text.includes('지원전') || text.includes('지원 전')) return 'is-not-started';
+  if (text.includes('포기') || text.includes('제외')) return 'is-not-applied';
+  return 'is-not-started';
 }
 
 async function saveDraft() {
@@ -903,34 +917,34 @@ function compareVersions() {
 }
 
 function buildLineDiff(leftBody, rightBody) {
-  const leftLines = splitLines(leftBody);
-  const rightLines = splitLines(rightBody);
-  const table = Array.from({ length: leftLines.length + 1 }, () => Array(rightLines.length + 1).fill(0));
-  for (let leftIndex = leftLines.length - 1; leftIndex >= 0; leftIndex -= 1) {
-    for (let rightIndex = rightLines.length - 1; rightIndex >= 0; rightIndex -= 1) {
-      table[leftIndex][rightIndex] = leftLines[leftIndex] === rightLines[rightIndex]
-        ? table[leftIndex + 1][rightIndex + 1] + 1
-        : Math.max(table[leftIndex + 1][rightIndex], table[leftIndex][rightIndex + 1]);
-    }
+  const diffs = Diff.diffLines(leftBody || '', rightBody || '');
+  const leftRows = [];
+  const rightRows = [];
+  
+  diffs.forEach((part) => {
+    const lines = part.value.split('\n');
+    if (lines[lines.length - 1] === '') lines.pop();
+    
+    lines.forEach((line) => {
+      if (part.added) {
+        leftRows.push({ type: 'empty', content: '' });
+        rightRows.push({ type: 'add', content: line });
+      } else if (part.removed) {
+        leftRows.push({ type: 'remove', content: line });
+        rightRows.push({ type: 'empty', content: '' });
+      } else {
+        leftRows.push({ type: 'same', content: line });
+        rightRows.push({ type: 'same', content: line });
+      }
+    });
+  });
+  
+  if (!leftRows.length) {
+    leftRows.push({ type: 'same', content: '' });
+    rightRows.push({ type: 'same', content: '' });
   }
-
-  const rows = [];
-  let leftIndex = 0;
-  let rightIndex = 0;
-  while (leftIndex < leftLines.length || rightIndex < rightLines.length) {
-    if (leftLines[leftIndex] === rightLines[rightIndex]) {
-      rows.push({ type: 'same', left: leftLines[leftIndex] ?? '', right: rightLines[rightIndex] ?? '' });
-      leftIndex += 1;
-      rightIndex += 1;
-    } else if (rightIndex < rightLines.length && (leftIndex === leftLines.length || table[leftIndex][rightIndex + 1] >= table[leftIndex + 1][rightIndex])) {
-      rows.push({ type: 'add', left: '', right: rightLines[rightIndex] });
-      rightIndex += 1;
-    } else if (leftIndex < leftLines.length) {
-      rows.push({ type: 'remove', left: leftLines[leftIndex], right: '' });
-      leftIndex += 1;
-    }
-  }
-  return rows.length ? rows : [{ type: 'same', left: '', right: '' }];
+  
+  return { leftRows, rightRows };
 }
 
 function splitLines(body) {
@@ -1046,6 +1060,10 @@ async function saveReference() {
     url: referenceForm.url
   });
   rememberCurrentWorkspaceIfSaved();
+  alert('저장 되었습니다.');
+  nextTick(() => {
+    document.querySelector('.workspace-side-rail')?.scrollIntoView({ behavior: 'smooth' });
+  });
 }
 
 async function deleteReference() {
@@ -1078,31 +1096,38 @@ function referenceTemplate(type) {
   return {
     JD: {
       title: 'JD 핵심 정리',
-      body: '공고의 주요 업무, 자격요건, 우대사항을 자유롭게 정리하세요.'
+      body: '',
+      placeholder: '공고의 주요 업무, 자격요건, 우대사항을 자유롭게 정리하세요.'
     },
     NEWS: {
       title: '뉴스기사',
-      body: ''
+      body: '',
+      placeholder: '뉴스 기사의 주요 내용을 요약하세요.'
     },
     DART: {
       title: 'DART 분석 메모',
-      body: '사업보고서의 주요 제품 및 서비스, 연구개발활동, 기타 참고사항을 정리하세요.'
+      body: '',
+      placeholder: '사업보고서의 주요 제품 및 서비스, 연구개발활동, 기타 참고사항을 정리하세요.'
     },
     TALENT_PROFILE: {
       title: '인재상',
-      body: ''
+      body: '',
+      placeholder: '인재상 문장, 이미지, 메모를 붙여넣으세요.'
     },
     AWARDS_PROJECTS: {
       title: '수상/프로젝트 근거',
-      body: '서류 입력 정보에서 가져온 수상과 프로젝트를 자기소개서 근거로 정리하세요.'
+      body: '',
+      placeholder: '서류 입력 정보에서 가져온 수상과 프로젝트를 자기소개서 근거로 정리하세요.'
     },
     PROMPT: {
       title: '프롬프트',
-      body: ''
+      body: '',
+      placeholder: '프롬프트 내용을 입력하세요.'
     },
     FREE_MEMO: {
-      title: '면접 예상 질문 정리',
-      body: '면접 질문, 키워드, 아이디어를 자유롭게 기록하세요.'
+      title: '자유 메모',
+      body: '',
+      placeholder: '면접 질문, 키워드, 아이디어를 자유롭게 기록하세요.'
     }
   }[type];
 }
@@ -1131,9 +1156,9 @@ function createBoardDraft(type) {
     articles: [],
     entries: [],
     dartSections: {
-      products: '주요 제품 및 서비스 내용을 정리하세요.',
-      contracts: '주요 계약 및 연구 개발 활동 내용을 정리하세요.',
-      notes: '기타 참고사항을 정리하세요.'
+      products: '',
+      contracts: '',
+      notes: ''
     },
     dartEntries: [],
     profileSections: createProfileSections(),
@@ -1217,10 +1242,13 @@ function removeKeyword(draft, keyword) {
 }
 
 function addArticle(draft) {
-  const title = draft.articleTitle.trim();
-  const url = draft.articleUrl.trim();
-  const body = draft.articleBody.trim();
-  if (!title || !url || !body) return;
+  const title = draft.articleTitle?.trim() || '';
+  const url = draft.articleUrl?.trim() || '';
+  const body = draft.articleBody?.trim() || '';
+  if (!title || !body) {
+    alert('제목과 내용을 모두 입력해주세요.');
+    return;
+  }
   draft.articles = [{
     id: `article-${Date.now()}`,
     title,
@@ -1228,10 +1256,14 @@ function addArticle(draft) {
     source: '직접 추가',
     date: new Date().toLocaleDateString('ko-KR'),
     url
-  }, ...draft.articles];
+  }, ...(draft.articles || [])];
   draft.articleTitle = '';
   draft.articleUrl = '';
   draft.articleBody = '';
+  alert('저장되었습니다.');
+  nextTick(() => {
+    scrollDrawerBoardToBottom();
+  });
 }
 
 function resetBoardDraft(draft, type = activeBoard.value) {
@@ -1244,6 +1276,7 @@ function resetBoardDraft(draft, type = activeBoard.value) {
     draft.articleBody = '';
   }
   if (type === 'TALENT_PROFILE') {
+    draft.title = '';
     draft.keywordInput = '';
     draft.keywords = [];
   }
@@ -1252,16 +1285,30 @@ function resetBoardDraft(draft, type = activeBoard.value) {
 
 function saveBoardEntry(draft, type = activeBoard.value) {
   const label = referenceTypeLabel(type);
-  const title = draft.title.trim() || `${label} 메모`;
-  const body = normalizeCompanyValue(draft.body);
-  if (!title && !body && type !== 'TALENT_PROFILE') return;
+  const title = draft.title?.trim() || `${label} 메모`;
+  const body = normalizeCompanyValue(draft.body || '');
+  if (!title && !body && type !== 'TALENT_PROFILE') {
+    alert('내용을 입력해주세요.');
+    return;
+  }
   draft.entries = [{
     id: `${type.toLowerCase()}-${Date.now()}`,
     title,
     body,
     keywords: [...(draft.keywords ?? [])],
     createdAt: new Date().toLocaleString('ko-KR')
-  }, ...draft.entries];
+  }, ...(draft.entries || [])];
+  draft.title = '';
+  draft.body = '';
+  if (type === 'TALENT_PROFILE') {
+    draft.keywordInput = '';
+    draft.keywords = [];
+  }
+  syncActiveMarkdownEditor();
+  alert('저장되었습니다.');
+  nextTick(() => {
+    scrollDrawerBoardToBottom();
+  });
 }
 
 function saveDartEntry(draft) {
@@ -1284,7 +1331,10 @@ function addDartEntry(draft) {
 }
 
 function addPromptCard(draft) {
-  if (!draft.newPrompt.title.trim() || !draft.newPrompt.body.trim()) return;
+  if (!draft.newPrompt.title.trim() || !draft.newPrompt.body.trim()) {
+    alert('제목과 내용을 모두 입력해주세요.');
+    return;
+  }
   const category = typeof draft.newPrompt.category === 'string' ? draft.newPrompt.category.trim() : '';
   draft.prompts = [...draft.prompts, {
     id: `prompt-${Date.now()}`,
@@ -1298,6 +1348,16 @@ function addPromptCard(draft) {
   draft.newPrompt.purpose = '';
   draft.newPrompt.body = '';
   draft.isAddingPrompt = false;
+  alert('저장되었습니다.');
+  nextTick(() => {
+    scrollDrawerBoardToBottom();
+  });
+}
+
+function scrollDrawerBoardToBottom() {
+  const board = document.querySelector('.drawer-board');
+  if (typeof board?.scrollTo !== 'function') return;
+  board.scrollTo({ top: board.scrollHeight, behavior: 'smooth' });
 }
 
 const MarkdownBoard = {
@@ -1476,11 +1536,11 @@ const MarkdownBoard = {
             h('label', ['진행 기간', fieldInput(project, 'period', '진행 기간', `project-period-${index}`)]),
             h('label', ['역할', fieldInput(project, 'role', '역할', `project-role-${index}`)]),
             h('label', ['사용 기술', fieldInput(project, 'skills', '사용 기술', `project-skills-${index}`)]),
-            h('label', ['주요 내용', fieldText(project, 'description', '주요 내용', `project-description-${index}`)]),
             h('label', ['링크', fieldInput(project, 'link', '링크', `project-link-${index}`)])
           ])),
           h('button', { type: 'button', class: 'dashed-add-button', onClick: () => addProject(draft) }, '+ 프로젝트 추가')
-        ])
+        ]),
+        renderBoardActions(draft, 'AWARDS_PROJECTS', '+ 추가')
       ]);
     }
 
@@ -1508,20 +1568,9 @@ const MarkdownBoard = {
           })
         ]),
         h('div', { class: 'prompt-board-tools' }, [
-          h('input', { placeholder: '프롬프트 내용', 'aria-label': '프롬프트 내용' }),
-          h('div', { class: 'prompt-filter-pills', key: `prompt-filters-${categories.join('|')}` }, categories.map((label) => (
-            h('button', {
-              key: `prompt-filter-${label}`,
-              type: 'button',
-              class: { active: draft.selectedPromptCategory === label },
-              onClick: () => {
-                draft.selectedPromptCategory = label;
-              }
-            }, label)
-          ))),
           h('button', {
             type: 'button',
-            class: 'primary-button prompt-add-shortcut',
+            class: 'ghost-button board-add-button',
             onClick: () => {
               draft.isAddingPrompt = true;
             }
@@ -1536,12 +1585,20 @@ const MarkdownBoard = {
           ]),
           h('p', [h('b', '용도'), ' ', prompt.purpose]),
           h('pre', prompt.body),
-          h('button', { type: 'button', class: 'ghost-button prompt-copy-button' }, '복사')
+          h('button', {
+            type: 'button',
+            class: 'ghost-button prompt-copy-button',
+            onClick: () => {
+              navigator.clipboard.writeText(prompt.body)
+                .then(() => alert('복사되었습니다.'))
+                .catch(() => alert('복사 실패'));
+            }
+          }, '복사')
         ])) : [
           h('p', { class: 'empty-board-message' }, '저장한 프롬프트가 없습니다.')
         ]),
-        draft.isAddingPrompt ? h('section', { class: 'prompt-add-form' }, [
-          h('h3', '새 프롬프트 추가'),
+        h('section', { class: 'prompt-add-form' }, [
+          h('h3', '프롬프트 추가'),
           h('label', ['제목', h('input', {
             value: draft.newPrompt.title,
             placeholder: '프롬프트 이름',
@@ -1575,7 +1632,7 @@ const MarkdownBoard = {
             } }, '취소'),
             h('button', { type: 'button', class: 'primary-button board-save-button', onClick: () => addPromptCard(draft) }, '저장')
           ])
-        ]) : null
+        ])
       ]);
     }
 
@@ -1593,7 +1650,7 @@ const MarkdownBoard = {
           })
         ]),
         h('div', { class: 'markdown-editor-wrap' }, [
-          isEmpty.value ? h('p', { class: 'markdown-placeholder' }, '인재상 문장, 이미지, 메모를 붙여넣으세요.') : null,
+          isEmpty.value ? h('p', { class: 'markdown-placeholder' }, referenceTemplate('TALENT_PROFILE')?.placeholder ?? '메모를 붙여넣으세요.') : null,
           h('div', {
             ref: editorRef,
             class: 'markdown-empty-page',
@@ -1804,7 +1861,7 @@ const MarkdownBoard = {
           })
         ]),
       h('div', { class: 'markdown-editor-wrap' }, [
-        isEmpty.value ? h('p', { class: 'markdown-placeholder' }, '마크다운으로 입력하거나 이미지를 붙여넣으세요.') : null,
+        isEmpty.value ? h('p', { class: 'markdown-placeholder' }, referenceTemplate(activeBoard.value)?.placeholder ?? '마크다운으로 입력하거나 이미지를 붙여넣으세요.') : null,
         h('div', {
           ref: editorRef,
           class: 'markdown-empty-page',

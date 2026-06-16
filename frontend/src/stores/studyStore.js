@@ -29,9 +29,21 @@ export const useStudyStore = defineStore('study', {
       }
     },
 
-    async createStudy(name, description) {
+    async loadMyInvites() {
       try {
-        const study = await studyApi.createStudy({ name, description });
+        this.myInvites = await studyApi.getMyInvites();
+      } catch (error) {
+        console.error('Failed to load my invites', error);
+      }
+    },
+
+    async createStudy(name, description, settings) {
+      try {
+        const study = await studyApi.createStudy({ 
+          name, 
+          description, 
+          settingsJson: JSON.stringify(settings) 
+        });
         this.myStudies.push(study);
         return study;
       } catch (error) {
@@ -54,7 +66,7 @@ export const useStudyStore = defineStore('study', {
     async respondToInvite(inviteId, accept) {
       try {
         await studyApi.respondToInvite(inviteId, accept);
-        await this.loadMyStudies(); // 새로고침
+        await Promise.all([this.loadMyStudies(), this.loadMyInvites()]); // 새로고침
       } catch (error) {
         throw new Error(error.response?.data?.message || '초대 응답 실패');
       }
@@ -104,6 +116,33 @@ export const useStudyStore = defineStore('study', {
       } catch (error) {
         this.status = 'error';
         this.errorMessage = error.message;
+        throw error;
+      }
+    },
+
+    async deleteStudy(studyId) {
+      this.status = 'loading';
+      try {
+        await studyApi.deleteStudy(studyId);
+        // Remove from list
+        this.studies = this.studies.filter(s => s.id !== studyId);
+        this.status = 'ready';
+      } catch (error) {
+        this.status = 'error';
+        this.errorMessage = error.response?.data?.message || '스터디 삭제 중 오류가 발생했습니다.';
+        throw error;
+      }
+    },
+
+    async leaveStudy(studyId, delegateEmail) {
+      this.status = 'loading';
+      try {
+        await studyApi.leaveStudy(studyId, delegateEmail);
+        this.studies = this.studies.filter(s => s.id !== studyId);
+        this.status = 'ready';
+      } catch (error) {
+        this.status = 'error';
+        this.errorMessage = error.response?.data?.message || '스터디 탈퇴 중 오류가 발생했습니다.';
         throw error;
       }
     }
