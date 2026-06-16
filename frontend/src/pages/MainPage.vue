@@ -27,16 +27,16 @@
         </RouterLink>
       </section>
 
-      <section v-if="dashboardStore.summary?.recentActivity" class="recent-task-widget" aria-label="최근 작업 이어서 하기">
+      <section v-if="displayRecentTask" class="recent-task-widget" aria-label="최근 작업 이어서 하기">
         <div class="recent-task-info">
           <div class="recent-task-pulse"></div>
           <div class="recent-task-text">
             <span>진행 중</span>
-            <strong>[{{ dashboardStore.summary.recentActivity.companyName }} {{ dashboardStore.summary.recentActivity.positionTitle }}] {{ dashboardStore.summary.recentActivity.actionName }}</strong>
-            <span class="recent-task-date" style="font-size: 0.85em; color: var(--text-tertiary); margin-top: 4px;">{{ dashboardStore.summary.recentActivity.updatedAt }}</span>
+            <strong>{{ displayRecentTask.companyName }} {{ displayRecentTask.positionTitle }} {{ displayRecentTask.actionName }}</strong>
+            <span class="recent-task-date" style="font-size: 0.85em; color: var(--text-tertiary); margin-top: 4px;">{{ displayRecentTask.updatedAt }}</span>
           </div>
         </div>
-        <RouterLink class="recent-task-action" :to="`/workspaces/${dashboardStore.summary.recentActivity.workspaceId}`">
+        <RouterLink class="recent-task-action" :to="`/workspaces/${displayRecentTask.workspaceId}`">
           이어서 하기
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="9 18 15 12 9 6"></polyline>
@@ -114,6 +114,7 @@
             </span>
             <RouterLink class="job-main-link" :to="`/workspaces/${job.workspaceId}`" style="display: flex; gap: 8px; align-items: center; text-decoration: none;">
               <span style="color: var(--ink); font-weight: 500; white-space: nowrap;">{{ formatAbsoluteDeadline(job) }}</span>
+              <span v-if="formatDDay(job) || job.deadlineLabel?.startsWith('D-')" class="deadline-pill" :class="{ urgent: job.deadlineSoon }">{{ formatDDay(job) || job.deadlineLabel }}</span>
             </RouterLink>
             <a
               class="main-apply-link"
@@ -124,8 +125,6 @@
             >
               바로가기
             </a>
-            <span v-if="formatDDay(job) || job.deadlineLabel?.startsWith('D-')" class="deadline-pill" :class="{ urgent: job.deadlineSoon }">{{ formatDDay(job) || job.deadlineLabel }}</span>
-            <span v-else></span>
             <span :data-testid="'main-recent-work-' + job.id">{{ isRecentWorkspace(job.workspaceId) ? '최근 작업' : '' }}</span>
             <button
               class="delete-job-button"
@@ -227,7 +226,7 @@ import StatePanel from '@/shared/StatePanel.vue';
 import OnboardingPage from '@/pages/OnboardingPage.vue';
 import SkeletonLoader from '@/shared/SkeletonLoader.vue';
 import { requiresOnboarding } from '@/features/auth/session/authSession';
-import { isRecentWorkspace } from '@/features/basket/recentWorkspaces';
+import { isRecentWorkspace, getRecentWorkspaceIds } from '@/features/basket/recentWorkspaces';
 import { useBasketStore } from '@/stores/basketStore';
 import { useDashboardStore } from '@/stores/dashboardStore';
 import { useRecommendationStore } from '@/stores/recommendationStore';
@@ -281,6 +280,33 @@ const basketPreviewJobs = computed(() => {
     .filter(job => isDeadlineWithinDays(job, 7))
     .sort((left, right) => deadlineRank(left) - deadlineRank(right))
     .slice(0, 5);
+});
+
+const displayRecentTask = computed(() => {
+  const recentIds = getRecentWorkspaceIds();
+  if (recentIds.length > 0) {
+    const job = basketStore.jobs.find(j => String(j.workspaceId) === recentIds[0]);
+    if (job) {
+      return {
+        companyName: job.companyName,
+        positionTitle: job.positionTitle,
+        actionName: '자소서 이어쓰기',
+        updatedAt: '방금 전',
+        workspaceId: job.workspaceId
+      };
+    }
+  }
+  if (dashboardStore.summary?.recentActivity) {
+    const apiTask = dashboardStore.summary.recentActivity;
+    return {
+      companyName: apiTask.companyName,
+      positionTitle: apiTask.positionTitle,
+      actionName: apiTask.actionName === '이력서 작성' || !apiTask.actionName ? '자소서 이어쓰기' : `${apiTask.actionName} 이어하기`,
+      updatedAt: apiTask.updatedAt,
+      workspaceId: apiTask.workspaceId
+    };
+  }
+  return null;
 });
 
 const recommendationPreviewItems = computed(() => [...recommendationStore.jobs]
