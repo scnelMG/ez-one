@@ -226,7 +226,7 @@ import StatePanel from '@/shared/StatePanel.vue';
 import OnboardingPage from '@/pages/OnboardingPage.vue';
 import SkeletonLoader from '@/shared/SkeletonLoader.vue';
 import { requiresOnboarding } from '@/features/auth/session/authSession';
-import { isRecentWorkspace, getRecentWorkspaceIds } from '@/features/basket/recentWorkspaces';
+import { isRecentWorkspace, getRecentWorkspaceIds, getRecentWorkspaceWithTime } from '@/features/basket/recentWorkspaces';
 import { useBasketStore } from '@/stores/basketStore';
 import { useDashboardStore } from '@/stores/dashboardStore';
 import { useRecommendationStore } from '@/stores/recommendationStore';
@@ -282,16 +282,28 @@ const basketPreviewJobs = computed(() => {
     .slice(0, 5);
 });
 
+function formatKoreanDateTime(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const hours = String(d.getHours()).padStart(2, '0');
+  const mins = String(d.getMinutes()).padStart(2, '0');
+  return `${year}년 ${month}월 ${day}일 ${hours}:${mins}`;
+}
+
 const displayRecentTask = computed(() => {
-  const recentIds = getRecentWorkspaceIds();
-  if (recentIds.length > 0) {
-    const job = basketStore.jobs.find(j => String(j.workspaceId) === recentIds[0]);
+  const recent = getRecentWorkspaceWithTime();
+  if (recent) {
+    const job = basketStore.jobs.find(j => String(j.workspaceId) === recent.id);
     if (job) {
       return {
         companyName: job.companyName,
         positionTitle: job.positionTitle,
         actionName: '자소서 이어쓰기',
-        updatedAt: '방금 전',
+        updatedAt: formatKoreanDateTime(recent.time),
         workspaceId: job.workspaceId
       };
     }
@@ -302,7 +314,7 @@ const displayRecentTask = computed(() => {
       companyName: apiTask.companyName,
       positionTitle: apiTask.positionTitle,
       actionName: apiTask.actionName === '이력서 작성' || !apiTask.actionName ? '자소서 이어쓰기' : `${apiTask.actionName} 이어하기`,
-      updatedAt: apiTask.updatedAt,
+      updatedAt: formatKoreanDateTime(apiTask.updatedAt),
       workspaceId: apiTask.workspaceId
     };
   }
