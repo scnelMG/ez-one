@@ -3,6 +3,7 @@ package com.ezone.backend.mapper;
 import com.ezone.backend.domain.UserSession;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Result;
 import org.apache.ibatis.annotations.Results;
 import org.apache.ibatis.annotations.Select;
@@ -41,4 +42,12 @@ public interface UserSessionMapper {
           AND revoked_at IS NULL
         """)
     int revokeByHash(String refreshTokenHash);
+
+    @Update("""
+        UPDATE user_sessions
+        SET revoked_at = CURRENT_TIMESTAMP
+        WHERE user_id = #{userId}
+          AND revoked_at IS NULL
+        """)
+    int revokeAllByUserId(@Param("userId") Long userId);
 }

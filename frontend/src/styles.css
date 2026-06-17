@@ -3492,28 +3492,52 @@ li {
 }
 
 .app-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(220px, 0.8fr);
+  gap: 18px 32px;
   border-top: 1px solid #e6eaf0;
   background: #ffffff;
-  color: #9aa3b2;
-  padding: 18px clamp(18px, 3vw, 44px);
+  color: #5f6b7a;
+  padding: 24px clamp(18px, 3vw, 44px);
 }
 
 .app-footer p {
   margin: 0;
-  font-size: 0.76rem;
-  font-weight: 700;
+  font-size: 0.78rem;
+  font-weight: 650;
   line-height: 1.5;
 }
 
 .app-footer a {
-  flex: 0 0 auto;
-  color: #727b8c;
+  color: #374151;
   font-size: 0.78rem;
   font-weight: 900;
+}
+
+.app-footer-brand {
+  min-width: 0;
+}
+
+.app-footer-brand strong {
+  display: inline-flex;
+  color: #111827;
+  font-size: 0.92rem;
+  margin-bottom: 8px;
+}
+
+.app-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  justify-content: flex-end;
+}
+
+.app-footer-meta {
+  color: #7b8493;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  grid-column: 1 / -1;
 }
 
 .wire-page {
@@ -5424,7 +5448,14 @@ li {
   }
 
   .app-footer {
-    align-items: flex-start;
+    grid-template-columns: 1fr;
+  }
+
+  .app-footer-links {
+    justify-content: flex-start;
+  }
+
+  .app-footer-meta {
     flex-direction: column;
   }
 
@@ -11130,10 +11161,26 @@ button.history-metric:hover {
 
 /* EZ-ONE landing tone pass: keep the reference spaciousness, but ground it in our product workflow. */
 .landing-page {
+  height: 100vh;
+  overflow: hidden;
   background:
     radial-gradient(circle at 72% 38%, rgba(112, 83, 255, 0.14), transparent 32rem),
     radial-gradient(circle at 18% 78%, rgba(70, 132, 255, 0.08), transparent 26rem),
     linear-gradient(180deg, #fbfcff 0%, #f7f9fd 52%, #fbfcff 100%);
+}
+
+.landing-slides-container {
+  height: 100%;
+  transition: transform 0.7s cubic-bezier(0.25, 1, 0.5, 1);
+  will-change: transform;
+}
+
+.landing-slides-container > section {
+  height: 100vh !important;
+  min-height: 100vh !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  align-content: center !important;
 }
 
 .landing-page::before {

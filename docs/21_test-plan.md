@@ -138,3 +138,18 @@
 - `TC-HISTORY-010`: History table search filters visible rows by keyword while explicit status/result/company-type label filters work independently, and reset clears search, filters, and custom sort.
 - `TC-HISTORY-012`: History table sorts visible rows by deadline and company name without changing the loaded period/result-stage data.
 - `TC-HISTORY-011`: History row navigation opens the workspace while the original posting link remains a separate external link.
+
+## 2026-06-17 Study Security Regression Tests
+
+- `TC-STUDY-AUTH-001`: Non-members cannot read study detail.
+- `TC-STUDY-AUTH-002`: Non-members cannot read shared essay detail or add shared essay feedback.
+- `TC-STUDY-AUTH-003`: Study invitation is leader-only.
+- `TC-STUDY-AUTH-004`: Study members cannot share an essay from a workspace they do not own.
+- `TC-STUDY-XSS-001`: Shared essay body content is rendered as text, not raw HTML.
+
+## 2026-06-17 Service Trust Remediation Tests
+
+- `TC-LAYOUT-FOOTER-001`: `AppLayout.test.js` verifies P1-only global navigation, disabled alert affordance, and production-style footer links/copy.
+- `TC-AUTH-WITHDRAW-001`: `P1ApiContractTest.currentUserCanWithdrawAndRevokeSessions` verifies `DELETE /api/me` revokes sessions and anonymizes the user.
+- `TC-SUPPORT-REQUEST-001`: Backend contract tests and frontend `MyPage.test.js`/`supportApi.test.js` verify inquiry and partnership forms call `/api/support/requests` instead of local-only alerts.
+- `TC-STUDY-PERMISSION-UI-001`: `StudyDetailPage.test.js` verifies the page uses the authenticated session email instead of a hardcoded user fallback.

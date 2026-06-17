@@ -13,7 +13,7 @@
       </div>
       <button class="scroll-nav-control" type="button" aria-label="다음 섹션으로 이동" @click="scrollLandingSection(1)">↓</button>
     </nav>
-
+    <div class="landing-slides-container" :style="{ transform: `translateY(-${currentLandingSection * 100}vh)` }">
     <section id="login-hero" class="landing-hero" aria-labelledby="login-title">
       <div class="landing-hero-copy">
         <RouterLink class="landing-brand landing-brand-hero" to="/" aria-label="EZ-ONE">
@@ -226,6 +226,7 @@
         Google로 시작하기
       </button>
     </section>
+    </div>
   </main>
 </template>
 
@@ -260,14 +261,34 @@ const emailForm = reactive({
     password: ''
 });
 
+let isAnimating = false;
+
+function handleWheel(e) {
+    if (isAnimating) return;
+    if (e.deltaY > 30) {
+        scrollLandingSection(1);
+    } else if (e.deltaY < -30) {
+        scrollLandingSection(-1);
+    }
+}
+
+function handleKeydown(e) {
+    if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') {
+        scrollLandingSection(1);
+    } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+        scrollLandingSection(-1);
+    }
+}
+
 onMounted(() => {
     redirectToConfiguredLocalOAuthOrigin();
-    updateCurrentLandingSection();
-    window.addEventListener('scroll', updateCurrentLandingSection, { passive: true });
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    window.addEventListener('keydown', handleKeydown);
 });
 
 onBeforeUnmount(() => {
-    window.removeEventListener('scroll', updateCurrentLandingSection);
+    window.removeEventListener('wheel', handleWheel);
+    window.removeEventListener('keydown', handleKeydown);
 });
 
 function startGoogleLogin(selectAccount = false) {
@@ -318,8 +339,15 @@ function openEmailAuth() {
 }
 
 function scrollLandingSection(direction) {
-    const nextIndex = Math.min(Math.max(currentLandingSection.value + direction, 0), landingSections.length - 1);
-    document.getElementById(landingSections[nextIndex].id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (isAnimating) return;
+    const nextIndex = currentLandingSection.value + direction;
+    if (nextIndex >= 0 && nextIndex < landingSections.length) {
+        isAnimating = true;
+        currentLandingSection.value = nextIndex;
+        setTimeout(() => {
+            isAnimating = false;
+        }, 700); // 0.7s transition
+    }
 }
 
 function updateCurrentLandingSection() {

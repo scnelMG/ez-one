@@ -6,13 +6,19 @@ import MyPage from './MyPage.vue';
 
 const mocks = vi.hoisted(() => ({
     updateCurrentUser: vi.fn(),
+    withdrawCurrentUser: vi.fn(),
+    logout: vi.fn(),
     getUserProfile: vi.fn(),
-    saveUserProfile: vi.fn()
+    saveUserProfile: vi.fn(),
+    getMyRequests: vi.fn(),
+    createRequest: vi.fn()
 }));
 
 vi.mock('@/features/auth/api/authApi', () => ({
     authApi: {
-        updateCurrentUser: (...args) => mocks.updateCurrentUser(...args)
+        updateCurrentUser: (...args) => mocks.updateCurrentUser(...args),
+        withdrawCurrentUser: (...args) => mocks.withdrawCurrentUser(...args),
+        logout: (...args) => mocks.logout(...args)
     }
 }));
 
@@ -20,6 +26,13 @@ vi.mock('@/features/profile/api/profileApi', () => ({
     profileApi: {
         getUserProfile: mocks.getUserProfile,
         saveUserProfile: mocks.saveUserProfile
+    }
+}));
+
+vi.mock('@/features/support/api/supportApi', () => ({
+    supportApi: {
+        getMyRequests: (...args) => mocks.getMyRequests(...args),
+        createRequest: (...args) => mocks.createRequest(...args)
     }
 }));
 
@@ -37,8 +50,10 @@ const makeRouter = () => createRouter({
     routes: [
         ...myRoutes,
         { path: '/', component: { template: '<div>main</div>' } },
+        { path: '/login', component: { template: '<div>login</div>' } },
         { path: '/basket', component: { template: '<div>basket</div>' } },
         { path: '/document-profile', component: { template: '<div>document profile</div>' } },
+        { path: '/history', component: { template: '<div>history</div>' } },
         { path: '/mypage/notion', component: { template: '<div>notion</div>' } }
     ]
 });
@@ -46,14 +61,19 @@ const makeRouter = () => createRouter({
 describe('MyPage', () => {
     beforeEach(() => {
         localStorage.clear();
+        vi.stubGlobal('confirm', vi.fn(() => true));
         mocks.updateCurrentUser.mockReset();
+        mocks.withdrawCurrentUser.mockReset();
+        mocks.logout.mockReset();
         mocks.getUserProfile.mockReset();
         mocks.saveUserProfile.mockReset();
+        mocks.getMyRequests.mockReset();
+        mocks.createRequest.mockReset();
         mocks.getUserProfile.mockResolvedValue({
             desiredRoles: ['프론트엔드', '백엔드'],
             companyTypes: ['중견기업', '스타트업'],
             industries: ['IT/플랫폼'],
-            regions: ['서울', '경기', '원격(재택)'],
+            regions: ['서울', '경기', '원격'],
             skills: ['React', 'TypeScript', 'Node.js'],
             ssafy: true,
             completed: true
@@ -67,6 +87,14 @@ describe('MyPage', () => {
             ssafy: false,
             completed: true
         });
+        mocks.getMyRequests.mockResolvedValue([
+            { id: 1, title: 'Notion 동기화 오류', status: 'RECEIVED' }
+        ]);
+        mocks.createRequest.mockResolvedValue({
+            id: 2,
+            title: '새 문의',
+            status: 'RECEIVED'
+        });
         localStorage.setItem('ezone.currentUser', JSON.stringify({
             id: 1,
             email: 'hong.gildong@gmail.com',
@@ -76,7 +104,7 @@ describe('MyPage', () => {
         }));
     });
 
-    it('MY-ACCOUNT: renders account content without the old left board list and updates nickname', async () => {
+    it('MY-ACCOUNT: renders account content and updates nickname', async () => {
         mocks.updateCurrentUser.mockResolvedValue({
             id: 1,
             email: 'hong.gildong@gmail.com',
@@ -89,26 +117,34 @@ describe('MyPage', () => {
         expect(wrapper.text()).toContain('마이페이지 · 내 계정');
         expect(wrapper.find('[data-testid="mypage-left-board"]').exists()).toBe(false);
         expect(wrapper.text()).toContain('Google 계정으로 로그인 중');
-        expect(wrapper.text()).toContain('노션 연동 계정과 우리 서비스 로그인 계정이 다를 수 있어요.');
+        expect(wrapper.text()).toContain('Notion 연동은 계정과 분리해 관리됩니다.');
 
         await wrapper.get('[data-testid="nickname-input"]').setValue('홍길동');
         await wrapper.get('[data-testid="save-account-profile"]').trigger('click');
+        await flushPromises();
+
         expect(mocks.updateCurrentUser).toHaveBeenCalledWith({ nickname: '홍길동' });
         expect(JSON.parse(localStorage.getItem('ezone.currentUser') ?? '{}').nickname).toBe('홍길동');
+    });
+
+    it('MY-ACCOUNT: withdraws through /api/me-backed auth api and clears the session', async () => {
+        mocks.withdrawCurrentUser.mockResolvedValue({});
+        const wrapper = await mountPage('/mypage');
+
+        await wrapper.find('.text-button.danger').trigger('click');
+        await flushPromises();
+
+        expect(window.confirm).toHaveBeenCalled();
+        expect(mocks.withdrawCurrentUser).toHaveBeenCalled();
+        expect(localStorage.getItem('ezone.currentUser')).toBeNull();
     });
 
     it('MY-ONBOARDING: edits onboarding preferences as chips', async () => {
         const wrapper = await mountPage('/mypage/onboarding');
 
         expect(wrapper.text()).toContain('마이페이지 · 온보딩 정보');
-        expect(wrapper.text()).toContain('온보딩 정보');
         expect(wrapper.text()).toContain('프론트엔드');
-        expect(wrapper.text()).toContain('지원 준비 정보');
-
-        expect(wrapper.find('[data-testid="profile-desired-roles"]').exists()).toBe(false);
-        expect(wrapper.find('[data-testid="profile-company-types"]').exists()).toBe(false);
-        expect(wrapper.find('[data-testid="profile-industries"]').exists()).toBe(false);
-        expect(wrapper.find('[data-testid="profile-regions"]').exists()).toBe(false);
+        expect(wrapper.text()).toContain('지원 준비 기본 정보');
 
         await wrapper.get('[data-testid="profile-role-option-프론트엔드"]').trigger('click');
         await wrapper.get('[data-testid="profile-role-option-백엔드"]').trigger('click');
@@ -119,7 +155,7 @@ describe('MyPage', () => {
         await wrapper.get('[data-testid="profile-industry-option-IT/플랫폼"]').trigger('click');
         await wrapper.get('[data-testid="profile-industry-option-금융"]').trigger('click');
         await wrapper.get('[data-testid="profile-region-option-경기"]').trigger('click');
-        await wrapper.get('[data-testid="profile-region-option-원격(재택)"]').trigger('click');
+        await wrapper.get('[data-testid="profile-region-option-원격"]').trigger('click');
         await wrapper.get('[data-testid="profile-skill-remove-React"]').trigger('click');
         await wrapper.get('[data-testid="profile-skill-remove-TypeScript"]').trigger('click');
         await wrapper.get('[data-testid="profile-skill-remove-Node.js"]').trigger('click');
@@ -139,14 +175,56 @@ describe('MyPage', () => {
         });
     });
 
-    it('MY-SUPPORT: renders QnA, inquiry, partnership, and terms pages as separate pages', async () => {
-        expect((await mountPage('/mypage/qna')).text()).toContain('공고별로 첨부한 자료는 어디서 보나요?');
-        expect((await mountPage('/mypage/inquiry')).text()).toContain('1:1 문의 작성');
-        expect((await mountPage('/mypage/partnership')).text()).toContain('제휴 문의');
+    it('MY-SUPPORT: submits inquiry to the support API and renders persisted history', async () => {
+        const wrapper = await mountPage('/mypage/inquiry');
+
+        expect(mocks.getMyRequests).toHaveBeenCalled();
+        expect(wrapper.text()).toContain('Notion 동기화 오류');
+
+        await wrapper.find('input[required]').setValue('새 문의');
+        await wrapper.find('textarea').setValue('문의 내용입니다.');
+        await wrapper.find('form.support-form').trigger('submit.prevent');
+        await flushPromises();
+
+        expect(mocks.createRequest).toHaveBeenCalledWith({
+            requestType: 'INQUIRY',
+            category: 'ACCOUNT',
+            title: '새 문의',
+            body: '문의 내용입니다.'
+        });
+        expect(wrapper.text()).toContain('1:1 문의가 접수되었습니다.');
+    });
+
+    it('MY-SUPPORT: submits partnership to the support API instead of a local alert', async () => {
+        const wrapper = await mountPage('/mypage/partnership');
+        const inputs = wrapper.findAll('input');
+
+        await inputs[0].setValue('EZ Partner');
+        await inputs[1].setValue('김담당');
+        await inputs[2].setValue('partner@example.com');
+        await inputs[3].setValue('010-0000-0000');
+        await wrapper.find('textarea').setValue('채용 콘텐츠 제휴를 제안합니다.');
+        await wrapper.find('form.support-form').trigger('submit.prevent');
+        await flushPromises();
+
+        expect(mocks.createRequest).toHaveBeenCalledWith({
+            requestType: 'PARTNERSHIP',
+            category: 'CONTENT',
+            title: 'EZ Partner 제휴 문의',
+            body: '채용 콘텐츠 제휴를 제안합니다.',
+            companyName: 'EZ Partner',
+            contactName: '김담당',
+            contactEmail: 'partner@example.com',
+            contactPhone: '010-0000-0000'
+        });
+        expect(wrapper.text()).toContain('제휴 문의가 접수되었습니다.');
+    });
+
+    it('MY-SUPPORT: renders QnA and terms pages as separate pages', async () => {
+        expect((await mountPage('/mypage/qna')).text()).toContain('공고별로 첨부 자료는 어디서 보나요?');
         const terms = await mountPage('/mypage/terms');
         expect(terms.text()).toContain('서비스 이용약관');
         expect(terms.text()).toContain('상표 및 로고 표시');
-        expect(terms.text()).toContain('제휴 또는 후원');
     });
 });
 

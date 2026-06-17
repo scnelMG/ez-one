@@ -91,7 +91,7 @@ flowchart LR
 | Mattermost 채용공고 수집 | P2 | webhook 원문 raw 저장, 채용공고 후보 파싱, 검토 승인 후 SSAFY 사용자에게만 추천 노출 |
 ## 2026-06-16 Past Application History
 
-- The history feature reads user-owned application records from `application_history`, including imported CSV history and basket jobs archived after the user saved them.
+- The history feature reads user-owned application records from `application_history`, including imported CSV history and basket jobs whose status indicates real application progress or non-application.
 - The default `/history` view loads all records. The period selector filters by `ALL`, `YYYY-H1`, or `YYYY-H2`.
 - Summary metrics are calculated for the selected period before optional result-stage row filtering and display the standard status counts: 지원완료, 미지원, 진행 중, 지원 전.
 - Imported failure outcomes such as 서류탈락, 필기/과제탈락, and 면접탈락 count as 지원완료 for the standard status summary because the user did submit those applications.
@@ -103,5 +103,5 @@ flowchart LR
 - Clicking a company-type bar filters visible table rows by that type. The reset control clears client-side search, label filters, and custom sort.
 - Clicking a row opens `/workspaces/{workspaceId}`. The row also exposes separate `열기` and `원본 공고` links so workspace navigation and external posting navigation are distinct.
 - The basket page exposes a `과거 지원 내역` entry point to `/history`.
-- Archiving a normal basket job snapshots it into `application_history` before it leaves the active basket list. The linked workspace remains readable from the history row.
+- Changing a normal basket job away from `READY` snapshots it into `application_history`. Deleting a basket job only removes it from the active list and does not create history by itself.
 - AI commentary and anonymous percentile comparison are excluded from this implementation.

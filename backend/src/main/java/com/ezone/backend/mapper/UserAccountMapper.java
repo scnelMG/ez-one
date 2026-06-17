@@ -24,6 +24,7 @@ public interface UserAccountMapper {
         FROM users
         WHERE provider = 'GOOGLE'
           AND provider_id = #{googleSubject}
+          AND deleted_at IS NULL
         """)
     @ConstructorArgs({
         @Arg(column = "id", javaType = Long.class),
@@ -45,6 +46,7 @@ public interface UserAccountMapper {
             profile_completed
         FROM users
         WHERE email = #{email}
+          AND deleted_at IS NULL
         """)
     @ConstructorArgs({
         @Arg(column = "id", javaType = Long.class),
@@ -61,6 +63,7 @@ public interface UserAccountMapper {
         FROM users
         WHERE email = #{email}
           AND provider = 'LOCAL'
+          AND deleted_at IS NULL
         """)
     Optional<String> findPasswordHashByEmail(String email);
 
@@ -74,6 +77,7 @@ public interface UserAccountMapper {
             profile_completed
         FROM users
         WHERE id = #{userId}
+          AND deleted_at IS NULL
         """)
     @ConstructorArgs({
         @Arg(column = "id", javaType = Long.class),
@@ -147,6 +151,7 @@ public interface UserAccountMapper {
         UPDATE users
         SET nickname = #{nickname}
         WHERE id = #{userId}
+          AND deleted_at IS NULL
         """)
     void updateNickname(@Param("userId") Long userId, @Param("nickname") String nickname);
 
@@ -154,6 +159,21 @@ public interface UserAccountMapper {
         UPDATE users
         SET profile_completed = TRUE
         WHERE id = #{userId}
+          AND deleted_at IS NULL
         """)
     void markProfileCompleted(@Param("userId") Long userId);
+
+    @Update("""
+        UPDATE users
+        SET
+            email = CONCAT('deleted+', id, '@ez-one.local'),
+            name = '탈퇴한 사용자',
+            nickname = '탈퇴한 사용자',
+            provider_id = CONCAT('deleted+', id),
+            password_hash = NULL,
+            deleted_at = CURRENT_TIMESTAMP
+        WHERE id = #{userId}
+          AND deleted_at IS NULL
+        """)
+    int withdrawUser(Long userId);
 }

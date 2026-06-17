@@ -65,3 +65,13 @@
 | `HISTORY-006`/`HISTORY-007` | selected-period summary metrics use the standard status counts 지원완료, 미지원, 진행 중, 지원 전 | `PastHistoryPage.test.js`, `HistoryApplicationAssemblerTest`, `P1ApiContractTest` |
 | `HISTORY-008` | company-type aggregation and table filters use explicit company/status/result labels | `PastHistoryPage.test.js`, `HistoryApplicationAssemblerTest`, `P1ApiContractTest` |
 | `HISTORY-009`/`HISTORY-010` | intentionally not implemented | Out of scope |
+
+## 2026-06-17 Study Security Traceability Update
+
+| Requirement | Implementation | Verification |
+| --- | --- | --- |
+| Study active surface remediation | Study service requires membership for study read/write data access and leader role for invite/image upload | `StudyServiceAuthorizationTest` |
+| Workspace ownership boundary | Shared essay creation validates `workspaceId` through the authenticated user's workspace access before insert | `StudyServiceAuthorizationTest` |
+| Frontend rendering safety | Shared essay body uses text interpolation instead of raw HTML rendering | `StudyDetailPage.test.js` |
+
+Study still needs a formal requirement ID if it remains an active product surface. Until then, this traceability entry documents a security remediation for existing active code rather than new P1 scope.
