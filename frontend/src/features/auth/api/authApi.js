@@ -36,7 +36,7 @@ export function createAuthApi(httpClient = defaultHttpClient) {
             return response.data.data;
         },
         async withdrawCurrentUser() {
-            await httpClient.delete('/api/profile');
+            await httpClient.delete('/api/me');
         }
     };
 }

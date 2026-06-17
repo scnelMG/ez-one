@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.ezone.backend.config.SecurityConfig;
 import com.ezone.backend.mapper.UserAccountMapper;
+import com.ezone.backend.mapper.UserSessionMapper;
 import com.ezone.backend.security.JwtAccessTokenVerifier;
 import com.ezone.backend.security.JwtAuthenticationFilter;
 import org.junit.jupiter.api.Test;
@@ -24,6 +25,9 @@ class CurrentUserControllerAuthTest {
 
     @MockitoBean
     private UserAccountMapper userAccountMapper;
+
+    @MockitoBean
+    private UserSessionMapper userSessionMapper;
 
     @Test
     void meRequiresAuthenticationWithApiEnvelope() throws Exception {

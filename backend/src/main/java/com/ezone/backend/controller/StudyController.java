@@ -42,24 +42,24 @@ public class StudyController {
     }
 
     @GetMapping("/{studyId}")
-    public ResponseEntity<StudyGroupDto> getStudyDetail(@PathVariable String studyId) {
-        return ResponseEntity.ok(studyService.getStudyDetail(studyId));
+    public ResponseEntity<StudyGroupDto> getStudyDetail(@AuthenticationPrincipal JwtAuthenticatedUser user, @PathVariable String studyId) {
+        return ResponseEntity.ok(studyService.getStudyDetail(studyId, user.email()));
     }
 
     @GetMapping("/{studyId}/essays")
-    public ResponseEntity<List<SharedEssayDto>> getSharedEssays(@PathVariable String studyId) {
-        return ResponseEntity.ok(studyService.getSharedEssays(studyId));
+    public ResponseEntity<List<SharedEssayDto>> getSharedEssays(@AuthenticationPrincipal JwtAuthenticatedUser user, @PathVariable String studyId) {
+        return ResponseEntity.ok(studyService.getSharedEssays(studyId, user.email()));
     }
 
     @PostMapping("/{studyId}/essays/{essayId}/read")
-    public ResponseEntity<Void> readEssay(@PathVariable String studyId, @PathVariable String essayId, @AuthenticationPrincipal org.springframework.security.core.userdetails.UserDetails user) {
-        studyService.readEssay(studyId, essayId, user.getUsername());
+    public ResponseEntity<Void> readEssay(@PathVariable String studyId, @PathVariable String essayId, @AuthenticationPrincipal JwtAuthenticatedUser user) {
+        studyService.readEssay(studyId, essayId, user.email());
         return ResponseEntity.ok().build();
     }
 
     @GetMapping("/{studyId}/jobs")
-    public ResponseEntity<List<SharedJobDto>> getSharedJobs(@PathVariable String studyId) {
-        return ResponseEntity.ok(studyService.getSharedJobs(studyId));
+    public ResponseEntity<List<SharedJobDto>> getSharedJobs(@AuthenticationPrincipal JwtAuthenticatedUser user, @PathVariable String studyId) {
+        return ResponseEntity.ok(studyService.getSharedJobs(studyId, user.email()));
     }
 
     @PostMapping("/{studyId}/invite")
@@ -81,7 +81,7 @@ public class StudyController {
 
     @PostMapping("/{studyId}/essay")
     public ResponseEntity<Void> shareEssay(@AuthenticationPrincipal JwtAuthenticatedUser user, @PathVariable String studyId, @RequestBody ShareEssayRequest request) {
-        studyService.shareEssay(user.email(), studyId, request);
+        studyService.shareEssay(user.userId(), user.email(), studyId, request);
         return ResponseEntity.ok().build();
     }
 
@@ -93,9 +93,10 @@ public class StudyController {
 
     @GetMapping("/{studyId}/essay/{sharedEssayId}")
     public ResponseEntity<SharedEssayDetailDto> getSharedEssayDetail(
+            @AuthenticationPrincipal JwtAuthenticatedUser user,
             @PathVariable String studyId,
             @PathVariable String sharedEssayId) {
-        return ResponseEntity.ok(studyService.getSharedEssayDetail(studyId, sharedEssayId));
+        return ResponseEntity.ok(studyService.getSharedEssayDetail(studyId, sharedEssayId, user.email()));
     }
 
     @PostMapping("/{studyId}/essay/{sharedEssayId}/feedback")
@@ -104,8 +105,7 @@ public class StudyController {
             @PathVariable String studyId,
             @PathVariable String sharedEssayId,
             @RequestBody AddFeedbackRequest request) {
-        String email = user != null ? user.email() : "test@test.com";
-        studyService.addEssayFeedback(email, studyId, sharedEssayId, request);
+        studyService.addEssayFeedback(user.email(), studyId, sharedEssayId, request);
         return ResponseEntity.ok().build();
     }
 

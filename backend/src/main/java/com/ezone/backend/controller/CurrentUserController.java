@@ -5,7 +5,9 @@ import com.ezone.backend.dto.ApiResponse;
 import com.ezone.backend.dto.auth.CurrentUserResponse;
 import com.ezone.backend.dto.auth.UpdateCurrentUserRequest;
 import com.ezone.backend.mapper.UserAccountMapper;
+import com.ezone.backend.mapper.UserSessionMapper;
 import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -15,9 +17,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class CurrentUserController {
 
     private final UserAccountMapper userAccountMapper;
+    private final UserSessionMapper userSessionMapper;
 
-    public CurrentUserController(UserAccountMapper userAccountMapper) {
+    public CurrentUserController(UserAccountMapper userAccountMapper, UserSessionMapper userSessionMapper) {
         this.userAccountMapper = userAccountMapper;
+        this.userSessionMapper = userSessionMapper;
     }
 
     @GetMapping("/api/me")
@@ -31,6 +35,14 @@ public class CurrentUserController {
         userAccountMapper.updateNickname(userId, request.nickname().trim());
 
         return ApiResponse.success(toResponse(loadCurrentUser()));
+    }
+
+    @DeleteMapping("/api/me")
+    public ApiResponse<Void> withdrawCurrentUser() {
+        Long userId = CurrentUserSupport.currentUserId();
+        userSessionMapper.revokeAllByUserId(userId);
+        userAccountMapper.withdrawUser(userId);
+        return ApiResponse.success(null);
     }
 
     private UserAccount loadCurrentUser() {

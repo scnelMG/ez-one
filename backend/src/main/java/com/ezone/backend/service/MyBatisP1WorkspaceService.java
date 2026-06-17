@@ -278,6 +278,9 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         if (mapper.updateBasketJobStatus(userId, basketJobId, status) == 0) {
             throw new IllegalArgumentException("Basket job not found");
         }
+        if (status != ApplicationStatus.READY) {
+            mapper.upsertApplicationHistoryFromBasketJob(userId, basketJobId);
+        }
         
         if (status == ApplicationStatus.IN_PROGRESS || status == ApplicationStatus.COMPLETED) {
             activityMapper.insertActivity(userId, requireBasketJob(userId, basketJobId).getWorkspaceId(), "STATUS_CHANGE", 2, java.time.LocalDateTime.now());
@@ -290,7 +293,6 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
     @Transactional
     public void archiveBasketJob(Long userId, Long basketJobId) {
         requireBasketJob(userId, basketJobId);
-        mapper.upsertApplicationHistoryFromBasketJob(userId, basketJobId);
         if (mapper.archiveBasketJob(userId, basketJobId) == 0) {
             throw new IllegalArgumentException("Basket job not found");
         }

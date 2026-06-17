@@ -210,21 +210,23 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             current.deleted()
         );
         basketJobs.put(basketJobId, updated);
+        if (status != ApplicationStatus.READY) {
+            historyService.recordArchivedBasketJob(
+                userId,
+                updated.workspaceId(),
+                updated.companyName(),
+                updated.positionTitle(),
+                effectiveStatus(updated),
+                updated.deadlineLabel(),
+                updated.sourceUrl()
+            );
+        }
         return toBasketResponse(updated);
     }
 
     @Override
     public void archiveBasketJob(Long userId, Long basketJobId) {
         BasketRecord current = requireBasketJob(userId, basketJobId);
-        historyService.recordArchivedBasketJob(
-            userId,
-            current.workspaceId(),
-            current.companyName(),
-            current.positionTitle(),
-            effectiveStatus(current),
-            current.deadlineLabel(),
-            current.sourceUrl()
-        );
         basketJobs.put(basketJobId, new BasketRecord(
             current.id(),
             current.userId(),

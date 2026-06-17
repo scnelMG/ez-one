@@ -1,6 +1,7 @@
 package com.ezone.backend.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
 import com.ezone.backend.domain.persistence.DocumentProfileSectionRow;
@@ -39,6 +40,22 @@ class DocumentProfilePersistenceServiceTest {
         assertThat(response.sections().get("basicInfo"))
             .isEqualTo(Map.of("nameKo", "Kim Codex", "email", "codex@example.com"));
         assertThat(response.lastSavedAt()).isNotNull();
+    }
+
+    @Test
+    void documentProfileSaveFailsWhenDatabaseMapperIsMissing() {
+        InMemoryProfileService service = new InMemoryProfileService(
+            userAccountMapper,
+            objectMapper,
+            (DocumentProfileMapper) null
+        );
+
+        assertThatThrownBy(() -> service.upsertSection(7L, "basicInfo", new UpsertDocumentSectionRequest(Map.of(
+            "nameKo", "Kim Codex",
+            "email", "codex@example.com"
+        ))))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("Document profile persistence is not configured");
     }
 
     private static final class FakeDocumentProfileMapper implements DocumentProfileMapper {

@@ -9,7 +9,6 @@ import com.ezone.backend.mapper.UserAccountMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,8 +27,6 @@ public class InMemoryProfileService implements ProfileService {
     private final ObjectMapper objectMapper;
     private final DocumentProfileMapper documentProfileMapper;
     private final Map<Long, UserProfileResponse> userProfiles = new LinkedHashMap<>();
-    private final Map<Long, Map<String, Object>> documentSections = new LinkedHashMap<>();
-    private final Map<Long, String> documentProfileLastSavedAt = new LinkedHashMap<>();
 
     @Autowired
     public InMemoryProfileService(
@@ -86,32 +83,21 @@ public class InMemoryProfileService implements ProfileService {
 
     @Override
     public DocumentProfileResponse getDocumentProfile(Long userId) {
-        if (documentProfileMapper != null) {
-            Map<String, Object> sections = new LinkedHashMap<>();
-            documentProfileMapper.listSections(userId).forEach(row ->
-                sections.put(row.sectionType(), readPayload(row.payloadJson()))
-            );
-            return new DocumentProfileResponse(
-                sections,
-                documentProfileMapper.findLastSavedAt(userId).orElse(null)
-            );
-        }
+        DocumentProfileMapper mapper = requireDocumentProfileMapper();
+        Map<String, Object> sections = new LinkedHashMap<>();
+        mapper.listSections(userId).forEach(row ->
+            sections.put(row.sectionType(), readPayload(row.payloadJson()))
+        );
         return new DocumentProfileResponse(
-            documentSections.computeIfAbsent(userId, ignored -> new LinkedHashMap<>()),
-            documentProfileLastSavedAt.get(userId)
+            sections,
+            mapper.findLastSavedAt(userId).orElse(null)
         );
     }
 
     @Override
     @Transactional
     public DocumentProfileResponse upsertSection(Long userId, String sectionType, UpsertDocumentSectionRequest request) {
-        if (documentProfileMapper != null) {
-            documentProfileMapper.upsertSection(userId, sectionType, writePayload(request.payload()));
-            return getDocumentProfile(userId);
-        }
-        Map<String, Object> sections = documentSections.computeIfAbsent(userId, ignored -> new LinkedHashMap<>());
-        sections.put(sectionType, request.payload() == null ? Map.of() : request.payload());
-        touchDocumentProfile(userId);
+        requireDocumentProfileMapper().upsertSection(userId, sectionType, writePayload(request.payload()));
         return getDocumentProfile(userId);
     }
 
@@ -125,15 +111,6 @@ public class InMemoryProfileService implements ProfileService {
             true,
             true
         ));
-        documentSections.put(1L, new LinkedHashMap<>(Map.of(
-            "basicInfo", Map.of("nameKo", "", "email", ""),
-            "projects", List.of(),
-            "awards", List.of()
-        )));
-    }
-
-    private void touchDocumentProfile(Long userId) {
-        documentProfileLastSavedAt.put(userId, Instant.now().toString());
     }
 
     private List<String> safeList(List<String> values) {
@@ -156,5 +133,12 @@ public class InMemoryProfileService implements ProfileService {
         catch (JsonProcessingException exception) {
             throw new IllegalArgumentException("Document profile section payload cannot be serialized.", exception);
         }
+    }
+
+    private DocumentProfileMapper requireDocumentProfileMapper() {
+        if (documentProfileMapper == null) {
+            throw new IllegalStateException("Document profile persistence is not configured.");
+        }
+        return documentProfileMapper;
     }
 }

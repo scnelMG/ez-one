@@ -100,3 +100,9 @@ Flyway는 당장 도입하지 않는다. 첫 배포 전 또는 여러 개발자�
 ## Frontend Language Boundary
 
 Frontend and extension code must be implemented with JavaScript and Vue SFC. TypeScript, `tsconfig`, `tsc`, and `vue-tsc` are not part of the approved P1 stack unless the user explicitly approves a stack change.
+
+## 2026-06-17 Flyway Status Correction
+
+The older deferred Flyway note above is superseded by `docs/34_database-migration-policy.md`.
+
+Current rule: Flyway is enabled for backend schema changes. Reviewed versioned migration files under `backend/src/main/resources/db/migration` are part of the active stack. Temporary, scratch, malformed, or personal SQL files must not be committed under that directory.

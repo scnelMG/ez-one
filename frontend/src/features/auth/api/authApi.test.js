@@ -99,6 +99,12 @@ describe('authApi', () => {
         expect(patch).toHaveBeenCalledWith('/api/me', { nickname: '길동' });
         expect(response.nickname).toBe('길동');
     });
+    it('AUTH-012: withdraws the current user through /api/me', async () => {
+        const deleteRequest = vi.fn().mockResolvedValue({ data: { success: true, data: null, error: null } });
+        const api = createAuthApi({ get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: deleteRequest });
+        await api.withdrawCurrentUser();
+        expect(deleteRequest).toHaveBeenCalledWith('/api/me');
+    });
     it('AUTH-001: surfaces Google login API error messages', async () => {
         const post = vi.fn().mockRejectedValue({
             isAxiosError: true,

@@ -2,7 +2,6 @@
   <main class="auth-page">
     <section class="auth-panel" aria-labelledby="callback-title">
       <img class="auth-logo" src="../assets/ez-one-logo-final.png" alt="EZ-ONE" />
-      <p class="section-kicker">Google 로그인</p>
       <h1 id="callback-title">Google 로그인을 처리하고 있습니다</h1>
       <p>{{ statusMessage }}</p>
       <RouterLink v-if="hasError" class="primary-button" to="/login">다시 로그인하기</RouterLink>

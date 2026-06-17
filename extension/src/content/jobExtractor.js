@@ -768,7 +768,7 @@ function splitCompactEssayQuestions(text) {
 }
 
 function looksLikeCompactEssayTextV2(text) {
-    return Boolean(text && (/[·•ㆍ・]\s*\S/.test(text) || /(?:^|\s)\d{1,2}\.\s*\S/.test(text)));
+    return Boolean(text && (hasNumberedEssayDelimiter(text) || hasLooseEssayDelimiter(text)));
 }
 
 function splitCompactEssayQuestionsV2(text) {
@@ -782,9 +782,7 @@ function splitCompactEssayQuestionsV2(text) {
         .replaceAll(KOREAN_SHORT_ESSAY_LABEL, ' ')
         .replace(/\s+/g, ' ')
         .trim();
-    const chunks = /[·•ㆍ・]/.test(normalized)
-        ? normalized.split(/\s*[·•ㆍ・]\s*/).slice(1)
-        : normalized.split(/(?:^|\s)\d{1,2}\.\s*/).slice(1);
+    const chunks = splitCompactEssayChunks(normalized);
     return chunks
         .map((chunk) => {
             const cleanChunk = chunk.replace(/^\d{1,2}\.\s*/, '').trim();
@@ -796,6 +794,26 @@ function splitCompactEssayQuestionsV2(text) {
             return prompt ? { prompt, maxLength } : null;
         })
         .filter(Boolean);
+}
+
+function splitCompactEssayChunks(text) {
+    const numberedMatches = Array.from(text.matchAll(/(?:^|[·•ㆍ・]\s*|\s+)(\d{1,2}\.\s*)/g));
+    if (numberedMatches.length > 0) {
+        return numberedMatches.map((match, index) => {
+            const start = (match.index ?? 0) + match[0].length - match[1].length;
+            const end = index + 1 < numberedMatches.length ? numberedMatches[index + 1].index : text.length;
+            return text.slice(start, end).replace(/\s*[·•ㆍ・]\s*$/g, '').trim();
+        }).filter(Boolean);
+    }
+    return text.split(/\s*[·•ㆍ・](?=\s)\s*/).slice(1);
+}
+
+function hasNumberedEssayDelimiter(text) {
+    return /(?:^|[·•ㆍ・]\s*|\s+)\d{1,2}\.\s*\S/.test(text);
+}
+
+function hasLooseEssayDelimiter(text) {
+    return /[·•ㆍ・](?=\s)\s*\S/.test(text);
 }
 
 function cleanText(value) {

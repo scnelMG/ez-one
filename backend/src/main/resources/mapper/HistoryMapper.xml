@@ -38,13 +38,137 @@
              THEN 'RULE'
              ELSE 'UNKNOWN'
            END AS company_data_source
-    FROM application_history ah
+    FROM (
+      SELECT ah.id, ah.user_id, ah.workspace_id, ah.company_name, ah.position_title, ah.application_status,
+             ah.result_stage, ah.result_label, ah.raw_result, ah.deadline_label, ah.deadline_date,
+             ah.period_key, ah.period_year, ah.period_half, ah.source_url, ah.company_type
+      FROM application_history ah
+      UNION ALL
+      SELECT (1000000000 + bj.id) AS id,
+             bj.user_id,
+             w.id AS workspace_id,
+             c.name AS company_name,
+             j.title AS position_title,
+             CASE
+               WHEN bj.application_status = 'READY'
+                 AND COALESCE(
+                   j.deadline_at,
+                   CASE
+                     WHEN j.deadline_label REGEXP '^[0-9]{4}[.-][0-9]{1,2}[.-][0-9]{1,2}' THEN STR_TO_DATE(REPLACE(j.deadline_label, '.', '-'), '%Y-%m-%d')
+                     ELSE NULL
+                   END
+                 ) &lt; CURRENT_DATE THEN 'NOT_APPLIED'
+               ELSE bj.application_status
+             END AS application_status,
+             CASE
+               WHEN bj.application_status IN ('READY', 'NOT_APPLIED') THEN 'NOT_APPLIED'
+               ELSE 'IN_PROGRESS'
+             END AS result_stage,
+             CASE
+               WHEN bj.application_status = 'COMPLETED' THEN '지원완료'
+               WHEN bj.application_status = 'IN_PROGRESS' THEN '진행 중'
+               WHEN bj.application_status = 'READY'
+                 AND COALESCE(
+                   j.deadline_at,
+                   CASE
+                     WHEN j.deadline_label REGEXP '^[0-9]{4}[.-][0-9]{1,2}[.-][0-9]{1,2}' THEN STR_TO_DATE(REPLACE(j.deadline_label, '.', '-'), '%Y-%m-%d')
+                     ELSE NULL
+                   END
+                 ) &lt; CURRENT_DATE THEN '미지원'
+               WHEN bj.application_status = 'READY' THEN '지원 전'
+               ELSE '미지원'
+             END AS result_label,
+             CASE
+               WHEN bj.application_status = 'COMPLETED' THEN '지원완료'
+               WHEN bj.application_status = 'IN_PROGRESS' THEN '진행 중'
+               WHEN bj.application_status = 'READY'
+                 AND COALESCE(
+                   j.deadline_at,
+                   CASE
+                     WHEN j.deadline_label REGEXP '^[0-9]{4}[.-][0-9]{1,2}[.-][0-9]{1,2}' THEN STR_TO_DATE(REPLACE(j.deadline_label, '.', '-'), '%Y-%m-%d')
+                     ELSE NULL
+                   END
+                 ) &lt; CURRENT_DATE THEN '마감 경과'
+               WHEN bj.application_status = 'READY' THEN '지원 전'
+               ELSE '미지원'
+             END AS raw_result,
+             j.deadline_label,
+             COALESCE(
+               j.deadline_at,
+               CASE
+                 WHEN j.deadline_label REGEXP '^[0-9]{4}[.-][0-9]{1,2}[.-][0-9]{1,2}' THEN STR_TO_DATE(REPLACE(j.deadline_label, '.', '-'), '%Y-%m-%d')
+                 ELSE NULL
+               END
+             ) AS deadline_date,
+             CONCAT(YEAR(COALESCE(
+               j.deadline_at,
+               CASE
+                 WHEN j.deadline_label REGEXP '^[0-9]{4}[.-][0-9]{1,2}[.-][0-9]{1,2}' THEN STR_TO_DATE(REPLACE(j.deadline_label, '.', '-'), '%Y-%m-%d')
+                 ELSE NULL
+               END,
+               CURRENT_DATE
+             )), '-', CASE WHEN MONTH(COALESCE(
+               j.deadline_at,
+               CASE
+                 WHEN j.deadline_label REGEXP '^[0-9]{4}[.-][0-9]{1,2}[.-][0-9]{1,2}' THEN STR_TO_DATE(REPLACE(j.deadline_label, '.', '-'), '%Y-%m-%d')
+                 ELSE NULL
+               END,
+               CURRENT_DATE
+             )) &lt;= 6 THEN 'H1' ELSE 'H2' END) AS period_key,
+             YEAR(COALESCE(
+               j.deadline_at,
+               CASE
+                 WHEN j.deadline_label REGEXP '^[0-9]{4}[.-][0-9]{1,2}[.-][0-9]{1,2}' THEN STR_TO_DATE(REPLACE(j.deadline_label, '.', '-'), '%Y-%m-%d')
+                 ELSE NULL
+               END,
+               CURRENT_DATE
+             )) AS period_year,
+             CASE WHEN MONTH(COALESCE(
+               j.deadline_at,
+               CASE
+                 WHEN j.deadline_label REGEXP '^[0-9]{4}[.-][0-9]{1,2}[.-][0-9]{1,2}' THEN STR_TO_DATE(REPLACE(j.deadline_label, '.', '-'), '%Y-%m-%d')
+                 ELSE NULL
+               END,
+               CURRENT_DATE
+             )) &lt;= 6 THEN 'H1' ELSE 'H2' END AS period_half,
+             j.url AS source_url,
+             COALESCE(NULLIF(c.company_type, ''), '기타기업') AS company_type
+      FROM basket_jobs bj
+      JOIN jobs j ON j.id = bj.job_id
+      JOIN companies c ON c.id = j.company_id
+      JOIN workspaces w ON w.basket_job_id = bj.id
+      WHERE bj.deleted_at IS NULL
+        AND bj.saved_source != 'HISTORY_IMPORT'
+        AND NOT EXISTS (
+          SELECT 1
+          FROM application_history existing
+          WHERE existing.workspace_id = w.id
+        )
+        AND (
+          bj.application_status IN ('COMPLETED', 'IN_PROGRESS', 'NOT_APPLIED')
+          OR (
+            bj.application_status = 'READY'
+            AND COALESCE(
+              j.deadline_at,
+              CASE
+                WHEN j.deadline_label REGEXP '^[0-9]{4}[.-][0-9]{1,2}[.-][0-9]{1,2}' THEN STR_TO_DATE(REPLACE(j.deadline_label, '.', '-'), '%Y-%m-%d')
+                ELSE NULL
+              END
+            ) &lt; CURRENT_DATE
+          )
+        )
+    ) ah
     LEFT JOIN workspaces w ON w.id = ah.workspace_id
     LEFT JOIN basket_jobs bj ON bj.id = w.basket_job_id
     LEFT JOIN jobs j ON j.id = bj.job_id
     LEFT JOIN companies c ON c.id = j.company_id
     LEFT JOIN company_profiles cp ON cp.company_id = c.id
     WHERE ah.user_id = #{userId}
+      AND NOT (
+        bj.deleted_at IS NOT NULL
+        AND COALESCE(bj.saved_source, '') != 'HISTORY_IMPORT'
+        AND ah.application_status = 'READY'
+      )
     ORDER BY ah.period_year DESC, ah.period_half DESC, ah.deadline_date IS NULL, ah.deadline_date ASC, ah.id ASC
   </select>
 </mapper>

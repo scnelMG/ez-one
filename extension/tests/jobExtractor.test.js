@@ -352,6 +352,67 @@ describe('extractJobPosting', () => {
             }
         });
     });
+    it('EXT-005: keeps Korean middle dots inside an essay prompt instead of splitting them as new questions', async () => {
+        const doc = document.implementation.createHTMLDocument('jasoseol-kotra-middle-dot-prompt');
+        doc.body.innerHTML = `
+      <main>
+        <h1>KOTRA 체험형 청년인턴 채용</h1>
+        <a href="/company/kotra">KOTRA</a>
+        <time datetime="2026-06-30">2026년 6월 30일 23:59</time>
+        <section aria-label="모집 직무">
+          <ul>
+            <li>
+              <span>청년인턴</span>
+              <span>3명 작성</span>
+              <button id="essay">자소서 문항 보기</button>
+            </li>
+          </ul>
+        </section>
+      </main>
+    `;
+        doc.getElementById('essay').addEventListener('mouseover', () => {
+            const layer = doc.createElement('div');
+            layer.setAttribute('role', 'dialog');
+            layer.textContent = '청년인턴· 1. KOTRA 지원 동기에 대해 상세히 기술해주시기 바랍니다.(700자)· 2. 직무와 유관한 본인의 역량을 한 가지 제시하고, 이를 개발하기 위해 노력한 경험ㆍ활동을 기재해 주시기 바랍니다.· 3. 입사 후 포부와 기여 방안을 작성해 주시기 바랍니다.(700자)';
+            doc.body.append(layer);
+        }, { once: true });
+
+        await expect(extractJobPostingWithInteractions(doc, 'https://jasoseol.com/recruit?ec=kotra', {
+            hoverDelayMs: 0,
+            targetRoles: ['청년인턴']
+        })).resolves.toMatchObject({
+            essayQuestions: [
+                {
+                    prompt: 'KOTRA 지원 동기에 대해 상세히 기술해주시기 바랍니다.',
+                    maxLength: 700
+                },
+                {
+                    prompt: '직무와 유관한 본인의 역량을 한 가지 제시하고, 이를 개발하기 위해 노력한 경험ㆍ활동을 기재해 주시기 바랍니다.',
+                    maxLength: null
+                },
+                {
+                    prompt: '입사 후 포부와 기여 방안을 작성해 주시기 바랍니다.',
+                    maxLength: 700
+                }
+            ],
+            roleEssayQuestions: {
+                '청년인턴': [
+                    {
+                        prompt: 'KOTRA 지원 동기에 대해 상세히 기술해주시기 바랍니다.',
+                        maxLength: 700
+                    },
+                    {
+                        prompt: '직무와 유관한 본인의 역량을 한 가지 제시하고, 이를 개발하기 위해 노력한 경험ㆍ활동을 기재해 주시기 바랍니다.',
+                        maxLength: null
+                    },
+                    {
+                        prompt: '입사 후 포부와 기여 방안을 작성해 주시기 바랍니다.',
+                        maxLength: 700
+                    }
+                ]
+            }
+        });
+    });
     it('EXT-016: separates compact contract employment type from a glued Jasoseol role label', () => {
         const doc = document.implementation.createHTMLDocument('jasoseol-contract-role-row');
         doc.body.innerHTML = `
@@ -1001,6 +1062,40 @@ describe('extractJobPosting', () => {
                     maxLength: 800
                 }
             ]
+        });
+    });
+
+    it('EXT-005: does not treat Jasoseol role category text as essay questions', async () => {
+        const doc = document.implementation.createHTMLDocument('jasoseol-role-categories-not-essays');
+        doc.body.innerHTML = `
+      <main>
+        <h1>2026 신입 채용</h1>
+        <a href="/company/example">Example Labs</a>
+        <time datetime="2026-06-30">2026년 6월 30일 23:59</time>
+        <section aria-label="모집 직무">
+          <ul>
+            <li>
+              <span>Backend</span>
+              <span>0명 작성</span>
+            </li>
+          </ul>
+        </section>
+        <section>
+          <p>사무마케팅 광고 홍보무역 유통IT 인터넷20생산 제조영업 고객상담건설금융6연구개발 설계디자인미디어전문 특수직</p>
+        </section>
+        <button id="essay">자소서 문항 보기</button>
+      </main>
+    `;
+
+        await expect(extractJobPostingWithInteractions(doc, 'https://jasoseol.com/recruit/example', {
+            hoverDelayMs: 0,
+            essayQuestionTimeoutMs: 50,
+            maxEssayTriggers: 1,
+            targetRoles: ['Backend']
+        })).resolves.toMatchObject({
+            essayQuestions: [],
+            roleEssayQuestions: {},
+            essayQuestionAvailability: {}
         });
     });
     it('EXT-005: matches a full Jasoseol role name to a shorter visible essay trigger row', async () => {

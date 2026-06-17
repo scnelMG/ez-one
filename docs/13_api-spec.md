@@ -52,7 +52,7 @@
 | GET | `/api/basket/jobs/{basketJobId}` | 저장 공고 상세 |
 | PATCH | `/api/basket/jobs/{basketJobId}` | 저장 공고 회사명/직무/마감/URL/지원 메모 수정 |
 | PATCH | `/api/basket/jobs/{basketJobId}/status` | 지원 상태 변경 |
-| DELETE | `/api/basket/jobs/{basketJobId}` | soft delete/archive. Normal saved jobs are snapshotted into `application_history` before leaving the active basket list. |
+| DELETE | `/api/basket/jobs/{basketJobId}` | soft delete from the active basket list. Deleting a mistakenly saved job does not create past application history. |
 
 장바구니와 대시보드 조회는 마감 경과 normalization을 적용한다. 마감된 미완료 공고는 `NOT_APPLIED`로 처리한다.
 
@@ -153,4 +153,35 @@ Mattermost source는 서버에서 `user_profiles.is_ssafy = true`를 재검증�
 | --- | --- | --- |
 | GET | `/api/history/applications?period=ALL&resultStage=` | Returns past application periods, selected-period summary, company-type counts, and rows with `workspaceId` links. `period` uses `ALL` or `YYYY-H1`/`YYYY-H2`. `resultStage` is optional and may be `DOCUMENT_FAILED`, `TEST_FAILED`, `INTERVIEW_FAILED`, `NOT_APPLIED`, or `IN_PROGRESS`. |
 
-History rows are stored in `application_history`. The import process creates linked `basket_jobs` and `workspaces` for workspace navigation, but `basket_jobs.saved_source = 'HISTORY_IMPORT'` is excluded from the active basket list. Normal basket jobs are also copied into `application_history` when archived, and their `workspaceId` remains readable through `GET /api/workspaces/{workspaceId}`.
+History rows are stored in `application_history`. The import process creates linked `basket_jobs` and `workspaces` for workspace navigation, but `basket_jobs.saved_source = 'HISTORY_IMPORT'` is excluded from the active basket list. Normal basket jobs are copied into `application_history` when their status changes away from `READY`. The history query also includes existing active basket jobs whose status is already `COMPLETED`, `IN_PROGRESS`, `NOT_APPLIED`, or past-deadline `READY`, so previously saved application progress remains visible without requiring delete/archive. Delete alone is treated as removing a mistaken basket entry, not as evidence of a past application.
+
+## 2026-06-17 Study API Authorization Addendum
+
+- All `/api/studies/{studyId}` read and write endpoints must verify that the authenticated user is a member of the target study before returning or mutating study data.
+- Leader-only actions include inviting users and uploading the study image.
+- Shared essay creation is allowed for study members only after the requested `workspaceId` is verified against the authenticated user's own workspace access.
+- Shared essay detail, read logs, feedback, and shared job recommendation must reject non-members instead of relying only on authenticated login state.
+
+## 2026-06-17 Account Withdrawal and Support API Addendum
+
+### `DELETE /api/me`
+
+- Requirement: `AUTH-012`
+- Auth: required
+- Revokes all active refresh sessions for the current user.
+- Soft-deletes the account by anonymizing email, name, nickname, provider id, and password hash.
+- Response envelope uses `success: true`, `data: null`, `error: null`.
+
+### `GET /api/support/requests`
+
+- Requirement: `SUPPORT-001`
+- Auth: required
+- Returns support requests created by the current user, newest first.
+
+### `POST /api/support/requests`
+
+- Requirement: `SUPPORT-001`
+- Auth: required
+- `requestType` must be `INQUIRY` or `PARTNERSHIP`.
+- Created requests start with `status: "RECEIVED"`.
+- Optional partnership fields are `companyName`, `contactName`, `contactEmail`, and `contactPhone`.

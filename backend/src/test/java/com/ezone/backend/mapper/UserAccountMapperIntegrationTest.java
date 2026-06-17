@@ -47,6 +47,7 @@ class UserAccountMapperIntegrationTest {
               password_hash VARCHAR(255) NULL,
               profile_completed BOOLEAN NOT NULL DEFAULT FALSE,
               created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              deleted_at TIMESTAMP NULL,
               UNIQUE KEY uk_users_email (email),
               UNIQUE KEY uk_users_provider_subject (provider, provider_id)
             )
@@ -75,5 +76,27 @@ class UserAccountMapperIntegrationTest {
             assertThat(user.nickname()).isEqualTo("Gil Dong");
             assertThat(user.profileCompleted()).isFalse();
         });
+    }
+
+    @Test
+    void withdrawUserAnonymizesAccountAndExcludesItFromLookups() {
+        GoogleUserProfile profile = new GoogleUserProfile(
+            "withdraw-google-subject",
+            "withdraw-user@example.com",
+            "Withdraw User",
+            "Withdraw"
+        );
+
+        UserAccount created = userAccountMapper.createFromGoogleProfile(profile);
+        int updated = userAccountMapper.withdrawUser(created.id());
+
+        assertThat(updated).isEqualTo(1);
+        assertThat(userAccountMapper.findByGoogleSubject("withdraw-google-subject")).isEmpty();
+        assertThat(userAccountMapper.findByEmail("withdraw-user@example.com")).isEmpty();
+        assertThat(jdbcTemplate.queryForObject(
+            "SELECT deleted_at IS NOT NULL FROM users WHERE id = ?",
+            Boolean.class,
+            created.id()
+        )).isTrue();
     }
 }
