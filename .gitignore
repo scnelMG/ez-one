@@ -17,6 +17,7 @@ Thumbs.db
 *.log
 logs/
 .codex-run-logs/
+docs/superpowers/
 
 # Java / Spring
 backend/build/
