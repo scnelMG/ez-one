@@ -13,7 +13,7 @@ describe('router', () => {
         expect(routeNames).toContain('basket-detail');
         expect(routeNames).toContain('workspace');
         expect(routeNames).toContain('document-profile');
-        expect(routeNames).not.toContain('recommendations');
+        expect(routeNames).toContain('recommendations-mattermost');
         expect(routeNames).toContain('history');
         expect(routeNames).toContain('mypage-account');
         expect(routeNames).toContain('mypage-notion');
@@ -29,6 +29,7 @@ describe('router', () => {
         expect(routes.find((route) => route.path === '/login')?.name).toBe('login');
         expect(routes.find((route) => route.path === '/main')?.redirect).toBe('/');
         expect(routes.find((route) => route.path === '/basket/:basketJobId')?.name).toBe('basket-detail');
+        expect(routes.find((route) => route.path === '/recommendations/mattermost')?.name).toBe('recommendations-mattermost');
     });
     it('uses the login page as the default start page when the user is not authenticated', async () => {
         await router.push('/');
@@ -135,6 +136,7 @@ describe('router', () => {
     it('activates approved history and keeps remaining P2-only route shells disabled', () => {
         const routePaths = router.getRoutes().map((route) => route.path);
         expect(routePaths).toContain('/history');
+        expect(routePaths).toContain('/recommendations/mattermost');
         expect(routePaths).not.toContain('/alerts');
         expect(routePaths).not.toContain('/basket/calendar');
         expect(routePaths).not.toContain('/mypage/support');

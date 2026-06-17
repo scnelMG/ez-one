@@ -915,6 +915,26 @@ class P1ApiContractTest {
     }
 
     @Test
+    void mattermostWebhookAcceptsOutgoingWebhookTokenAndSnakeCasePayload() throws Exception {
+        mockMvc.perform(post("/api/integrations/mattermost/webhook")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "token": "test-mm-secret",
+                      "channel_id": "jobs-channel",
+                      "post_id": "mm-contract-snake-1",
+                      "user_name": "recruiter",
+                      "text": "Line / Server Platform Engineer / -D-7\\nhttps://careers.linecorp.com/jobs/102",
+                      "attachments": []
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.messageType").value("JOB_POSTING"))
+            .andExpect(jsonPath("$.data.parseStatus").value("PARSED"))
+            .andExpect(jsonPath("$.data.createdParsedJobPost").value(true));
+    }
+
+    @Test
     void mattermostRecommendationsAreOnlyAvailableToSsafyUsers() throws Exception {
         mockMvc.perform(get("/api/recommendations/jobs?source=mattermost"))
             .andExpect(status().isOk())

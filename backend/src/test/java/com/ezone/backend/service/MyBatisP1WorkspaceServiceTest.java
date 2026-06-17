@@ -110,11 +110,12 @@ class MyBatisP1WorkspaceServiceTest {
             .extracting(
                 DashboardJobResponse::basketJobId,
                 DashboardJobResponse::companyName,
-                DashboardJobResponse::companyLogoUrl
+                DashboardJobResponse::companyLogoUrl,
+                DashboardJobResponse::sourceUrl
             )
             .containsExactly(
-                tuple(9001L, "LINE", "https://static.example.com/line-logo.png"),
-                tuple(9002L, "오늘의집", "https://static.example.com/ohou-logo.png")
+                tuple(9001L, "LINE", "https://static.example.com/line-logo.png", "https://www.jasoseol.com/"),
+                tuple(9002L, "오늘의집", "https://static.example.com/ohou-logo.png", "https://www.jasoseol.com/")
             );
     }
 

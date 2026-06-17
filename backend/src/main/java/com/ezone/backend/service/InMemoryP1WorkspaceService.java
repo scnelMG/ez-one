@@ -459,7 +459,8 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
                 sample.companyName(),
                 sample.positionTitle(),
                 sample.deadlineLabel(),
-                sample.logoUrl()
+                sample.logoUrl(),
+                sample.sourceUrl()
             ))
             .toList();
     }
@@ -700,7 +701,8 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             record.companyName(),
             record.positionTitle(),
             record.deadlineLabel(),
-            record.companyLogoUrl()
+            record.companyLogoUrl(),
+            record.sourceUrl()
         );
     }
 

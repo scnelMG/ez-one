@@ -13,6 +13,7 @@ import WorkspacePage from '@/pages/WorkspacePage.vue';
 import StudyListPage from '@/pages/StudyListPage.vue';
 import StudyDetailPage from '@/pages/StudyDetailPage.vue';
 import PastHistoryPage from '@/pages/PastHistoryPage.vue';
+import MattermostRecommendationsPage from '@/pages/MattermostRecommendationsPage.vue';
 
 export const router = createRouter({
     history: createWebHistory(),
@@ -83,6 +84,12 @@ export const router = createRouter({
             path: '/history',
             name: 'history',
             component: PastHistoryPage,
+            meta: { requiresAuth: true }
+        },
+        {
+            path: '/recommendations/mattermost',
+            name: 'recommendations-mattermost',
+            component: MattermostRecommendationsPage,
             meta: { requiresAuth: true }
         },
         {

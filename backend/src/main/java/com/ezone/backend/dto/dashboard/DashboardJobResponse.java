@@ -6,6 +6,7 @@ public record DashboardJobResponse(
     String companyName,
     String positionTitle,
     String deadlineLabel,
-    String companyLogoUrl
+    String companyLogoUrl,
+    String sourceUrl
 ) {
 }

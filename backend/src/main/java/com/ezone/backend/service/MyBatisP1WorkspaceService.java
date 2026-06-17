@@ -598,7 +598,8 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
             row.getCompanyName(),
             row.getPositionTitle(),
             row.getDeadlineLabel(),
-            row.getCompanyLogoUrl()
+            row.getCompanyLogoUrl(),
+            row.getSourceUrl()
         );
     }
 
@@ -609,7 +610,8 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
             row.getCompanyName(),
             row.getPositionTitle(),
             row.getDeadlineLabel(),
-            row.getCompanyLogoUrl()
+            row.getCompanyLogoUrl(),
+            row.getSourceUrl()
         );
     }
 

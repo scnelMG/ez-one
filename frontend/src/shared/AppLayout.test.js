@@ -93,6 +93,7 @@ describe('AppLayout', () => {
             '/basket',
             '/document-profile',
             '/study',
+            '/recommendations/mattermost',
             '/history'
         ]);
         expect(wrapper.get('[data-testid="global-trademark-notice"]').text()).toContain('채용공고 식별 목적으로만 사용');

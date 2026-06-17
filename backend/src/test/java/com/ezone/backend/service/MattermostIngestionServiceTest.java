@@ -39,6 +39,7 @@ class MattermostIngestionServiceTest {
     @Test
     void ingestStoresRawMessageAndCreatesJobCandidateForJobPosting() {
         MattermostWebhookRequest request = new MattermostWebhookRequest(
+            null,
             "jobs-channel",
             "mm-101",
             "recruiter",
@@ -75,6 +76,7 @@ class MattermostIngestionServiceTest {
     @Test
     void ingestCreatesCandidatesOnlyForWeeklyJobListingRowsWithRecruitmentUrls() {
         MattermostWebhookRequest request = new MattermostWebhookRequest(
+            null,
             "employment-info",
             "mm-weekly-1",
             "career-center",
@@ -122,6 +124,7 @@ class MattermostIngestionServiceTest {
     @Test
     void ingestStoresRecruitmentBriefingNoticeRawOnly() {
         MattermostWebhookRequest request = new MattermostWebhookRequest(
+            null,
             "employment-notice",
             "mm-notice-briefing",
             "career-center",
@@ -152,6 +155,7 @@ class MattermostIngestionServiceTest {
     @Test
     void ingestStoresHiddenLinkJobNoticeRawOnlyUntilUrlIsVisible() {
         MattermostWebhookRequest request = new MattermostWebhookRequest(
+            null,
             "employment-info",
             "mm-hidden-link",
             "career-center",
@@ -186,6 +190,7 @@ class MattermostIngestionServiceTest {
     @Test
     void ingestStoresSuccessStoryRawOnly() {
         MattermostWebhookRequest request = new MattermostWebhookRequest(
+            null,
             "jobs-channel",
             "mm-102",
             "writer",
