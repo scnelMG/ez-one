@@ -95,8 +95,9 @@ erDiagram
 - `V9__seed_demo_jobs_and_recommendations.sql` temporarily seeds demo basket jobs and `jobs.source = 'RECOMMENDATION'` rows with company logos for local UI verification. These rows use `ez-one-demo-*` source URLs so they can be removed later.
 ## 2026-06-16 Application History Update
 
-- Added `application_history` for imported past application rows.
-- `application_history.workspace_id` is unique and links each imported row to the existing workspace surface.
+- Added `application_history` for past application rows from CSV import and archived normal basket jobs.
+- `application_history.workspace_id` is unique and links each history row to the existing workspace surface.
 - Import-created `basket_jobs` use `saved_source = 'HISTORY_IMPORT'`; active basket queries exclude that source while workspace lookup remains available.
+- Normal archived basket jobs keep their `basket_jobs.deleted_at` value for active-list exclusion, but workspace lookup remains available when a matching `application_history` row exists.
 - Key columns: `user_id`, `workspace_id`, `company_name`, `position_title`, `application_status`, `result_stage`, `raw_result`, `deadline_date`, `period_key`, `period_year`, `period_half`, `source_url`, `company_type`.
 - Indexes: `idx_application_history_user_period (user_id, period_key)` and `idx_application_history_user_result (user_id, result_stage)`.

@@ -27,11 +27,11 @@
 | TC-EXT-002 | Extension | 추출 실패 | 미지원 페이지 또는 추출 실패 시 오류 안내, 잘못된 저장 없음 |
 | TC-EXT-003 | Extension | 저장 전 수집 데이터 수정 | 회사명, 공고명, 마감일 수정값이 저장 API payload에 반영됨 |
 | TC-EXT-004 | Extension | 확장 설치 안내 | 웹 랜딩에서 Chrome 확장프로그램 로컬 설치 안내와 `dist` 경로 제공 |
-| TC-EXT-DOC-AUTOFILL-001 | Extension | 서류 정보 자동 입력 보조 | label, placeholder, name/id, table, nearby text 기반 기본/문서/커스텀 항목 입력 |
+| TC-EXT-DOC-AUTOFILL-001 | Extension | 서류 정보 자동 입력 보조 | label, placeholder, name/id, table, nearby text 기반 기본/표준 문서 항목 입력 |
 | TC-EXT-DOC-AUTOFILL-002 | Extension | 자기소개서/장문 입력 제외 | essay/long-form textarea는 자동 입력하지 않고 수동 검토 대상으로 표시 |
 | TC-REC-001 | Recommendation | 추천 공고 별표 저장 | 장바구니 저장, 중복 처리 |
 | TC-PROFILE-001 | Document Profile | 표준 섹션 저장 | 사용자별 데이터 저장 |
-| TC-PROFILE-CUSTOM-001 | Document Profile | 커스텀 항목 추가 | 재사용 가능한 항목 생성 |
+| TC-PROFILE-SECTION-001 | Document Profile | 표준 섹션 저장 | 재사용 가능한 서류 입력 섹션 저장 |
 | TC-WS-001 | Workspace | 워크스페이스 열기 | 상단 지원 정보와 작성 데이터 조회 |
 | TC-WS-002 | Workspace | 자동 저장 | debounce 후 최신 draft 저장 |
 | TC-WS-003 | Workspace | 텍스트/이미지 도화지 | payload 유지 |
@@ -73,7 +73,7 @@
 - `TC-EXT-LOGO-001`: Extension extractor returns an absolute `logoUrl` candidate from explicit logo images or metadata.
 - `TC-JOB-LOGO-001`: Backend stores a valid optional job `logoUrl` on the linked company record only when the company has no logo.
 - `TC-JOB-LOGO-002`: Basket responses expose `companyLogoUrl`; workspace responses expose `companyDetails.logoUrl`.
-- `TC-EXT-DOC-AUTOFILL-001`: Extension parser fills basic/document/custom fields from labels, placeholders, name/id, tables, and nearby text.
+- `TC-EXT-DOC-AUTOFILL-001`: Extension parser fills basic/document standard fields from labels, placeholders, name/id, tables, and nearby text.
 - `TC-EXT-DOC-AUTOFILL-002`: Essay and long-form textarea fields are excluded from automatic input and reported for manual review.
 - Real company application pages remain manual smoke-test territory because login, personal data, and accidental submission risk make automated E2E unsafe.
 
@@ -133,3 +133,8 @@
 - `TC-HISTORY-005`: Clicking a history row navigates to `/workspaces/{workspaceId}`.
 - `TC-HISTORY-006`: Backend contract returns periods, summary, rows, result-stage filtering, and keeps `HISTORY_IMPORT` rows out of active basket listing.
 - `TC-HISTORY-007`: Migration contract verifies `application_history` schema and confirms personal email/data are not embedded in migration SQL.
+- `TC-HISTORY-008`: Basket page exposes a `과거 지원 내역` link to `/history`.
+- `TC-HISTORY-009`: History summary exposes the standard status counts 지원완료, 미지원, 진행 중, 지원 전.
+- `TC-HISTORY-010`: History table search filters visible rows by keyword while explicit status/result/company-type label filters work independently, and reset clears search, filters, and custom sort.
+- `TC-HISTORY-012`: History table sorts visible rows by deadline and company name without changing the loaded period/result-stage data.
+- `TC-HISTORY-011`: History row navigation opens the workspace while the original posting link remains a separate external link.

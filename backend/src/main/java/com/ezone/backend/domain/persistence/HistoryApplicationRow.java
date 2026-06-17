@@ -19,6 +19,8 @@ public class HistoryApplicationRow {
     private String periodHalf;
     private String sourceUrl;
     private String companyType;
+    private String companyIndustry;
+    private String companyDataSource;
 
     public Long getId() {
         return id;
@@ -138,5 +140,21 @@ public class HistoryApplicationRow {
 
     public void setCompanyType(String companyType) {
         this.companyType = companyType;
+    }
+
+    public String getCompanyIndustry() {
+        return companyIndustry;
+    }
+
+    public void setCompanyIndustry(String companyIndustry) {
+        this.companyIndustry = companyIndustry;
+    }
+
+    public String getCompanyDataSource() {
+        return companyDataSource;
+    }
+
+    public void setCompanyDataSource(String companyDataSource) {
+        this.companyDataSource = companyDataSource;
     }
 }

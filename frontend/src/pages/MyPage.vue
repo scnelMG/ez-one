@@ -56,10 +56,10 @@
       <section v-else-if="activeSection === 'onboarding'" class="mypage-panel" aria-label="온보딩 정보">
         <div class="section-heading">
           <div>
-            <p class="section-kicker">맞춤 추천 정보</p>
+            <p class="section-kicker">온보딩 정보</p>
             <h2>마이페이지 · 온보딩 정보</h2>
           </div>
-          <small>추천 공고에 반영돼요 · 언제든 수정 가능</small>
+          <small>지원 준비 기본 정보로 사용돼요 · 언제든 수정 가능</small>
         </div>
         <div class="preference-chip-form">
           <section class="onboarding-field-group" aria-label="희망 직무">
@@ -173,7 +173,7 @@
               </button>
             </div>
           </section>
-          <p class="mattermost-note">'예' 선택 시 추천 공고에 Mattermost 공고가 함께 표시돼요.</p>
+          <p class="mattermost-note">SSAFY 여부는 지원 준비 정보로 저장돼요.</p>
         </div>
         <div class="form-actions">
           <p v-if="preferenceStatusMessage" class="form-status" role="status">{{ preferenceStatusMessage }}</p>
@@ -345,7 +345,7 @@ const pageCopy = {
   },
   onboarding: {
     title: '마이페이지 · 온보딩 정보',
-    description: '추천 공고에 반영되는 직무, 기업 유형, 지역, 스킬 정보를 수정합니다.'
+    description: '지원 준비에 사용하는 직무, 기업 유형, 지역, 스킬 정보를 수정합니다.'
   },
   qna: {
     title: '마이페이지 · QnA',
@@ -374,7 +374,7 @@ const faqItems = [
   { q: '노션 이메일이 로그인 이메일과 달라도 되나요?', a: '네. 로그인 계정과 노션 연동 계정은 다를 수 있고, 내 계정에서 차이를 안내합니다.' },
   { q: '자소서는 어떻게 버전 관리하나요?', a: '공고 워크스페이스에서 도화지와 자소서 버전관리를 전환해 비교할 수 있습니다.' },
   { q: '공고별로 첨부한 자료는 어디서 보나요?', a: '워크스페이스 오른쪽 참고자료 패널에서 JD, 뉴스, DART, 메모를 확인합니다.' },
-  { q: '추천 공고는 어떤 기준으로 보여지나요?', a: '온보딩에서 입력한 선호 직무와 기술 스택을 바탕으로 마감순 공고를 제안합니다.' }
+  { q: '온보딩 정보는 어디에 쓰이나요?', a: '희망 직무, 기업 유형, 지역, 기술 스택을 마이페이지에서 다시 확인하고 지원 준비 기본 정보로 관리합니다.' }
 ];
 
 onMounted(async () => {

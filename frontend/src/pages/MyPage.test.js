@@ -39,7 +39,6 @@ const makeRouter = () => createRouter({
         { path: '/', component: { template: '<div>main</div>' } },
         { path: '/basket', component: { template: '<div>basket</div>' } },
         { path: '/document-profile', component: { template: '<div>document profile</div>' } },
-        { path: '/recommendations', component: { template: '<div>recommendations</div>' } },
         { path: '/mypage/notion', component: { template: '<div>notion</div>' } }
     ]
 });
@@ -98,13 +97,13 @@ describe('MyPage', () => {
         expect(JSON.parse(localStorage.getItem('ezone.currentUser') ?? '{}').nickname).toBe('홍길동');
     });
 
-    it('MY-ONBOARDING: edits onboarding recommendation preferences as chips', async () => {
+    it('MY-ONBOARDING: edits onboarding preferences as chips', async () => {
         const wrapper = await mountPage('/mypage/onboarding');
 
         expect(wrapper.text()).toContain('마이페이지 · 온보딩 정보');
-        expect(wrapper.text()).toContain('맞춤 추천 정보');
+        expect(wrapper.text()).toContain('온보딩 정보');
         expect(wrapper.text()).toContain('프론트엔드');
-        expect(wrapper.text()).toContain('Mattermost 공고');
+        expect(wrapper.text()).toContain('지원 준비 정보');
 
         expect(wrapper.find('[data-testid="profile-desired-roles"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="profile-company-types"]').exists()).toBe(false);

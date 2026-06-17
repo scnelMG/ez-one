@@ -1,47 +1,58 @@
 package com.ezone.backend.service;
 
-import com.ezone.backend.dto.profile.CreateDocumentCustomFieldRequest;
-import com.ezone.backend.dto.profile.DocumentCustomFieldResponse;
 import com.ezone.backend.dto.profile.DocumentProfileResponse;
 import com.ezone.backend.dto.profile.UpsertDocumentSectionRequest;
 import com.ezone.backend.dto.profile.UserProfileRequest;
 import com.ezone.backend.dto.profile.UserProfileResponse;
+import com.ezone.backend.mapper.DocumentProfileMapper;
 import com.ezone.backend.mapper.UserAccountMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class InMemoryProfileService implements ProfileService {
 
+    private static final TypeReference<Map<String, Object>> SECTION_PAYLOAD_TYPE = new TypeReference<>() {
+    };
+
     private final UserAccountMapper userAccountMapper;
-    private final AtomicLong idGenerator = new AtomicLong(300);
+    private final ObjectMapper objectMapper;
+    private final DocumentProfileMapper documentProfileMapper;
     private final Map<Long, UserProfileResponse> userProfiles = new LinkedHashMap<>();
     private final Map<Long, Map<String, Object>> documentSections = new LinkedHashMap<>();
-    private final Map<Long, List<DocumentCustomFieldResponse>> customFields = new LinkedHashMap<>();
     private final Map<Long, String> documentProfileLastSavedAt = new LinkedHashMap<>();
 
+    @Autowired
+    public InMemoryProfileService(
+        UserAccountMapper userAccountMapper,
+        ObjectMapper objectMapper,
+        ObjectProvider<DocumentProfileMapper> documentProfileMapper
+    ) {
+        this(userAccountMapper, objectMapper, documentProfileMapper.getIfAvailable());
+    }
+
     public InMemoryProfileService(UserAccountMapper userAccountMapper) {
+        this(userAccountMapper, new ObjectMapper(), (DocumentProfileMapper) null);
+    }
+
+    InMemoryProfileService(
+        UserAccountMapper userAccountMapper,
+        ObjectMapper objectMapper,
+        DocumentProfileMapper documentProfileMapper
+    ) {
         this.userAccountMapper = userAccountMapper;
-        userProfiles.put(1L, new UserProfileResponse(
-            List.of("백엔드 개발자"),
-            List.of("대기업", "스타트업"),
-            List.of("핀테크", "생산성 도구"),
-            List.of("서울", "경기"),
-            List.of("Java", "Spring Boot", "MyBatis"),
-            true,
-            true
-        ));
-        documentSections.put(1L, new LinkedHashMap<>(Map.of(
-            "basicInfo", Map.of("nameKo", "", "email", ""),
-            "projects", List.of(),
-            "awards", List.of()
-        )));
-        customFields.put(1L, new ArrayList<>());
+        this.objectMapper = objectMapper;
+        this.documentProfileMapper = documentProfileMapper;
+        seedDemoProfile();
     }
 
     @Override
@@ -75,54 +86,50 @@ public class InMemoryProfileService implements ProfileService {
 
     @Override
     public DocumentProfileResponse getDocumentProfile(Long userId) {
+        if (documentProfileMapper != null) {
+            Map<String, Object> sections = new LinkedHashMap<>();
+            documentProfileMapper.listSections(userId).forEach(row ->
+                sections.put(row.sectionType(), readPayload(row.payloadJson()))
+            );
+            return new DocumentProfileResponse(
+                sections,
+                documentProfileMapper.findLastSavedAt(userId).orElse(null)
+            );
+        }
         return new DocumentProfileResponse(
             documentSections.computeIfAbsent(userId, ignored -> new LinkedHashMap<>()),
-            customFields.computeIfAbsent(userId, ignored -> new ArrayList<>()),
             documentProfileLastSavedAt.get(userId)
         );
     }
 
     @Override
+    @Transactional
     public DocumentProfileResponse upsertSection(Long userId, String sectionType, UpsertDocumentSectionRequest request) {
+        if (documentProfileMapper != null) {
+            documentProfileMapper.upsertSection(userId, sectionType, writePayload(request.payload()));
+            return getDocumentProfile(userId);
+        }
         Map<String, Object> sections = documentSections.computeIfAbsent(userId, ignored -> new LinkedHashMap<>());
         sections.put(sectionType, request.payload() == null ? Map.of() : request.payload());
         touchDocumentProfile(userId);
         return getDocumentProfile(userId);
     }
 
-    @Override
-    public DocumentCustomFieldResponse createCustomField(Long userId, CreateDocumentCustomFieldRequest request) {
-        DocumentCustomFieldResponse response = new DocumentCustomFieldResponse(
-            idGenerator.incrementAndGet(),
-            request.label(),
-            request.fieldType(),
-            request.value()
-        );
-        customFields.computeIfAbsent(userId, ignored -> new ArrayList<>()).add(response);
-        touchDocumentProfile(userId);
-        return response;
-    }
-
-    @Override
-    public DocumentCustomFieldResponse updateCustomField(Long userId, Long fieldId, CreateDocumentCustomFieldRequest request) {
-        List<DocumentCustomFieldResponse> fields = customFields.computeIfAbsent(userId, ignored -> new ArrayList<>());
-        fields.removeIf(field -> field.id().equals(fieldId));
-        DocumentCustomFieldResponse response = new DocumentCustomFieldResponse(
-            fieldId,
-            request.label(),
-            request.fieldType(),
-            request.value()
-        );
-        fields.add(response);
-        touchDocumentProfile(userId);
-        return response;
-    }
-
-    @Override
-    public void deleteCustomField(Long userId, Long fieldId) {
-        customFields.computeIfAbsent(userId, ignored -> new ArrayList<>())
-            .removeIf(field -> field.id().equals(fieldId));
-        touchDocumentProfile(userId);
+    private void seedDemoProfile() {
+        userProfiles.put(1L, new UserProfileResponse(
+            List.of("백엔드 개발자"),
+            List.of("대기업", "스타트업"),
+            List.of("핀테크", "생산성 도구"),
+            List.of("서울", "경기"),
+            List.of("Java", "Spring Boot", "MyBatis"),
+            true,
+            true
+        ));
+        documentSections.put(1L, new LinkedHashMap<>(Map.of(
+            "basicInfo", Map.of("nameKo", "", "email", ""),
+            "projects", List.of(),
+            "awards", List.of()
+        )));
     }
 
     private void touchDocumentProfile(Long userId) {
@@ -131,5 +138,23 @@ public class InMemoryProfileService implements ProfileService {
 
     private List<String> safeList(List<String> values) {
         return values == null ? List.of() : values;
+    }
+
+    private Map<String, Object> readPayload(String payloadJson) {
+        try {
+            return objectMapper.readValue(payloadJson, SECTION_PAYLOAD_TYPE);
+        }
+        catch (JsonProcessingException exception) {
+            throw new IllegalStateException("Document profile section payload is not valid JSON.", exception);
+        }
+    }
+
+    private String writePayload(Map<String, Object> payload) {
+        try {
+            return objectMapper.writeValueAsString(payload == null ? Map.of() : payload);
+        }
+        catch (JsonProcessingException exception) {
+            throw new IllegalArgumentException("Document profile section payload cannot be serialized.", exception);
+        }
     }
 }

@@ -6,19 +6,13 @@ import DocumentProfilePage from './DocumentProfilePage.vue';
 
 const mocks = vi.hoisted(() => ({
     getDocumentProfile: vi.fn(),
-    saveSection: vi.fn(),
-    createCustomField: vi.fn(),
-    updateCustomField: vi.fn(),
-    deleteCustomField: vi.fn()
+    saveSection: vi.fn()
 }));
 
 vi.mock('@/features/document-profile/api/documentProfileApi', () => ({
     documentProfileApi: {
         getDocumentProfile: mocks.getDocumentProfile,
-        saveSection: mocks.saveSection,
-        createCustomField: mocks.createCustomField,
-        updateCustomField: mocks.updateCustomField,
-        deleteCustomField: mocks.deleteCustomField
+        saveSection: mocks.saveSection
     }
 }));
 
@@ -29,7 +23,6 @@ const makeRouter = () => createRouter({
         { path: '/main', component: { template: '<div>main</div>' } },
         { path: '/basket', component: { template: '<div>basket</div>' } },
         { path: '/mypage', component: { template: '<div>mypage</div>' } },
-        { path: '/recommendations', component: { template: '<div>recommendations</div>' } }
     ]
 });
 
@@ -65,14 +58,7 @@ describe('DocumentProfilePage', () => {
                 trainings: [{ title: 'Cloud Course', summary: '120 hours' }],
                 activities: [{ title: 'Student Club', summary: 'Backend lead' }]
             },
-            customFields: [
-                {
-                    id: '501',
-                    label: 'Portfolio',
-                    fieldType: 'URL',
-                    value: 'https://example.com'
-                }
-            ],
+            customFields: [],
             lastSavedAt: '2026-06-05T12:00:00Z'
         });
         mocks.saveSection.mockImplementation((sectionType, payload) => Promise.resolve({
@@ -92,19 +78,6 @@ describe('DocumentProfilePage', () => {
             },
             customFields: []
         }));
-        mocks.createCustomField.mockResolvedValue({
-            id: '601',
-            label: 'Blog',
-            fieldType: 'URL',
-            value: 'https://blog.example.com'
-        });
-        mocks.updateCustomField.mockResolvedValue({
-            id: '501',
-            label: 'Portfolio Updated',
-            fieldType: 'URL',
-            value: 'https://example.com/updated'
-        });
-        mocks.deleteCustomField.mockResolvedValue(undefined);
     });
 
     it('PROFILE-001: uses the extension settings structure without visible requirement IDs or autosave copy', async () => {
@@ -133,9 +106,9 @@ describe('DocumentProfilePage', () => {
             '병역 / 장애 / 보훈',
             '학교 정보',
             '경력',
+            '프로젝트',
             '자격증 / 어학',
-            '기타',
-            '커스텀 필드'
+            '수상/교육/활동/해외경험'
         ]);
     });
 
@@ -158,18 +131,106 @@ describe('DocumentProfilePage', () => {
             addressDetail: 'Gangnam-gu'
         });
 
-        await wrapper.get('[data-testid="section-career"]').trigger('click');
+        await wrapper.get('[data-testid="section-projects"]').trigger('click');
         await wrapper.get('[data-testid="projects-0-projectName"]').setValue('EZ-ONE Renewal');
         await wrapper.get('[data-testid="projects-0-contribution"]').setValue('Workspace and profile integration');
         await wrapper.get('[data-testid="save-document-profile"]').trigger('click');
         await flushPromises();
-        expect(mocks.saveSection).toHaveBeenLastCalledWith('career', expect.objectContaining({
+        expect(mocks.saveSection).toHaveBeenLastCalledWith('projects', expect.objectContaining({
             projects: [
                 expect.objectContaining({
                     projectName: 'EZ-ONE Renewal',
                     contribution: 'Workspace and profile integration'
                 })
             ]
+        }));
+    });
+
+    it('PROFILE-011: uses selects for military classification fields', async () => {
+        const wrapper = await mountPage();
+
+        await wrapper.get('[data-testid="section-military"]').trigger('click');
+        const status = wrapper.get('[data-testid="military-status"]');
+        const branch = wrapper.get('[data-testid="military-branch"]');
+        const rank = wrapper.get('[data-testid="military-rank"]');
+        const dischargeType = wrapper.get('[data-testid="military-dischargeType"]');
+
+        expect(status.element.tagName).toBe('SELECT');
+        expect(branch.element.tagName).toBe('SELECT');
+        expect(branch.text()).toContain('육군');
+        expect(branch.text()).toContain('해군');
+        expect(branch.text()).toContain('공군');
+        expect(rank.element.tagName).toBe('SELECT');
+        expect(rank.text()).toContain('병장');
+        expect(dischargeType.element.tagName).toBe('SELECT');
+        expect(dischargeType.text()).toContain('만기제대');
+        expect(dischargeType.text()).toContain('의병제대');
+    });
+
+    it('PROFILE-011: renders disability and veteran groups like application-form choices', async () => {
+        const wrapper = await mountPage();
+
+        await wrapper.get('[data-testid="section-military"]').trigger('click');
+        const disabilityChoice = wrapper.get('[data-testid="disability-hasDisability-radio-group"]');
+        const veteranChoice = wrapper.get('[data-testid="veteran-isVeteran-radio-group"]');
+        const disabilityLevel = wrapper.get('[data-testid="disability-disabilityLevel"]');
+        const veteranRelation = wrapper.get('[data-testid="veteran-veteranRelation"]');
+
+        expect(disabilityChoice.text()).toContain('비대상');
+        expect(disabilityChoice.text()).toContain('대상');
+        expect(veteranChoice.text()).toContain('비대상');
+        expect(veteranChoice.text()).toContain('대상');
+        expect(disabilityLevel.element.tagName).toBe('SELECT');
+        expect(disabilityLevel.text()).toContain('중증');
+        expect(disabilityLevel.text()).toContain('경증');
+        expect(veteranRelation.element.tagName).toBe('SELECT');
+        expect(veteranRelation.text()).toContain('본인');
+        expect(veteranRelation.text()).toContain('부');
+        expect(veteranRelation.text()).toContain('모');
+    });
+
+    it('PROFILE-012/013: uses day-level school dates and removes high school GPA', async () => {
+        const wrapper = await mountPage();
+
+        await wrapper.get('[data-testid="section-education"]').trigger('click');
+
+        expect(wrapper.find('[data-testid="highSchool-grade"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="highSchool-gradeScale"]').exists()).toBe(false);
+        expect(wrapper.get('[data-testid="highSchool-entranceDate"]').attributes('type')).toBe('text');
+        expect(wrapper.get('[data-testid="highSchool-graduationDate"]').attributes('type')).toBe('text');
+        expect(wrapper.get('[data-testid="universities-0-entranceDate"]').attributes('type')).toBe('text');
+        expect(wrapper.get('[data-testid="universities-0-graduationDate"]').attributes('type')).toBe('text');
+        expect(wrapper.get('[data-testid="universities-0-gradeScale"]').element.closest('label')?.textContent)
+            .toContain('만점');
+        expect(wrapper.get('[data-testid="universities-0-subMajor"]').element.closest('label')?.textContent)
+            .toContain('복수전공/부전공');
+        expect(wrapper.get('[data-testid="universities-0-isTransfer"]').element.closest('label')?.textContent)
+            .toContain('편입 여부');
+        expect(wrapper.get('[data-testid="universities-0-majorGrade"]').element.closest('label')?.textContent)
+            .toContain('전공 평점');
+        expect(wrapper.get('[data-testid="universities-0-majorGradeScale"]').element.closest('label')?.textContent)
+            .toContain('전공 만점');
+        expect(wrapper.get('[data-testid="universities-0-gradeRank"]').element.closest('label')?.textContent)
+            .toContain('학점 석차/상위 퍼센트');
+        expect(wrapper.get('[data-testid="graduateSchools-0-subMajor"]').element.closest('label')?.textContent)
+            .toContain('복수전공/부전공');
+    });
+
+    it('PROFILE-012/013: formats date input as YYYY-MM-DD and ignores extra digits', async () => {
+        const wrapper = await mountPage();
+
+        await wrapper.get('[data-testid="section-education"]').trigger('click');
+        const graduationDate = wrapper.get('[data-testid="highSchool-graduationDate"]');
+
+        await graduationDate.setValue('202409030579');
+
+        expect(graduationDate.element.value).toBe('2024-09-03');
+        await wrapper.get('[data-testid="save-document-profile"]').trigger('click');
+        await flushPromises();
+        expect(mocks.saveSection).toHaveBeenLastCalledWith('education', expect.objectContaining({
+            highSchool: expect.objectContaining({
+                graduationDate: '2024-09-03'
+            })
         }));
     });
 
@@ -183,10 +244,37 @@ describe('DocumentProfilePage', () => {
         expect(mocks.saveSection).toHaveBeenCalledWith('basicInfo', expect.objectContaining({ phone: '010-9999-0000' }));
     });
 
+    it('PROFILE-012/013: uses registration number instead of expiry date for language tests', async () => {
+        const wrapper = await mountPage();
+
+        await wrapper.get('[data-testid="section-certificates"]').trigger('click');
+
+        expect(wrapper.find('[data-testid="languageTests-0-expiryDate"]').exists()).toBe(false);
+        const testName = wrapper.get('[data-testid="languageTests-0-testName"]');
+        expect(testName.element.tagName).toBe('SELECT');
+        expect(testName.text()).toContain('OPIc(영어)');
+        expect(testName.text()).toContain('TOEIC');
+        expect(testName.text()).toContain('HSK');
+        await testName.setValue('OPIc(영어)');
+        const registrationNumber = wrapper.get('[data-testid="languageTests-0-registrationNumber"]');
+        expect(registrationNumber.element.closest('label')?.textContent).toContain('등록번호');
+        await registrationNumber.setValue('OPIC-2024-001');
+        await wrapper.get('[data-testid="save-document-profile"]').trigger('click');
+        await flushPromises();
+        expect(mocks.saveSection).toHaveBeenLastCalledWith('certificates', expect.objectContaining({
+            languageTests: [
+                expect.objectContaining({
+                    testName: 'OPIc(영어)',
+                    registrationNumber: 'OPIC-2024-001'
+                })
+            ]
+        }));
+    });
+
     it('PROFILE-024: adds and deletes repeatable items before using the global save button', async () => {
         const wrapper = await mountPage();
 
-        await wrapper.get('[data-testid="section-career"]').trigger('click');
+        await wrapper.get('[data-testid="section-projects"]').trigger('click');
         await wrapper.get('[data-testid="projects-0-projectName"]').setValue('First Project');
         await wrapper.get('[data-testid="add-projects"]').trigger('click');
         await wrapper.get('[data-testid="projects-1-projectName"]').setValue('Second Project');
@@ -194,7 +282,7 @@ describe('DocumentProfilePage', () => {
         await wrapper.get('[data-testid="delete-projects-0"]').trigger('click');
         await wrapper.get('[data-testid="save-document-profile"]').trigger('click');
         await flushPromises();
-        expect(mocks.saveSection).toHaveBeenLastCalledWith('career', expect.objectContaining({
+        expect(mocks.saveSection).toHaveBeenLastCalledWith('projects', expect.objectContaining({
             projects: [
                 expect.objectContaining({
                     projectName: 'Second Project',
@@ -204,33 +292,13 @@ describe('DocumentProfilePage', () => {
         }));
     });
 
-    it('PROFILE-001/PROFILE-006: creates, updates, and deletes custom fields', async () => {
+    it('PROFILE-001/PROFILE-006: removes custom field controls from the document profile page', async () => {
         const wrapper = await mountPage();
 
-        await wrapper.get('[data-testid="section-custom"]').trigger('click');
-        expect(wrapper.text()).toContain('Portfolio');
-        await wrapper.get('[data-testid="custom-label"]').setValue('Blog');
-        await wrapper.get('[data-testid="custom-type"]').setValue('URL');
-        await wrapper.get('[data-testid="custom-value"]').setValue('https://blog.example.com');
-        await wrapper.get('[data-testid="create-custom-field"]').trigger('click');
-        expect(mocks.createCustomField).toHaveBeenCalledWith({
-            label: 'Blog',
-            fieldType: 'URL',
-            value: 'https://blog.example.com'
-        });
-
-        await wrapper.get('[data-testid="edit-custom-501"]').trigger('click');
-        await wrapper.get('[data-testid="custom-label"]').setValue('Portfolio Updated');
-        await wrapper.get('[data-testid="custom-value"]').setValue('https://example.com/updated');
-        await wrapper.get('[data-testid="update-custom-field"]').trigger('click');
-        expect(mocks.updateCustomField).toHaveBeenCalledWith('501', {
-            label: 'Portfolio Updated',
-            fieldType: 'URL',
-            value: 'https://example.com/updated'
-        });
-
-        await wrapper.get('[data-testid="delete-custom-501"]').trigger('click');
-        expect(mocks.deleteCustomField).toHaveBeenCalledWith('501');
+        expect(wrapper.find('[data-testid="section-custom"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="custom-label"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="create-custom-field"]').exists()).toBe(false);
+        expect(wrapper.text()).not.toContain('커스텀 필드');
     });
 });
 

@@ -90,7 +90,15 @@
                 </label>
                 <label>
                   생년월일
-                  <input v-model="basicInfoForm.birthdate" type="date" data-testid="basic-info-birthdate" />
+                  <input
+                    :value="basicInfoForm.birthdate"
+                    type="text"
+                    inputmode="numeric"
+                    maxlength="10"
+                    placeholder="YYYY-MM-DD"
+                    data-testid="basic-info-birthdate"
+                    @input="updateDateField(basicInfoForm, 'birthdate', $event)"
+                  />
                 </label>
                 <label class="full">
                   주소
@@ -112,6 +120,7 @@
                 v-for="group in activeSectionSchema.groups"
                 :key="group.key"
                 class="profile-group-card"
+                :class="{ 'application-choice-card': group.layout === 'applicationChoice' }"
               >
                 <div class="profile-subsection-heading">
                   <h3>{{ group.title }}</h3>
@@ -147,6 +156,21 @@
                             <span>{{ field.checkboxLabel }}</span>
                           </label>
                         </div>
+                        <div v-else-if="field.type === 'radio'" class="radio-field-wrapper" :class="{ wide: field.wide, full: field.full }">
+                          <span class="radio-field-label">{{ field.label }}</span>
+                          <div class="application-radio-group" :data-testid="`${group.key}-${index}-${field.key}-radio-group`">
+                            <label v-for="option in field.options" :key="String(option.value)" class="application-radio-option">
+                              <input
+                                v-model="item[field.key]"
+                                type="radio"
+                                :name="`${group.key}-${index}-${field.key}`"
+                                :value="option.value"
+                                :data-testid="`${group.key}-${index}-${field.key}-${String(option.value)}`"
+                              />
+                              <span>{{ option.label }}</span>
+                            </label>
+                          </div>
+                        </div>
                         <label v-else :class="{ wide: field.wide, full: field.full }">
                           {{ field.label }}
                           <textarea
@@ -164,6 +188,16 @@
                               {{ option.label }}
                             </option>
                           </select>
+                          <input
+                            v-else-if="field.type === 'date'"
+                            :value="item[field.key]"
+                            type="text"
+                            inputmode="numeric"
+                            maxlength="10"
+                            :placeholder="field.placeholder"
+                            :data-testid="`${group.key}-${index}-${field.key}`"
+                            @input="updateDateField(item, field.key, $event)"
+                          />
                           <input
                             v-else
                             v-model="item[field.key]"
@@ -198,6 +232,21 @@
                         <span>{{ field.checkboxLabel }}</span>
                       </label>
                     </div>
+                    <div v-else-if="field.type === 'radio'" class="radio-field-wrapper" :class="{ wide: field.wide, full: field.full }">
+                      <span class="radio-field-label">{{ field.label }}</span>
+                      <div class="application-radio-group" :data-testid="`${group.key}-${field.key}-radio-group`">
+                        <label v-for="option in field.options" :key="String(option.value)" class="application-radio-option">
+                          <input
+                            v-model="activeSectionForm[group.key][field.key]"
+                            type="radio"
+                            :name="`${group.key}-${field.key}`"
+                            :value="option.value"
+                            :data-testid="`${group.key}-${field.key}-${String(option.value)}`"
+                          />
+                          <span>{{ option.label }}</span>
+                        </label>
+                      </div>
+                    </div>
                     <label v-else :class="{ wide: field.wide, full: field.full }">
                       {{ field.label }}
                       <textarea
@@ -216,6 +265,16 @@
                         </option>
                       </select>
                       <input
+                        v-else-if="field.type === 'date'"
+                        :value="activeSectionForm[group.key][field.key]"
+                        type="text"
+                        inputmode="numeric"
+                        maxlength="10"
+                        :placeholder="field.placeholder"
+                        :data-testid="`${group.key}-${field.key}`"
+                        @input="updateDateField(activeSectionForm[group.key], field.key, $event)"
+                      />
+                      <input
                         v-else
                         v-model="activeSectionForm[group.key][field.key]"
                         :type="field.type ?? 'text'"
@@ -228,88 +287,6 @@
               </div>
             </section>
 
-            <section v-else-if="activeSection === 'custom'" class="document-custom-form" aria-label="커스텀 항목 입력">
-              <div v-if="documentProfileStore.profile?.customFields?.length" class="profile-group-card">
-                <div class="profile-subsection-heading">
-                  <h3>등록된 커스텀 필드</h3>
-                </div>
-                <ul class="summary-stack">
-                  <li v-for="field in documentProfileStore.profile?.customFields ?? []" :key="field.id" class="custom-field-item">
-                    <div class="custom-field-content">
-                      <div class="custom-field-meta">
-                        <strong class="custom-field-label">{{ field.label }}</strong>
-                        <small class="custom-field-badge" :class="field.fieldType.toLowerCase()">{{ field.fieldType }}</small>
-                      </div>
-                      <div class="custom-field-value-wrapper">
-                        <p class="custom-field-value">{{ field.value }}</p>
-                      </div>
-                    </div>
-                    <div class="custom-field-actions">
-                      <button
-                        class="text-button"
-                        type="button"
-                        :data-testid="`edit-custom-${field.id}`"
-                        @click="editCustomField(field)"
-                      >
-                        수정
-                      </button>
-                      <button
-                        class="text-button danger"
-                        type="button"
-                        :data-testid="`delete-custom-${field.id}`"
-                        @click="deleteCustomField(field.id)"
-                      >
-                        삭제
-                      </button>
-                    </div>
-                  </li>
-                </ul>
-              </div>
-
-              <div class="profile-group-card custom-field-creator">
-                <div class="profile-subsection-heading">
-                  <h3>{{ editingCustomFieldId ? '커스텀 필드 수정' : '커스텀 필드 추가' }}</h3>
-                </div>
-                <div class="profile-field-grid columns-3">
-                  <label>
-                    라벨
-                    <input v-model="customFieldForm.label" placeholder="예: 포트폴리오" data-testid="custom-label" />
-                  </label>
-                  <label>
-                    유형
-                    <select v-model="customFieldForm.fieldType" data-testid="custom-type">
-                      <option value="TEXT">텍스트</option>
-                      <option value="URL">링크</option>
-                      <option value="NUMBER">숫자</option>
-                    </select>
-                  </label>
-                  <label>
-                    값
-                    <input v-model="customFieldForm.value" placeholder="값을 입력하세요" data-testid="custom-value" />
-                  </label>
-                </div>
-                <div class="repeatable-tools">
-                  <button
-                    v-if="editingCustomFieldId"
-                    class="primary-button"
-                    type="button"
-                    data-testid="update-custom-field"
-                    @click="updateCustomField"
-                  >
-                    커스텀 수정
-                  </button>
-                  <button
-                    v-else
-                    class="primary-button"
-                    type="button"
-                    data-testid="create-custom-field"
-                    @click="createCustomField"
-                  >
-                    커스텀 추가
-                  </button>
-                </div>
-              </div>
-            </section>
           </template>
         </main>
       </div>
@@ -380,12 +357,6 @@ const basicInfoForm = reactive({
   addressDetail: ''
 });
 const activeSectionForm = reactive({});
-const customFieldForm = reactive({
-  label: '',
-  fieldType: 'TEXT',
-  value: ''
-});
-const editingCustomFieldId = ref('');
 let autoSaveTimer = null;
 let suppressFormWatch = true;
 
@@ -394,9 +365,9 @@ const sections = [
   { id: 'military', label: '병역 / 장애 / 보훈', title: '병역 / 장애 / 보훈' },
   { id: 'education', label: '학교 정보', title: '학교 정보' },
   { id: 'career', label: '경력', title: '경력' },
+  { id: 'projects', label: '프로젝트', title: '프로젝트' },
   { id: 'certificates', label: '자격증 / 어학', title: '자격증 / 어학' },
-  { id: 'other', label: '기타', title: '기타' },
-  { id: 'custom', label: '커스텀 필드', title: '커스텀 필드' }
+  { id: 'other', label: '수상/교육/활동/해외경험', title: '수상/교육/활동/해외경험' }
 ];
 
 const saveButtonLabel = computed(() => (documentProfileStore.status === 'saving' ? '저장 중' : '저장'));
@@ -418,7 +389,74 @@ const selectOptions = {
     { label: '선택', value: '' },
     { label: '미필', value: '미필' },
     { label: '군필', value: '군필' },
-    { label: '면제', value: '면제' }
+    { label: '면제', value: '면제' },
+    { label: '해당 없음', value: '해당 없음' }
+  ],
+  militaryBranch: [
+    { label: '선택', value: '' },
+    { label: '육군', value: '육군' },
+    { label: '해군', value: '해군' },
+    { label: '공군', value: '공군' },
+    { label: '해병대', value: '해병대' },
+    { label: '의무경찰', value: '의무경찰' },
+    { label: '의무소방', value: '의무소방' },
+    { label: '사회복무요원', value: '사회복무요원' },
+    { label: '산업기능요원', value: '산업기능요원' },
+    { label: '전문연구요원', value: '전문연구요원' },
+    { label: '기타', value: '기타' }
+  ],
+  militaryRank: [
+    { label: '선택', value: '' },
+    { label: '이병', value: '이병' },
+    { label: '일병', value: '일병' },
+    { label: '상병', value: '상병' },
+    { label: '병장', value: '병장' },
+    { label: '하사', value: '하사' },
+    { label: '중사', value: '중사' },
+    { label: '상사', value: '상사' },
+    { label: '원사', value: '원사' },
+    { label: '준위', value: '준위' },
+    { label: '소위', value: '소위' },
+    { label: '중위', value: '중위' },
+    { label: '대위', value: '대위' },
+    { label: '소령 이상', value: '소령 이상' },
+    { label: '해당 없음', value: '해당 없음' }
+  ],
+  dischargeType: [
+    { label: '선택', value: '' },
+    { label: '만기제대', value: '만기제대' },
+    { label: '의병제대', value: '의병제대' },
+    { label: '의가사제대', value: '의가사제대' },
+    { label: '전역 예정', value: '전역 예정' },
+    { label: '소집해제', value: '소집해제' },
+    { label: '면제', value: '면제' },
+    { label: '해당 없음', value: '해당 없음' }
+  ],
+  applicableStatus: [
+    { label: '비대상', value: false },
+    { label: '대상', value: true }
+  ],
+  disabilityLevel: [
+    { label: '선택', value: '' },
+    { label: '중증', value: '중증' },
+    { label: '경증', value: '경증' },
+    { label: '1급', value: '1급' },
+    { label: '2급', value: '2급' },
+    { label: '3급', value: '3급' },
+    { label: '4급', value: '4급' },
+    { label: '5급', value: '5급' },
+    { label: '6급', value: '6급' }
+  ],
+  veteranRelation: [
+    { label: '선택', value: '' },
+    { label: '본인', value: '본인' },
+    { label: '부', value: '부' },
+    { label: '모', value: '모' },
+    { label: '배우자', value: '배우자' },
+    { label: '자녀', value: '자녀' },
+    { label: '조부', value: '조부' },
+    { label: '조모', value: '조모' },
+    { label: '기타', value: '기타' }
   ],
   graduation: [
     { label: '선택', value: '' },
@@ -456,6 +494,22 @@ const selectOptions = {
     { label: '4.5', value: '4.5' },
     { label: '4.3', value: '4.3' },
     { label: '100', value: '100' }
+  ],
+  languageTestName: [
+    { label: '선택하세요', value: '' },
+    { label: 'OPIc(영어)', value: 'OPIc(영어)' },
+    { label: 'OPIc(일본어)', value: 'OPIc(일본어)' },
+    { label: 'OPIc(중국어)', value: 'OPIc(중국어)' },
+    { label: 'OPIc(스페인어)', value: 'OPIc(스페인어)' },
+    { label: 'OPIc(러시아어)', value: 'OPIc(러시아어)' },
+    { label: 'OPIc(베트남어)', value: 'OPIc(베트남어)' },
+    { label: 'TOEIC', value: 'TOEIC' },
+    { label: 'TOEFL', value: 'TOEFL' },
+    { label: 'IELTS', value: 'IELTS' },
+    { label: 'TEPS', value: 'TEPS' },
+    { label: 'JLPT', value: 'JLPT' },
+    { label: 'HSK', value: 'HSK' },
+    { label: '기타', value: '기타' }
   ],
   employmentType: [
     { label: '선택', value: '' },
@@ -509,32 +563,34 @@ const sectionSchemas = {
         columns: 3,
         fields: [
           selectField('status', '병역 상태 (군필/미필/면제 등)', selectOptions.militaryStatus),
-          textField('branch', '군별 (육군/해군/공군 등)', '예: 육군'),
-          textField('rank', '계급', '예: 병장'),
+          selectField('branch', '군별 (육군/해군/공군 등)', selectOptions.militaryBranch),
+          selectField('rank', '계급', selectOptions.militaryRank),
           textField('specialty', '보직/병과', '예: 정보통신'),
           dateField('enlistmentDate', '입대일'),
           dateField('dischargeDate', '전역일'),
-          textField('dischargeType', '전역 구분 (만기/의병 등)', '예: 만기제대', false),
+          selectField('dischargeType', '전역 구분 (만기/의병 등)', selectOptions.dischargeType),
           textField('exemptionReason', '면제 사유', '면제 사유를 입력하세요', true)
         ]
       },
       {
         key: 'disability',
         title: '장애',
+        layout: 'applicationChoice',
         columns: 2,
         fields: [
-          checkboxField('hasDisability', '장애 여부', false),
-          textField('disabilityLevel', '장애 정도', '장애 정도', false),
+          radioField('hasDisability', '장애 여부', selectOptions.applicableStatus),
+          selectField('disabilityLevel', '장애 정도', selectOptions.disabilityLevel),
           textField('disabilityDescription', '장애 내용', '장애 내용', true)
         ]
       },
       {
         key: 'veteran',
         title: '보훈',
+        layout: 'applicationChoice',
         columns: 2,
         fields: [
-          checkboxField('isVeteran', '보훈 대상 여부', false),
-          textField('veteranRelation', '보훈 관계 (본인/부/모 등)', '보훈 관계 (본인/부/모 등)', false),
+          radioField('isVeteran', '보훈 대상 여부', selectOptions.applicableStatus),
+          selectField('veteranRelation', '보훈 관계 (본인/부/모 등)', selectOptions.veteranRelation),
           textField('veteranNumber', '보훈 번호', '보훈 번호', false),
           textField('veteranRate', '보훈 비율', '보훈 비율', false)
         ]
@@ -550,13 +606,11 @@ const sectionSchemas = {
         fields: [
           textField('schoolName', '학교명', '학교명', true),
           selectField('schoolType', '학교 유형', selectOptions.schoolType),
-          monthField('entranceDate', '입학일'),
-          monthField('graduationDate', '졸업일'),
+          dateField('entranceDate', '입학일'),
+          dateField('graduationDate', '졸업일'),
           selectField('graduationStatus', '졸업구분', selectOptions.graduation),
           textField('location', '소재지', '예: 서울'),
-          selectField('dayNight', '주간/야간', selectOptions.dayNight),
-          textField('grade', '* 성적 평점', '평점'),
-          selectField('gradeScale', '/', selectOptions.gradeScale)
+          selectField('dayNight', '주간/야간', selectOptions.dayNight)
         ]
       },
       {
@@ -623,7 +677,11 @@ const sectionSchemas = {
           checkboxField('isActive', '재직 중 여부'),
           textField('duties', '주요 업무 내용', '', false, true)
         ]
-      },
+      }
+    ]
+  },
+  projects: {
+    groups: [
       {
         key: 'projects',
         title: '프로젝트',
@@ -668,10 +726,10 @@ const sectionSchemas = {
         repeatable: true,
         columns: 4,
         fields: [
-          textField('testName', '시험명', '예: TOEIC'),
+          selectField('testName', '시험명', selectOptions.languageTestName),
           textField('score', '점수/등급', '예: 900'),
           dateField('acquiredDate', '취득일'),
-          dateField('expiryDate', '만료일')
+          textField('registrationNumber', '등록번호', '등록번호를 입력하세요.')
         ]
       }
     ]
@@ -806,7 +864,7 @@ async function saveActiveSection() {
 }
 
 function scheduleAutoSave() {
-  if (suppressFormWatch || activeSection.value === 'custom') return;
+  if (suppressFormWatch) return;
   clearAutoSaveTimer();
   autoSaveStatus.value = 'waiting';
   autoSaveTimer = setTimeout(() => {
@@ -843,9 +901,11 @@ function legacySectionPayload(sectionType) {
   if (sectionType === 'career') {
     return {
       careers: Array.isArray(sectionsPayload.career) ? sectionsPayload.career : [],
-      internships: Array.isArray(sectionsPayload.internships) ? sectionsPayload.internships : [],
-      projects: Array.isArray(sectionsPayload.projects) ? sectionsPayload.projects : []
+      internships: Array.isArray(sectionsPayload.internships) ? sectionsPayload.internships : []
     };
+  }
+  if (sectionType === 'projects') {
+    return { projects: Array.isArray(sectionsPayload.projects) ? sectionsPayload.projects : [] };
   }
   if (sectionType === 'certificates') {
     return { certificates: Array.isArray(sectionsPayload.certificates) ? sectionsPayload.certificates : [] };
@@ -887,40 +947,17 @@ async function deleteGroupItem(groupKey, index) {
   activeSectionForm[groupKey].splice(index, 1);
 }
 
-function editCustomField(field) {
-  editingCustomFieldId.value = field.id;
-  customFieldForm.label = field.label;
-  customFieldForm.fieldType = field.fieldType;
-  customFieldForm.value = field.value;
+function updateDateField(target, key, event) {
+  const formattedValue = formatDateInput(event.target.value);
+  target[key] = formattedValue;
+  event.target.value = formattedValue;
 }
 
-function createCustomField() {
-  void documentProfileStore.createCustomField({ ...customFieldForm });
-  resetCustomFieldForm();
-}
-
-function updateCustomField() {
-  if (!editingCustomFieldId.value) return;
-  void documentProfileStore.updateCustomField(editingCustomFieldId.value, { ...customFieldForm });
-  resetCustomFieldForm();
-}
-
-async function deleteCustomField(fieldId) {
-  const confirmed = await confirmDelete('이 커스텀 항목을 삭제하시겠습니까?');
-  if (!confirmed) {
-    return;
-  }
-  void documentProfileStore.deleteCustomField(fieldId);
-  if (editingCustomFieldId.value === fieldId) {
-    resetCustomFieldForm();
-  }
-}
-
-function resetCustomFieldForm() {
-  editingCustomFieldId.value = '';
-  customFieldForm.label = '';
-  customFieldForm.fieldType = 'TEXT';
-  customFieldForm.value = '';
+function formatDateInput(value) {
+  const digits = String(value ?? '').replace(/\D/g, '').slice(0, 8);
+  if (digits.length <= 4) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 4)}-${digits.slice(4)}`;
+  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
 }
 
 function textField(key, label, placeholder = '', wide = false, full = false) {
@@ -928,7 +965,7 @@ function textField(key, label, placeholder = '', wide = false, full = false) {
 }
 
 function dateField(key, label) {
-  return { key, label, type: 'date', placeholder: '연도-월-일' };
+  return { key, label, type: 'date', placeholder: 'YYYY-MM-DD' };
 }
 
 function monthField(key, label) {
@@ -939,6 +976,10 @@ function selectField(key, label, options, wide = false) {
   return { key, label, options, wide, type: 'select' };
 }
 
+function radioField(key, label, options, wide = false) {
+  return { key, label, options, wide, type: 'radio' };
+}
+
 function checkboxField(key, checkboxLabel, wide = true) {
   return { key, label: '', checkboxLabel, type: 'checkbox', wide };
 }
@@ -947,12 +988,17 @@ function educationDegreeFields(degreeOptions) {
   return [
     textField('schoolName', '학교명', '학교명'),
     textField('major', '전공', '전공명'),
+    textField('subMajor', '복수전공/부전공'),
     selectField('degreeType', '학위구분', degreeOptions),
-    monthField('entranceDate', '입학일'),
-    monthField('graduationDate', '졸업일'),
+    dateField('entranceDate', '입학일'),
+    dateField('graduationDate', '졸업일'),
     selectField('graduationStatus', '졸업구분', selectOptions.graduation),
+    checkboxField('isTransfer', '편입 여부', false),
     textField('grade', '* 성적 평점', '평점'),
-    selectField('gradeScale', '/', selectOptions.gradeScale)
+    selectField('gradeScale', '만점', selectOptions.gradeScale),
+    textField('majorGrade', '전공 평점', '평점'),
+    selectField('majorGradeScale', '전공 만점', selectOptions.gradeScale),
+    textField('gradeRank', '학점 석차/상위 퍼센트', '예: 상위 10%')
   ];
 }
 

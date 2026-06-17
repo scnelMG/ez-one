@@ -9,8 +9,8 @@
     >
       <header class="onboarding-modal-header">
         <div>
-          <h2 id="onboarding-title">맞춤 공고 추천 정보 입력</h2>
-          <p>입력한 정보로 나에게 맞는 공고를 추천해드려요.</p>
+          <h2 id="onboarding-title">지원 준비 정보 입력</h2>
+          <p>입력한 정보는 마이페이지에서 언제든 다시 수정할 수 있어요.</p>
         </div>
         <button class="icon-button" type="button" aria-label="온보딩 닫기" @click="skipOnboarding">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -121,7 +121,7 @@
             <button type="button" :class="{ active: form.ssafy }" @click="form.ssafy = true">예</button>
             <button type="button" :class="{ active: !form.ssafy }" @click="form.ssafy = false">아니오</button>
           </div>
-          <p class="onboarding-helper">'예' 선택 시 Mattermost 추천 공고가 함께 표시돼요.</p>
+          <p class="onboarding-helper">SSAFY 여부는 지원 준비 정보로 저장돼요.</p>
         </section>
       </div>
 

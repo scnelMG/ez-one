@@ -48,7 +48,6 @@ const makeRouter = () => createRouter({
         { path: '/mypage', component: { template: '<div>mypage</div>' } },
         { path: '/study', component: { template: '<div>study</div>' } },
         { path: '/mypage/terms', component: { template: '<div>terms</div>' } },
-        { path: '/recommendations', component: { template: '<div>recommendations</div>' } },
         { path: '/document-profile', component: { template: '<div>document profile</div>' } }
     ]
 });

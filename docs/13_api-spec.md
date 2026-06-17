@@ -52,7 +52,7 @@
 | GET | `/api/basket/jobs/{basketJobId}` | 저장 공고 상세 |
 | PATCH | `/api/basket/jobs/{basketJobId}` | 저장 공고 회사명/직무/마감/URL/지원 메모 수정 |
 | PATCH | `/api/basket/jobs/{basketJobId}/status` | 지원 상태 변경 |
-| DELETE | `/api/basket/jobs/{basketJobId}` | soft delete/archive |
+| DELETE | `/api/basket/jobs/{basketJobId}` | soft delete/archive. Normal saved jobs are snapshotted into `application_history` before leaving the active basket list. |
 
 장바구니와 대시보드 조회는 마감 경과 normalization을 적용한다. 마감된 미완료 공고는 `NOT_APPLIED`로 처리한다.
 
@@ -82,9 +82,6 @@ Mattermost source는 서버에서 `user_profiles.is_ssafy = true`를 재검증�
 | --- | --- | --- |
 | GET | `/api/document-profile` | 전체 서류 입력 정보 조회 |
 | PUT | `/api/document-profile/sections/{sectionType}` | 표준 섹션 저장 |
-| POST | `/api/document-profile/custom-fields` | 커스텀 항목 추가 |
-| PATCH | `/api/document-profile/custom-fields/{fieldId}` | 커스텀 항목 수정 |
-| DELETE | `/api/document-profile/custom-fields/{fieldId}` | 커스텀 항목 삭제 |
 
 ## 워크스페이스
 
@@ -156,4 +153,4 @@ Mattermost source는 서버에서 `user_profiles.is_ssafy = true`를 재검증�
 | --- | --- | --- |
 | GET | `/api/history/applications?period=ALL&resultStage=` | Returns past application periods, selected-period summary, company-type counts, and rows with `workspaceId` links. `period` uses `ALL` or `YYYY-H1`/`YYYY-H2`. `resultStage` is optional and may be `DOCUMENT_FAILED`, `TEST_FAILED`, `INTERVIEW_FAILED`, `NOT_APPLIED`, or `IN_PROGRESS`. |
 
-Imported history rows are stored separately in `application_history`. The import process creates linked `basket_jobs` and `workspaces` for workspace navigation, but `basket_jobs.saved_source = 'HISTORY_IMPORT'` is excluded from the active basket list.
+History rows are stored in `application_history`. The import process creates linked `basket_jobs` and `workspaces` for workspace navigation, but `basket_jobs.saved_source = 'HISTORY_IMPORT'` is excluded from the active basket list. Normal basket jobs are also copied into `application_history` when archived, and their `workspaceId` remains readable through `GET /api/workspaces/{workspaceId}`.

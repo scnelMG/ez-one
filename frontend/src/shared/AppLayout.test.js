@@ -46,7 +46,6 @@ function makeRouter() {
             { path: '/basket', component: { template: '<div>basket</div>' } },
             { path: '/document-profile', component: { template: '<div>document profile</div>' } },
             { path: '/history', component: { template: '<div>history</div>' } },
-            { path: '/recommendations', component: { template: '<div>recommendations</div>' } },
             { path: '/study', component: { template: '<div>study</div>' } },
             { path: '/mypage', component: { template: '<div>mypage</div>' } },
             { path: '/mypage/notion', component: { template: '<div>notion</div>' } },
@@ -94,6 +93,7 @@ describe('AppLayout', () => {
             '/basket',
             '/document-profile',
             '/study',
+            '/recommendations/mattermost',
             '/history'
         ]);
         expect(wrapper.get('[data-testid="global-trademark-notice"]').text()).toContain('채용공고 식별 목적으로만 사용');

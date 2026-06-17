@@ -2,115 +2,69 @@ import { describe, expect, it, vi } from 'vitest';
 import { createRecommendationApi } from './recommendationApi';
 
 describe('recommendationApi', () => {
-    it('REC-001: loads recommendation jobs from the backend with deadline and logo metadata', async () => {
+    it('MM-001: loads Mattermost recommendations from the source-scoped backend API', async () => {
         const get = vi.fn().mockResolvedValue({
             data: {
                 success: true,
                 data: [
                     {
-                        basketJobId: 9001,
+                        basketJobId: 9101,
                         workspaceId: null,
-                        companyName: '라인',
+                        companyName: 'Line',
                         positionTitle: 'Server Platform Engineer',
                         deadlineLabel: 'D-7',
-                        deadlineDate: '2026-06-13',
-                        companyLogoUrl: 'https://example.com/line.png'
+                        companyLogoUrl: 'https://www.google.com/s2/favicons?domain=linecorp.com&sz=128'
                     }
-                ],
-                error: null
+                ]
             }
         });
-        const api = createRecommendationApi({ get, post: vi.fn() });
-        const jobs = await api.listJobs();
+        const post = vi.fn();
+        const api = createRecommendationApi({ get, post });
 
-        expect(get).toHaveBeenCalledWith('/api/recommendations/jobs', {});
-        expect(jobs).toEqual([
-            {
-                id: '9001',
-                companyName: '라인',
-                positionTitle: 'Server Platform Engineer',
-                deadlineLabel: 'D-7',
-                deadlineDate: '2026-06-13',
-                companyLogoUrl: 'https://example.com/line.png',
-                participantCount: 0,
-                workspaceId: null
-            }
-        ]);
-    });
+        const jobs = await api.listMattermostJobs();
 
-    it('REC-001: resolves missing logos from backend company domain or known company name', async () => {
-        const get = vi.fn().mockResolvedValue({
-            data: {
-                success: true,
-                data: [
-                    {
-                        basketJobId: 9002,
-                        companyName: 'SK하이닉스',
-                        positionTitle: '청년 Hy-Five 15기',
-                        deadlineLabel: 'D-4',
-                        deadlineDate: '2026-06-11'
-                    },
-                    {
-                        basketJobId: 9003,
-                        companyName: '새회사',
-                        positionTitle: '경영지원',
-                        deadlineLabel: 'D-2',
-                        deadlineDate: '2026-06-09',
-                        companyDomain: 'example-careers.co.kr'
-                    }
-                ],
-                error: null
-            }
+        expect(get).toHaveBeenCalledWith('/api/recommendations/jobs', {
+            params: { source: 'mattermost' },
+            skipAuthRefresh: true
         });
-        const api = createRecommendationApi({ get, post: vi.fn() });
-        const jobs = await api.listJobs();
-
-        expect(jobs[0].companyLogoUrl).toBe('https://www.google.com/s2/favicons?domain=skhynix.com&sz=128');
-        expect(jobs[1].companyLogoUrl).toBe('https://www.google.com/s2/favicons?domain=example-careers.co.kr&sz=128');
+        expect(jobs[0]).toMatchObject({
+            id: '9101',
+            companyName: 'Line',
+            positionTitle: 'Server Platform Engineer',
+            deadlineLabel: 'D-7',
+            companyLogoUrl: 'https://www.google.com/s2/favicons?domain=linecorp.com&sz=128'
+        });
     });
 
-    it('REC-001: saves a recommendation and returns the basket workspace path', async () => {
+    it('MM-001: saves a Mattermost recommendation through the source-scoped save API', async () => {
+        const get = vi.fn();
         const post = vi.fn().mockResolvedValue({
             data: {
                 success: true,
                 data: {
-                    id: 101,
-                    workspaceId: 102,
-                    companyName: '라인',
+                    id: 201,
+                    workspaceId: 202,
+                    companyName: 'Line',
                     positionTitle: 'Server Platform Engineer',
-                    applicationStatus: 'NOT_APPLIED',
-                    statusLabel: '지원 전',
+                    applicationStatus: 'READY',
+                    statusLabel: '지원전',
                     deadlineLabel: 'D-7',
                     deadlineSoon: true,
-                    sourceUrl: 'https://www.jasoseol.com/'
-                },
-                error: null
+                    sourceUrl: 'https://careers.linecorp.com/jobs/102'
+                }
             }
         });
-        const api = createRecommendationApi({ get: vi.fn(), post });
-        const savedJob = await api.saveJob('9001');
+        const api = createRecommendationApi({ get, post });
 
-        expect(post).toHaveBeenCalledWith('/api/recommendations/jobs/9001/save');
-        expect(savedJob).toEqual({
-            basketJobId: '101',
-            workspaceId: '102',
-            companyName: '라인',
-            positionTitle: 'Server Platform Engineer'
+        const saved = await api.saveMattermostJob('9101');
+
+        expect(post).toHaveBeenCalledWith('/api/recommendations/jobs/9101/save', null, {
+            params: { source: 'mattermost' }
         });
-    });
-
-    it('MM-009: loads Mattermost recommendations with source query', async () => {
-        const get = vi.fn().mockResolvedValue({
-            data: {
-                success: true,
-                data: [],
-                error: null
-            }
+        expect(saved).toMatchObject({
+            id: '201',
+            workspaceId: '202',
+            companyName: 'Line'
         });
-        const api = createRecommendationApi({ get, post: vi.fn() });
-
-        await api.listJobs('mattermost');
-
-        expect(get).toHaveBeenCalledWith('/api/recommendations/jobs?source=mattermost', {});
     });
 });

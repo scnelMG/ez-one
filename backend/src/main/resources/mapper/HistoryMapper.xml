@@ -19,14 +19,32 @@
     <result property="periodHalf" column="period_half"/>
     <result property="sourceUrl" column="source_url"/>
     <result property="companyType" column="company_type"/>
+    <result property="companyIndustry" column="company_industry"/>
+    <result property="companyDataSource" column="company_data_source"/>
   </resultMap>
 
   <select id="listApplications" resultMap="historyApplicationRowMap">
-    SELECT id, user_id, workspace_id, company_name, position_title, application_status,
-           result_stage, result_label, raw_result, deadline_label, period_key, period_year,
-           period_half, source_url, company_type
-    FROM application_history
-    WHERE user_id = #{userId}
-    ORDER BY period_year DESC, period_half DESC, deadline_date IS NULL, deadline_date ASC, id ASC
+    SELECT ah.id, ah.user_id, ah.workspace_id, ah.company_name, ah.position_title, ah.application_status,
+           ah.result_stage, ah.result_label, ah.raw_result, ah.deadline_label, ah.period_key, ah.period_year,
+           ah.period_half, ah.source_url,
+           COALESCE(NULLIF(c.company_type, ''), NULLIF(ah.company_type, ''), '미확인') AS company_type,
+           NULLIF(cp.industry, '') AS company_industry,
+           CASE
+             WHEN cp.id IS NOT NULL AND COALESCE(cp.source_priority, '') != 'RULE_BASED_INTERNAL' THEN 'MASTER'
+             WHEN cp.id IS NOT NULL THEN 'RULE'
+             WHEN c.id IS NOT NULL
+               AND COALESCE(NULLIF(c.domain, ''), 'unknown') != 'unknown'
+               AND COALESCE(NULLIF(c.company_type, ''), '미확인') != '미확인'
+             THEN 'RULE'
+             ELSE 'UNKNOWN'
+           END AS company_data_source
+    FROM application_history ah
+    LEFT JOIN workspaces w ON w.id = ah.workspace_id
+    LEFT JOIN basket_jobs bj ON bj.id = w.basket_job_id
+    LEFT JOIN jobs j ON j.id = bj.job_id
+    LEFT JOIN companies c ON c.id = j.company_id
+    LEFT JOIN company_profiles cp ON cp.company_id = c.id
+    WHERE ah.user_id = #{userId}
+    ORDER BY ah.period_year DESC, ah.period_half DESC, ah.deadline_date IS NULL, ah.deadline_date ASC, ah.id ASC
   </select>
 </mapper>

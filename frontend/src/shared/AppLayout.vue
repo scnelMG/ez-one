@@ -9,8 +9,8 @@
         <RouterLink to="/basket">공고 장바구니</RouterLink>
         <RouterLink to="/document-profile">서류 입력 정보</RouterLink>
         <RouterLink to="/study">취업 스터디</RouterLink>
+        <RouterLink to="/recommendations/mattermost">MM 추천공고</RouterLink>
         <RouterLink to="/history">과거 지원 내역</RouterLink>
-        <RouterLink v-if="profileStore.profile?.ssafy" to="/recommendations?source=mattermost">MM 추천 공고</RouterLink>
       </nav>
 
       <div class="header-actions">

@@ -68,60 +68,6 @@ export const useDocumentProfileStore = defineStore('documentProfile', () => {
             errorMessage.value = messageFromError(error, '서류 섹션을 저장하지 못했습니다.');
         }
     }
-    async function createCustomField(payload) {
-        status.value = 'saving';
-        errorMessage.value = '';
-        try {
-            const field = await documentProfileApi.createCustomField(payload);
-            if (profile.value) {
-                profile.value = {
-                    ...profile.value,
-                    customFields: [...profile.value.customFields, field]
-                };
-            }
-            status.value = 'ready';
-        }
-        catch (error) {
-            status.value = 'error';
-            errorMessage.value = messageFromError(error, '커스텀 항목을 추가하지 못했습니다.');
-        }
-    }
-    async function updateCustomField(fieldId, payload) {
-        status.value = 'saving';
-        errorMessage.value = '';
-        try {
-            const field = await documentProfileApi.updateCustomField(fieldId, payload);
-            if (profile.value) {
-                profile.value = {
-                    ...profile.value,
-                    customFields: profile.value.customFields.map((item) => (item.id === fieldId ? field : item))
-                };
-            }
-            status.value = 'ready';
-        }
-        catch (error) {
-            status.value = 'error';
-            errorMessage.value = messageFromError(error, '커스텀 항목을 수정하지 못했습니다.');
-        }
-    }
-    async function deleteCustomField(fieldId) {
-        status.value = 'saving';
-        errorMessage.value = '';
-        try {
-            await documentProfileApi.deleteCustomField(fieldId);
-            if (profile.value) {
-                profile.value = {
-                    ...profile.value,
-                    customFields: profile.value.customFields.filter((item) => item.id !== fieldId)
-                };
-            }
-            status.value = 'ready';
-        }
-        catch (error) {
-            status.value = 'error';
-            errorMessage.value = messageFromError(error, '커스텀 항목을 삭제하지 못했습니다.');
-        }
-    }
     return {
         status,
         profile,
@@ -140,10 +86,7 @@ export const useDocumentProfileStore = defineStore('documentProfile', () => {
         activities,
         loadDocumentProfile,
         saveBasicInfo,
-        saveReusableSection,
-        createCustomField,
-        updateCustomField,
-        deleteCustomField
+        saveReusableSection
     };
 });
 function normalizeBasicInfo(payload) {
