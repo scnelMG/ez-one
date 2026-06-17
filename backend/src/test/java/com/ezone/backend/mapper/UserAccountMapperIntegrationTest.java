@@ -7,13 +7,22 @@ import com.ezone.backend.dto.auth.GoogleUserProfile;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.mybatis.spring.boot.test.autoconfigure.MybatisTest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
-@EnabledIfEnvironmentVariable(named = "RUN_DB_INTEGRATION_TESTS", matches = "true")
+@MybatisTest(
+    properties = {
+        "spring.datasource.url=jdbc:h2:mem:user-account-mapper;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1",
+        "spring.datasource.username=sa",
+        "spring.datasource.password=",
+        "spring.datasource.driver-class-name=org.h2.Driver",
+        "spring.flyway.enabled=false",
+        "spring.sql.init.mode=never"
+    }
+)
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class UserAccountMapperIntegrationTest {
 
     private static final String TEST_GOOGLE_SUBJECT = "test-google-subject-auth-001";
@@ -26,12 +35,22 @@ class UserAccountMapperIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        ensureColumn("name", "VARCHAR(255) NOT NULL DEFAULT ''");
-        ensureColumn("nickname", "VARCHAR(255) NOT NULL DEFAULT ''");
-        ensureColumn("profile_completed", "BOOLEAN NOT NULL DEFAULT FALSE");
-        jdbcTemplate.update("UPDATE users SET name = email WHERE name = ''");
-        jdbcTemplate.update("UPDATE users SET nickname = email WHERE nickname = ''");
-        jdbcTemplate.update("DELETE FROM users WHERE provider = 'GOOGLE' AND provider_id = ?", TEST_GOOGLE_SUBJECT);
+        jdbcTemplate.execute("DROP TABLE IF EXISTS users");
+        jdbcTemplate.execute("""
+            CREATE TABLE users (
+              id BIGINT PRIMARY KEY AUTO_INCREMENT,
+              email VARCHAR(255) NOT NULL,
+              name VARCHAR(255) NOT NULL,
+              nickname VARCHAR(255) NOT NULL,
+              provider VARCHAR(32) NOT NULL,
+              provider_id VARCHAR(255) NOT NULL,
+              password_hash VARCHAR(255) NULL,
+              profile_completed BOOLEAN NOT NULL DEFAULT FALSE,
+              created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              UNIQUE KEY uk_users_email (email),
+              UNIQUE KEY uk_users_provider_subject (provider, provider_id)
+            )
+            """);
     }
 
     @Test
@@ -56,19 +75,5 @@ class UserAccountMapperIntegrationTest {
             assertThat(user.nickname()).isEqualTo("Gil Dong");
             assertThat(user.profileCompleted()).isFalse();
         });
-    }
-
-    private void ensureColumn(String columnName, String definition) {
-        Integer count = jdbcTemplate.queryForObject("""
-            SELECT COUNT(*)
-            FROM information_schema.columns
-            WHERE table_schema = DATABASE()
-              AND table_name = 'users'
-              AND column_name = ?
-            """, Integer.class, columnName);
-
-        if (count == null || count == 0) {
-            jdbcTemplate.execute("ALTER TABLE users ADD COLUMN " + columnName + " " + definition);
-        }
     }
 }
