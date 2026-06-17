@@ -10,11 +10,42 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+function K([int[]]$Codepoints) {
+    return -join ($Codepoints | ForEach-Object { [char]$_ })
+}
+
+function Label([string]$Key) {
+    switch ($Key) {
+        "IN_PROGRESS" { return K @(0xC9C4, 0xD589, 0xC911) }
+        "INTERVIEW_FAILED" { return (K @(0xBA74, 0xC811)) + " " + (K @(0xB2E8, 0xACC4)) + " " + (K @(0xC885, 0xB8CC)) }
+        "TEST_FAILED" { return (K @(0xD544, 0xAE30)) + "/" + (K @(0xACFC, 0xC81C)) + " " + (K @(0xB2E8, 0xACC4)) + " " + (K @(0xC885, 0xB8CC)) }
+        "DOCUMENT_FAILED" { return (K @(0xC11C, 0xB958)) + " " + (K @(0xB2E8, 0xACC4)) + " " + (K @(0xC885, 0xB8CC)) }
+        "NOT_APPLIED" { return K @(0xBBF8, 0xC9C0, 0xC6D0) }
+        "PUBLIC_INSTITUTION" { return (K @(0xACF5, 0xACF5)) + (K @(0xAE30, 0xAD00)) }
+        "ENTERPRISE" { return K @(0xB300, 0xAE30, 0xC5C5) }
+        "MID_SIZE" { return (K @(0xC911, 0xACAC)) + (K @(0xAE30, 0xC5C5)) }
+        "SMALL_SIZE" { return (K @(0xC911, 0xC18C)) + (K @(0xAE30, 0xC5C5)) }
+        "STARTUP" { return K @(0xC2A4, 0xD0C0, 0xD2B8, 0xC5C5) }
+        "OTHER" { return (K @(0xAE30, 0xD0C0)) + (K @(0xAE30, 0xC5C5)) }
+        "UNKNOWN_ROLE" { return (K @(0xC9C1, 0xBB34)) + " " + (K @(0xBBF8, 0xAE30, 0xB85D)) }
+        "UNKNOWN_DEADLINE" { return (K @(0xB9C8, 0xAC10, 0xC77C)) + " " + (K @(0xBBF8, 0xAE30, 0xB85D)) }
+        "UNKNOWN_SIZE" { return K @(0xBBF8, 0xD655, 0xC778) }
+        default { return $Key }
+    }
+}
+
 function SqlString([string]$Value) {
     if ([string]::IsNullOrWhiteSpace($Value)) {
         return "NULL"
     }
-    return "'" + $Value.Replace("'", "''") + "'"
+    return "'" + (NormalizeText $Value).Replace("'", "''") + "'"
+}
+
+function NormalizeText([string]$Value) {
+    if ($null -eq $Value) {
+        return ""
+    }
+    return ($Value -replace "[\r\n]+", " ").Trim()
 }
 
 function SqlDate([string]$Value) {
@@ -46,10 +77,6 @@ function PeriodKey([string]$Value) {
     }
 }
 
-function K([int[]]$Codepoints) {
-    return -join ($Codepoints | ForEach-Object { [char]$_ })
-}
-
 function HasText([string]$Value, [int[]]$Codepoints) {
     return $Value.Contains((K $Codepoints))
 }
@@ -65,37 +92,37 @@ function ResultStage([string]$Value) {
 }
 
 function ResultLabel([string]$Stage) {
-    switch ($Stage) {
-        "IN_PROGRESS" { "In progress" }
-        "INTERVIEW_FAILED" { "Interview stage ended" }
-        "TEST_FAILED" { "Test/assignment stage ended" }
-        "DOCUMENT_FAILED" { "Document stage ended" }
-        default { "Not applied" }
-    }
+    return Label $Stage
 }
 
 function ApplicationStatus([string]$Stage) {
     if ($Stage -eq "IN_PROGRESS") {
         return "IN_PROGRESS"
     }
-    return "NOT_APPLIED"
+    if ($Stage -eq "NOT_APPLIED") {
+        return "NOT_APPLIED"
+    }
+    return "COMPLETED"
 }
 
 function CompanyType([string]$CompanyName, [string]$SourceUrl) {
     $domainHost = DomainFromUrl $SourceUrl
-    if ($domainHost -match "bank|finance|kdb|shinhan|kb|woori|hana|nh|ibk|samsunglife|hanwhalife") {
-        return "Finance/Public"
+    if ((HasText $CompanyName @(0xACF5, 0xC0AC)) -or (HasText $CompanyName @(0xACF5, 0xB2E8)) -or (HasText $CompanyName @(0xAE30, 0xAD00)) -or (HasText $CompanyName @(0xC7AC, 0xB2E8)) -or (HasText $CompanyName @(0xC815, 0xBD80)) -or ($domainHost -match "kdb|bok")) {
+        return Label "PUBLIC_INSTITUTION"
     }
     if ($domainHost -match "samsung|hyundai|lg|sk|naver|kakao|nexon|hanwha|cj|kt|nhn|coupang|linecorp|woowahan|toss|lotte|koreanair") {
-        return "Enterprise"
+        return Label "ENTERPRISE"
     }
     if ($domainHost -match "dalpha|wrtn|upstage|wanted|buzzvil|classum|channel") {
-        return "Startup"
+        return Label "STARTUP"
     }
-    if ((HasText $CompanyName @(0xC740, 0xD589)) -or (HasText $CompanyName @(0xBCF4, 0xD5D8)) -or (HasText $CompanyName @(0xC99D, 0xAD8C)) -or (HasText $CompanyName @(0xAE08, 0xC735))) {
-        return "Finance/Public"
+    if (HasText $CompanyName @(0xC911, 0xACAC)) {
+        return Label "MID_SIZE"
     }
-    return "Other"
+    if (HasText $CompanyName @(0xC911, 0xC18C)) {
+        return Label "SMALL_SIZE"
+    }
+    return Label "OTHER"
 }
 
 function DomainFromUrl([string]$Url) {
@@ -103,7 +130,8 @@ function DomainFromUrl([string]$Url) {
         return $null
     }
     try {
-        return ([Uri]$Url).Host
+        $normalizedUrl = if ($Url -match "^[a-zA-Z][a-zA-Z0-9+.-]*://") { $Url } else { "https://$Url" }
+        return ([Uri]$normalizedUrl).Host
     } catch {
         return $null
     }
@@ -136,15 +164,19 @@ $lines.Add("SELECT @history_user_id := id FROM users WHERE email = @history_user
 $lines.Add("")
 
 $index = 0
+$imported = 0
 foreach ($row in $rows) {
     $index += 1
-    $companyName = (FieldByIndex $row 0).Trim()
-    $sourceUrl = (FieldByIndex $row 1).Trim()
-    $rawResult = (FieldByIndex $row 2).Trim()
-    $deadlineLabel = (FieldByIndex $row 3).Trim()
-    $positionTitle = (FieldByIndex $row 4).Trim()
-    if ([string]::IsNullOrWhiteSpace($companyName) -or [string]::IsNullOrWhiteSpace($positionTitle)) {
+    $companyName = NormalizeText (FieldByIndex $row 0)
+    $sourceUrl = NormalizeText (FieldByIndex $row 1)
+    $rawResult = NormalizeText (FieldByIndex $row 2)
+    $deadlineLabel = NormalizeText (FieldByIndex $row 3)
+    $positionTitle = NormalizeText (FieldByIndex $row 4)
+    if ([string]::IsNullOrWhiteSpace($companyName)) {
         continue
+    }
+    if ([string]::IsNullOrWhiteSpace($positionTitle)) {
+        $positionTitle = Label "UNKNOWN_ROLE"
     }
 
     $stage = ResultStage $rawResult
@@ -154,32 +186,37 @@ foreach ($row in $rows) {
     $companyType = CompanyType $companyName $sourceUrl
     $domain = DomainFromUrl $sourceUrl
     $resultLabel = ResultLabel $stage
-    $fallbackDeadlineLabel = if ([string]::IsNullOrWhiteSpace($deadlineLabel)) { "No deadline" } else { $deadlineLabel }
+    $fallbackDeadlineLabel = if ([string]::IsNullOrWhiteSpace($deadlineLabel)) { Label "UNKNOWN_DEADLINE" } else { $deadlineLabel }
+    $companySize = Label "UNKNOWN_SIZE"
 
+    $imported += 1
     $lines.Add("-- Row ${index}: $companyName / $positionTitle")
+    $lines.Add("SET @history_company_id := NULL, @history_job_id := NULL, @history_basket_job_id := NULL, @history_workspace_id := NULL, @history_existing_workspace_id := NULL;")
+    $lines.Add("SELECT @history_existing_workspace_id := workspace_id FROM application_history WHERE user_id = @history_user_id AND company_name = $(SqlString $companyName) AND position_title = $(SqlString $positionTitle) AND source_url <=> $(SqlString $sourceUrl) ORDER BY id ASC LIMIT 1;")
     $lines.Add("INSERT INTO companies (name, domain, company_type, size)")
-    $lines.Add("VALUES ($(SqlString $companyName), $(SqlString $domain), $(SqlString $companyType), 'Unknown')")
+    $lines.Add("VALUES ($(SqlString $companyName), $(SqlString $domain), $(SqlString $companyType), $(SqlString $companySize))")
     $lines.Add("ON DUPLICATE KEY UPDATE domain = COALESCE(domain, VALUES(domain)), company_type = COALESCE(company_type, VALUES(company_type)), updated_at = CURRENT_TIMESTAMP;")
     $lines.Add("SELECT @history_company_id := id FROM companies WHERE name = $(SqlString $companyName) LIMIT 1;")
     $lines.Add("INSERT INTO jobs (company_id, title, role, deadline_label, deadline_at, source, url)")
     $lines.Add("SELECT @history_company_id, $(SqlString $positionTitle), $(SqlString $positionTitle), $(SqlString $fallbackDeadlineLabel), $deadlineDate, 'HISTORY_IMPORT', $(SqlString $sourceUrl)")
-    $lines.Add("WHERE NOT EXISTS (SELECT 1 FROM jobs WHERE company_id = @history_company_id AND title = $(SqlString $positionTitle) AND url = $(SqlString $sourceUrl));")
-    $lines.Add("SELECT @history_job_id := id FROM jobs WHERE company_id = @history_company_id AND title = $(SqlString $positionTitle) AND url = $(SqlString $sourceUrl) ORDER BY id DESC LIMIT 1;")
+    $lines.Add("WHERE @history_existing_workspace_id IS NULL AND NOT EXISTS (SELECT 1 FROM jobs WHERE company_id = @history_company_id AND title = $(SqlString $positionTitle) AND url <=> $(SqlString $sourceUrl));")
+    $lines.Add("SELECT @history_job_id := id FROM jobs WHERE company_id = @history_company_id AND title = $(SqlString $positionTitle) AND url <=> $(SqlString $sourceUrl) ORDER BY id DESC LIMIT 1;")
     $lines.Add("INSERT INTO basket_jobs (user_id, job_id, application_status, status_reason, saved_source)")
     $lines.Add("SELECT @history_user_id, @history_job_id, '$status', '$stage', 'HISTORY_IMPORT'")
-    $lines.Add("WHERE @history_user_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM basket_jobs WHERE user_id = @history_user_id AND job_id = @history_job_id AND deleted_at IS NULL);")
+    $lines.Add("WHERE @history_existing_workspace_id IS NULL AND @history_user_id IS NOT NULL AND @history_job_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM basket_jobs WHERE user_id = @history_user_id AND job_id = @history_job_id AND deleted_at IS NULL);")
     $lines.Add("SELECT @history_basket_job_id := id FROM basket_jobs WHERE user_id = @history_user_id AND job_id = @history_job_id AND deleted_at IS NULL ORDER BY id DESC LIMIT 1;")
     $lines.Add("INSERT INTO workspaces (user_id, basket_job_id)")
     $lines.Add("SELECT @history_user_id, @history_basket_job_id")
-    $lines.Add("WHERE @history_user_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM workspaces WHERE basket_job_id = @history_basket_job_id);")
+    $lines.Add("WHERE @history_existing_workspace_id IS NULL AND @history_user_id IS NOT NULL AND @history_basket_job_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM workspaces WHERE basket_job_id = @history_basket_job_id);")
     $lines.Add("SELECT @history_workspace_id := id FROM workspaces WHERE basket_job_id = @history_basket_job_id LIMIT 1;")
+    $lines.Add("SELECT @history_workspace_id := COALESCE(@history_existing_workspace_id, @history_workspace_id);")
     $lines.Add("INSERT INTO application_history (user_id, workspace_id, company_name, position_title, application_status, result_stage, result_label, raw_result, deadline_label, deadline_date, period_key, period_year, period_half, source_url, company_type)")
     $lines.Add("SELECT @history_user_id, @history_workspace_id, $(SqlString $companyName), $(SqlString $positionTitle), '$status', '$stage', $(SqlString $resultLabel), $(SqlString $rawResult), $(SqlString $fallbackDeadlineLabel), $deadlineDate, $(SqlString $period.Key), $($period.Year), $(SqlString $period.Half), $(SqlString $sourceUrl), $(SqlString $companyType)")
     $lines.Add("WHERE @history_user_id IS NOT NULL AND @history_workspace_id IS NOT NULL")
-    $lines.Add("ON DUPLICATE KEY UPDATE application_status = VALUES(application_status), result_stage = VALUES(result_stage), result_label = VALUES(result_label), raw_result = VALUES(raw_result), updated_at = CURRENT_TIMESTAMP;")
+    $lines.Add("ON DUPLICATE KEY UPDATE application_status = VALUES(application_status), result_stage = VALUES(result_stage), result_label = VALUES(result_label), raw_result = VALUES(raw_result), position_title = VALUES(position_title), deadline_label = VALUES(deadline_label), company_type = VALUES(company_type), updated_at = CURRENT_TIMESTAMP;")
     $lines.Add("")
 }
 
 $lines.Add("COMMIT;")
 $lines | Set-Content -LiteralPath $OutFile -Encoding UTF8
-Write-Host "Wrote $($rows.Count) source rows to $OutFile"
+Write-Host "Read $($rows.Count) source rows; wrote $imported import rows to $OutFile"

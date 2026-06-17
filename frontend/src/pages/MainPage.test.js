@@ -5,12 +5,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { basketApi } from '@/features/basket/api/basketApi';
 import { dashboardApi } from '@/features/dashboard/api/dashboardApi';
 import { profileApi } from '@/features/profile/api/profileApi';
-import { recommendationApi } from '@/features/recommendations/api/recommendationApi';
 import MainPage from './MainPage.vue';
 
 vi.mock('@/features/basket/api/basketApi', () => ({
     basketApi: {
         listJobs: vi.fn(),
+        updateStatus: vi.fn(),
         archiveJob: vi.fn(),
         createJob: vi.fn()
     }
@@ -31,13 +31,6 @@ vi.mock('@/features/profile/api/profileApi', () => ({
     }
 }));
 
-vi.mock('@/features/recommendations/api/recommendationApi', () => ({
-    recommendationApi: {
-        listJobs: vi.fn(),
-        saveJob: vi.fn()
-    }
-}));
-
 const basketJobs = [
     job('101', 'Naver', 'Backend Engineer', 'IN_PROGRESS', '진행중', '2026.06.08', '102'),
     job('104', 'KakaoPay', 'Server Developer', 'NOT_STARTED', '지원 전', '2026.06.12', '105'),
@@ -45,24 +38,6 @@ const basketJobs = [
     job('107', 'Toss', 'Frontend Developer', 'SUBMITTED', '지원완료', '2026.06.25', '109'),
     job('108', 'Planet', 'Frontend Developer', 'NOT_STARTED', '지원 전', '2026.06.27', '110'),
     job('109', 'Overflow', 'Java Backend Engineer', 'IN_PROGRESS', '진행중', '2026.06.30', '111')
-];
-
-const recommendationJobs = [
-    recommendation('r-1', '우리은행', '일반 (하계 체험형)', '2026-06-08', '22시간 남음', 'wooribank.com', 2135),
-    recommendation('r-2', 'SK하이닉스', '청년 Hy-Five 15기', '2026-06-11', '4일 남음', 'skhynix.com', 485),
-    recommendation('r-3', '손해보험협회', '일반사무', '2026-06-08', '8시간 남음', 'knia.or.kr', 544),
-    recommendation('r-4', '아이마켓코리아', '경영지원', '2026-06-08', '8시간 남음', 'imarketkorea.com', 488),
-    recommendation('r-5', '롯데그룹', '[롯데월드] HR', '2026-06-15', '8일 남음', 'lotte.co.kr', 1485),
-    {
-        id: 'r-always',
-        companyName: '상시회사',
-        positionTitle: '상시 채용',
-        deadlineLabel: '상시',
-        deadlineDate: null,
-        participantCount: 0,
-        companyLogoUrl: '',
-        workspaceId: null
-    }
 ];
 
 const makeRouter = () => createRouter({
@@ -75,7 +50,7 @@ const makeRouter = () => createRouter({
         { path: '/mypage', component: { template: '<div>mypage</div>' } },
         { path: '/study', component: { template: '<div>study</div>' } },
         { path: '/workspaces/:workspaceId', component: { template: '<div>workspace</div>' } },
-        { path: '/recommendations', component: { template: '<div>recommendations</div>' } },
+        { path: '/history', component: { template: '<div>history</div>' } },
         { path: '/document-profile', component: { template: '<div>document profile</div>' } },
         { path: '/mypage/notion', component: { template: '<div>notion</div>' } },
         { path: '/mypage/terms', component: { template: '<div>terms</div>' } }
@@ -89,6 +64,12 @@ describe('MainPage', () => {
         vi.mocked(basketApi.listJobs).mockResolvedValue(basketJobs);
         vi.mocked(basketApi.archiveJob).mockReset();
         vi.mocked(basketApi.archiveJob).mockResolvedValue(undefined);
+        vi.mocked(basketApi.updateStatus).mockReset();
+        vi.mocked(basketApi.updateStatus).mockResolvedValue({
+            ...basketJobs[0],
+            status: 'SUBMITTED',
+            statusLabel: '지원완료'
+        });
         vi.mocked(basketApi.createJob).mockReset();
         vi.mocked(basketApi.createJob).mockResolvedValue({
             id: '201',
@@ -137,15 +118,6 @@ describe('MainPage', () => {
             ssafy: false,
             completed: true
         });
-        vi.mocked(recommendationApi.listJobs).mockReset();
-        vi.mocked(recommendationApi.listJobs).mockResolvedValue(recommendationJobs);
-        vi.mocked(recommendationApi.saveJob).mockReset();
-        vi.mocked(recommendationApi.saveJob).mockResolvedValue({
-            basketJobId: 'r-1',
-            workspaceId: '201',
-            companyName: '우리은행',
-            positionTitle: '일반 (하계 체험형)'
-        });
         vi.stubGlobal('confirm', vi.fn(() => true));
     });
 
@@ -161,7 +133,8 @@ describe('MainPage', () => {
 
         expect(wrapper.text()).toContain('지원 현황');
         expect(wrapper.text()).toContain('공고 장바구니');
-        expect(wrapper.text()).toContain('추천 공고');
+        expect(wrapper.text()).not.toContain('추천 공고');
+        expect(wrapper.find('[data-testid="main-recommendation-preview-job"]').exists()).toBe(false);
         expect(wrapper.find('.dashboard-rail').exists()).toBe(false);
         expect(wrapper.find('.filter-bar').exists()).toBe(false);
         expect(wrapper.find('[data-testid="member-chip"]').exists()).toBe(false);
@@ -171,7 +144,8 @@ describe('MainPage', () => {
         localStorage.setItem('ezone.recentWorkspaces', JSON.stringify(['102']));
         const wrapper = await mountMain();
 
-        expect(wrapper.get('.main-basket-title-row').text()).toBe('공고 장바구니마감 임박순으로 제공됩니다.');
+        expect(wrapper.get('.main-basket-title-row').text()).toBe('공고 장바구니 마감 임박순으로 제공됩니다.');
+        expect(wrapper.get('[data-testid="main-basket-title-link"]').attributes('href')).toBe('/basket');
         expect(wrapper.findAll('.main-basket-head span').map((cell) => cell.text())).toEqual([
             '중요',
             '회사명',
@@ -184,32 +158,24 @@ describe('MainPage', () => {
         ]);
         const rows = wrapper.findAll('[data-testid="main-basket-preview-job"]');
         expect(rows).toHaveLength(5);
+        expect(rows[0].element.children.length).toBe(wrapper.get('.main-basket-head').element.children.length);
         expect(rows[0].get('[data-testid="main-basket-company"]').text()).toContain('Naver');
-        expect(rows[0].get('[data-testid="main-recent-work-101"]').text()).toBe('최근 작업');
+        expect(rows[0].get('[data-testid="main-status-101"]').text()).toBe(basketJobs[0].statusLabel);
+        expect(rows[0].get('[data-testid="main-recent-work-101"]').text()).toBe('이어가기');
+        expect(rows[0].get('[data-testid="main-recent-work-link-101"]').attributes('href')).toBe('/workspaces/102');
         expect(rows[0].get('[data-testid="main-basket-apply-link"]').text()).toBe('바로가기');
         expect(wrapper.find('[data-testid="main-archive-101"]').exists()).toBe(true);
     });
 
-    it('renders four recommendation page preview cards and saves from main', async () => {
+    it('JOB-010/MAIN-013: updates status from the main basket preview with the same basket behavior', async () => {
         const wrapper = await mountMain();
 
-        expect(recommendationApi.listJobs).toHaveBeenCalled();
-        const cards = wrapper.findAll('[data-testid="main-recommendation-preview-job"]');
-        expect(cards).toHaveLength(4);
-        expect(cards[0].text()).toContain('우리은행');
-        expect(cards[0].text()).toContain('담기');
-        expect(cards[0].text()).toContain('명 작성');
-        expect(wrapper.text()).not.toContain('상시회사');
-        expect(wrapper.findAll('[data-testid="main-recommendation-logo"]')).toHaveLength(4);
-
-        vi.mocked(dashboardApi.getSummary).mockClear();
-        vi.mocked(basketApi.listJobs).mockClear();
-
-        await wrapper.get('[data-testid="main-save-recommendation-r-1"]').trigger('click');
+        await wrapper.get('[data-testid="main-status-101"]').trigger('click');
+        await wrapper.get('[data-testid="main-status-101-option-COMPLETED"]').trigger('click');
         await flushPromises();
-        expect(recommendationApi.saveJob).toHaveBeenCalledWith('r-1');
-        expect(dashboardApi.getSummary).toHaveBeenCalled();
-        expect(basketApi.listJobs).toHaveBeenCalled();
+
+        expect(basketApi.updateStatus).toHaveBeenCalledWith('101', 'COMPLETED');
+        expect(wrapper.get('[data-testid="main-status-101"]').text()).toBe('지원완료');
     });
 
     it('JOB-008: prompts confirm and reloads summary stats after deleting job in basket preview', async () => {
@@ -317,19 +283,6 @@ function job(id, companyName, positionTitle, status, statusLabel, deadlineDate, 
         deadlineSoon: deadlineDate <= '2026-06-12',
         workspaceId,
         sourceUrl: `https://www.jasoseol.com/recruit/${id}`
-    };
-}
-
-function recommendation(id, companyName, positionTitle, deadlineDate, deadlineLabel, domain, participantCount) {
-    return {
-        id,
-        companyName,
-        positionTitle,
-        deadlineLabel,
-        deadlineDate,
-        participantCount,
-        companyLogoUrl: `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
-        workspaceId: null
     };
 }
 

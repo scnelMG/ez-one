@@ -1,5 +1,7 @@
 package com.ezone.backend.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.groups.Tuple.tuple;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
@@ -37,31 +39,7 @@ class MyBatisP1WorkspaceServiceTest {
     void createBasketJobRecordsUnverifiedCompanyInfoSourceFromSavedUrl() {
         String sourceUrl = "https://careers.example.com/jobs/backend";
         when(mapper.findDuplicateBasketJob(1L, "Example Labs", sourceUrl, "Backend Developer")).thenReturn(Optional.empty());
-        doAnswer(invocation -> {
-            JobRow row = invocation.getArgument(0);
-            row.setCompanyId(10L);
-            return null;
-        }).when(mapper).upsertCompany(org.mockito.ArgumentMatchers.any());
-        doAnswer(invocation -> {
-            JobRow row = invocation.getArgument(0);
-            row.setId(20L);
-            return null;
-        }).when(mapper).insertJob(org.mockito.ArgumentMatchers.any());
-        doAnswer(invocation -> {
-            BasketJobRow row = invocation.getArgument(0);
-            row.setId(30L);
-            return null;
-        }).when(mapper).insertBasketJob(org.mockito.ArgumentMatchers.any());
-        doAnswer(invocation -> {
-            WorkspaceRow row = invocation.getArgument(0);
-            row.setId(40L);
-            return null;
-        }).when(mapper).insertWorkspace(org.mockito.ArgumentMatchers.any());
-        doAnswer(invocation -> {
-            EssayQuestionRow row = invocation.getArgument(0);
-            row.setId(50L);
-            return null;
-        }).when(mapper).insertEssayQuestion(org.mockito.ArgumentMatchers.any());
+        stubCreateBasketPersistence(10L, 20L, 30L, 40L);
 
         service.createBasketJob(1L, new CreateBasketJobRequest(
             null,
@@ -78,7 +56,34 @@ class MyBatisP1WorkspaceServiceTest {
                 && sourceUrl.equals(row.getLogoSourceUrl())
                 && "DISCOVERED".equals(row.getLogoStatus())
         ));
+        verify(mapper).upsertRuleBasedCompanyProfile(10L, "미확인", "careers.example.com");
         verify(mapper).recordCompanyInfoSource(10L, "SAVED_JOB_URL", sourceUrl, "UNVERIFIED");
+    }
+
+    @Test
+    void createBasketJobUsesKnownCompanyDefaultsInsteadOfJasoseolDomain() {
+        String sourceUrl = "https://jasoseol.com/recruit?rec=104614";
+        String positionTitle = "인턴 · 정보보호 데이터 엔지니어";
+        when(mapper.findDuplicateBasketJob(1L, "카카오뱅크", sourceUrl, positionTitle)).thenReturn(Optional.empty());
+        stubCreateBasketPersistence(10L, 20L, 30L, 40L);
+
+        service.createBasketJob(1L, new CreateBasketJobRequest(
+            null,
+            "카카오뱅크",
+            positionTitle,
+            "2026.07.03",
+            sourceUrl,
+            "",
+            "MANUAL"
+        ));
+
+        verify(mapper).upsertCompany(argThat(row ->
+            "카카오뱅크".equals(row.getCompanyName())
+                && "kakaobank.com".equals(row.getCompanyDomain())
+                && "대기업".equals(row.getCompanyType())
+                && "대기업".equals(row.getCompanySize())
+        ));
+        verify(mapper).upsertRuleBasedCompanyProfile(10L, "금융", "kakaobank.com");
     }
 
     @Test
@@ -101,15 +106,16 @@ class MyBatisP1WorkspaceServiceTest {
 
         List<DashboardJobResponse> recommendations = service.listRecommendationJobs(1L);
 
-        org.assertj.core.api.Assertions.assertThat(recommendations)
+        assertThat(recommendations)
             .extracting(
                 DashboardJobResponse::basketJobId,
                 DashboardJobResponse::companyName,
-                DashboardJobResponse::companyLogoUrl
+                DashboardJobResponse::companyLogoUrl,
+                DashboardJobResponse::sourceUrl
             )
             .containsExactly(
-                org.assertj.core.groups.Tuple.tuple(9001L, "LINE", "https://static.example.com/line-logo.png"),
-                org.assertj.core.groups.Tuple.tuple(9002L, "오늘의집", "https://static.example.com/ohou-logo.png")
+                tuple(9001L, "LINE", "https://static.example.com/line-logo.png", "https://www.jasoseol.com/"),
+                tuple(9002L, "오늘의집", "https://static.example.com/ohou-logo.png", "https://www.jasoseol.com/")
             );
     }
 
@@ -130,24 +136,38 @@ class MyBatisP1WorkspaceServiceTest {
             "https://www.jasoseol.com/recruit/line-platform",
             "Server Platform Engineer"
         )).thenReturn(Optional.empty());
+        stubCreateBasketPersistence(10L, 20L, 30L, 40L);
+
+        service.saveRecommendation(1L, 9001L);
+
+        verify(mapper).upsertCompany(argThat(row ->
+            "LINE".equals(row.getCompanyName())
+                && "line.me".equals(row.getCompanyDomain())
+                && "대기업".equals(row.getCompanyType())
+                && "https://static.example.com/line-logo.png".equals(row.getCompanyLogoUrl())
+        ));
+        verify(mapper).upsertRuleBasedCompanyProfile(10L, "IT/플랫폼", "line.me");
+    }
+
+    private void stubCreateBasketPersistence(Long companyId, Long jobId, Long basketJobId, Long workspaceId) {
         doAnswer(invocation -> {
             JobRow row = invocation.getArgument(0);
-            row.setCompanyId(10L);
+            row.setCompanyId(companyId);
             return null;
         }).when(mapper).upsertCompany(org.mockito.ArgumentMatchers.any());
         doAnswer(invocation -> {
             JobRow row = invocation.getArgument(0);
-            row.setId(20L);
+            row.setId(jobId);
             return null;
         }).when(mapper).insertJob(org.mockito.ArgumentMatchers.any());
         doAnswer(invocation -> {
             BasketJobRow row = invocation.getArgument(0);
-            row.setId(30L);
+            row.setId(basketJobId);
             return null;
         }).when(mapper).insertBasketJob(org.mockito.ArgumentMatchers.any());
         doAnswer(invocation -> {
             WorkspaceRow row = invocation.getArgument(0);
-            row.setId(40L);
+            row.setId(workspaceId);
             return null;
         }).when(mapper).insertWorkspace(org.mockito.ArgumentMatchers.any());
         doAnswer(invocation -> {
@@ -155,13 +175,6 @@ class MyBatisP1WorkspaceServiceTest {
             row.setId(50L);
             return null;
         }).when(mapper).insertEssayQuestion(org.mockito.ArgumentMatchers.any());
-
-        service.saveRecommendation(1L, 9001L);
-
-        verify(mapper).upsertCompany(argThat(row ->
-            "LINE".equals(row.getCompanyName())
-                && "https://static.example.com/line-logo.png".equals(row.getCompanyLogoUrl())
-        ));
     }
 
     private JobRow recommendationRow(

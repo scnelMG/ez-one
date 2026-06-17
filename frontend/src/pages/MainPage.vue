@@ -47,7 +47,11 @@
       <section class="dashboard-panel main-basket-preview" aria-label="공고 장바구니 미리보기">
         <div class="section-heading">
           <div class="main-basket-title-row">
-            <h2>공고 장바구니</h2>
+            <h2>
+              <RouterLink class="main-basket-title-link" data-testid="main-basket-title-link" to="/basket">
+                공고 장바구니
+              </RouterLink>
+            </h2>
             <p class="main-preview-note">마감 임박순으로 제공됩니다</p>
             <span class="sr-only">.</span>
           </div>
@@ -109,10 +113,40 @@
               <strong>{{ job.companyName }}</strong>
             </RouterLink>
             <span class="main-basket-position">{{ job.positionTitle }}</span>
-            <span class="status-tag" :class="statusClass(job.applicationStatus)" data-testid="main-basket-status">
-              {{ statusLabel(job.applicationStatus, job.applicationStatusLabel) }}
-            </span>
-            <RouterLink class="job-main-link" :to="`/workspaces/${job.workspaceId}`" style="display: flex; gap: 8px; align-items: center; text-decoration: none;">
+            <div class="status-menu">
+              <button
+                class="status-select status-tag"
+                type="button"
+                :class="statusClass(job.status)"
+                :aria-label="`${job.companyName} ${job.positionTitle} 지원 상태 변경`"
+                :aria-expanded="openStatusJobId === job.id ? 'true' : 'false'"
+                :data-testid="`main-status-${job.id}`"
+                @click="toggleStatusMenu(job.id)"
+              >
+                {{ statusLabel(job.status, job.statusLabel) }}
+              </button>
+              <div
+                v-if="openStatusJobId === job.id"
+                class="status-option-list"
+                role="listbox"
+                :aria-label="`${job.companyName} 지원 상태 선택`"
+              >
+                <button
+                  v-for="option in statusOptions"
+                  :key="option.value"
+                  class="status-option status-tag"
+                  type="button"
+                  role="option"
+                  :class="statusClass(option.value)"
+                  :aria-selected="job.status === option.value ? 'true' : 'false'"
+                  :data-testid="`main-status-${job.id}-option-${option.value}`"
+                  @click="changeStatus(job.id, option.value)"
+                >
+                  {{ option.label }}
+                </button>
+              </div>
+            </div>
+            <RouterLink class="job-main-link deadline-cell" :to="`/workspaces/${job.workspaceId}`">
               <span style="color: var(--ink); font-weight: 500; white-space: nowrap;">{{ formatAbsoluteDeadline(job) }}</span>
               <span v-if="formatDDay(job) || job.deadlineLabel?.startsWith('D-')" class="deadline-pill" :class="{ urgent: job.deadlineSoon }">{{ formatDDay(job) || job.deadlineLabel }}</span>
             </RouterLink>
@@ -125,7 +159,16 @@
             >
               바로가기
             </a>
-            <span :data-testid="'main-recent-work-' + job.id">{{ isRecentWorkspace(job.workspaceId) ? '최근 작업' : '' }}</span>
+            <span class="recent-work-cell" :data-testid="'main-recent-work-' + job.id">
+              <RouterLink
+                v-if="isRecentWorkspace(job.workspaceId)"
+                class="recent-work-badge"
+                :data-testid="'main-recent-work-link-' + job.id"
+                :to="`/workspaces/${job.workspaceId}`"
+              >
+                이어가기
+              </RouterLink>
+            </span>
             <button
               class="delete-job-button"
               type="button"
@@ -187,7 +230,6 @@
           </article>
         </div>
       </section>
-
       <HoneyPotGraph :activities="activities" />
 
     </section>
@@ -216,7 +258,6 @@ import {
   statusLabel,
   normalizedSourceUrl,
   companyInitial,
-  formatParticipantCount,
   formatDDay,
   formatDateTime,
   formatAbsoluteDeadline,
@@ -241,6 +282,13 @@ const profileStore = useProfileStore();
 const showOnboardingModal = ref(requiresOnboarding());
 const priorityJobIds = computed(() => basketStore.priorityJobIds);
 const failedLogos = ref(new Set());
+const openStatusJobId = ref(null);
+const statusOptions = [
+    { value: 'READY', label: '지원 전' },
+    { value: 'NOT_APPLIED', label: '미지원' },
+    { value: 'IN_PROGRESS', label: '진행중' },
+    { value: 'COMPLETED', label: '지원완료' }
+];
 
 const confirmState = reactive({
   show: false,
@@ -325,7 +373,6 @@ const recommendationPreviewItems = computed(() => [...recommendationStore.jobs]
     .filter(isVisibleRecommendation)
     .sort((left, right) => deadlineRank(left) - deadlineRank(right))
     .slice(0, 4));
-
 const activities = ref([]);
 
 onMounted(async () => {
@@ -336,26 +383,10 @@ onMounted(async () => {
   
   const realActivities = await dashboardApi.getActivities();
   activities.value = realActivities || [];
-
-  void recommendationStore.loadRecommendations();
 });
-
-function isVisibleRecommendation(item) {
-    return item.deadlineLabel !== '상시' && item.deadlineLabel !== '상시채용';
-}
 
 function handleLogoError(id) {
     failedLogos.value.add(id);
-}
-
-function saveRecommendation(recommendationId) {
-    void recommendationStore.saveRecommendation(recommendationId).then(() => {
-        if (recommendationStore.savedJob) {
-            showToast(`${recommendationStore.savedJob.companyName} 공고를 담았습니다`, { tone: 'green' });
-        }
-        void dashboardStore.loadSummary();
-        void basketStore.loadJobs();
-    });
 }
 
 function isPriorityJob(job) {
@@ -364,6 +395,15 @@ function isPriorityJob(job) {
 
 function togglePriority(jobId) {
     basketStore.togglePriority(jobId);
+}
+
+function toggleStatusMenu(jobId) {
+    openStatusJobId.value = openStatusJobId.value === jobId ? null : jobId;
+}
+
+function changeStatus(jobId, nextStatus) {
+    openStatusJobId.value = null;
+    void basketStore.updateStatus(jobId, nextStatus);
 }
 
 async function archiveJob(id) {

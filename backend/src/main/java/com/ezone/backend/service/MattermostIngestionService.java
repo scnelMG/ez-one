@@ -26,8 +26,18 @@ public class MattermostIngestionService {
 
     private static final Pattern URL_PATTERN = Pattern.compile("https?://\\S+");
     private static final Pattern BRACKET_COMPANY_PATTERN = Pattern.compile("^\\[([^\\]]+)]\\s*(.+)$");
-    private static final Pattern DEADLINE_PATTERN = Pattern.compile("(D-\\d+|\\d{4}\\.\\d{2}\\.\\d{2}|오늘)");
+    private static final Pattern DEADLINE_PATTERN = Pattern.compile(
+        "(D-\\d+|\\d{4}\\.\\d{2}\\.\\d{2}|\\d{1,2}/\\d{1,2}\\([^)]+\\)|상시/수시/채용 시 마감 공고)"
+    );
+    private static final Pattern JOB_LISTING_LINE_PATTERN = Pattern.compile("^(.+?)\\s*/\\s*(.+?)\\s*/\\s*(-\\s*.+)$");
     private static final Set<String> REVIEW_STATUSES = Set.of("APPROVED", "REJECTED");
+    private static final Set<String> NON_RECRUITMENT_URL_HOST_PARTS = Set.of(
+        "youtu.be",
+        "youtube.com",
+        "forms.gle",
+        "docs.google.com",
+        "work24.go.kr"
+    );
 
     @Autowired(required = false)
     private MattermostMapper mattermostMapper;
@@ -58,24 +68,27 @@ public class MattermostIngestionService {
         message.setParseStatus(parsed.parseStatus());
         insertMessage(message);
 
-        MattermostParsedJobPostRow candidate = null;
-        if (parsed.createCandidate()) {
-            candidate = new MattermostParsedJobPostRow();
+        MattermostParsedJobPostRow firstCandidate = null;
+        for (ParsedJobCandidate parsedCandidate : parsed.candidates()) {
+            MattermostParsedJobPostRow candidate = new MattermostParsedJobPostRow();
             candidate.setMessageId(message.getId());
-            candidate.setCompanyName(parsed.companyName());
-            candidate.setTitle(parsed.title());
-            candidate.setUrl(parsed.url());
-            candidate.setDeadlineLabel(parsed.deadlineLabel());
+            candidate.setCompanyName(parsedCandidate.companyName());
+            candidate.setTitle(parsedCandidate.title());
+            candidate.setUrl(parsedCandidate.url());
+            candidate.setDeadlineLabel(parsedCandidate.deadlineLabel());
             candidate.setReviewStatus("NEEDS_REVIEW");
             insertParsedJobPost(candidate);
+            if (firstCandidate == null) {
+                firstCandidate = candidate;
+            }
         }
 
         return new MattermostIngestResponse(
             message.getId(),
             message.getMessageType(),
             message.getParseStatus(),
-            candidate != null,
-            candidate == null ? null : candidate.getId()
+            firstCandidate != null,
+            firstCandidate == null ? null : firstCandidate.getId()
         );
     }
 
@@ -108,20 +121,32 @@ public class MattermostIngestionService {
     private ParsedMattermostMessage parse(MattermostWebhookRequest request) {
         String text = safeText(request.text());
         String lower = text.toLowerCase(Locale.ROOT);
-        if (lower.contains("취업성공후기") || lower.contains("합격 후기") || lower.contains("합격후기")) {
+        if (text.contains("취업성공후기") || text.contains("합격 후기") || text.contains("합격후기")) {
             return ParsedMattermostMessage.ignored("SUCCESS_STORY");
         }
         if (text.isBlank() && request.attachments() != null && !request.attachments().isEmpty()) {
             return ParsedMattermostMessage.filePending();
         }
+
+        List<ParsedJobCandidate> candidates = extractJobCandidates(text);
+        if (!candidates.isEmpty()) {
+            return ParsedMattermostMessage.jobPosting(candidates);
+        }
+
+        if (isJobRelatedNotice(text, lower)) {
+            return ParsedMattermostMessage.ignored("JOB_RELATED_NOTICE");
+        }
+
         Matcher urlMatcher = URL_PATTERN.matcher(text);
-        boolean hasUrl = urlMatcher.find();
-        boolean hasJobKeyword = text.contains("채용") || lower.contains("recruit") || lower.contains("career");
-        if (!hasUrl || !hasJobKeyword) {
+        if (!urlMatcher.find() || !hasJobKeyword(text, lower)) {
             return ParsedMattermostMessage.ignored("ANNOUNCEMENT");
         }
 
         String url = cleanUrl(urlMatcher.group());
+        if (!isRecruitmentUrl(url)) {
+            return ParsedMattermostMessage.ignored("JOB_RELATED_NOTICE");
+        }
+
         String withoutUrl = text.replace(urlMatcher.group(), "").trim();
         String companyName = "미확인";
         String title = withoutUrl;
@@ -132,7 +157,80 @@ public class MattermostIngestionService {
         }
         String deadlineLabel = extractDeadline(text).orElse("미정");
         title = title.replace("마감 " + deadlineLabel, "").trim();
-        return ParsedMattermostMessage.jobPosting(companyName, title, url, deadlineLabel);
+        return ParsedMattermostMessage.jobPosting(List.of(new ParsedJobCandidate(companyName, title, url, deadlineLabel)));
+    }
+
+    private List<ParsedJobCandidate> extractJobCandidates(String text) {
+        List<String> lines = text.lines()
+            .map(String::trim)
+            .filter(line -> !line.isBlank())
+            .toList();
+        List<ParsedJobCandidate> candidates = new ArrayList<>();
+        for (int index = 0; index < lines.size(); index++) {
+            String listingLine = normalizeListingLine(lines.get(index));
+            Matcher listingMatcher = JOB_LISTING_LINE_PATTERN.matcher(listingLine);
+            if (!listingMatcher.find()) {
+                continue;
+            }
+            Optional<String> url = findRecruitmentUrlNear(lines, index);
+            if (url.isEmpty()) {
+                continue;
+            }
+            String companyName = listingMatcher.group(1).trim();
+            String title = listingMatcher.group(2).trim();
+            String deadlineLabel = normalizeDeadline(listingMatcher.group(3));
+            if (companyName.isBlank() || title.isBlank()) {
+                continue;
+            }
+            candidates.add(new ParsedJobCandidate(companyName, title, url.get(), deadlineLabel));
+        }
+        return candidates;
+    }
+
+    private Optional<String> findRecruitmentUrlNear(List<String> lines, int listingLineIndex) {
+        int lastIndex = Math.min(lines.size() - 1, listingLineIndex + 2);
+        for (int index = listingLineIndex; index <= lastIndex; index++) {
+            Matcher matcher = URL_PATTERN.matcher(lines.get(index));
+            if (matcher.find()) {
+                String url = cleanUrl(matcher.group());
+                if (isRecruitmentUrl(url)) {
+                    return Optional.of(url);
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
+    private String normalizeListingLine(String line) {
+        return line
+            .replaceAll("(:[^:\\s]+:\\s*)+", "")
+            .replaceAll("^[\\s\\p{Punct}]+", "")
+            .trim();
+    }
+
+    private String normalizeDeadline(String value) {
+        return value.replaceFirst("^-\\s*", "").trim();
+    }
+
+    private boolean isJobRelatedNotice(String text, String lower) {
+        return text.contains("채용공고")
+            || text.contains("채용설명회")
+            || text.contains("취업특강")
+            || text.contains("취뽀뉴스")
+            || text.contains("채용 포지션")
+            || lower.contains("job fair");
+    }
+
+    private boolean hasJobKeyword(String text, String lower) {
+        return text.contains("채용")
+            || text.contains("공고")
+            || lower.contains("recruit")
+            || lower.contains("career");
+    }
+
+    private boolean isRecruitmentUrl(String url) {
+        String lower = url.toLowerCase(Locale.ROOT);
+        return NON_RECRUITMENT_URL_HOST_PARTS.stream().noneMatch(lower::contains);
     }
 
     private Optional<String> extractDeadline(String text) {
@@ -205,7 +303,7 @@ public class MattermostIngestionService {
     }
 
     private String cleanUrl(String url) {
-        return url.replaceAll("[),.]+$", "");
+        return url.replaceAll("[\\]),.]+$", "");
     }
 
     private String toJson(Map<String, Object> payload) {
@@ -219,30 +317,26 @@ public class MattermostIngestionService {
     private record ParsedMattermostMessage(
         String messageType,
         String parseStatus,
-        boolean createCandidate,
+        List<ParsedJobCandidate> candidates
+    ) {
+        static ParsedMattermostMessage jobPosting(List<ParsedJobCandidate> candidates) {
+            return new ParsedMattermostMessage("JOB_POSTING", "PARSED", candidates);
+        }
+
+        static ParsedMattermostMessage ignored(String messageType) {
+            return new ParsedMattermostMessage(messageType, "IGNORED", List.of());
+        }
+
+        static ParsedMattermostMessage filePending() {
+            return new ParsedMattermostMessage("FILE_ONLY", "FILE_PENDING", List.of());
+        }
+    }
+
+    private record ParsedJobCandidate(
         String companyName,
         String title,
         String url,
         String deadlineLabel
     ) {
-        static ParsedMattermostMessage jobPosting(String companyName, String title, String url, String deadlineLabel) {
-            return new ParsedMattermostMessage(
-                "JOB_POSTING",
-                "PARSED",
-                true,
-                companyName,
-                title,
-                url,
-                deadlineLabel
-            );
-        }
-
-        static ParsedMattermostMessage ignored(String messageType) {
-            return new ParsedMattermostMessage(messageType, "IGNORED", false, null, null, null, null);
-        }
-
-        static ParsedMattermostMessage filePending() {
-            return new ParsedMattermostMessage("FILE_ONLY", "FILE_PENDING", false, null, null, null, null);
-        }
     }
 }

@@ -297,7 +297,7 @@
               <div class="essay-items">
                 <div v-for="item in studyStore.currentSharedEssayDetail.items" :key="item.versionId" class="essay-item">
                   <h4 class="question-title">Q. {{ item.questionText }}</h4>
-                  <div class="essay-body" v-html="item.body"></div>
+                  <div class="essay-body">{{ item.body }}</div>
                 </div>
                 <div v-if="studyStore.currentSharedEssayDetail.items.length === 0" class="empty-state">
                   선택된 자소서 내용이 없습니다.
@@ -450,6 +450,7 @@ import { useStudyStore } from '@/stores/studyStore';
 import { studyApi } from '@/features/study/api/studyApi';
 import { basketApi } from '@/features/basket/api/basketApi';
 import { workspaceApi } from '@/features/workspace/api/workspaceApi';
+import { getCurrentUser } from '@/features/auth/session/authSession';
 
 const route = useRoute();
 const studyStore = useStudyStore();
@@ -525,7 +526,7 @@ onMounted(() => {
 
 // 권한 확인
 const myEmail = computed(() => {
-  return localStorage.getItem('ez_one_user_email') || 'eunjaelee058@gmail.com'; // TODO: auth store
+  return getCurrentUser()?.email || '';
 });
 
 const myMemberInfo = computed(() => {

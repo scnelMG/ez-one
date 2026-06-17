@@ -68,6 +68,8 @@ Use this workflow for backend schema changes:
 5. If Flyway fails, inspect the error, fix the root cause, then run `repair` only after understanding what failed.
 6. After repair, rerun migration and verify backend startup.
 
+Temporary migration files are not allowed in `backend/src/main/resources/db/migration`. If a SQL file is exploratory, invalid, personal, or not intended to run in every environment, keep it outside the Flyway migration directory and outside the reviewed application migration history.
+
 Recommended commands:
 
 ```powershell
@@ -114,4 +116,3 @@ Do not ship or commit a configuration change that disables Flyway for normal loc
   https://documentation.red-gate.com/flyway/learn-more-about-flyway/feature-summary
 - Redgate Flyway deployment guidance: production rollouts should use validation/pre-flight checks to detect history drift before applying changes.
   https://documentation.red-gate.com/flyway/deploying-database-changes-using-flyway/rolling-out-updates-from-a-single-schema-to-multiple-production-databases
-

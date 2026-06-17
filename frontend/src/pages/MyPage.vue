@@ -22,7 +22,7 @@
             이름
             <input v-model="nickname" data-testid="nickname-input" maxlength="50" />
           </label>
-          <button class="icon-edit-button" type="button" aria-label="이름 수정" @click="saveProfile">✎</button>
+          <button class="icon-edit-button" type="button" aria-label="이름 저장" @click="saveProfile">저장</button>
         </article>
 
         <article class="account-login-card">
@@ -34,13 +34,13 @@
             <span class="status-chip green">Google 로그인</span>
           </div>
           <p>{{ currentUser?.email }}</p>
-          <small>이 서비스는 Google(Gmail) 계정으로 로그인해, 별도 비밀번호는 없어요.</small>
+          <small>EZ-ONE은 Google 계정으로 로그인하며 별도 비밀번호를 저장하지 않습니다.</small>
         </article>
 
         <article class="account-warning-card">
-          <strong>노션 연동 계정과 우리 서비스 로그인 계정이 다를 수 있어요.</strong>
-          <p>노션 연동은 ‘노션 연동 관리’에서 설정·확인할 수 있어요.</p>
-          <RouterLink to="/mypage/notion">노션 연동 관리 →</RouterLink>
+          <strong>Notion 연동은 계정과 분리해 관리됩니다.</strong>
+          <p>연결 상태와 동기화 범위는 Notion 연동 관리에서 확인할 수 있습니다.</p>
+          <RouterLink to="/mypage/notion">Notion 연동 관리</RouterLink>
         </article>
 
         <div class="account-actions">
@@ -56,10 +56,10 @@
       <section v-else-if="activeSection === 'onboarding'" class="mypage-panel" aria-label="온보딩 정보">
         <div class="section-heading">
           <div>
-            <p class="section-kicker">맞춤 추천 정보</p>
+            <p class="section-kicker">온보딩 정보</p>
             <h2>마이페이지 · 온보딩 정보</h2>
           </div>
-          <small>추천 공고에 반영돼요 · 언제든 수정 가능</small>
+          <small>지원 준비 기본 정보로 사용됩니다. 언제든 수정할 수 있습니다.</small>
         </div>
         <div class="preference-chip-form">
           <section class="onboarding-field-group" aria-label="희망 직무">
@@ -94,8 +94,8 @@
               </button>
             </div>
           </section>
-          <section class="onboarding-field-group" aria-label="계열 및 업종">
-            <strong>계열 / 업종</strong>
+          <section class="onboarding-field-group" aria-label="산업">
+            <strong>산업</strong>
             <div class="onboarding-chip-list">
               <button
                 v-for="industry in industryOptions"
@@ -126,8 +126,8 @@
               </button>
             </div>
           </section>
-          <section class="onboarding-field-group" aria-label="보유 스킬">
-            <strong>보유 스킬</strong>
+          <section class="onboarding-field-group" aria-label="보유 기술">
+            <strong>보유 기술</strong>
             <div class="skill-input-shell">
               <span v-for="skill in profileForm.skills" :key="skill" class="skill-token">
                 {{ skill }}
@@ -137,10 +137,7 @@
                   :data-testid="`profile-skill-remove-${skill}`"
                   @click="removePreferenceSkill(skill)"
                 >
-                  <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                  </svg>
+                  ×
                 </button>
               </span>
               <input
@@ -155,25 +152,15 @@
           <section class="onboarding-field-group" aria-label="SSAFY 교육생 여부">
             <strong>SSAFY 교육생이신가요?</strong>
             <div class="segmented-control">
-              <button
-                type="button"
-                :class="{ active: profileForm.ssafy }"
-                data-testid="profile-ssafy-true"
-                @click="profileForm.ssafy = true"
-              >
+              <button type="button" :class="{ active: profileForm.ssafy }" data-testid="profile-ssafy-true" @click="profileForm.ssafy = true">
                 예
               </button>
-              <button
-                type="button"
-                :class="{ active: !profileForm.ssafy }"
-                data-testid="profile-ssafy-false"
-                @click="profileForm.ssafy = false"
-              >
+              <button type="button" :class="{ active: !profileForm.ssafy }" data-testid="profile-ssafy-false" @click="profileForm.ssafy = false">
                 아니오
               </button>
             </div>
           </section>
-          <p class="mattermost-note">'예' 선택 시 추천 공고에 Mattermost 공고가 함께 표시돼요.</p>
+          <p class="mattermost-note">저장된 온보딩 정보는 지원 문서 기본 정보로만 사용됩니다.</p>
         </div>
         <div class="form-actions">
           <p v-if="preferenceStatusMessage" class="form-status" role="status">{{ preferenceStatusMessage }}</p>
@@ -184,19 +171,19 @@
         </div>
       </section>
 
-      <section v-else-if="activeSection === 'qna'" class="mypage-panel" aria-label="QnA">
+      <section v-else-if="activeSection === 'qna'" class="mypage-panel" aria-label="자주 묻는 질문">
         <div class="section-heading">
           <div>
             <p class="section-kicker">QnA</p>
-            <h2>마이페이지 · QnA</h2>
+            <h2>마이페이지 · 자주 묻는 질문</h2>
           </div>
-          <input class="mypage-search" placeholder="궁금한 점을 검색하세요" />
+          <input class="mypage-search" placeholder="궁금한 내용을 검색하세요" />
         </div>
         <div class="faq-filter-row">
           <span>전체</span>
           <span>계정</span>
-          <span>노션 연동</span>
-          <span>공고/장바구니</span>
+          <span>Notion 연동</span>
+          <span>공고/바구니</span>
           <span>자소서</span>
           <span>확장 프로그램</span>
         </div>
@@ -231,12 +218,17 @@
             내용
             <textarea v-model="inquiryForm.body" required />
           </label>
-          <button class="primary-button" type="submit">문의 접수</button>
+          <button class="primary-button" type="submit" :disabled="supportSubmitting">
+            {{ supportSubmitting ? '접수 중' : '문의 접수' }}
+          </button>
         </form>
+        <p v-if="supportStatusMessage" class="form-status" role="status">{{ supportStatusMessage }}</p>
         <div class="support-history">
           <strong>내 문의 내역</strong>
-          <span>노션 연동이 자꾸 풀려요 · 답변 완료</span>
-          <span>확장 프로그램 자동 입력 오류 · 접수중</span>
+          <span v-if="supportRequests.length === 0">아직 접수된 문의가 없습니다.</span>
+          <span v-for="request in supportRequests" :key="request.id ?? request.title">
+            {{ request.title }} · {{ formatSupportStatus(request.status) }}
+          </span>
         </div>
       </section>
 
@@ -263,8 +255,11 @@
             </select>
           </label>
           <label>제안 내용 <textarea v-model="partnershipForm.body" required /></label>
-          <button class="primary-button" type="submit">제휴 문의 보내기</button>
+          <button class="primary-button" type="submit" :disabled="supportSubmitting">
+            {{ supportSubmitting ? '전송 중' : '제휴 문의 보내기' }}
+          </button>
         </form>
+        <p v-if="supportStatusMessage" class="form-status" role="status">{{ supportStatusMessage }}</p>
       </section>
 
       <section v-else class="mypage-panel" aria-label="이용약관">
@@ -273,7 +268,7 @@
             <p class="section-kicker">약관</p>
             <h2>서비스 이용약관</h2>
           </div>
-          <small>시행일 2026.01.01 · 인쇄/다운로드</small>
+          <small>시행일 2026.01.01</small>
         </div>
         <div class="terms-tabs">
           <span>제1조 목적</span>
@@ -295,26 +290,33 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue';
-import { useRoute } from 'vue-router';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import AppLayout from '@/shared/AppLayout.vue';
 import PageHeader from '@/shared/PageHeader.vue';
 import MyPageNav from '@/shared/MyPageNav.vue';
 import { authApi } from '@/features/auth/api/authApi';
-import { getCurrentUser, saveCurrentUser } from '@/features/auth/session/authSession';
+import { supportApi } from '@/features/support/api/supportApi';
+import { clearAuthSession, getCurrentUser, getRefreshToken, saveCurrentUser } from '@/features/auth/session/authSession';
 import { useProfileStore } from '@/stores/profileStore';
 
 const route = useRoute();
+const router = useRouter();
 const profileStore = useProfileStore();
 const currentUser = ref(getCurrentUser());
 const nickname = ref(currentUser.value?.nickname || currentUser.value?.name || '');
 const saving = ref(false);
 const statusMessage = ref('');
 const preferenceStatusMessage = ref('');
+const supportStatusMessage = ref('');
+const supportSubmitting = ref(false);
+const supportRequests = ref([]);
+
 const roleOptions = ['프론트엔드', '백엔드', '데이터 엔지니어', 'AI/ML', '모바일', 'DevOps', 'PM', '디자인', 'QA', '기타'];
 const companyTypeOptions = ['대기업', '공공기관', '중견기업', '중소기업', '스타트업', '기타'];
 const industryOptions = ['IT/플랫폼', '제조', '금융', '커머스', '게임', '바이오/헬스', '미디어', '기타'];
-const regionOptions = ['서울', '경기', '인천', '대전', '부산', '대구', '광주', '제주', '원격(재택)'];
+const regionOptions = ['서울', '경기', '인천', '대전', '부산', '대구', '광주', '제주', '원격'];
+
 const profileForm = reactive({
   desiredRoles: [roleOptions[0]],
   companyTypes: [companyTypeOptions[0]],
@@ -341,15 +343,15 @@ const partnershipForm = reactive({
 const pageCopy = {
   account: {
     title: '마이페이지 · 내 계정',
-    description: '로그인 계정과 노션 연동 계정이 다를 수 있음을 안내하고 계정 정보를 관리합니다.'
+    description: '로그인 계정과 외부 연동 상태를 확인하고 계정 정보를 관리합니다.'
   },
   onboarding: {
     title: '마이페이지 · 온보딩 정보',
-    description: '추천 공고에 반영되는 직무, 기업 유형, 지역, 스킬 정보를 수정합니다.'
+    description: '지원 준비에 사용하는 직무, 기업 유형, 지역, 기술 정보를 수정합니다.'
   },
   qna: {
-    title: '마이페이지 · QnA',
-    description: '자주 묻는 질문을 검색하고 바로 확인합니다.'
+    title: '마이페이지 · 자주 묻는 질문',
+    description: '자주 묻는 질문을 빠르게 확인합니다.'
   },
   inquiry: {
     title: '마이페이지 · 1:1 문의',
@@ -371,10 +373,10 @@ const pageDescription = computed(() => pageCopy[activeSection.value]?.descriptio
 const profileInitial = computed(() => (nickname.value || currentUser.value?.email || 'E').trim().charAt(0).toUpperCase());
 
 const faqItems = [
-  { q: '노션 이메일이 로그인 이메일과 달라도 되나요?', a: '네. 로그인 계정과 노션 연동 계정은 다를 수 있고, 내 계정에서 차이를 안내합니다.' },
-  { q: '자소서는 어떻게 버전 관리하나요?', a: '공고 워크스페이스에서 도화지와 자소서 버전관리를 전환해 비교할 수 있습니다.' },
-  { q: '공고별로 첨부한 자료는 어디서 보나요?', a: '워크스페이스 오른쪽 참고자료 패널에서 JD, 뉴스, DART, 메모를 확인합니다.' },
-  { q: '추천 공고는 어떤 기준으로 보여지나요?', a: '온보딩에서 입력한 선호 직무와 기술 스택을 바탕으로 마감순 공고를 제안합니다.' }
+  { q: 'Notion 이메일이 로그인 이메일과 달라도 되나요?', a: '네. 로그인 계정과 Notion 연동 계정은 분리해서 관리합니다.' },
+  { q: '자소서는 어떻게 버전 관리하나요?', a: '워크스페이스에서 문항별 초안과 버전을 관리할 수 있습니다.' },
+  { q: '공고별로 첨부 자료는 어디서 보나요?', a: '워크스페이스 오른쪽 참고자료 영역에서 JD, 뉴스, 메모를 확인합니다.' },
+  { q: '온보딩 정보는 어디에 쓰이나요?', a: '지원 문서 기본 정보와 추천 준비 정보로 사용됩니다.' }
 ];
 
 onMounted(async () => {
@@ -382,12 +384,22 @@ onMounted(async () => {
   if (profileStore.profile) {
     syncProfileForm();
   }
+  if (activeSection.value === 'inquiry') {
+    await loadSupportRequests();
+  }
+});
+
+watch(activeSection, async (section) => {
+  supportStatusMessage.value = '';
+  if (section === 'inquiry') {
+    await loadSupportRequests();
+  }
 });
 
 async function saveProfile() {
   const nextNickname = nickname.value.trim();
   if (!nextNickname) {
-    statusMessage.value = '닉네임을 입력해 주세요.';
+    statusMessage.value = '이름을 입력해 주세요.';
     return;
   }
   saving.value = true;
@@ -461,10 +473,6 @@ function removePreferenceSkill(skill) {
   }
 }
 
-import { clearAuthSession, getRefreshToken } from '@/features/auth/session/authSession';
-import { useRouter } from 'vue-router';
-const router = useRouter();
-
 async function handleLogout() {
   const refreshToken = getRefreshToken();
   try {
@@ -478,7 +486,7 @@ async function handleLogout() {
 }
 
 async function handleWithdraw() {
-  if (!window.confirm('정말로 탈퇴하시겠습니까? 관련 데이터가 모두 영구 삭제됩니다.')) {
+  if (!window.confirm('정말로 탈퇴하시겠습니까? 로그인 세션이 종료되고 계정 식별 정보가 익명화됩니다.')) {
     return;
   }
   try {
@@ -494,18 +502,65 @@ function cancelPreferences() {
   preferenceStatusMessage.value = '입력 내용이 초기화되었습니다.';
 }
 
-function submitInquiry() {
-  alert('1:1 문의가 접수되었습니다.');
-  inquiryForm.title = '';
-  inquiryForm.body = '';
+async function loadSupportRequests() {
+  try {
+    supportRequests.value = await supportApi.getMyRequests();
+  } catch {
+    supportRequests.value = [];
+  }
 }
 
-function submitPartnership() {
-  alert('제휴 문의가 전송되었습니다.');
-  partnershipForm.company = '';
-  partnershipForm.contactName = '';
-  partnershipForm.email = '';
-  partnershipForm.phone = '';
-  partnershipForm.body = '';
+async function submitInquiry() {
+  supportSubmitting.value = true;
+  supportStatusMessage.value = '';
+  try {
+    const created = await supportApi.createRequest({
+      requestType: 'INQUIRY',
+      category: inquiryForm.type,
+      title: inquiryForm.title,
+      body: inquiryForm.body
+    });
+    supportRequests.value = [created, ...supportRequests.value.filter((item) => item.id !== created.id)];
+    inquiryForm.title = '';
+    inquiryForm.body = '';
+    supportStatusMessage.value = '1:1 문의가 접수되었습니다.';
+  } catch {
+    supportStatusMessage.value = '문의 접수에 실패했습니다. 잠시 후 다시 시도해 주세요.';
+  } finally {
+    supportSubmitting.value = false;
+  }
+}
+
+async function submitPartnership() {
+  supportSubmitting.value = true;
+  supportStatusMessage.value = '';
+  try {
+    await supportApi.createRequest({
+      requestType: 'PARTNERSHIP',
+      category: partnershipForm.type,
+      title: `${partnershipForm.company} 제휴 문의`,
+      body: partnershipForm.body,
+      companyName: partnershipForm.company,
+      contactName: partnershipForm.contactName,
+      contactEmail: partnershipForm.email,
+      contactPhone: partnershipForm.phone
+    });
+    partnershipForm.company = '';
+    partnershipForm.contactName = '';
+    partnershipForm.email = '';
+    partnershipForm.phone = '';
+    partnershipForm.body = '';
+    supportStatusMessage.value = '제휴 문의가 접수되었습니다.';
+  } catch {
+    supportStatusMessage.value = '제휴 문의 전송에 실패했습니다. 잠시 후 다시 시도해 주세요.';
+  } finally {
+    supportSubmitting.value = false;
+  }
+}
+
+function formatSupportStatus(status) {
+  if (status === 'RECEIVED') return '접수';
+  if (status === 'ANSWERED') return '답변 완료';
+  return status || '확인 중';
 }
 </script>

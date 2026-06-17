@@ -3,6 +3,8 @@ package com.ezone.backend.controller;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -15,8 +17,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.ezone.backend.config.SecurityConfig;
+import com.ezone.backend.domain.persistence.DocumentProfileSectionRow;
 import com.ezone.backend.domain.UserAccount;
+import com.ezone.backend.dto.support.SupportRequestResponse;
+import com.ezone.backend.mapper.DocumentProfileMapper;
+import com.ezone.backend.mapper.SupportRequestMapper;
 import com.ezone.backend.mapper.UserAccountMapper;
+import com.ezone.backend.mapper.UserSessionMapper;
 import com.ezone.backend.security.JwtAccessTokenVerifier;
 import com.ezone.backend.security.JwtAuthenticationFilter;
 import com.ezone.backend.service.InMemoryHistoryService;
@@ -26,6 +33,8 @@ import com.ezone.backend.service.MattermostIngestionService;
 import com.ezone.backend.service.NotionIntegrationService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,6 +56,7 @@ import org.springframework.test.web.servlet.MockMvc;
     RecommendationController.class,
     ProfileController.class,
     CurrentUserController.class,
+    SupportRequestController.class,
     NotionIntegrationController.class,
     ExtensionJobController.class
     ,
@@ -78,6 +88,15 @@ class P1ApiContractTest {
     @MockitoBean
     private UserAccountMapper userAccountMapper;
 
+    @MockitoBean
+    private UserSessionMapper userSessionMapper;
+
+    @MockitoBean
+    private SupportRequestMapper supportRequestMapper;
+
+    @MockitoBean
+    private DocumentProfileMapper documentProfileMapper;
+
     @BeforeEach
     void setUp() {
         when(userAccountMapper.findById(1L)).thenReturn(Optional.of(new UserAccount(
@@ -88,6 +107,13 @@ class P1ApiContractTest {
             "Gil Dong",
             true
         )));
+        when(documentProfileMapper.listSections(1L)).thenReturn(List.of(new DocumentProfileSectionRow(
+            1L,
+            "basicInfo",
+            "{\"nameKo\":\"Hong Gil Dong\",\"email\":\"user@example.com\"}",
+            "2026-06-17T10:00:00"
+        )));
+        when(documentProfileMapper.findLastSavedAt(1L)).thenReturn(Optional.of("2026-06-17T10:00:00"));
     }
 
     @Test
@@ -146,11 +172,15 @@ class P1ApiContractTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data.summary.total", greaterThanOrEqualTo(1)))
+            .andExpect(jsonPath("$.data.summary.completed", greaterThanOrEqualTo(1)))
             .andExpect(jsonPath("$.data.periods[0].value").value("ALL"))
             .andExpect(jsonPath("$.data.companyTypes[0].type", notNullValue()))
+            .andExpect(jsonPath("$.data.industryStats", notNullValue()))
+            .andExpect(jsonPath("$.data.dataQuality.total", greaterThanOrEqualTo(1)))
             .andExpect(jsonPath("$.data.rows[0].workspaceId", notNullValue()))
             .andExpect(jsonPath("$.data.rows[0].resultStage", notNullValue()))
-            .andExpect(jsonPath("$.data.rows[0].resultLabel", notNullValue()));
+            .andExpect(jsonPath("$.data.rows[0].resultLabel", notNullValue()))
+            .andExpect(jsonPath("$.data.rows[0].companyDataSource", notNullValue()));
 
         mockMvc.perform(get("/api/history/applications?period=2025-H1&resultStage=DOCUMENT_FAILED"))
             .andExpect(status().isOk())
@@ -159,6 +189,84 @@ class P1ApiContractTest {
         mockMvc.perform(get("/api/basket/jobs"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data[0].companyName").value("네이버"));
+    }
+
+    @Test
+    void deletingReadyBasketJobDoesNotCreatePastApplicationHistory() throws Exception {
+        String createdBody = mockMvc.perform(post("/api/basket/jobs")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "companyName": "Mistaken Basket Company",
+                      "positionTitle": "Backend Developer",
+                      "deadlineLabel": "2026.06.30",
+                      "sourceUrl": "https://example.com/jobs/mistaken-basket",
+                      "savedSource": "DIRECT"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+        JsonNode created = objectMapper.readTree(createdBody);
+        long basketJobId = created.at("/data/id").asLong();
+        long workspaceId = created.at("/data/workspaceId").asLong();
+
+        mockMvc.perform(delete("/api/basket/jobs/%d".formatted(basketJobId)))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/basket/jobs"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data[?(@.id == %d)]".formatted(basketJobId), hasSize(0)));
+
+        mockMvc.perform(get("/api/history/applications"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath(
+                "$.data.rows[?(@.workspaceId == %d && @.companyName == 'Mistaken Basket Company')]".formatted(workspaceId),
+                hasSize(0)
+            ));
+    }
+
+    @Test
+    void completedBasketJobAppearsInHistoryWithoutDeletingFromBasket() throws Exception {
+        String createdBody = mockMvc.perform(post("/api/basket/jobs")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "companyName": "Completed History Company",
+                      "positionTitle": "Frontend Developer",
+                      "deadlineLabel": "2026.06.30",
+                      "sourceUrl": "https://example.com/jobs/completed-history",
+                      "savedSource": "DIRECT"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+        JsonNode created = objectMapper.readTree(createdBody);
+        long basketJobId = created.at("/data/id").asLong();
+        long workspaceId = created.at("/data/workspaceId").asLong();
+
+        mockMvc.perform(patch("/api/basket/jobs/%d/status".formatted(basketJobId))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "applicationStatus": "COMPLETED"
+                    }
+                    """))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/basket/jobs"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data[?(@.id == %d)]".formatted(basketJobId), hasSize(1)));
+
+        mockMvc.perform(get("/api/history/applications"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath(
+                "$.data.rows[?(@.workspaceId == %d && @.companyName == 'Completed History Company' && @.applicationStatus == 'COMPLETED')]".formatted(workspaceId),
+                hasSize(1)
+            ));
     }
 
     @Test
@@ -208,6 +316,34 @@ class P1ApiContractTest {
             .andExpect(jsonPath("$.data.companyDetails.companyType").value("미확인"))
             .andExpect(jsonPath("$.data.companyDetails.size").value("미확인"))
             .andExpect(jsonPath("$.data.companyDetails.financialStatus").value("unverified"));
+    }
+
+    @Test
+    void workspaceDoesNotExposeJobBoardDomainAsKnownCompanyHomepage() throws Exception {
+        String createdBody = mockMvc.perform(post("/api/basket/jobs")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "companyName": "카카오뱅크",
+                      "positionTitle": "인턴 · 정보보호 데이터 엔지니어",
+                      "deadlineLabel": "2026.07.03",
+                      "sourceUrl": "https://jasoseol.com/recruit?rec=104614",
+                      "savedSource": "DIRECT"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+        long workspaceId = objectMapper.readTree(createdBody).at("/data/workspaceId").asLong();
+
+        mockMvc.perform(get("/api/workspaces/%d".formatted(workspaceId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.companyName").value("카카오뱅크"))
+            .andExpect(jsonPath("$.data.companyDetails.domain").value("kakaobank.com"))
+            .andExpect(jsonPath("$.data.companyDetails.homepage").value("kakaobank.com"))
+            .andExpect(jsonPath("$.data.companyDetails.companyType").value("대기업"))
+            .andExpect(jsonPath("$.data.companyDetails.size").value("대기업"));
     }
 
     @Test
@@ -438,8 +574,7 @@ class P1ApiContractTest {
 
         mockMvc.perform(get("/api/extension/document-profile"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.sections.basicInfo", notNullValue()))
-            .andExpect(jsonPath("$.data.customFields", notNullValue()));
+            .andExpect(jsonPath("$.data.sections.basicInfo", notNullValue()));
 
         mockMvc.perform(put("/api/document-profile/sections/basicInfo")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -453,35 +588,11 @@ class P1ApiContractTest {
                     """))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.lastSavedAt", notNullValue()));
-
-        mockMvc.perform(post("/api/document-profile/custom-fields")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                    {
-                      "label": "Portfolio",
-                      "fieldType": "URL",
-                      "value": "https://example.com"
-                    }
-                    """))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.label").value("Portfolio"))
-            .andExpect(jsonPath("$.data.fieldType").value("URL"));
-
-        mockMvc.perform(patch("/api/document-profile/custom-fields/301")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                    {
-                      "label": "Portfolio Updated",
-                      "fieldType": "URL",
-                      "value": "https://example.com/updated"
-                    }
-                    """))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.label").value("Portfolio Updated"));
-
-        mockMvc.perform(delete("/api/document-profile/custom-fields/301"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.success").value(true));
+        verify(documentProfileMapper).upsertSection(
+            eq(1L),
+            eq("basicInfo"),
+            eq("{\"nameKo\":\"Hong Gil Dong\",\"email\":\"user@example.com\"}")
+        );
 
         mockMvc.perform(get("/api/integrations/notion"))
             .andExpect(status().isOk())
@@ -644,6 +755,56 @@ class P1ApiContractTest {
             .andExpect(jsonPath("$.data.name").value("Hong Gil Dong"));
 
         verify(userAccountMapper).updateNickname(1L, "길동");
+    }
+
+    @Test
+    void currentUserCanWithdrawAndRevokeSessions() throws Exception {
+        mockMvc.perform(delete("/api/me"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true));
+
+        verify(userSessionMapper).revokeAllByUserId(1L);
+        verify(userAccountMapper).withdrawUser(1L);
+    }
+
+    @Test
+    void supportRequestCanBeCreatedAndListedForCurrentUser() throws Exception {
+        when(supportRequestMapper.findByUserId(1L)).thenReturn(List.of(
+            new SupportRequestResponse(
+                10L,
+                "INQUIRY",
+                "ERROR",
+                "동기화가 실패합니다",
+                "Notion 연결 후 동기화가 실패합니다.",
+                null,
+                null,
+                null,
+                null,
+                "RECEIVED",
+                Instant.parse("2026-06-17T08:00:00Z")
+            )
+        ));
+
+        mockMvc.perform(post("/api/support/requests")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "requestType": "INQUIRY",
+                      "category": "ERROR",
+                      "title": "동기화가 실패합니다",
+                      "body": "Notion 연결 후 동기화가 실패합니다."
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.id").value(10))
+            .andExpect(jsonPath("$.data.status").value("RECEIVED"));
+
+        verify(supportRequestMapper).insert(eq(1L), any());
+
+        mockMvc.perform(get("/api/support/requests"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data[0].title").value("동기화가 실패합니다"));
     }
 
     @Test
@@ -864,6 +1025,26 @@ class P1ApiContractTest {
                       "text": "[라인] Server Platform Engineer 채용 https://careers.linecorp.com/jobs/101 마감 D-7",
                       "attachments": [],
                       "rawPayload": { "team": "employment" }
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.messageType").value("JOB_POSTING"))
+            .andExpect(jsonPath("$.data.parseStatus").value("PARSED"))
+            .andExpect(jsonPath("$.data.createdParsedJobPost").value(true));
+    }
+
+    @Test
+    void mattermostWebhookAcceptsOutgoingWebhookTokenAndSnakeCasePayload() throws Exception {
+        mockMvc.perform(post("/api/integrations/mattermost/webhook")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "token": "test-mm-secret",
+                      "channel_id": "jobs-channel",
+                      "post_id": "mm-contract-snake-1",
+                      "user_name": "recruiter",
+                      "text": "Line / Server Platform Engineer / -D-7\\nhttps://careers.linecorp.com/jobs/102",
+                      "attachments": []
                     }
                     """))
             .andExpect(status().isOk())

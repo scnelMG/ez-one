@@ -18,15 +18,19 @@ public class P1WorkspaceMapperSupport {
 
     public Long promoteMattermostJob(MattermostParsedJobPostRow candidate) {
         JobRow job = new JobRow();
+        CompanyDetailDefaults.CompanyDefaults defaults = CompanyDetailDefaults.resolve(candidate.getCompanyName(), candidate.getUrl());
         job.setCompanyName(candidate.getCompanyName());
-        job.setCompanyDomain(CompanyDetailDefaults.domainFromUrl(candidate.getUrl()));
-        job.setCompanyType(CompanyDetailDefaults.UNKNOWN_KO);
-        job.setCompanySize(CompanyDetailDefaults.UNKNOWN_KO);
+        job.setCompanyDomain(defaults.domain());
+        job.setCompanyType(defaults.companyType());
+        job.setCompanySize(defaults.size());
         job.setPositionTitle(candidate.getTitle());
         job.setDeadlineLabel(candidate.getDeadlineLabel());
         job.setSourceUrl(candidate.getUrl());
         job.setSource("MATTERMOST");
         mapper.upsertCompany(job);
+        if (!CompanyDetailDefaults.UNKNOWN_DOMAIN.equals(defaults.domain())) {
+            mapper.upsertRuleBasedCompanyProfile(job.getCompanyId(), defaults.industry(), defaults.domain());
+        }
         mapper.recordCompanyInfoSource(job.getCompanyId(), "MATTERMOST_JOB_URL", candidate.getUrl(), "UNVERIFIED");
         mapper.insertJob(job);
         return job.getId();

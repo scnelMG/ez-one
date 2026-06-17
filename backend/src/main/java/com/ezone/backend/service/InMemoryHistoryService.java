@@ -6,6 +6,7 @@ import com.ezone.backend.domain.persistence.HistoryApplicationRow;
 import com.ezone.backend.dto.history.HistoryApplicationResponse;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
@@ -14,17 +15,61 @@ import org.springframework.stereotype.Service;
 public class InMemoryHistoryService implements HistoryService {
 
     private final List<HistoryApplicationRow> rows = new ArrayList<>();
+    private final AtomicLong idGenerator = new AtomicLong(1000);
 
     public InMemoryHistoryService() {
-        rows.add(row(1L, 102L, "Dalpha", "AI Engineer", "2025.03.23", "2025-H1", 2025, "H1",
-            HistoryResultStage.DOCUMENT_FAILED, "Document stage ended", "Document failed", "Startup"));
-        rows.add(row(2L, 103L, "Nexon Korea", "Data Analyst", "No deadline", "2025-H1", 2025, "H1",
-            HistoryResultStage.NOT_APPLIED, "Not applied", "Not applied", "Enterprise"));
+        rows.add(row(1L, 102L, "달파", "AI Engineer", "2025.03.23", "2025-H1", 2025, "H1",
+            HistoryResultStage.DOCUMENT_FAILED, "서류 단계 종료", "서류탈락", "스타트업"));
+        rows.add(row(2L, 103L, "넥슨코리아", "데이터 분석가", "마감일 미기록", "2025-H1", 2025, "H1",
+            HistoryResultStage.NOT_APPLIED, "미지원", "미지원", "대기업"));
+        rows.add(row(3L, 104L, "한국전력공사", "데이터 엔지니어", "2026.02.01", "2026-H1", 2026, "H1",
+            HistoryResultStage.IN_PROGRESS, "진행 중", "면접 대기", "공공기관"));
     }
 
     @Override
     public HistoryApplicationResponse listApplications(Long userId, String period, HistoryResultStage resultStage) {
-        return HistoryApplicationAssembler.toResponse(rows, period, resultStage);
+        return HistoryApplicationAssembler.toResponse(rows.stream()
+            .filter(row -> row.getUserId().equals(userId))
+            .toList(), period, resultStage);
+    }
+
+    public void recordArchivedBasketJob(
+        Long userId,
+        Long workspaceId,
+        String companyName,
+        String positionTitle,
+        ApplicationStatus applicationStatus,
+        String deadlineLabel,
+        String sourceUrl
+    ) {
+        if (rows.stream().anyMatch(row -> row.getWorkspaceId().equals(workspaceId))) {
+            return;
+        }
+        String periodKey = "2026-H1";
+        HistoryResultStage resultStage = applicationStatus == ApplicationStatus.NOT_APPLIED || applicationStatus == ApplicationStatus.READY
+            ? HistoryResultStage.NOT_APPLIED
+            : HistoryResultStage.IN_PROGRESS;
+        CompanyDetailDefaults.CompanyDefaults defaults = CompanyDetailDefaults.resolve(companyName, sourceUrl);
+        HistoryApplicationRow row = row(
+            idGenerator.incrementAndGet(),
+            workspaceId,
+            companyName,
+            positionTitle,
+            deadlineLabel,
+            periodKey,
+            2026,
+            "H1",
+            resultStage,
+            resultLabel(applicationStatus),
+            resultLabel(applicationStatus),
+            defaults.companyType()
+        );
+        row.setUserId(userId);
+        row.setSourceUrl(sourceUrl);
+        row.setApplicationStatus(applicationStatus);
+        row.setCompanyIndustry(defaults.industry());
+        row.setCompanyDataSource(CompanyDetailDefaults.UNKNOWN_DOMAIN.equals(defaults.domain()) ? "UNKNOWN" : "RULE");
+        rows.add(row);
     }
 
     private static HistoryApplicationRow row(
@@ -47,7 +92,7 @@ public class InMemoryHistoryService implements HistoryService {
         row.setWorkspaceId(workspaceId);
         row.setCompanyName(companyName);
         row.setPositionTitle(positionTitle);
-        row.setApplicationStatus(resultStage == HistoryResultStage.IN_PROGRESS ? ApplicationStatus.IN_PROGRESS : ApplicationStatus.NOT_APPLIED);
+        row.setApplicationStatus(applicationStatus(resultStage));
         row.setResultStage(resultStage);
         row.setResultLabel(resultLabel);
         row.setRawResult(rawResult);
@@ -57,6 +102,27 @@ public class InMemoryHistoryService implements HistoryService {
         row.setPeriodHalf(half);
         row.setSourceUrl("https://example.com/history/%d".formatted(id));
         row.setCompanyType(companyType);
+        row.setCompanyIndustry(CompanyDetailDefaults.UNKNOWN_KO);
+        row.setCompanyDataSource(CompanyDetailDefaults.UNKNOWN_KO.equals(companyType) ? "UNKNOWN" : "RULE");
         return row;
+    }
+
+    private static ApplicationStatus applicationStatus(HistoryResultStage resultStage) {
+        if (resultStage == HistoryResultStage.IN_PROGRESS) {
+            return ApplicationStatus.IN_PROGRESS;
+        }
+        if (resultStage == HistoryResultStage.NOT_APPLIED) {
+            return ApplicationStatus.NOT_APPLIED;
+        }
+        return ApplicationStatus.COMPLETED;
+    }
+
+    private static String resultLabel(ApplicationStatus status) {
+        return switch (status) {
+            case READY -> "지원 전";
+            case NOT_APPLIED -> "미지원";
+            case IN_PROGRESS -> "진행 중";
+            case COMPLETED -> "지원완료";
+        };
     }
 }

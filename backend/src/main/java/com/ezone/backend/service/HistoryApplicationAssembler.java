@@ -6,6 +6,8 @@ import com.ezone.backend.domain.persistence.HistoryApplicationRow;
 import com.ezone.backend.dto.history.HistoryApplicationResponse;
 import com.ezone.backend.dto.history.HistoryApplicationResponse.HistoryApplicationRowResponse;
 import com.ezone.backend.dto.history.HistoryApplicationResponse.HistoryCompanyTypeResponse;
+import com.ezone.backend.dto.history.HistoryApplicationResponse.HistoryDataQualityResponse;
+import com.ezone.backend.dto.history.HistoryApplicationResponse.HistoryIndustryResponse;
 import com.ezone.backend.dto.history.HistoryApplicationResponse.HistoryPeriodResponse;
 import com.ezone.backend.dto.history.HistoryApplicationResponse.HistorySummaryResponse;
 import java.util.Comparator;
@@ -16,6 +18,10 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 final class HistoryApplicationAssembler {
+    private static final String UNKNOWN = "미확인";
+    private static final String DATA_SOURCE_MASTER = "MASTER";
+    private static final String DATA_SOURCE_RULE = "RULE";
+    private static final String DATA_SOURCE_UNKNOWN = "UNKNOWN";
 
     private HistoryApplicationAssembler() {
     }
@@ -26,15 +32,14 @@ final class HistoryApplicationAssembler {
             .toList();
         List<HistoryApplicationRow> filteredRows = periodRows.stream()
             .filter(row -> resultStage == null || row.getResultStage() == resultStage)
-            .sorted(Comparator
-                .comparing(HistoryApplicationRow::getDeadlineLabel, Comparator.nullsLast(String::compareTo))
-                .thenComparing(HistoryApplicationRow::getId))
             .toList();
 
         return new HistoryApplicationResponse(
             periods(allRows),
             summary(periodRows),
             companyTypes(periodRows),
+            industryStats(periodRows),
+            dataQuality(periodRows),
             filteredRows.stream().map(HistoryApplicationAssembler::rowResponse).toList()
         );
     }
@@ -53,10 +58,13 @@ final class HistoryApplicationAssembler {
             ))
             .values()
             .stream()
-            .sorted(Comparator.comparing(HistoryPeriodResponse::value).reversed())
+            .sorted(Comparator
+                .comparingInt((HistoryPeriodResponse period) -> periodSortRank(period.value()))
+                .reversed()
+                .thenComparing(HistoryPeriodResponse::label))
             .toList();
         return Stream.concat(
-            Stream.of(new HistoryPeriodResponse("ALL", "All")),
+            Stream.of(new HistoryPeriodResponse("ALL", "전체")),
             periodOptions.stream()
         ).toList();
     }
@@ -80,13 +88,31 @@ final class HistoryApplicationAssembler {
 
     private static List<HistoryCompanyTypeResponse> companyTypes(List<HistoryApplicationRow> rows) {
         return rows.stream()
-            .map(row -> row.getCompanyType() == null || row.getCompanyType().isBlank() ? "Other" : row.getCompanyType())
+            .map(row -> valueOrUnknown(row.getCompanyType()))
             .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
             .entrySet()
             .stream()
             .sorted(Map.Entry.<String, Long>comparingByValue().reversed().thenComparing(Map.Entry.comparingByKey()))
             .map(entry -> new HistoryCompanyTypeResponse(entry.getKey(), entry.getValue()))
             .toList();
+    }
+
+    private static List<HistoryIndustryResponse> industryStats(List<HistoryApplicationRow> rows) {
+        return rows.stream()
+            .map(row -> valueOrUnknown(row.getCompanyIndustry()))
+            .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
+            .entrySet()
+            .stream()
+            .sorted(Map.Entry.<String, Long>comparingByValue().reversed().thenComparing(Map.Entry.comparingByKey()))
+            .map(entry -> new HistoryIndustryResponse(entry.getKey(), entry.getValue()))
+            .toList();
+    }
+
+    private static HistoryDataQualityResponse dataQuality(List<HistoryApplicationRow> rows) {
+        long companyMaster = rows.stream().filter(row -> DATA_SOURCE_MASTER.equals(normalizedDataSource(row))).count();
+        long ruleBased = rows.stream().filter(row -> DATA_SOURCE_RULE.equals(normalizedDataSource(row))).count();
+        long unknown = rows.size() - companyMaster - ruleBased;
+        return new HistoryDataQualityResponse(rows.size(), companyMaster, ruleBased, unknown);
     }
 
     private static HistoryApplicationRowResponse rowResponse(HistoryApplicationRow row) {
@@ -101,14 +127,37 @@ final class HistoryApplicationAssembler {
             row.getRawResult(),
             row.getDeadlineLabel(),
             row.getSourceUrl(),
-            row.getCompanyType()
+            valueOrUnknown(row.getCompanyType()),
+            valueOrUnknown(row.getCompanyIndustry()),
+            normalizedDataSource(row)
         );
+    }
+
+    private static String valueOrUnknown(String value) {
+        return value == null || value.isBlank() ? UNKNOWN : value;
+    }
+
+    private static String normalizedDataSource(HistoryApplicationRow row) {
+        String value = row.getCompanyDataSource();
+        if (DATA_SOURCE_MASTER.equals(value) || DATA_SOURCE_RULE.equals(value)) {
+            return value;
+        }
+        return DATA_SOURCE_UNKNOWN;
     }
 
     private static String periodLabel(Integer year, String half) {
         if (year == null) {
-            return "Unknown";
+            return "기간 미기록";
         }
-        return "%d %s".formatted(year, "H2".equals(half) ? "H2" : "H1");
+        return "%d %s".formatted(year, "H2".equals(half) ? "하반기" : "상반기");
+    }
+
+    private static int periodSortRank(String value) {
+        if (value == null || !value.matches("\\d{4}-H[12]")) {
+            return Integer.MIN_VALUE;
+        }
+        int year = Integer.parseInt(value.substring(0, 4));
+        int half = "H2".equals(value.substring(5)) ? 2 : 1;
+        return year * 10 + half;
     }
 }

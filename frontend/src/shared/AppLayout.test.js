@@ -14,7 +14,10 @@ const mocks = vi.hoisted(() => ({
         pictureUrl: 'https://example.com/profile.png'
     })),
     getRefreshToken: vi.fn(() => 'refresh-token'),
-    logout: vi.fn()
+    logout: vi.fn(),
+    profile: null,
+    profileStatus: 'ready',
+    loadProfile: vi.fn()
 }));
 
 vi.mock('@/features/auth/api/authApi', () => ({
@@ -31,9 +34,9 @@ vi.mock('@/features/auth/session/authSession', () => ({
 
 vi.mock('@/stores/profileStore', () => ({
     useProfileStore: () => ({
-        profile: null,
-        status: 'loaded',
-        loadProfile: vi.fn()
+        profile: mocks.profile,
+        status: mocks.profileStatus,
+        loadProfile: mocks.loadProfile
     })
 }));
 
@@ -46,11 +49,13 @@ function makeRouter() {
             { path: '/basket', component: { template: '<div>basket</div>' } },
             { path: '/document-profile', component: { template: '<div>document profile</div>' } },
             { path: '/history', component: { template: '<div>history</div>' } },
-            { path: '/recommendations', component: { template: '<div>recommendations</div>' } },
             { path: '/study', component: { template: '<div>study</div>' } },
+            { path: '/recommendations/mattermost', component: { template: '<div>mattermost</div>' } },
             { path: '/mypage', component: { template: '<div>mypage</div>' } },
             { path: '/mypage/notion', component: { template: '<div>notion</div>' } },
             { path: '/mypage/onboarding', component: { template: '<div>onboarding</div>' } },
+            { path: '/mypage/inquiry', component: { template: '<div>inquiry</div>' } },
+            { path: '/mypage/partnership', component: { template: '<div>partnership</div>' } },
             { path: '/mypage/terms', component: { template: '<div>terms</div>' } }
         ]
     });
@@ -72,6 +77,9 @@ describe('AppLayout', () => {
         mocks.getRefreshToken.mockReturnValue('refresh-token');
         mocks.logout.mockReset();
         mocks.logout.mockResolvedValue({});
+        mocks.profile = { ssafy: false };
+        mocks.profileStatus = 'ready';
+        mocks.loadProfile.mockReset();
     });
 
     afterEach(() => {
@@ -83,21 +91,55 @@ describe('AppLayout', () => {
         const alertEntry = wrapper.get('[data-testid="reserved-alerts"]');
 
         expect(alertEntry.attributes('aria-disabled')).toBe('true');
+        expect(alertEntry.attributes('aria-label')).toBe('알림은 준비 중입니다');
+        expect(alertEntry.attributes('title')).toBe('알림은 준비 중입니다');
         expect(alertEntry.element.tagName).not.toBe('BUTTON');
     });
 
-    it('MAIN-013/HISTORY-001: uses the logo as main link and enables history nav', async () => {
+    it('MAIN-013/HISTORY-001: uses the logo as main link and keeps approved global navigation visible', async () => {
         const wrapper = await mountLayout('/');
+        const navLinks = wrapper.findAll('.primary-nav a').map((link) => link.attributes('href'));
+        const navText = wrapper.get('.primary-nav').text();
 
         expect(wrapper.get('.brand-lockup').attributes('href')).toBe('/');
-        expect(wrapper.findAll('.primary-nav a').map((link) => link.attributes('href'))).toEqual([
+        expect(navLinks).toEqual(['/basket', '/document-profile', '/study', '/history']);
+        expect(navText).toContain('공고 장바구니');
+        expect(navText).toContain('취업 스터디');
+        expect(navText).not.toContain('공고 바구니');
+        expect(navLinks).not.toContain('/recommendations/mattermost');
+    });
+
+    it('MM-001: shows the Mattermost recommendation menu only for SSAFY users in the original order', async () => {
+        mocks.profile = { ssafy: true };
+        const wrapper = await mountLayout('/');
+        const navLinks = wrapper.findAll('.primary-nav a').map((link) => link.attributes('href'));
+
+        expect(navLinks).toEqual([
             '/basket',
             '/document-profile',
             '/study',
+            '/recommendations/mattermost',
             '/history'
         ]);
-        expect(wrapper.get('[data-testid="global-trademark-notice"]').text()).toContain('채용공고 식별 목적으로만 사용');
-        expect(wrapper.get('.app-footer a').attributes('href')).toBe('/mypage/terms');
+        expect(wrapper.get('.primary-nav').text()).toContain('MM 추천공고');
+    });
+
+    it('MAIN-013: renders a production-style footer without fake company facts', async () => {
+        const wrapper = await mountLayout('/');
+        const footer = wrapper.get('.app-footer');
+        const footerLinks = footer.findAll('a').map((link) => link.attributes('href'));
+
+        expect(footer.text()).toContain('EZ-ONE');
+        expect(footer.text()).toContain('채용 공고, 작성 자료, 서류 정보를 한곳에서 관리하는 취업 준비 워크스페이스입니다.');
+        expect(footer.text()).toContain('support@ez-one.local');
+        expect(footer.text()).toContain('사업자 정보는 정식 출시 전 확정 예정입니다.');
+        expect(footerLinks).toEqual([
+            '/mypage/terms',
+            '/mypage/terms#privacy',
+            '/mypage/inquiry',
+            '/mypage/partnership',
+            'mailto:support@ez-one.local'
+        ]);
     });
 
     it('MY-001: opens a compact mypage dropdown with the Google profile photo', async () => {
@@ -109,8 +151,9 @@ describe('AppLayout', () => {
         await wrapper.get('[data-testid="mypage-menu-trigger"]').trigger('mouseenter');
         const dropdown = wrapper.get('[data-testid="mypage-dropdown"]');
         expect(dropdown.text()).toContain('내 계정');
-        expect(dropdown.text()).toContain('노션 연동 관리');
+        expect(dropdown.text()).toContain('Notion 연동 관리');
         expect(dropdown.text()).toContain('온보딩 정보');
+        expect(dropdown.text()).toContain('1:1 문의');
         expect(wrapper.get('[data-testid="mypage-link-notion"]').attributes('href')).toBe('/mypage/notion');
     });
 

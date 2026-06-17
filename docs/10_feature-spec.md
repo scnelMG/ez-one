@@ -42,7 +42,7 @@ flowchart LR
 | 기능 | 입력 | 처리 | 출력 | 실패 처리 |
 | --- | --- | --- | --- | --- |
 | 표준 섹션 저장 | sectionType, payload | 사용자별 섹션 저장 | section payload | 필드 검증 오류 |
-| 커스텀 항목 저장 | label, fieldType, value | 사용자 정의 항목 생성/수정 | custom field | 빈 label 거부 |
+| 표준 서류 섹션 저장 | sectionType, payload | 기본정보/학력/경력/프로젝트/자격/어학 등 표준 섹션 생성/수정 | document profile section | 사용자 계정 단위 저장 |
 | 워크스페이스 기본값 | workspaceId | 사용자 서류 입력 정보 조회 | 기본값 payload | 없는 값은 blank |
 
 ## 워크스페이스
@@ -77,7 +77,7 @@ flowchart LR
 | --- | --- | --- | --- | --- |
 | 공고 미리보기 | 현재 페이지 추출값 | 필수 필드 검증 | preview payload | 추출 실패 메시지 |
 | 추출 공고 저장 | preview payload | 장바구니 저장 API 호출 | basket/workspace route | 중복/추출 실패 처리 |
-| 확장 프로그램 서류 입력 정보 조회 | Bearer token | 현재 사용자 document profile 조회 | sections/customFields/lastSavedAt | 미로그인/권한 오류 안내 |
+| 확장 프로그램 서류 입력 정보 조회 | Bearer token | 현재 사용자 document profile 조회 | sections/lastSavedAt | 미로그인/권한 오류 안내 |
 | 확장 프로그램 서류 자동 입력 | 현재 탭 입력칸, document profile | label/placeholder/name/id/주변 텍스트 매칭, 장문 자기소개서 제외 | 자동 입력/실패/복사 후보 결과 | 매칭 실패 항목 수동 검토 안내 |
 
 ## P2 / IA-only 기능
@@ -91,10 +91,17 @@ flowchart LR
 | Mattermost 채용공고 수집 | P2 | webhook 원문 raw 저장, 채용공고 후보 파싱, 검토 승인 후 SSAFY 사용자에게만 추천 노출 |
 ## 2026-06-16 Past Application History
 
-- The history feature reads imported, user-owned application records from `application_history`.
+- The history feature reads user-owned application records from `application_history`, including imported CSV history and basket jobs whose status indicates real application progress or non-application.
 - The default `/history` view loads all records. The period selector filters by `ALL`, `YYYY-H1`, or `YYYY-H2`.
-- Summary metrics are calculated for the selected period before optional result-stage row filtering.
+- Summary metrics are calculated for the selected period before optional result-stage row filtering and display the standard status counts: 지원완료, 미지원, 진행 중, 지원 전.
+- Imported failure outcomes such as 서류탈락, 필기/과제탈락, and 면접탈락 count as 지원완료 for the standard status summary because the user did submit those applications.
 - Supported result stages are `DOCUMENT_FAILED`, `TEST_FAILED`, `INTERVIEW_FAILED`, `NOT_APPLIED`, and `IN_PROGRESS`.
-- Company-type counts are returned with the same selected-period scope as the summary.
-- Clicking a row opens `/workspaces/{workspaceId}`.
+- Company-type counts use the requirement labels 대기업, 공공기관, 중견기업, 중소기업, 스타트업, 기타기업 and are returned with the same selected-period scope as the summary.
+- The table supports client-side search by company, position, result text, and source URL within the loaded period/result-stage set.
+- The table provides explicit label filters for standard application status, result label, and company type. These filters are separate from free-text search.
+- The table supports client-side sorting by default API order, deadline latest/earliest, company name, and status label.
+- Clicking a company-type bar filters visible table rows by that type. The reset control clears client-side search, label filters, and custom sort.
+- Clicking a row opens `/workspaces/{workspaceId}`. The row also exposes separate `열기` and `원본 공고` links so workspace navigation and external posting navigation are distinct.
+- The basket page exposes a `과거 지원 내역` entry point to `/history`.
+- Changing a normal basket job away from `READY` snapshots it into `application_history`. Deleting a basket job only removes it from the active list and does not create history by itself.
 - AI commentary and anonymous percentile comparison are excluded from this implementation.

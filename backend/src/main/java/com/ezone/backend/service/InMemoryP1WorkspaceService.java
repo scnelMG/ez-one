@@ -47,8 +47,10 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
     private final Map<Long, ReferenceRecord> references = new LinkedHashMap<>();
     private final Map<Long, VersionRecord> versions = new LinkedHashMap<>();
     private final Map<String, String> companyLogos = new LinkedHashMap<>();
+    private final InMemoryHistoryService historyService;
 
-    public InMemoryP1WorkspaceService() {
+    public InMemoryP1WorkspaceService(InMemoryHistoryService historyService) {
+        this.historyService = historyService;
         seed(1L, "네이버", "Backend Engineer", "오늘 18:00", true, ApplicationStatus.IN_PROGRESS);
         seed(1L, "카카오페이", "Server Developer", "D-2", true, ApplicationStatus.NOT_APPLIED);
         seed(1L, "토스", "Platform Engineer", "D-5", false, ApplicationStatus.COMPLETED);
@@ -208,6 +210,17 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             current.deleted()
         );
         basketJobs.put(basketJobId, updated);
+        if (status != ApplicationStatus.READY) {
+            historyService.recordArchivedBasketJob(
+                userId,
+                updated.workspaceId(),
+                updated.companyName(),
+                updated.positionTitle(),
+                effectiveStatus(updated),
+                updated.deadlineLabel(),
+                updated.sourceUrl()
+            );
+        }
         return toBasketResponse(updated);
     }
 
@@ -448,7 +461,8 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
                 sample.companyName(),
                 sample.positionTitle(),
                 sample.deadlineLabel(),
-                sample.logoUrl()
+                sample.logoUrl(),
+                sample.sourceUrl()
             ))
             .toList();
     }
@@ -689,11 +703,13 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             record.companyName(),
             record.positionTitle(),
             record.deadlineLabel(),
-            record.companyLogoUrl()
+            record.companyLogoUrl(),
+            record.sourceUrl()
         );
     }
 
     private WorkspaceResponse toWorkspaceResponse(WorkspaceRecord record) {
+        CompanyDetailDefaults.CompanyDefaults defaults = CompanyDetailDefaults.resolve(record.companyName(), record.sourceUrl());
         return new WorkspaceResponse(
             record.id(),
             record.basketJobId(),
@@ -703,9 +719,9 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             record.statusLabel(),
             record.sourceUrl(),
             new CompanyDetailsResponse(
-                CompanyDetailDefaults.domainFromUrl(record.sourceUrl()),
-                CompanyDetailDefaults.UNKNOWN_KO,
-                CompanyDetailDefaults.UNKNOWN_KO,
+                defaults.domain(),
+                defaults.companyType(),
+                defaults.size(),
                 record.companyLogoUrl(),
                 null,
                 null,
@@ -716,7 +732,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
                 null,
                 null,
                 null,
-                CompanyDetailDefaults.domainFromUrl(record.sourceUrl()),
+                defaults.domain(),
                 null,
                 null
             ),
@@ -795,7 +811,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
     }
 
     private String companyLogoFor(String companyName, String sourceUrl, String logoUrl) {
-        String key = "%s|%s".formatted(companyName, CompanyDetailDefaults.domainFromUrl(sourceUrl));
+        String key = "%s|%s".formatted(companyName, CompanyDetailDefaults.resolve(companyName, sourceUrl).domain());
         String normalizedLogoUrl = normalizeLogoUrl(logoUrl);
         if (normalizedLogoUrl != null) {
             companyLogos.putIfAbsent(key, normalizedLogoUrl);

@@ -9,11 +9,11 @@ import ExtensionConnectPage from '@/pages/ExtensionConnectPage.vue';
 import MainPage from '@/pages/MainPage.vue';
 import MyPage from '@/pages/MyPage.vue';
 import NotionSettingsPage from '@/pages/NotionSettingsPage.vue';
-import RecommendationPage from '@/pages/RecommendationPage.vue';
 import WorkspacePage from '@/pages/WorkspacePage.vue';
 import StudyListPage from '@/pages/StudyListPage.vue';
 import StudyDetailPage from '@/pages/StudyDetailPage.vue';
 import PastHistoryPage from '@/pages/PastHistoryPage.vue';
+import MattermostRecommendationsPage from '@/pages/MattermostRecommendationsPage.vue';
 
 export const router = createRouter({
     history: createWebHistory(),
@@ -69,12 +69,6 @@ export const router = createRouter({
             meta: { requiresAuth: true }
         },
         {
-            path: '/recommendations',
-            name: 'recommendations',
-            component: RecommendationPage,
-            meta: { requiresAuth: true }
-        },
-        {
             path: '/study',
             name: 'study-list',
             component: StudyListPage,
@@ -90,6 +84,12 @@ export const router = createRouter({
             path: '/history',
             name: 'history',
             component: PastHistoryPage,
+            meta: { requiresAuth: true }
+        },
+        {
+            path: '/recommendations/mattermost',
+            name: 'recommendations-mattermost',
+            component: MattermostRecommendationsPage,
             meta: { requiresAuth: true }
         },
         {

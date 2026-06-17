@@ -117,7 +117,7 @@
 | 기업 세부 정보 수집 실패 처리 | DATA-004 | 기업 세부 정보 수집이 실패하거나 일부 항목을 찾을 수 없는 경우, 시스템은 해당 항목을 미수집 상태로 저장하고 관리자 또는 사용자에게 확인 가능한 형태로 표시한다. | 데이터 | P2 | 정책 | 시작 전 | 기업 정보 | 공고 워크스페이스, 관리자 | 수집 실패가 공고 장바구니 담기 또는 워크스페이스 이용을 막지 않도록 한다. |
 | 추천용 공고 주기 수집 데이터 정의 | DATA-005 | 시스템은 사용자에게 맞춤 공고 추천을 제공하기 위해 자소설닷컴을 우선 대상으로 매일 공고 정보를 수집하여 추천 후보 공고 DB에 저장한다. 이후 다른 채용 사이트로 수집 대상을 확장할 수 있다. | 데이터 | P3 | 데이터 | 시작 전 | 공고, 기업 정보, 추천 공고 | 공고 추천, 메인 대시보드 | 후순위 기능이다. 1차 대상은 자소설닷컴이며, 수집 주기는 매일이다. |
 | mm 수집 데이터 정의 | DATA-006 | 시스템은 mm 채용 채널에서 수신되는 채용 관련 원문 정보를 수집하고, 회사명, 직무/공고명, 마감일자, 채용공고 URL 등 추천에 필요한 구조화 데이터로 변환하여 저장한다. | 데이터 | P2 | 데이터 | 시작 전 | mm 수집 정보, 공고, 기업 정보, 추천 공고 | 공고 추천, 메인 대시보드 | 의미 있는 채용 공고만 필터링하며, 부족한 공고/기업 정보는 기존 기업정보 DB 또는 외부 수집을 통해 보강한다. mm 데이터 형식은 추후 확정한다. |
-| 공고 수집 경로 구분 | DATA-007 | 공고 데이터는 사용자 액션 기반 수집, 추천용 주기 수집, mm 채용 채널 수집 경로를 구분하여 저장·관리한다. | 데이터 | P1 | 정책 | 완료 | mm 수집 정보, 공고, 추천 공고 | 공고 장바구니, 공고 추천, 확장 프로그램 팝업 | savedSource separates MANUAL, EXTENSION, and RECOMMENDATION paths. |
+| 공고 수집 경로 구분 | DATA-007 | 공고 데이터는 사용자 액션 기반 수집, 확장 프로그램 저장, 후순위 추천/수집 경로를 구분하여 저장·관리한다. P1 화면은 직접 입력과 확장 프로그램 저장만 활성화한다. | 데이터 | P1 | 정책 | 완료 | mm 수집 정보, 공고, 추천 공고 | 공고 장바구니, 확장 프로그램 팝업 | savedSource separates MANUAL, EXTENSION, and reserved RECOMMENDATION paths. |
 | Chrome Extension 공고 저장 | EXT-001 | Chrome Extension에서 지원 사이트 공고를 저장한다. P1 지원 사이트는 http://Jasoseol.com부터 시작한다. | 확장 프로그램 | P1 | 기능 | 완료 |  |  | 현재 04. 요구사항 정의서 기준으로 갱신 |
 | 확장 프로그램 서류 자동 입력 보조 고도화 | EXT-002 | 서류 자동 입력 보조 고도화는 IA에는 유지하되 MVP 이후 구현한다. | 확장 프로그램 | P2 | 기능 | 완료 |  |  | P2. 현재 04. 요구사항 정의서 기준으로 갱신 |
 | 미로그인 처리 | EXT-003 | 미로그인 상태에서는 로그인 안내를 제공한다. | 확장 프로그램 | P1 | 기능 | 완료 |  |  | 확장 팝업에서 로그인 전 기능 선택을 숨기고 Google 로그인 CTA를 제공한다. |
@@ -130,7 +130,7 @@
 | 저장 성공 안내 | EXT-010 | 저장 성공 시 장바구니 경로를 제공한다. | 확장 프로그램 | P1 | 기능 | 완료 |  |  | 저장 완료 화면에서 장바구니 링크를 제공한다. |
 | 추출 실패 처리 | EXT-011 | 정보 추출 실패 시 실패 사유와 직접 입력 방법을 안내한다. | 확장 프로그램 | P2 | 기능 | 시작 전 |  |  |  |
 | 미지원 페이지 처리 | EXT-012 | 수집 대상이 아닌 페이지에서는 미지원 페이지임을 안내한다. | 확장 프로그램 | P1 | 기능 | 완료 |  |  | 자소설닷컴이 아닌 active tab에서는 미지원 안내를 표시한다. |
-| 지원서 입력 칸 채우기 | EXT-013 | 사용자 정보를 바탕으로 지원서 입력 칸을 자동 또는 반자동으로 채운다. | 확장 프로그램 | P1 | 기능 | 완료 |  |  | 기본 인적사항/서류정보/커스텀 항목을 active tab 주입 방식으로 자동 입력하고, 자기소개서 자동 입력은 제외한다. |
+| 지원서 입력 칸 채우기 | EXT-013 | 사용자 정보를 바탕으로 지원서 입력 칸을 자동 또는 반자동으로 채운다. | 확장 프로그램 | P1 | 기능 | 완료 |  |  | 기본 인적사항/표준 서류정보를 active tab 주입 방식으로 자동 입력하고, 자기소개서 자동 입력은 제외한다. |
 | 자소설닷컴 접근 상태 확인 | EXT-014 | 확장 프로그램은 자소설닷컴 공고 또는 자소서 문항 페이지에 접근 가능한 상태인지 확인한다. | 확장 프로그램 | P1 | 기능 | 완료 |  |  | active tab URL과 host permissions로 지원 페이지를 확인한다. |
 | 자소설닷컴 공고 기본 정보 추출 | EXT-015 | 확장 프로그램은 자소설닷컴에서 회사명, 직무/공고명, 마감일자, 채용공고 URL을 추출한다. | 확장 프로그램 | P1 | 기능 | 완료 |  |  | `#__NEXT_DATA__`와 DOM fallback 기반으로 추출한다. |
 | 직무 후보 전체 추출 | EXT-016 | 공고에 복수 직무 또는 모집 부문이 있는 경우 확장 프로그램은 저장 가능한 직무 후보를 모두 추출한다. | 확장 프로그램 | P1 | 기능 | 완료 |  |  | 직무 후보 중복 제거와 실제 자소설 복수 직무 payload를 테스트했다. |
@@ -153,7 +153,7 @@
 | 기업 유형별 과거 지원 통계 | HISTORY-008 | 과거 지원 통계는 대기업, 공공기관, 중견기업, 중소기업, 스타트업, 기타기업 등 기업 유형별 집계를 포함한다. | 화면 | P2 | 데이터 | 시작 전 |  |  |  |
 | 과거 지원 AI 총평 | HISTORY-009 | 가능한 경우 AI를 활용하여 선택된 기간의 과거 지원 내역에 대한 총평 또는 평가를 제공한다. | AI | P3 | 기능 | 시작 전 |  |  |  |
 | 과거 지원 개수 사용자 백분위 표시 | HISTORY-010 | 데이터가 충분히 쌓인 경우 선택된 기간의 지원완료 개수가 익명 집계 기준으로 다른 사용자 대비 상위 몇 퍼센트인지 표시한다. | 화면 | P3 | 기능 | 시작 전 |  |  |  |
-| 공고 장바구니 저장 | JOB-001 | 확장 프로그램, 추천 공고, 직접 입력 경로로 공고를 장바구니에 담고 중복 URL은 기존 공고로 안내한다. | 공고 관리 | P1 | 기능 | 완료 |  |  | 현재 04. 요구사항 정의서 기준으로 갱신 |
+| 공고 장바구니 저장 | JOB-001 | 확장 프로그램과 직접 입력 경로로 공고를 장바구니에 담고 중복 URL은 기존 공고로 안내한다. 추천 공고 저장 경로는 현재 제공하지 않는다. | 공고 관리 | P1 | 기능 | 완료 |  |  | 추천 공고 페이지 제거에 따라 P1 저장 경로를 확장 프로그램/직접 입력으로 제한한다. |
 | 공고 저장 시 워크스페이스 자동 생성 | JOB-002 | 저장된 공고마다 하나의 지원 워크스페이스를 자동 생성한다. | 공고 관리 | P1 | 기능 | 완료 |  |  | 현재 04. 요구사항 정의서 기준으로 갱신 |
 | 추천 공고 저장 | JOB-003 | 사용자는 추천 공고를 장바구니에 저장할 수 있다. | 공고 관리 | P2 | 기능 | 시작 전 |  |  |  |
 | 공고 직접 등록 | JOB-004 | 사용자는 공고를 직접 등록할 수 있다. | 공고 관리 | P1 | 기능 | 완료 |  |  | 장바구니 직접 등록 폼과 `/api/basket/jobs` 생성 계약을 검증한다. |
@@ -191,11 +191,11 @@
 | 마감일순 장바구니 상위 목록 | MAIN-006 | 메인 페이지 장바구니 요약 목록은 마감일이 가까운 순으로 5개 또는 10개 공고를 표시한다. | 화면 | P1 | 기능 | 완료 |  |  | 마감일 가까운 순 5개 표시를 `MainPage.test.js`에서 검증한다. |
 | 마감 1주 이내 공고 강조 | MAIN-007 | 마감일이 1주일 이하로 남은 공고는 메인 페이지 장바구니 요약 목록에서 시각적으로 강조한다. | 화면 | P1 | 화면 | 완료 |  |  | D-7 이내 공고 강조 class를 `MainPage.test.js`에서 검증한다. |
 | 최근 작업 공고 표시 | MAIN-008 | 메인 페이지는 사용자가 최근 작업 중이었던 공고를 식별할 수 있도록 표시한다. | 화면 | P2 | 기능 | 시작 전 |  |  |  |
-| 메인 추천 공고 표시 | MAIN-009 | 메인 페이지는 사용자에게 추천 공고 목록을 표시한다. | 화면 | P2 | 기능 | 시작 전 |  |  |  |
-| 추천 공고 카드 정보 표시 | MAIN-010 | 추천 공고 카드에는 기업명, 직무, 마감일, 기업 로고 이미지를 표시한다. | 화면 | P2 | 데이터 | 시작 전 |  |  |  |
+| 메인 추천 공고 표시 | MAIN-009 | 메인 페이지는 추천 공고 목록을 표시하지 않는다. 추천 노출은 현재 화면 범위에서 제외한다. | 화면 | P2 | 기능 | 제외 |  |  | 사용자 결정으로 메인 추천 공고 미리보기를 제거한다. |
+| 추천 공고 카드 정보 표시 | MAIN-010 | 추천 공고 카드 정보 표시는 현재 화면 범위에서 제외한다. | 화면 | P2 | 데이터 | 제외 |  |  | 추천 공고 화면 제거에 따라 비활성화한다. |
 | 상단 네비게이션 메뉴 제공 | MAIN-011 | 메인 페이지 상단에는 주요 페이지로 이동할 수 있는 네비게이션 메뉴를 제공한다. | 화면 | P1 | 화면 | 완료 |  |  | 공통 AppLayout 네비게이션과 라우터 테스트로 검증한다. |
 | 로고 클릭 시 메인 이동 | MAIN-012 | 사용자가 웹페이지 로고 또는 서비스명을 클릭하면 메인 페이지로 이동한다. | 화면 | P1 | 기능 | 완료 |  |  | 공통 레이아웃 로고 링크가 main route로 연결된다. |
-| 네비게이션 메뉴 항목 | MAIN-013 | 네비게이션 메뉴는 공고 장바구니, 내 서류 정보, 과거 지원 내역, 추천공고, 설정, 로그인/로그아웃, 마이페이지 항목을 포함한다. | 화면 | P1 | 화면 | 완료 |  |  | P1 주요 메뉴와 P2 알림 reserved 상태를 라우터/레이아웃 테스트에서 검증한다. |
+| 네비게이션 메뉴 항목 | MAIN-013 | 네비게이션 메뉴는 공고 장바구니, 내 서류 정보, 과거 지원 내역, 설정, 로그인/로그아웃, 마이페이지 항목을 포함한다. 추천공고 메뉴는 제공하지 않는다. | 화면 | P1 | 화면 | 완료 |  |  | P1 주요 메뉴와 P2 알림 reserved 상태를 라우터/레이아웃 테스트에서 검증한다. |
 | 메인 장바구니 주간 캘린더 표시 | MAIN-014 | 메인 페이지는 오늘 기준 약 1주일 기간의 캘린더를 제공하고, 해당 기간에 마감되는 장바구니 공고를 날짜별로 표시한다. | 화면 | P1 | 기능 | 완료 |  |  | 주간 마감 캘린더 렌더링을 `MainPage.test.js`에서 검증한다. |
 | 주간 캘린더 공고 선택 이동 | MAIN-015 | 사용자가 메인 페이지 주간 캘린더의 공고를 선택하면 해당 공고의 장바구니 상세 또는 워크스페이스로 이동할 수 있다. | 화면 | P1 | 기능 | 완료 |  |  | 주간 캘린더 공고의 워크스페이스 링크를 `MainPage.test.js`에서 검증한다. |
 | Mattermost 원문 수집과 후보 공고화 | MM-001 | SSAFY 추천 분기 구조는 유지하되 Mattermost 수집과 후보 공고화는 후순위다. | mm 연동 | P2 | 기능 | 완료 |  |  | P2. 현재 04. 요구사항 정의서 기준으로 갱신 |
@@ -239,20 +239,20 @@
 | 온보딩 건너뛰기 | ONBOARD-004 | 사용자는 온보딩 입력을 건너뛸 수 있으며, 추후 마이 페이지에서 동일 정보를 작성 또는 수정할 수 있다. | 인증/계정 | P1 | 기능 | 완료 |  |  | Onboarding skip saves empty preferences and marks profileCompleted. |
 | 희망 기업 분류 관리 | ONBOARD-005 | 희망 기업은 기업 분류(대기업, 공공기관, 중견기업, 중소기업, 스타트업, 기타)와 계열/업종(제조, 금융 등)을 구분하여 저장한다. | 인증/계정 | P1 | 데이터 | 완료 |  |  | companyTypes and industries are stored separately. |
 | 로그인/회원가입 | PAGE-001 | 로그인, 회원가입, 구글 로그인 화면을 제공한다. | 화면 | P1 | 화면 | 완료 |  |  | Login page now supports email login, signup, and Google login. |
-| 메인 대시보드 | PAGE-002 | 지원 공고 수, 마감 임박 공고, 추천 공고 요약을 제공한다. | 화면 | P1 | 화면 | 완료 |  |  | Verified by MainPage dashboard tests. |
+| 메인 대시보드 | PAGE-002 | 지원 공고 수, 마감 임박 공고, 장바구니 요약을 제공한다. 추천 공고 요약은 제공하지 않는다. | 화면 | P1 | 화면 | 완료 |  |  | Verified by MainPage dashboard tests. |
 | 공고 장바구니 | PAGE-003 | 공고 목록, 검색, 정렬, 필터링, 지원 상태 변경 화면을 제공한다. | 화면 | P1 | 화면 | 완료 |  |  | Verified by BasketPage list/search/sort/filter/status tests. |
-| 공고 추천 | PAGE-004 | 추천 공고 목록, 추천 사유, 저장, 숨김 화면을 제공한다. | 화면 | P2 | 화면 | 시작 전 |  |  |  |
+| 공고 추천 | PAGE-004 | 추천 공고 목록, 추천 사유, 저장, 숨김 화면은 현재 제공하지 않는다. | 화면 | P2 | 화면 | 제외 |  |  | 추천 공고 페이지 제거에 따라 라우트를 제공하지 않는다. |
 | 공고 워크스페이스 | PAGE-005 | 공고 워크스페이스는 공고 기본정보, 기업 세부 정보, 자소서 문항, 도화지, 버전 관리, 참고자료 화면을 제공한다. | 화면 | P1 | 화면 | 완료 |  |  | Verified by WorkspacePage workspace, draft, version, reference, profile, company panels. |
 | 내정보 입력 | PAGE-006 | 수상, 과목, 프로젝트 관리 화면을 제공한다. | 화면 | P1 | 화면 | 완료 |  |  | Verified by DocumentProfilePage course, award, project, and profile section tests. |
 | 설정 | PAGE-007 | 계정, Notion, 확장 프로그램 연동 관리 화면을 제공한다. | 화면 | P2 | 화면 | 시작 전 |  |  |  |
 | 관리자 페이지 제공 | PAGE-008 | 관리자는 최소 운영 범위에서 사용자, 공고, 기업 정보, 추천 데이터를 조회하고 필요한 항목을 수정할 수 있는 관리자 페이지에 접근할 수 있다. | 화면 | P3 | 화면 | 시작 전 |  |  |  |
 | 확장 프로그램 팝업 | PAGE-009 | 추출 정보 미리보기, 저장, 로그인 안내, 저장 결과 안내 화면을 제공한다. | 화면 | P1 | 화면 | 완료 |  |  | 로그인, 기능 선택, 미리보기, 저장 완료 상태를 제공한다. |
-| 서류 입력 정보 관리 | PROFILE-001 | 기본정보, 학력, 경력, 프로젝트, 자격/어학, 수상/활동, 커스텀 항목을 저장한다. | 서류 입력 정보 | P1 | 기능 | 완료 |  |  | 현재 04. 요구사항 정의서 기준으로 갱신 |
+| 서류 입력 정보 관리 | PROFILE-001 | 기본정보, 병역/장애/보훈, 학력, 경력, 프로젝트, 자격/어학, 수상/교육/활동/해외경험 등 표준 서류 입력 정보를 저장한다. | 서류 입력 정보 | P1 | 기능 | 완료 |  |  | 현재 04. 요구사항 정의서 기준으로 갱신 |
 | 과목 정보 등록 | PROFILE-002 | 사용자는 과목 정보를 등록할 수 있다. | 서류 입력 정보 | P1 | 기능 | 완료 |  |  | Verified by course section edit tests. |
 | 프로젝트 정보 등록 | PROFILE-003 | 사용자는 프로젝트 정보를 등록할 수 있다. | 서류 입력 정보 | P1 | 기능 | 완료 |  |  | Verified by project section edit tests. |
 | 서류 입력 정보 조회 | PROFILE-004 | 사용자는 서류 입력 정보 페이지에서 본인이 입력한 기본 정보, 학력, 경력, 자격증, 어학, 프로젝트, 수상 등 정보를 조회할 수 있다. | 서류 입력 정보 | P1 | 기능 | 완료 | 서류 입력 정보 | 서류 입력 정보 | Verified by document profile API/page read tests. |
 | 서류 입력 정보 수정 | PROFILE-005 | 사용자는 서류 입력 정보 페이지에서 본인이 입력한 정보를 수정할 수 있다. | 서류 입력 정보 | P1 | 기능 | 완료 | 서류 입력 정보 | 서류 입력 정보 | Verified by document profile section save tests. |
-| 서류 입력 정보 삭제 | PROFILE-006 | 사용자는 서류 입력 정보 페이지에서 본인이 입력한 항목을 삭제할 수 있다. | 서류 입력 정보 | P1 | 기능 | 완료 | 서류 입력 정보 | 서류 입력 정보 | Verified by custom field and repeatable item delete tests. |
+| 서류 입력 정보 삭제 | PROFILE-006 | 사용자는 서류 입력 정보 페이지에서 본인이 입력한 반복 항목을 삭제할 수 있다. | 서류 입력 정보 | P1 | 기능 | 완료 | 서류 입력 정보 | 서류 입력 정보 | Verified by repeatable item delete tests. |
 | 서류 입력 정보 유형 관리 | PROFILE-007 | 서류 입력 정보는 기본 정보, 병역/장애/보훈, 학교 정보, 경력, 자격증/어학, 자소서, 기타 정보 유형으로 구분하여 관리한다. | 서류 입력 정보 | P1 | 데이터 | 완료 | 서류 입력 정보 | 서류 입력 정보 | Verified by standard profile sections and reusable item model. |
 | 대표 경험 표시 | PROFILE-008 | 사용자는 자주 활용할 경험을 대표 경험으로 표시할 수 있다. | 서류 입력 정보 | P2 | 기능 | 시작 전 |  |  |  |
 | 서류 입력 정보 마지막 저장 시각 표시 | PROFILE-009 | 서류 입력 정보 입력 페이지는 사용자의 마지막 저장 시각을 표시한다. | 서류 입력 정보 | P1 | 기능 | 완료 | 서류 입력 정보 | 서류 입력 정보 | Verified by lastSavedAt API/page mapping. |
@@ -272,7 +272,7 @@
 | 섹션별 커스텀 필드 관리 | PROFILE-023 | 사용자는 기본 정보, 병역/장애/보훈, 학교 정보 등 주요 섹션에 커스텀 필드를 추가할 수 있다. | 서류 입력 정보 | P2 | 기능 | 시작 전 |  |  |  |
 | 다건 항목 추가/삭제 | PROFILE-024 | 경력, 학력, 프로젝트, 인턴/알바, 수상, 교육, 활동, 해외경험 등 반복 가능한 항목은 추가 및 삭제가 가능해야 한다. | 서류 입력 정보 | P1 | 기능 | 완료 |  |  | Verified by repeatable item add/delete tests. |
 | 희망 직무/기업/지역/스킬 관리 | PROFILE-025 | 사용자는 온보딩에서 입력한 희망 직무, 희망 기업 분류, 계열/업종, 희망 근무 지역, 보유 스킬 정보를 내정보에서 조회하고 수정할 수 있다. | 서류 입력 정보 | P1 | 기능 | 완료 |  |  | Verified by MyPage onboarding preference edit tests. |
-| 서류 입력 정보 자동 입력 활용 | PROFILE-026 | 서류 입력 정보는 크롬 확장 프로그램의 지원서 입력 보조 기능에서 자동 또는 반자동 입력에 활용될 수 있어야 한다. | 서류 입력 정보 | P1 | 기능 | 완료 | 서류 입력 정보 | 확장 프로그램 팝업 | `/api/extension/document-profile`과 확장 자동입력 파서가 basicInfo/customFields/반복 섹션 값을 활용한다. |
+| 서류 입력 정보 자동 입력 활용 | PROFILE-026 | 서류 입력 정보는 크롬 확장 프로그램의 지원서 입력 보조 기능에서 자동 또는 반자동 입력에 활용될 수 있어야 한다. | 서류 입력 정보 | P1 | 기능 | 완료 | 서류 입력 정보 | 확장 프로그램 팝업 | `/api/extension/document-profile`과 확장 자동입력 파서가 basicInfo/반복 표준 섹션 값을 활용한다. |
 | 서류 입력 정보 워크스페이스 조회 | PROFILE-027 | 사용자는 워크스페이스에서 수상, 프로젝트 등 본인의 서류 입력 정보를 조회할 수 있다. | 서류 입력 정보 | P1 | 기능 | 완료 | 서류 입력 정보 | 공고 워크스페이스 | Verified by WorkspacePage document profile panel tests. |
 | AI 프롬프트 보관함 제공 | PROMPT-001 | 시스템은 사용자가 자소서 작성에 자주 사용하는 프롬프트를 저장하고 외부 AI 도구에 복사할 수 있는 AI 프롬프트 보관함을 제공한다. | 워크스페이스/자소서 | P2 | 기능 | 시작 전 | 사용자, 워크스페이스 | 공고 워크스페이스 | 사용자 계정 단위로 관리한다. |
 | 내 프롬프트 관리 | PROMPT-002 | 사용자는 마이페이지에서 본인이 저장한 프롬프트를 추가, 조회, 수정, 삭제할 수 있다. | 워크스페이스/자소서 | P2 | 기능 | 시작 전 | 사용자 |  | 프롬프트 전체 관리는 마이페이지에서 수행한다. |
@@ -283,7 +283,7 @@
 | 기본 프롬프트 변수 치환 | PROMPT-007 | 워크스페이스에서 기본 프롬프트를 복사할 때 회사명, 직무/공고명, 자소서 문항 변수를 현재 공고 정보로 치환하여 복사할 수 있다. | 워크스페이스/자소서 | P2 | 기능 | 시작 전 | 공고, 워크스페이스, 자소서 문항 | 공고 워크스페이스 | 변수 치환은 기본 프롬프트에만 적용하고, 내 프롬프트는 원문 그대로 복사한다. |
 | 프롬프트 복사 | PROMPT-008 | 사용자는 기본 프롬프트 또는 내 프롬프트를 외부 AI 도구에 붙여넣을 수 있도록 클립보드에 복사할 수 있다. | 워크스페이스/자소서 | P2 | 기능 | 시작 전 | 사용자, 워크스페이스 | 공고 워크스페이스 | 복사 성공 또는 실패 상태를 사용자에게 표시한다. |
 | 내부 AI 실행 제외 | PROMPT-009 | AI 프롬프트 보관함은 외부 AI 도구에 붙여넣기 위한 복사 보조 기능으로 제공하며, 초기 범위에서는 서비스 내부 AI 실행을 포함하지 않는다. | 워크스페이스/자소서 | P2 | 제약 | 시작 전 | 사용자 | 공고 워크스페이스 | 내부 AI 실행은 별도 AI 기능 요구사항으로 분리한다. |
-| 추천 공고 장바구니 저장 | REC-001 | http://Jasoseol.com 기반 추천 공고를 별표로 장바구니에 담고 워크스페이스를 생성한다. | 공고 추천 | P1 | 기능 | 완료 |  |  | 현재 04. 요구사항 정의서 기준으로 갱신 |
+| 추천 공고 장바구니 저장 | REC-001 | http://Jasoseol.com 기반 추천 공고 저장은 현재 범위에서 제외한다. 공고 저장은 확장 프로그램 또는 직접 입력 장바구니 흐름을 사용한다. | 공고 추천 | P2 | 기능 | 제외 |  |  | 추천 공고 페이지 제거에 따라 비활성화한다. |
 | 추천 카드 hover 기업 정보 | REC-002 | 추천 카드 hover 기업 정보는 기업 데이터가 안정화된 뒤 구현한다. | 공고 추천 | P2 | 기능 | 완료 |  |  | P2. 현재 04. 요구사항 정의서 기준으로 갱신 |
 | 추천 공고 조회 | REC-003 | 사용자는 추천 공고 목록을 조회할 수 있다. | 공고 추천 | P2 | 기능 | 시작 전 |  |  |  |
 | 추천 사유 표시 | REC-004 | 추천 공고의 세부 페이지에 들어가면 추천 사유를 표시한다. | 공고 추천 | P3 | 기능 | 시작 전 |  |  |  |
@@ -330,10 +330,10 @@
 
 - `EXT-008` / `JOB-021`: Extension job save now includes optional company logo extraction. The extension may send `logoUrl`; save must still succeed when the logo is absent or invalid.
 - `JOB-016`: Company information now includes reusable logo metadata on `companies`: `logo_url`, `logo_source_url`, `logo_status`, `logo_updated_at`. Existing logos are preserved unless a future trusted-source policy explicitly allows replacement.
-- `EXT-013`, `EXT-021`, `EXT-022`, `EXT-023`, `PROFILE-026`: Document auto-fill support is treated as P1 for basic document/profile/custom fields. Essay auto-fill remains excluded.
+- `EXT-013`, `EXT-021`, `EXT-022`, `EXT-023`, `PROFILE-026`: Document auto-fill support is treated as P1 for basic document/profile standard fields. Essay auto-fill remains excluded.
 ## 2026-06-16 History Scope Update
 
-- `HISTORY-001` through `HISTORY-008` are approved for implementation in branch `codex/history-page`.
-- Implemented scope: `/history` page, half-year period filter, selected-period summary metrics, company-type aggregation, imported history rows, and row navigation to `/workspaces/{workspaceId}`.
+- `HISTORY-001` through `HISTORY-008` are approved for implementation in branch `codex/history-past-applications`.
+- Implemented scope: `/history` page, basket-to-history entry point, half-year period filter, standard status summary metrics, company-type aggregation/filtering, imported history rows, archived basket history rows, table search, row navigation to `/workspaces/{workspaceId}`, and separate original posting links.
 - `HISTORY-009` and `HISTORY-010` remain out of scope: no AI summary and no anonymous percentile comparison.
 - Imported history data must not be hardcoded in Flyway migrations. Use `tools/import-history-csv.ps1` to generate reviewed SQL for a specific local account and CSV.

@@ -111,6 +111,14 @@
       logo_url = IF(logo_url IS NULL, VALUES(logo_url), logo_url)
   </insert>
 
+  <insert id="upsertRuleBasedCompanyProfile">
+    INSERT INTO company_profiles (company_id, industry, homepage_url, source_priority, source_updated_at, created_at)
+    VALUES (#{companyId}, #{industry}, #{homepageUrl}, 'RULE_BASED_INTERNAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ON DUPLICATE KEY UPDATE
+      industry = COALESCE(NULLIF(industry, ''), VALUES(industry)),
+      homepage_url = COALESCE(NULLIF(homepage_url, ''), VALUES(homepage_url))
+  </insert>
+
   <insert id="recordCompanyInfoSource">
     INSERT INTO company_info_sources (company_id, source_name, source_url, status, collected_at, created_at)
     VALUES (#{companyId}, #{sourceName}, #{sourceUrl}, #{status}, NULL, CURRENT_TIMESTAMP)
@@ -316,6 +324,140 @@
     WHERE id = #{basketJobId} AND user_id = #{userId} AND deleted_at IS NULL
   </update>
 
+  <insert id="upsertApplicationHistoryFromBasketJob">
+    INSERT INTO application_history (
+      user_id,
+      workspace_id,
+      company_name,
+      position_title,
+      application_status,
+      result_stage,
+      result_label,
+      raw_result,
+      deadline_label,
+      deadline_date,
+      period_key,
+      period_year,
+      period_half,
+      source_url,
+      company_type,
+      created_at,
+      updated_at
+    )
+    SELECT
+      bj.user_id,
+      w.id,
+      c.name,
+      j.title,
+      CASE
+        WHEN bj.application_status = 'READY'
+          AND COALESCE(
+            j.deadline_at,
+            CASE
+              WHEN j.deadline_label REGEXP '^[0-9]{4}[.-][0-9]{1,2}[.-][0-9]{1,2}' THEN STR_TO_DATE(REPLACE(j.deadline_label, '.', '-'), '%Y-%m-%d')
+              ELSE NULL
+            END
+          ) &lt; CURRENT_DATE THEN 'NOT_APPLIED'
+        ELSE bj.application_status
+      END,
+      CASE
+        WHEN bj.application_status IN ('READY', 'NOT_APPLIED') THEN 'NOT_APPLIED'
+        ELSE 'IN_PROGRESS'
+      END,
+      CASE
+        WHEN bj.application_status = 'COMPLETED' THEN '지원완료'
+        WHEN bj.application_status = 'IN_PROGRESS' THEN '진행 중'
+        WHEN bj.application_status = 'READY'
+          AND COALESCE(
+            j.deadline_at,
+            CASE
+              WHEN j.deadline_label REGEXP '^[0-9]{4}[.-][0-9]{1,2}[.-][0-9]{1,2}' THEN STR_TO_DATE(REPLACE(j.deadline_label, '.', '-'), '%Y-%m-%d')
+              ELSE NULL
+            END
+          ) &lt; CURRENT_DATE THEN '미지원'
+        WHEN bj.application_status = 'READY' THEN '지원 전'
+        ELSE '미지원'
+      END,
+      CASE
+        WHEN bj.application_status = 'COMPLETED' THEN '지원완료'
+        WHEN bj.application_status = 'IN_PROGRESS' THEN '진행 중'
+        WHEN bj.application_status = 'READY'
+          AND COALESCE(
+            j.deadline_at,
+            CASE
+              WHEN j.deadline_label REGEXP '^[0-9]{4}[.-][0-9]{1,2}[.-][0-9]{1,2}' THEN STR_TO_DATE(REPLACE(j.deadline_label, '.', '-'), '%Y-%m-%d')
+              ELSE NULL
+            END
+          ) &lt; CURRENT_DATE THEN '마감 경과'
+        WHEN bj.application_status = 'READY' THEN '지원 전'
+        ELSE '미지원'
+      END,
+      j.deadline_label,
+      COALESCE(
+        j.deadline_at,
+        CASE
+          WHEN j.deadline_label REGEXP '^[0-9]{4}[.-][0-9]{1,2}[.-][0-9]{1,2}' THEN STR_TO_DATE(REPLACE(j.deadline_label, '.', '-'), '%Y-%m-%d')
+          ELSE NULL
+        END
+      ),
+      CONCAT(YEAR(COALESCE(
+        j.deadline_at,
+        CASE
+          WHEN j.deadline_label REGEXP '^[0-9]{4}[.-][0-9]{1,2}[.-][0-9]{1,2}' THEN STR_TO_DATE(REPLACE(j.deadline_label, '.', '-'), '%Y-%m-%d')
+          ELSE NULL
+        END,
+        CURRENT_DATE
+      )), '-', CASE WHEN MONTH(COALESCE(
+        j.deadline_at,
+        CASE
+          WHEN j.deadline_label REGEXP '^[0-9]{4}[.-][0-9]{1,2}[.-][0-9]{1,2}' THEN STR_TO_DATE(REPLACE(j.deadline_label, '.', '-'), '%Y-%m-%d')
+          ELSE NULL
+        END,
+        CURRENT_DATE
+      )) &lt;= 6 THEN 'H1' ELSE 'H2' END),
+      YEAR(COALESCE(
+        j.deadline_at,
+        CASE
+          WHEN j.deadline_label REGEXP '^[0-9]{4}[.-][0-9]{1,2}[.-][0-9]{1,2}' THEN STR_TO_DATE(REPLACE(j.deadline_label, '.', '-'), '%Y-%m-%d')
+          ELSE NULL
+        END,
+        CURRENT_DATE
+      )),
+      CASE WHEN MONTH(COALESCE(
+        j.deadline_at,
+        CASE
+          WHEN j.deadline_label REGEXP '^[0-9]{4}[.-][0-9]{1,2}[.-][0-9]{1,2}' THEN STR_TO_DATE(REPLACE(j.deadline_label, '.', '-'), '%Y-%m-%d')
+          ELSE NULL
+        END,
+        CURRENT_DATE
+      )) &lt;= 6 THEN 'H1' ELSE 'H2' END,
+      j.url,
+      COALESCE(NULLIF(c.company_type, ''), '기타기업'),
+      CURRENT_TIMESTAMP,
+      CURRENT_TIMESTAMP
+    FROM basket_jobs bj
+    JOIN jobs j ON j.id = bj.job_id
+    JOIN companies c ON c.id = j.company_id
+    JOIN workspaces w ON w.basket_job_id = bj.id
+    WHERE bj.id = #{basketJobId}
+      AND bj.user_id = #{userId}
+      AND bj.deleted_at IS NULL
+      AND bj.saved_source != 'HISTORY_IMPORT'
+    ON DUPLICATE KEY UPDATE
+      application_status = VALUES(application_status),
+      result_stage = VALUES(result_stage),
+      result_label = VALUES(result_label),
+      raw_result = VALUES(raw_result),
+      deadline_label = VALUES(deadline_label),
+      deadline_date = VALUES(deadline_date),
+      period_key = VALUES(period_key),
+      period_year = VALUES(period_year),
+      period_half = VALUES(period_half),
+      source_url = VALUES(source_url),
+      company_type = VALUES(company_type),
+      updated_at = CURRENT_TIMESTAMP
+  </insert>
+
   <select id="findWorkspace" resultMap="workspaceRowMap">
     SELECT w.id, w.user_id, w.basket_job_id, c.name AS company_name, j.title AS position_title,
            j.deadline_label, bj.application_status, j.url AS source_url,
@@ -335,7 +477,15 @@
     LEFT JOIN company_profiles cp ON cp.company_id = c.id
     WHERE w.user_id = #{userId}
       AND w.id = #{workspaceId}
-      AND bj.deleted_at IS NULL
+      AND (
+        bj.deleted_at IS NULL
+        OR EXISTS (
+          SELECT 1
+          FROM application_history ah
+          WHERE ah.workspace_id = w.id
+            AND ah.user_id = #{userId}
+        )
+      )
   </select>
 
   <select id="findWorkspaceOwner" resultType="long">
@@ -343,7 +493,14 @@
     FROM workspaces w
     JOIN basket_jobs bj ON bj.id = w.basket_job_id
     WHERE w.id = #{workspaceId}
-      AND bj.deleted_at IS NULL
+      AND (
+        bj.deleted_at IS NULL
+        OR EXISTS (
+          SELECT 1
+          FROM application_history ah
+          WHERE ah.workspace_id = w.id
+        )
+      )
   </select>
 
   <select id="listQuestions" resultMap="questionRowMap">

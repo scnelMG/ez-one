@@ -33,7 +33,8 @@ public class MattermostIntegrationController {
         @RequestHeader(value = "X-MM-Webhook-Secret", required = false) String secret,
         @RequestBody MattermostWebhookRequest request
     ) {
-        if (webhookSecret == null || webhookSecret.isBlank() || !webhookSecret.equals(secret)) {
+        String providedSecret = secret == null || secret.isBlank() ? request.token() : secret;
+        if (webhookSecret == null || webhookSecret.isBlank() || !webhookSecret.equals(providedSecret)) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid Mattermost webhook secret.");
         }
         return ApiResponse.success(mattermostIngestionService.ingest(request));

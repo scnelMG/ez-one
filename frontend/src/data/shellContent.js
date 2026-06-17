@@ -12,13 +12,6 @@ export const dashboardCards = [
         body: '마감일이 가까운 공고를 먼저 보여주고 각 워크스페이스로 바로 연결합니다.',
         status: 'D-0',
         meta: '2건'
-    },
-    {
-        kicker: '맞춤 추천',
-        title: '추천 공고',
-        body: '온보딩에서 입력한 선호 직무와 기술 스택을 바탕으로 맞춤 공고를 제안합니다.',
-        status: '추천',
-        meta: '프로필 기반'
     }
 ];
 

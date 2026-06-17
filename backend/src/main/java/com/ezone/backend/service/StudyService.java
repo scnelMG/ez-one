@@ -84,11 +84,12 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public StudyGroupDto getStudyDetail(String studyId) {
+    public StudyGroupDto getStudyDetail(String studyId, String userEmail) {
         StudyGroupRow group = studyMapper.findStudyGroupById(studyId);
         if (group == null) {
             throw new RuntimeException("스터디를 찾을 수 없습니다.");
         }
+        requireStudyMember(studyId, userEmail);
         StudyGroupDto dto = mapToDto(group);
         List<StudyMemberDto> members = studyMapper.findMembersByStudyId(studyId).stream()
             .map(m -> {
@@ -116,7 +117,8 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public List<SharedEssayDto> getSharedEssays(String studyId) {
+    public List<SharedEssayDto> getSharedEssays(String studyId, String userEmail) {
+        requireStudyMember(studyId, userEmail);
         return studyMapper.findSharedEssaysByStudyId(studyId).stream().map(e -> {
             SharedEssayDto dto = new SharedEssayDto();
             dto.setId(e.getId());
@@ -141,9 +143,8 @@ public class StudyService {
             dto.setDeadlineLabel(e.getDeadlineLabel());
             
             // 본인이 작성한 것이 아니고, 읽음 로그가 없으면 NEW
-            String currentUserEmail = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
-            boolean isMine = currentUserEmail.equals(e.getUserEmail());
-            boolean hasRead = studyMapper.countEssayReadLog(e.getId(), currentUserEmail) > 0;
+            boolean isMine = userEmail.equals(e.getUserEmail());
+            boolean hasRead = studyMapper.countEssayReadLog(e.getId(), userEmail) > 0;
             dto.setIsNew(!isMine && !hasRead);
 
             return dto;
@@ -151,6 +152,11 @@ public class StudyService {
     }
 
     public void readEssay(String studyId, String essayId, String userEmail) {
+        requireStudyMember(studyId, userEmail);
+        SharedEssayRow essay = studyMapper.findSharedEssayById(essayId);
+        if (essay == null || !essay.getStudyId().equals(studyId)) {
+            throw new IllegalArgumentException("Shared essay not found");
+        }
         StudyEssayReadLogRow row = new StudyEssayReadLogRow();
         row.setStudyId(studyId);
         row.setEssayId(essayId);
@@ -164,7 +170,8 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public List<SharedJobDto> getSharedJobs(String studyId) {
+    public List<SharedJobDto> getSharedJobs(String studyId, String userEmail) {
+        requireStudyMember(studyId, userEmail);
         return studyMapper.findSharedJobsByStudyId(studyId).stream().map(j -> {
             SharedJobDto dto = new SharedJobDto();
             dto.setId(j.getId());
@@ -199,6 +206,7 @@ public class StudyService {
         if (study == null) {
             throw new IllegalArgumentException("Study not found");
         }
+        requireStudyLeader(studyId, inviterEmail);
 
         StudyInviteRow invite = new StudyInviteRow();
         invite.setId(UUID.randomUUID().toString());
@@ -244,13 +252,16 @@ public class StudyService {
         }
     }
 
-    public void shareEssay(String userEmail, String studyId, ShareEssayRequest request) {
+    public void shareEssay(Long userId, String userEmail, String studyId, ShareEssayRequest request) {
+        requireStudyMember(studyId, userEmail);
+        p1WorkspaceService.getWorkspace(userId, parseWorkspaceId(request.getWorkspaceId()));
+
         SharedEssayRow essay = new SharedEssayRow();
         essay.setId(UUID.randomUUID().toString());
         essay.setStudyId(studyId);
         essay.setUserEmail(userEmail);
         essay.setWorkspaceId(request.getWorkspaceId());
-        
+
         try {
             String json = objectMapper.writeValueAsString(request.getVersionIds());
             essay.setVersionIds(json);
@@ -263,6 +274,12 @@ public class StudyService {
     }
 
     public void addFeedback(String userEmail, String sharedEssayId, AddFeedbackRequest request) {
+        SharedEssayRow sharedEssay = studyMapper.findSharedEssayById(sharedEssayId);
+        if (sharedEssay == null) {
+            throw new IllegalArgumentException("Shared essay not found");
+        }
+        requireStudyMember(sharedEssay.getStudyId(), userEmail);
+
         EssayFeedbackRow feedback = new EssayFeedbackRow();
         feedback.setId(UUID.randomUUID().toString());
         feedback.setSharedEssayId(sharedEssayId);
@@ -273,7 +290,8 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public SharedEssayDetailDto getSharedEssayDetail(String studyId, String sharedEssayId) {
+    public SharedEssayDetailDto getSharedEssayDetail(String studyId, String sharedEssayId, String userEmail) {
+        requireStudyMember(studyId, userEmail);
         SharedEssayRow e = studyMapper.findSharedEssayById(sharedEssayId);
         if (e == null || !e.getStudyId().equals(studyId)) {
             throw new IllegalArgumentException("Shared essay not found");
@@ -318,6 +336,7 @@ public class StudyService {
     }
 
     public void addEssayFeedback(String userEmail, String studyId, String sharedEssayId, AddFeedbackRequest request) {
+        requireStudyMember(studyId, userEmail);
         SharedEssayRow e = studyMapper.findSharedEssayById(sharedEssayId);
         if (e == null || !e.getStudyId().equals(studyId)) {
             throw new IllegalArgumentException("Shared essay not found");
@@ -334,6 +353,7 @@ public class StudyService {
     }
 
     public void recommendJob(String userEmail, String studyId, RecommendJobRequest request) {
+        requireStudyMember(studyId, userEmail);
         SharedJobRow row = new SharedJobRow();
         row.setId(UUID.randomUUID().toString());
         row.setStudyId(studyId);
@@ -355,6 +375,7 @@ public class StudyService {
         if (study == null) {
             throw new IllegalArgumentException("스터디를 찾을 수 없습니다.");
         }
+        requireStudyLeader(studyId, userEmail);
         
         try {
             String fileName = java.util.UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
@@ -422,5 +443,28 @@ public class StudyService {
         }
 
         studyMapper.deleteStudyMember(studyId, userEmail);
+    }
+
+    private StudyMemberRow requireStudyMember(String studyId, String userEmail) {
+        return studyMapper.findMembersByStudyId(studyId).stream()
+            .filter(member -> member.getUserEmail().equals(userEmail))
+            .findFirst()
+            .orElseThrow(() -> new ForbiddenResourceException("Study access denied."));
+    }
+
+    private StudyMemberRow requireStudyLeader(String studyId, String userEmail) {
+        StudyMemberRow member = requireStudyMember(studyId, userEmail);
+        if (!"LEADER".equals(member.getRole())) {
+            throw new ForbiddenResourceException("Only the study leader can perform this action.");
+        }
+        return member;
+    }
+
+    private Long parseWorkspaceId(String workspaceId) {
+        try {
+            return Long.parseLong(workspaceId);
+        } catch (NumberFormatException exception) {
+            throw new IllegalArgumentException("Workspace not found");
+        }
     }
 }

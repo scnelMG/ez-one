@@ -17,6 +17,7 @@ Thumbs.db
 *.log
 logs/
 .codex-run-logs/
+docs/superpowers/
 
 # Java / Spring
 backend/build/
@@ -40,3 +41,4 @@ __pycache__/
 *.local
 tmp/
 temp/
+.worktrees/
