@@ -270,15 +270,15 @@ import { requiresOnboarding } from '@/features/auth/session/authSession';
 import { isRecentWorkspace, getRecentWorkspaceIds, getRecentWorkspaceWithTime } from '@/features/basket/recentWorkspaces';
 import { useBasketStore } from '@/stores/basketStore';
 import { useDashboardStore } from '@/stores/dashboardStore';
-import { useRecommendationStore } from '@/stores/recommendationStore';
+import { recommendationApi } from '@/features/recommendations/api/recommendationApi';
 import { useProfileStore } from '@/stores/profileStore';
 import { showToast } from '@/shared/useToast';
 import ConfirmDialog from '@/shared/ConfirmDialog.vue';
 
 const dashboardStore = useDashboardStore();
 const basketStore = useBasketStore();
-const recommendationStore = useRecommendationStore();
 const profileStore = useProfileStore();
+const mmJobs = ref([]);
 const showOnboardingModal = ref(requiresOnboarding());
 const priorityJobIds = computed(() => basketStore.priorityJobIds);
 const failedLogos = ref(new Set());
@@ -369,8 +369,7 @@ const displayRecentTask = computed(() => {
   return null;
 });
 
-const recommendationPreviewItems = computed(() => [...recommendationStore.jobs]
-    .filter(isVisibleRecommendation)
+const recommendationPreviewItems = computed(() => [...mmJobs.value]
     .sort((left, right) => deadlineRank(left) - deadlineRank(right))
     .slice(0, 4));
 const activities = ref([]);
@@ -383,6 +382,13 @@ onMounted(async () => {
   
   const realActivities = await dashboardApi.getActivities();
   activities.value = realActivities || [];
+
+  try {
+    const jobs = await recommendationApi.listMattermostJobs();
+    mmJobs.value = jobs || [];
+  } catch (e) {
+    console.error('Failed to load recommendation jobs', e);
+  }
 });
 
 function handleLogoError(id) {
@@ -404,6 +410,17 @@ function toggleStatusMenu(jobId) {
 function changeStatus(jobId, nextStatus) {
     openStatusJobId.value = null;
     void basketStore.updateStatus(jobId, nextStatus);
+}
+
+async function saveRecommendation(id) {
+  try {
+    await recommendationApi.saveMattermostJob(id);
+    await basketStore.loadJobs();
+    mmJobs.value = mmJobs.value.filter(j => j.id !== id);
+    showToast('공고가 장바구니에 담겼습니다.', 'success');
+  } catch (e) {
+    showToast('공고 저장에 실패했습니다.', 'error');
+  }
 }
 
 async function archiveJob(id) {
