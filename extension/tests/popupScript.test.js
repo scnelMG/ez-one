@@ -101,6 +101,8 @@ describe('extension popup script', () => {
         expect(script).toContain("item.scrollIntoView({ block: 'nearest', behavior: 'smooth' })");
         expect(script).toContain('getEssayQuestionRows');
         expect(script).toContain("data-max-length");
+        expect(script).toContain("data-max-length-unit");
+        expect(script).toContain('formatEssayQuestionLimit');
         expect(script).toContain("'.essay-question-input'");
         expect(script).toContain('collectEssayQuestions()');
         expect(script).toContain('function collectEssayQuestions()');

@@ -14,7 +14,7 @@ const apiBaseUrl = import.meta.env.VITE_EXTENSION_API_BASE_URL ?? 'http://localh
 const webAppUrl = import.meta.env.VITE_EXTENSION_WEB_APP_URL ?? 'http://localhost:5173';
 const AUTH_EXPIRED_MESSAGE = '\uB85C\uADF8\uC778\uC774 \uB9CC\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4';
 const UNSUPPORTED_JOB_PAGE_MESSAGE = '채용공고 목록이나 캘린더에서는 저장할 공고를 정확히 찾을 수 없어요.';
-const JOB_EXTRACTOR_VERSION = '2026-06-12-role-essay-v11';
+const JOB_EXTRACTOR_VERSION = '2026-06-17-essay-limit-unit-v12';
 const POSTING_WATCH_INTERVAL_MS = 1200;
 const LOGIN_SESSION_POLL_INTERVAL_MS = 800;
 const LOGIN_SESSION_POLL_TIMEOUT_MS = 120000;
@@ -557,12 +557,13 @@ function renderEssayQuestionInputs(questions = [], options = {}) {
     const validQuestions = questions
         .map((question) => ({
         prompt: normalizeInput(question?.prompt ?? ''),
-        maxLength: Number.isFinite(Number(question?.maxLength)) ? Number(question.maxLength) : null
+        maxLength: Number.isFinite(Number(question?.maxLength)) ? Number(question.maxLength) : null,
+        maxLengthUnit: normalizeMaxLengthUnit(question?.maxLengthUnit)
     }))
         .filter((question) => question.prompt);
     const items = validQuestions.length > 0
         ? validQuestions
-        : showFallback ? [{ prompt: '', maxLength: null }] : [];
+        : showFallback ? [{ prompt: '', maxLength: null, maxLengthUnit: null }] : [];
     essayQuestionList.replaceChildren(...items.map(createEssayQuestionInput));
     schedulePanelResize();
 }
@@ -585,11 +586,12 @@ function createEssayQuestionInput(question, index) {
     action.className = 'essay-question-action';
     action.setAttribute('aria-hidden', 'true');
     title.textContent = `문항 ${index + 1}`;
-    meta.textContent = question.maxLength ? `${question.maxLength}자` : '글자 수 제한 없음';
+    meta.textContent = formatEssayQuestionLimit(question);
     preview.className = 'essay-question-preview';
     preview.textContent = hasPrompt ? question.prompt : '문항을 직접 입력하세요.';
     textarea.className = 'essay-question-input';
     textarea.setAttribute('data-max-length', question.maxLength ? String(question.maxLength) : '');
+    textarea.setAttribute('data-max-length-unit', question.maxLengthUnit ?? '');
     textarea.rows = getEssayQuestionRows(question.prompt);
     textarea.placeholder = '자소서 문항을 입력하세요.';
     textarea.value = question.prompt;
@@ -638,7 +640,7 @@ function buildRoleEssayQuestionsPayload(selectedRoles) {
     const source = currentPosting?.roleEssayQuestions ?? {};
     const payload = selectedRoles.reduce((accumulator, role) => {
         if (Array.isArray(source[role])) {
-            accumulator[role] = source[role];
+            accumulator[role] = source[role].map(toSaveableEssayQuestion);
         }
         return accumulator;
     }, {});
@@ -695,7 +697,8 @@ function collectEssayQuestions() {
     return Array.from(essayQuestionList.querySelectorAll('.essay-question-input'))
         .map((input) => ({
         prompt: normalizeInput(input.value),
-        maxLength: normalizeMaxLength(input.getAttribute('data-max-length'))
+        maxLength: normalizeMaxLength(input.getAttribute('data-max-length')),
+        maxLengthUnit: normalizeMaxLengthUnit(input.getAttribute('data-max-length-unit'))
     }))
         .filter((question) => question.prompt)
         .map((question) => ({
@@ -704,9 +707,29 @@ function collectEssayQuestions() {
     }));
 }
 
+function toSaveableEssayQuestion(question) {
+    return {
+        prompt: question.prompt,
+        maxLength: Number.isFinite(Number(question.maxLength)) ? Number(question.maxLength) : null
+    };
+}
+
 function normalizeMaxLength(value) {
     const parsed = Number(value);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function normalizeMaxLengthUnit(value) {
+    return value === 'byte' || value === 'char' ? value : null;
+}
+
+function formatEssayQuestionLimit(question) {
+    if (!question.maxLength) {
+        return '글자 수 제한 없음';
+    }
+    return question.maxLengthUnit === 'byte'
+        ? `${question.maxLength}byte`
+        : `${question.maxLength}자`;
 }
 
 function renderSavedJobs(savedJobs, posting) {

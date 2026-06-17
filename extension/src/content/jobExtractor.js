@@ -7,7 +7,7 @@ const KOREAN_ESSAY_QUESTION_VIEW = '\uC790\uC18C\uC11C \uBB38\uD56D \uBCF4\uAE30
 const KOREAN_ESSAY_QUESTION_LABEL = '\uC790\uC18C\uC11C \uBB38\uD56D';
 const KOREAN_ESSAY_LATER_ADD = '\uB098\uC911\uC5D0 \uC4F8 \uC790\uAE30\uC18C\uAC1C\uC11C\uB85C \uCD94\uAC00';
 const KOREAN_COMPANY_ICON = '\uAE30\uC5C5 \uC544\uC774\uCF58';
-const JOB_EXTRACTOR_VERSION = '2026-06-12-role-essay-v11';
+const JOB_EXTRACTOR_VERSION = '2026-06-17-essay-limit-unit-v12';
 
 export function extractJobPosting(documentRef = document, sourceUrl = documentRef.location.href) {
     if (isPlainJasoseolRecruitListUrl(sourceUrl)) {
@@ -276,7 +276,7 @@ function extractEssayQuestions(documentRef) {
         }
         return [{
             prompt,
-            maxLength: extractMaxLength(cleanText(item.textContent))
+            ...extractMaxLengthLimit(cleanText(item.textContent))
         }];
     });
     if (structuredQuestions.length > 0) {
@@ -727,15 +727,42 @@ function isEmploymentTypeText(text) {
 }
 
 function extractMaxLength(text) {
+    return extractMaxLengthLimit(text).maxLength;
+}
+
+function extractMaxLengthLimit(text) {
     if (!text) {
-        return null;
+        return { maxLength: null, maxLengthUnit: null };
     }
-    const match = text.match(/\((\d{2,5})\s*자\)|(\d{2,5})\s*자/);
-    if (match) {
-        return Number(match[1] ?? match[2]);
+    const byteMatch = text.match(limitPattern('byte'));
+    if (byteMatch) {
+        return {
+            maxLength: parseLimitNumber(byteMatch[1] ?? byteMatch[2]),
+            maxLengthUnit: 'byte'
+        };
+    }
+    const charMatch = text.match(limitPattern('자'));
+    if (charMatch) {
+        return {
+            maxLength: parseLimitNumber(charMatch[1] ?? charMatch[2]),
+            maxLengthUnit: 'char'
+        };
     }
     const fallback = text.match(/(\d{2,5})/);
-    return fallback ? Number(fallback[1]) : null;
+    return {
+        maxLength: fallback ? Number(fallback[1]) : null,
+        maxLengthUnit: fallback ? 'char' : null
+    };
+}
+
+function limitPattern(unit) {
+    const numberPattern = '(\\d{1,3}(?:,\\d{3})+|\\d{2,5})';
+    return new RegExp(`\\(${numberPattern}\\s*${unit}\\)|${numberPattern}\\s*${unit}`, 'i');
+}
+
+function parseLimitNumber(value) {
+    const parsed = Number(String(value ?? '').replace(/,/g, ''));
+    return Number.isFinite(parsed) ? parsed : null;
 }
 
 function looksLikeCompactEssayText(text) {
@@ -758,17 +785,17 @@ function splitCompactEssayQuestions(text) {
         .slice(1)
         .map((chunk) => {
             const cleanChunk = chunk.trim();
-            const maxLength = extractMaxLength(cleanChunk);
+            const maxLengthLimit = extractMaxLengthLimit(cleanChunk);
             const prompt = cleanText(cleanChunk
-                .replace(/\(\d{2,5}\s*자\)/g, '')
-                .replace(/\d{2,5}\s*자/g, ''));
-            return prompt ? { prompt, maxLength } : null;
+                .replace(limitTextPattern(), '')
+                .replace(limitTextTailPattern(), ''));
+            return prompt ? { prompt, ...maxLengthLimit } : null;
         })
         .filter(Boolean);
 }
 
 function looksLikeCompactEssayTextV2(text) {
-    return Boolean(text && (hasNumberedEssayDelimiter(text) || hasLooseEssayDelimiter(text)));
+    return Boolean(text && (hasNumberedEssayDelimiter(text) || hasQuestionLabelDelimiter(text) || hasLooseEssayDelimiter(text)));
 }
 
 function splitCompactEssayQuestionsV2(text) {
@@ -785,13 +812,17 @@ function splitCompactEssayQuestionsV2(text) {
     const chunks = splitCompactEssayChunks(normalized);
     return chunks
         .map((chunk) => {
-            const cleanChunk = chunk.replace(/^\d{1,2}\.\s*/, '').trim();
-            const maxLength = extractMaxLength(cleanChunk);
+            const cleanChunk = chunk
+                .replace(/^\d{1,2}\.\s*/, '')
+                .replace(/^문항\s*\d{1,2}\s*/u, '')
+                .replace(/^\d{2,5}\s*자\s*/u, '')
+                .trim();
+            const maxLengthLimit = extractMaxLengthLimit(cleanChunk);
             const prompt = cleanText(cleanChunk
-                .replace(/\(\s*\d{2,5}\s*\uC790\s*(?:\uC774\uB0B4|\uB0B4\uC678)?\s*\)/g, '')
-                .replace(/\s*\(?\d{2,5}\s*\uC790\s*(?:\uC774\uB0B4|\uB0B4\uC678)?\)?\s*$/g, '')
+                .replace(limitTextPattern(), '')
+                .replace(limitTextTailPattern(), '')
                 .replace(/\s+/g, ' '));
-            return prompt ? { prompt, maxLength } : null;
+            return prompt ? { prompt, ...maxLengthLimit } : null;
         })
         .filter(Boolean);
 }
@@ -805,11 +836,31 @@ function splitCompactEssayChunks(text) {
             return text.slice(start, end).replace(/\s*[·•ㆍ・]\s*$/g, '').trim();
         }).filter(Boolean);
     }
+    const questionLabelMatches = Array.from(text.matchAll(/(?:^|\s+)(문항\s*\d{1,2}\s*)/gu));
+    if (questionLabelMatches.length > 0) {
+        return questionLabelMatches.map((match, index) => {
+            const start = (match.index ?? 0) + match[0].length - match[1].length;
+            const end = index + 1 < questionLabelMatches.length ? questionLabelMatches[index + 1].index : text.length;
+            return text.slice(start, end).trim();
+        }).filter(Boolean);
+    }
     return text.split(/\s*[·•ㆍ・](?=\s)\s*/).slice(1);
+}
+
+function limitTextPattern() {
+    return /\(\s*(?:\d{1,3}(?:,\d{3})+|\d{2,5})\s*(?:\uC790|byte)\s*(?:\uC774\uB0B4|\uB0B4\uC678)?\s*\)/gi;
+}
+
+function limitTextTailPattern() {
+    return /\s*\(?(?:\d{1,3}(?:,\d{3})+|\d{2,5})\s*(?:\uC790|byte)\s*(?:\uC774\uB0B4|\uB0B4\uC678)?\)?\s*$/gi;
 }
 
 function hasNumberedEssayDelimiter(text) {
     return /(?:^|[·•ㆍ・]\s*|\s+)\d{1,2}\.\s*\S/.test(text);
+}
+
+function hasQuestionLabelDelimiter(text) {
+    return /(?:^|\s+)문항\s*\d{1,2}\s*\S/u.test(text);
 }
 
 function hasLooseEssayDelimiter(text) {

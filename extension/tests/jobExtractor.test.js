@@ -228,6 +228,116 @@ describe('extractJobPosting', () => {
             }
         });
     });
+    it('EXT-005: extracts byte-based essay question limits without keeping the limit text in prompts', () => {
+        const doc = document.implementation.createHTMLDocument('jasoseol-byte-essay-limits');
+        doc.body.innerHTML = `
+      <main>
+        <h1>삼정KPMG 채용</h1>
+        <a href="/company/kpmg">삼정KPMG</a>
+        <time datetime="2026-06-30">2026년 6월 30일 23:59</time>
+        <section aria-label="자소서 문항">
+          <p>문항 1 100자 본인의 강점 3가지를 해시태그(#)를 사용하여 키워드로 표현해 주십시오. (예시: #열정 #존중 #협업) (100byte)</p>
+          <p>문항 2 400자 모집분야 중 본인이 가장 해보고 싶은 업무는 무엇인가요? (400byte)</p>
+          <p>문항 3 2000자 지원동기 및 입사 후 목표, 경력사항 등의 내용을 자유롭게 작성하여 주시기 바랍니다.(2000byte)</p>
+          <p>문항 4 2000자 컨설팅에 필요한 자질은 무엇이라고 생각하며, 본인이 현재 가지고 있는 역량, 앞으로 개발해야 하는 역량은 무엇이라고 생각하나요? (자신의 역량이 잘 발휘된 경험을 포함하여 작성하여 주시기 바랍니다.) (2000byte)</p>
+          <p>문항 5 2000자 삼정KPMG 5 values (Integrity, Excellence, Courage, Together, For Better) 중 본인을 가장 잘 표현하는 value 1개를 선택하고, 그 이유와 실천 사례를 함께 작성해 주시기 바랍니다.(2000byte)</p>
+        </section>
+      </main>
+    `;
+
+        expect(extractJobPosting(doc, 'https://jasoseol.com/recruit?ec=kpmg')).toMatchObject({
+            essayQuestions: [
+                {
+                    prompt: '본인의 강점 3가지를 해시태그(#)를 사용하여 키워드로 표현해 주십시오. (예시: #열정 #존중 #협업)',
+                    maxLength: 100,
+                    maxLengthUnit: 'byte'
+                },
+                {
+                    prompt: '모집분야 중 본인이 가장 해보고 싶은 업무는 무엇인가요?',
+                    maxLength: 400,
+                    maxLengthUnit: 'byte'
+                },
+                {
+                    prompt: '지원동기 및 입사 후 목표, 경력사항 등의 내용을 자유롭게 작성하여 주시기 바랍니다.',
+                    maxLength: 2000,
+                    maxLengthUnit: 'byte'
+                },
+                {
+                    prompt: '컨설팅에 필요한 자질은 무엇이라고 생각하며, 본인이 현재 가지고 있는 역량, 앞으로 개발해야 하는 역량은 무엇이라고 생각하나요? (자신의 역량이 잘 발휘된 경험을 포함하여 작성하여 주시기 바랍니다.)',
+                    maxLength: 2000,
+                    maxLengthUnit: 'byte'
+                },
+                {
+                    prompt: '삼정KPMG 5 values (Integrity, Excellence, Courage, Together, For Better) 중 본인을 가장 잘 표현하는 value 1개를 선택하고, 그 이유와 실천 사례를 함께 작성해 주시기 바랍니다.',
+                    maxLength: 2000,
+                    maxLengthUnit: 'byte'
+                }
+            ]
+        });
+    });
+    it('EXT-005: prefers parenthesized byte limits over leading character labels in structured question rows', () => {
+        const doc = document.implementation.createHTMLDocument('jasoseol-structured-byte-essay-limits');
+        doc.body.innerHTML = `
+      <main>
+        <h1>삼정KPMG 채용</h1>
+        <a href="/company/kpmg">삼정KPMG</a>
+        <time datetime="2026-06-30">2026년 6월 30일 23:59</time>
+        <section aria-label="자소서 문항">
+          <article>
+            <h3>본인의 강점 3가지를 해시태그(#)를 사용하여 키워드로 표현해 주십시오. (예시: #열정 #존중 #협업)</h3>
+            <small>문항 1</small>
+            <span>100자</span>
+            <span>(100byte)</span>
+          </article>
+        </section>
+      </main>
+    `;
+
+        expect(extractJobPosting(doc, 'https://jasoseol.com/recruit?ec=kpmg')).toMatchObject({
+            essayQuestions: [
+                {
+                    prompt: '본인의 강점 3가지를 해시태그(#)를 사용하여 키워드로 표현해 주십시오. (예시: #열정 #존중 #협업)',
+                    maxLength: 100,
+                    maxLengthUnit: 'byte'
+                }
+            ]
+        });
+    });
+    it('EXT-005: parses comma-formatted essay limits without truncating the prompt', () => {
+        const doc = document.implementation.createHTMLDocument('jasoseol-comma-essay-limits');
+        doc.body.innerHTML = `
+      <main>
+        <h1>GC녹십자 채용</h1>
+        <a href="/company/gc">GC녹십자</a>
+        <time datetime="2026-06-30">2026년 6월 30일 23:59</time>
+        <section aria-label="자소서 문항">
+          <p>문항 1 회사를 선택하는 본인만의 기준 및 GC녹십자에 지원하는 이유에 대해 기재하여 주시기 바랍니다. (1,000자)</p>
+          <p>문항 2 자기주도적으로 가장 치열하게 임했던 경험은 무엇이었으며, 본인에게 어떤 의미가 있었는지 설명해 주시기 바랍니다. (1,000자)</p>
+          <p>문항 3 지원하신 직무에 필요한 역량을 향상시키기 위해 지원자님 께서 노력 및 경험한 바를 작성해 주시기 바랍니다. (2개 항목 이상) ① 경험: (1,000자)</p>
+        </section>
+      </main>
+    `;
+
+        expect(extractJobPosting(doc, 'https://jasoseol.com/recruit?ec=gc')).toMatchObject({
+            essayQuestions: [
+                {
+                    prompt: '회사를 선택하는 본인만의 기준 및 GC녹십자에 지원하는 이유에 대해 기재하여 주시기 바랍니다.',
+                    maxLength: 1000,
+                    maxLengthUnit: 'char'
+                },
+                {
+                    prompt: '자기주도적으로 가장 치열하게 임했던 경험은 무엇이었으며, 본인에게 어떤 의미가 있었는지 설명해 주시기 바랍니다.',
+                    maxLength: 1000,
+                    maxLengthUnit: 'char'
+                },
+                {
+                    prompt: '지원하신 직무에 필요한 역량을 향상시키기 위해 지원자님 께서 노력 및 경험한 바를 작성해 주시기 바랍니다. (2개 항목 이상) ① 경험:',
+                    maxLength: 1000,
+                    maxLengthUnit: 'char'
+                }
+            ]
+        });
+    });
     it('EXT-005: reveals Jasoseol essay questions when only the role row hover opens the layer', async () => {
         const doc = document.implementation.createHTMLDocument('jasoseol-row-hover-only-essay-layer');
         doc.body.innerHTML = `
