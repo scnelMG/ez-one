@@ -9003,7 +9003,7 @@ button.history-metric:hover {
 .history-table-head,
 .history-row {
   display: grid;
-  grid-template-columns: minmax(120px, 1.2fr) minmax(160px, 1.6fr) minmax(140px, 1.1fr) minmax(100px, 0.8fr) minmax(110px, 0.8fr);
+  grid-template-columns: minmax(150px, 1.05fr) minmax(160px, 1.2fr) 118px minmax(104px, 0.72fr) 112px 104px;
   gap: 12px;
   align-items: center;
   min-width: 780px;
@@ -9023,7 +9023,7 @@ button.history-metric:hover {
   border-top: 1px solid var(--line);
   color: var(--text);
   transition: background 0.16s ease;
-  cursor: pointer;
+  cursor: default;
 }
 
 .history-row:hover {

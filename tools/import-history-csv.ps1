@@ -48,6 +48,10 @@ function NormalizeText([string]$Value) {
     return ($Value -replace "[\r\n]+", " ").Trim()
 }
 
+function CompactText([string]$Value) {
+    return (NormalizeText $Value) -replace "\s+", ""
+}
+
 function SqlDate([string]$Value) {
     if ([string]::IsNullOrWhiteSpace($Value)) {
         return "NULL"
@@ -81,7 +85,19 @@ function HasText([string]$Value, [int[]]$Codepoints) {
     return $Value.Contains((K $Codepoints))
 }
 
+function IsCompactText([string]$Value, [int[]]$Codepoints) {
+    return (CompactText $Value) -eq (K $Codepoints)
+}
+
 function ResultStage([string]$Value) {
+    if (IsCompactText $Value @(0xBBF8, 0xC9C0, 0xC6D0)) { return "NOT_APPLIED" }
+    if (IsCompactText $Value @(0xC9C4, 0xD589, 0xC911)) { return "IN_PROGRESS" }
+    if (IsCompactText $Value @(0xC11C, 0xB958, 0xD0C8, 0xB77D)) { return "DOCUMENT_FAILED" }
+    if (IsCompactText $Value @(0xD544, 0xAE30, 0xD0C8, 0xB77D)) { return "TEST_FAILED" }
+    if (IsCompactText $Value @(0xD544, 0xAE30, 0xBBF8, 0xC751, 0xC2DC)) { return "TEST_FAILED" }
+    if (IsCompactText $Value @(0xC5ED, 0xB7C9, 0xAC80, 0xC0AC, 0xBBF8, 0xC9C0, 0xC6D0)) { return "TEST_FAILED" }
+    if (IsCompactText $Value @(0xBA74, 0xC811, 0xD0C8, 0xB77D)) { return "INTERVIEW_FAILED" }
+    if (IsCompactText $Value @(0xBA74, 0xC811, 0xBBF8, 0xC751, 0xC2DC)) { return "INTERVIEW_FAILED" }
     if (HasText $Value @(0xC9C4, 0xD589)) { return "IN_PROGRESS" }
     if (HasText $Value @(0xBA74, 0xC811)) { return "INTERVIEW_FAILED" }
     if ((HasText $Value @(0xD544, 0xAE30)) -or (HasText $Value @(0xC5ED, 0xB7C9)) -or (HasText $Value @(0xAC80, 0xC0AC)) -or (HasText $Value @(0xACFC, 0xC81C))) {
@@ -145,11 +161,22 @@ function FieldByIndex($Row, [int]$Index) {
     return [string]$properties[$Index].Value
 }
 
+function FieldByHeader($Row, [int[][]]$HeaderCodepoints, [int]$FallbackIndex) {
+    $headers = $HeaderCodepoints | ForEach-Object { K $_ }
+    foreach ($property in $Row.PSObject.Properties) {
+        $propertyName = NormalizeText $property.Name
+        if ($headers -contains $propertyName) {
+            return [string]$property.Value
+        }
+    }
+    return FieldByIndex $Row $FallbackIndex
+}
+
 if (!(Test-Path -LiteralPath $CsvPath)) {
     throw "CSV file not found: $CsvPath"
 }
 
-$rows = Import-Csv -LiteralPath $CsvPath
+$rows = Import-Csv -LiteralPath $CsvPath -Encoding UTF8
 $outDir = Split-Path -Parent $OutFile
 if (![string]::IsNullOrWhiteSpace($outDir) -and !(Test-Path -LiteralPath $outDir)) {
     New-Item -ItemType Directory -Path $outDir | Out-Null
@@ -167,11 +194,11 @@ $index = 0
 $imported = 0
 foreach ($row in $rows) {
     $index += 1
-    $companyName = NormalizeText (FieldByIndex $row 0)
-    $sourceUrl = NormalizeText (FieldByIndex $row 1)
-    $rawResult = NormalizeText (FieldByIndex $row 2)
-    $deadlineLabel = NormalizeText (FieldByIndex $row 3)
-    $positionTitle = NormalizeText (FieldByIndex $row 4)
+    $companyName = NormalizeText (FieldByHeader $row @(@(0xAE30, 0xC5C5, 0xBA85)) 0)
+    $sourceUrl = NormalizeText (FieldByHeader $row @(@(0xAD00, 0xB828, 0x20, 0xB9C1, 0xD06C)) 1)
+    $rawResult = NormalizeText (FieldByHeader $row @(@(0xC120, 0xD0DD)) 2)
+    $deadlineLabel = NormalizeText (FieldByHeader $row @(@(0xC811, 0xC218, 0x20, 0xAE30, 0xD55C)) 3)
+    $positionTitle = NormalizeText (FieldByHeader $row @(@(0xC9C1, 0xBB34)) 4)
     if ([string]::IsNullOrWhiteSpace($companyName)) {
         continue
     }

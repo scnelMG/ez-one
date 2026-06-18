@@ -49,14 +49,11 @@ const historyFixture = {
     },
     companyTypes: [
         { type: '대기업', count: 52 },
-        { type: '공공기관', count: 41 },
-        { type: '스타트업', count: 24 },
-        { type: '미확인', count: 7 }
+        { type: '공공기관', count: 41 }
     ],
     industryStats: [
         { industry: '금융', count: 61 },
-        { industry: 'IT', count: 48 },
-        { industry: '공공', count: 32 }
+        { industry: 'IT', count: 48 }
     ],
     dataQuality: {
         total: 194,
@@ -75,10 +72,7 @@ const historyFixture = {
             resultLabel: '서류 단계 종료',
             rawResult: '서류탈락',
             deadlineLabel: '2025.03.23',
-            sourceUrl: 'https://example.com/dalpha',
-            companyType: '스타트업',
-            companyIndustry: 'AI',
-            companyDataSource: 'RULE'
+            sourceUrl: 'https://example.com/dalpha'
         },
         {
             id: '2',
@@ -90,25 +84,19 @@ const historyFixture = {
             resultLabel: '미지원',
             rawResult: '미지원',
             deadlineLabel: '마감일 미기록',
-            sourceUrl: 'https://example.com/nexon',
-            companyType: '대기업',
-            companyIndustry: 'IT',
-            companyDataSource: 'RULE'
+            sourceUrl: 'https://example.com/nexon'
         },
         {
             id: '3',
             workspaceId: '104',
             companyName: '한국전력공사',
             positionTitle: '데이터 엔지니어',
-            applicationStatus: 'COMPLETED',
+            applicationStatus: 'IN_PROGRESS',
             resultStage: 'IN_PROGRESS',
             resultLabel: '진행 중',
-            rawResult: '면접 대기',
+            rawResult: '진행중',
             deadlineLabel: '2026.02.01',
-            sourceUrl: 'https://example.com/kepco',
-            companyType: '공공기관',
-            companyIndustry: '공공',
-            companyDataSource: 'MASTER'
+            sourceUrl: 'https://example.com/kepco'
         }
     ]
 };
@@ -136,23 +124,20 @@ describe('PastHistoryPage', () => {
         mocks.listApplications.mockResolvedValue(historyFixture);
     });
 
-    it('HISTORY-003/HISTORY-006/HISTORY-008: renders imported application history dashboard and table', async () => {
+    it('HISTORY-003/HISTORY-006: renders past history as a basket-connected job list', async () => {
         const wrapper = await mountHistory('/history');
 
-        expect(mocks.listApplications).toHaveBeenCalledWith({ period: 'ALL', resultStage: undefined });
+        expect(mocks.listApplications).toHaveBeenCalledWith({ period: 'ALL' });
         expect(wrapper.get('[data-testid="history-period-select"]').text()).toContain('2026 상반기');
         expect(wrapper.get('[data-testid="metric-total"]').text()).toContain('194');
-        expect(wrapper.get('[data-testid="metric-completed"]').text()).toContain('79');
+        expect(wrapper.get('[data-testid="metric-ready"]').text()).toContain('0');
         expect(wrapper.get('[data-testid="metric-not-applied"]').text()).toContain('109');
         expect(wrapper.get('[data-testid="metric-in-progress"]').text()).toContain('6');
-        expect(wrapper.get('[data-testid="metric-ready"]').text()).toContain('0');
-        expect(wrapper.find('.history-stage-filters').exists()).toBe(false);
-        expect(wrapper.find('[data-testid^="company-filter-"]').exists()).toBe(false);
-        expect(wrapper.get('[data-testid="company-type-chart"]').text()).toContain('대기업');
-        expect(wrapper.get('[data-testid="company-type-chart"]').text()).toContain('공공기관');
-        expect(wrapper.get('[data-testid="industry-chart"]').text()).toContain('금융');
-        expect(wrapper.get('[data-testid="company-data-quality"]').text()).toContain('기업 마스터');
-        expect(wrapper.get('[data-testid="company-data-quality"]').text()).toContain('31');
+        expect(wrapper.get('[data-testid="metric-completed"]').text()).toContain('79');
+        expect(wrapper.find('[data-testid="company-type-chart"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="industry-chart"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="company-data-quality"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="history-result-label-filter"]').exists()).toBe(false);
         expect(rowCompanies(wrapper)).toEqual(['달파', '넥슨코리아', '한국전력공사']);
     });
 
@@ -162,34 +147,32 @@ describe('PastHistoryPage', () => {
         await wrapper.get('[data-testid="history-period-select"]').setValue('2026-H1');
         await flushPromises();
 
-        expect(mocks.listApplications).toHaveBeenLastCalledWith({ period: '2026-H1', resultStage: undefined });
+        expect(mocks.listApplications).toHaveBeenLastCalledWith({ period: '2026-H1' });
     });
 
-    it('HISTORY-001: opens the matching workspace from the row and keeps the original posting as a separate link', async () => {
+    it('HISTORY-001: keeps workspace navigation and the original posting as separate links', async () => {
         const wrapper = await mountHistory('/history');
 
         expect(wrapper.findAll('.history-table-head span').map((cell) => cell.text())).toEqual([
             '회사명',
             '직무',
             '상태',
-            '마감일자',
-            '채용 사이트 링크'
+            '마감일',
+            '채용 사이트 링크',
+            '최근 작업'
         ]);
         const firstRow = wrapper.get('[data-testid="history-row"]');
         expect(firstRow.text()).toContain('달파');
         expect(firstRow.text()).toContain(statusLabel('COMPLETED'));
         expect(firstRow.text()).not.toContain('서류 단계 종료');
         expect(firstRow.text()).not.toContain('서류탈락');
-        expect(firstRow.text()).not.toContain('열기');
         expect(firstRow.element.children.length).toBe(wrapper.get('.history-table-head').element.children.length);
         expect(wrapper.get('[data-testid="history-source-1"]').attributes('href')).toBe('https://example.com/dalpha');
         expect(wrapper.get('[data-testid="history-source-1"]').text()).toBe('바로가기');
-        await firstRow.trigger('click');
-        await flushPromises();
-        expect(wrapper.vm.$router.currentRoute.value.path).toBe('/workspaces/102');
+        expect(wrapper.get('[data-testid="history-workspace-1"]').attributes('href')).toBe('/workspaces/102');
     });
 
-    it('filters the visible rows by search keyword without losing the selected period data', async () => {
+    it('filters the visible rows by search keyword without exposing raw result labels as searchable UI copy', async () => {
         const wrapper = await mountHistory('/history');
 
         await wrapper.get('[data-testid="history-search"]').setValue('전력');
@@ -197,18 +180,18 @@ describe('PastHistoryPage', () => {
         expect(wrapper.get('[data-testid="history-visible-count"]').text()).toContain('1건 표시');
         expect(wrapper.get('[data-testid="history-visible-count"]').text()).toContain('전체 194건');
 
+        await wrapper.get('[data-testid="history-search"]').setValue('서류탈락');
+        expect(rowCompanies(wrapper)).toEqual([]);
+
         await wrapper.get('[data-testid="history-reset-filters"]').trigger('click');
         expect(rowCompanies(wrapper)).toEqual(['달파', '넥슨코리아', '한국전력공사']);
     });
 
-    it('filters by explicit status/result labels and sorts rows independently from search', async () => {
+    it('filters by standard application status and sorts rows independently from search', async () => {
         const wrapper = await mountHistory('/history');
 
         await wrapper.get('[data-testid="history-status-filter"]').setValue('COMPLETED');
-        expect(rowCompanies(wrapper)).toEqual(['달파', '한국전력공사']);
-
-        await wrapper.get('[data-testid="history-result-label-filter"]').setValue('진행 중');
-        expect(rowCompanies(wrapper)).toEqual(['한국전력공사']);
+        expect(rowCompanies(wrapper)).toEqual(['달파']);
 
         await wrapper.get('[data-testid="history-reset-filters"]').trigger('click');
         await wrapper.get('[data-testid="history-sort-select"]').setValue('DEADLINE_DESC');
