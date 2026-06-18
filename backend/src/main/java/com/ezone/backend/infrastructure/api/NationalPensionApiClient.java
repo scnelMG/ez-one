@@ -41,14 +41,10 @@ public class NationalPensionApiClient {
         }
 
         try {
-            URI uri = UriComponentsBuilder.fromHttpUrl(API_URL)
-                    .queryParam("serviceKey", serviceKey)
-                    .queryParam("wkpl_nm", companyName)
-                    .queryParam("pageNo", 1)
-                    .queryParam("numOfRows", 10)
-                    .queryParam("resultType", "json")
-                    .build()
-                    .toUri();
+            String urlString = API_URL + "?serviceKey=" + java.net.URLEncoder.encode(serviceKey, "UTF-8") + 
+                    "&wkpl_nm=" + java.net.URLEncoder.encode(companyName, "UTF-8") + 
+                    "&pageNo=1&numOfRows=10&resultType=json";
+            URI uri = new URI(urlString);
 
             ResponseEntity<String> response = restTemplate.getForEntity(uri, String.class);
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
