@@ -5,6 +5,7 @@ import com.ezone.backend.mapper.CompanySyncMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +28,23 @@ public class CompanyDataSyncService {
     public CompanyDataSyncService(NationalPensionApiClient pensionApiClient, CompanySyncMapper syncMapper) {
         this.pensionApiClient = pensionApiClient;
         this.syncMapper = syncMapper;
+    }
+
+    @Scheduled(cron = "0 30 2 * * ?") // 매일 새벽 2시 30분에 실행
+    public void runDailyPensionSync() {
+        int limit = 1000;
+        List<String> companiesToSync = syncMapper.findCompaniesNeedingPensionSync(limit);
+        log.info("Starting daily Pension API sync for {} companies.", companiesToSync.size());
+        
+        for (String companyName : companiesToSync) {
+            try {
+                syncCompanyByName(companyName);
+                Thread.sleep(200); // API Rate Limit 방지를 위한 지연 (0.2초)
+            } catch (Exception e) {
+                log.error("Failed daily sync for: {}", companyName, e);
+            }
+        }
+        log.info("Finished daily Pension API sync.");
     }
 
     @Async
@@ -55,6 +73,11 @@ public class CompanyDataSyncService {
         List<NationalPensionApiClient.CompanyPensionData> dataList = pensionApiClient.searchCompanyByName(companyName);
         if (dataList == null || dataList.isEmpty()) {
             log.info("No data found from National Pension API for: {}", companyName);
+            // 만약 profile이 있다면 source_updated_at만 갱신해서 무한 반복 시도를 방지합니다.
+            Long existingProfileId = syncMapper.findCompanyProfileIdByCompanyId(existingCompanyId != null ? existingCompanyId : syncMapper.findCompanyIdByName(companyName));
+            if (existingProfileId != null) {
+                syncMapper.touchProfileSourceUpdatedAt(existingProfileId);
+            }
             return;
         }
 

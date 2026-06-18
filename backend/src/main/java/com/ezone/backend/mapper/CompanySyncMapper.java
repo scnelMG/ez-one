@@ -54,6 +54,9 @@ public interface CompanySyncMapper {
             "WHERE company_id = #{companyId} AND source_type = #{sourceType}")
     void touchProfileSource(@Param("companyId") Long companyId, @Param("sourceType") String sourceType);
 
+    @Update("UPDATE company_profiles SET source_updated_at = CURRENT_TIMESTAMP WHERE id = #{profileId}")
+    void touchProfileSourceUpdatedAt(@Param("profileId") Long profileId);
+
     @Select("SELECT c.name FROM companies c " +
             "LEFT JOIN company_profiles cp ON c.id = cp.company_id " +
             "WHERE cp.id IS NULL OR cp.employee_count IS NULL OR cp.address IS NULL " +

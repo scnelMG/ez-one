@@ -24,7 +24,7 @@ public class CompanyController {
     public ApiResponse<List<CompanySearchResponse>> searchCompanies(@RequestParam String query) {
         // 실시간 캐싱 (On-Demand): DB에 검색하기 전 먼저 API를 호출하여 최신 데이터를 가져옵니다.
         try {
-            syncService.syncCompanyByName(query);
+            // syncService.syncCompanyByName(query); // 실시간 동기화 제거
         } catch (Exception e) {
             // API 호출 실패가 검색 실패로 이어지지 않도록 예외 처리
         }
@@ -33,7 +33,7 @@ public class CompanyController {
 
     @PostMapping("/sync")
     public ApiResponse<String> syncCompany(@RequestParam String name) {
-        syncService.syncCompanyByName(name);
+        // syncService.syncCompanyByName(name); // 실시간 동기화 제거
         return ApiResponse.success("Synced data for: " + name);
     }
 }
