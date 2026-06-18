@@ -50,10 +50,12 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
 
     private final P1WorkspaceMapper mapper;
     private final ActivityMapper activityMapper;
+    private final CompanyDataSyncService companyDataSyncService;
 
-    public MyBatisP1WorkspaceService(P1WorkspaceMapper mapper, ActivityMapper activityMapper) {
+    public MyBatisP1WorkspaceService(P1WorkspaceMapper mapper, ActivityMapper activityMapper, CompanyDataSyncService companyDataSyncService) {
         this.mapper = mapper;
         this.activityMapper = activityMapper;
+        this.companyDataSyncService = companyDataSyncService;
     }
 
     @Override
@@ -152,6 +154,9 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
             recordUnverifiedCompanyInfoSource(job);
             mapper.insertJob(job);
         }
+
+        // Trigger real-time asynchronous company data sync from public APIs (National Pension / DART)
+        companyDataSyncService.syncCompanyDataAsync(request.companyName());
 
         BasketJobRow basketJob = new BasketJobRow();
         basketJob.setUserId(userId);

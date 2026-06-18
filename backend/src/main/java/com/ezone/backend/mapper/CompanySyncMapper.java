@@ -20,21 +20,23 @@ public interface CompanySyncMapper {
     @Select("SELECT id FROM company_profiles WHERE company_id = #{companyId} LIMIT 1")
     Long findCompanyProfileIdByCompanyId(@Param("companyId") Long companyId);
 
-    @Insert("INSERT INTO company_profiles (company_id, address, employee_count, source_priority) " +
-            "VALUES (#{companyId}, #{address}, #{employeeCount}, #{sourcePriority})")
+    @Insert("INSERT INTO company_profiles (company_id, address, employee_count, founded_at, source_priority) " +
+            "VALUES (#{companyId}, #{address}, #{employeeCount}, #{foundedAt}, #{sourcePriority})")
     void insertCompanyProfile(
             @Param("companyId") Long companyId,
             @Param("address") String address,
             @Param("employeeCount") Integer employeeCount,
+            @Param("foundedAt") java.time.LocalDate foundedAt,
             @Param("sourcePriority") String sourcePriority);
 
     @Update("UPDATE company_profiles SET address = #{address}, employee_count = #{employeeCount}, " +
-            "source_updated_at = CURRENT_TIMESTAMP " +
+            "founded_at = COALESCE(#{foundedAt}, founded_at), source_updated_at = CURRENT_TIMESTAMP " +
             "WHERE company_id = #{companyId}")
     void updateCompanyProfile(
             @Param("companyId") Long companyId,
             @Param("address") String address,
-            @Param("employeeCount") Integer employeeCount);
+            @Param("employeeCount") Integer employeeCount,
+            @Param("foundedAt") java.time.LocalDate foundedAt);
 
     @Select("SELECT id FROM company_profile_sources " +
             "WHERE company_id = #{companyId} AND source_type = #{sourceType} LIMIT 1")
@@ -51,6 +53,12 @@ public interface CompanySyncMapper {
     @Update("UPDATE company_profile_sources SET collected_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP " +
             "WHERE company_id = #{companyId} AND source_type = #{sourceType}")
     void touchProfileSource(@Param("companyId") Long companyId, @Param("sourceType") String sourceType);
+
+    @Select("SELECT c.name FROM companies c " +
+            "LEFT JOIN company_profiles cp ON c.id = cp.company_id " +
+            "WHERE cp.id IS NULL OR cp.employee_count IS NULL OR cp.address IS NULL " +
+            "ORDER BY c.id DESC LIMIT #{limit}")
+    java.util.List<String> findCompaniesNeedingPensionSync(@Param("limit") int limit);
 
     public static class CompanyEntity {
         private Long id;

@@ -52,8 +52,8 @@ JOIN (
   UNION ALL SELECT 'AXA손해보험', 'axa.co.kr', '금융'
 ) known ON known.name = c.name AND known.domain = c.domain
 ON DUPLICATE KEY UPDATE
-  industry = COALESCE(NULLIF(industry, ''), VALUES(industry)),
-  homepage_url = COALESCE(NULLIF(homepage_url, ''), VALUES(homepage_url));
+  company_profiles.industry = COALESCE(NULLIF(company_profiles.industry, ''), VALUES(industry)),
+  company_profiles.homepage_url = COALESCE(NULLIF(company_profiles.homepage_url, ''), VALUES(homepage_url));
 
 UPDATE jobs j
 JOIN companies bad ON bad.id = j.company_id

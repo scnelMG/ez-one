@@ -4,9 +4,12 @@ import com.ezone.backend.infrastructure.api.NationalPensionApiClient;
 import com.ezone.backend.mapper.CompanySyncMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Service
@@ -24,6 +27,15 @@ public class CompanyDataSyncService {
     public CompanyDataSyncService(NationalPensionApiClient pensionApiClient, CompanySyncMapper syncMapper) {
         this.pensionApiClient = pensionApiClient;
         this.syncMapper = syncMapper;
+    }
+
+    @Async
+    public void syncCompanyDataAsync(String companyName) {
+        try {
+            syncCompanyByName(companyName);
+        } catch (Exception e) {
+            log.error("Failed to async sync company data for: {}", companyName, e);
+        }
     }
 
     @Transactional
@@ -56,12 +68,21 @@ public class CompanyDataSyncService {
             log.info("Created new company record for {} (ID: {})", companyName, companyId);
         }
 
+        LocalDate foundedAt = null;
+        if (pensionData.getJoinDate() != null && pensionData.getJoinDate().length() == 8) {
+            try {
+                foundedAt = LocalDate.parse(pensionData.getJoinDate(), DateTimeFormatter.BASIC_ISO_DATE);
+            } catch (Exception e) {
+                log.warn("Failed to parse joinDate: {} for company: {}", pensionData.getJoinDate(), companyName);
+            }
+        }
+
         Long profileId = syncMapper.findCompanyProfileIdByCompanyId(companyId);
         if (profileId == null) {
-            syncMapper.insertCompanyProfile(companyId, pensionData.getAddress(), pensionData.getEmployeeCount(), SOURCE_TYPE_PUBLIC_PENSION);
+            syncMapper.insertCompanyProfile(companyId, pensionData.getAddress(), pensionData.getEmployeeCount(), foundedAt, SOURCE_TYPE_PUBLIC_PENSION);
             log.info("Created new company profile for company ID: {}", companyId);
         } else {
-            syncMapper.updateCompanyProfile(companyId, pensionData.getAddress(), pensionData.getEmployeeCount());
+            syncMapper.updateCompanyProfile(companyId, pensionData.getAddress(), pensionData.getEmployeeCount(), foundedAt);
             log.info("Updated existing company profile for company ID: {}", companyId);
         }
 
