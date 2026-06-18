@@ -53,6 +53,9 @@ company-enrichment:
 mybatis:
   mapper-locations: classpath:mapper/**/*.xml
 
+opendart:
+  api-key: ${OPENDART_API_KEY:}
+
 server:
   port: ${SERVER_PORT:8080}
   address: ${SERVER_ADDRESS:::1}
@@ -73,6 +76,12 @@ gms:
     api-key: ${GMS_API_KEY:}
     base-url: ${GMS_AI_BASE_URL:https://gms.ssafy.io/gmsapi/api.openai.com/v1}
     recommendation-model: ${GMS_RECOMMENDATION_MODEL:gpt-4.1-mini}
+
+dart:
+  ai:
+    fast-model: ${DART_AI_FAST_MODEL:gpt-4.1-mini}
+    analysis-model: ${DART_AI_ANALYSIS_MODEL:gpt-4.1}
+    compare-model: ${DART_AI_COMPARE_MODEL:gemini-2.5-flash}
 
 auth:
   google:

@@ -213,3 +213,38 @@ History rows are stored in `application_history`. The import process creates lin
   - `FTC_BUSINESS_GROUP`: 공정거래위원회 기업집단포털, used for 대기업/공시대상기업집단 affiliate classification.
   - `ALIO_PUBLIC_INSTITUTION`: ALIO 공공기관 경영정보 공개시스템, used for 공공기관 classification.
 - `company_info_sources` still records the saved posting URL as `SAVED_JOB_URL/UNVERIFIED`; it is not treated as official company classification evidence.
+
+## 2026-06-19 DART GMS AI Analysis API
+
+Requirement: `REF-003`, `JOB-018`, `REF-008`, `AI-004`, `AI-006`.
+
+All endpoints require the authenticated user to own `{workspaceId}`.
+
+| Method | Path | Description |
+| --- | --- | --- |
+| GET | `/api/workspaces/{workspaceId}/dart/disclosures` | Returns OpenDART periodic disclosure candidates for the workspace company. Provider failure returns `available=false` and does not block the workspace. |
+| POST | `/api/workspaces/{workspaceId}/dart/analyses` | Creates a GMS AI analysis for the selected disclosure. The request includes `rceptNo`, `reportName`, optional company/position context, essay questions, and optional manual DART text. |
+| GET | `/api/workspaces/{workspaceId}/dart/analyses/{analysisId}` | Returns a stored analysis preview for the same owner/workspace. |
+| POST | `/api/workspaces/{workspaceId}/dart/analyses/{analysisId}/save-reference` | Saves a completed analysis as a `DART` reference material and returns the created reference. |
+
+Analysis response `result` is structured as:
+
+```json
+{
+  "evidenceCards": [
+    {
+      "title": "string",
+      "summary": "string",
+      "sourceSection": "string",
+      "rceptNo": "string",
+      "relevanceScore": 0
+    }
+  ],
+  "appealPoints": ["string"],
+  "suggestedSentences": ["string"],
+  "cautions": ["string"],
+  "missingInfo": ["string"]
+}
+```
+
+AI output is preview-only until the user explicitly saves it as reference material. It must not update essay drafts automatically.

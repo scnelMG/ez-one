@@ -187,6 +187,27 @@ export function createWorkspaceApi(httpClient = defaultHttpClient) {
                 return { ...reference };
             }
         },
+        async listDartDisclosures(workspaceId) {
+            const response = await httpClient.get(`/api/workspaces/${workspaceId}/dart/disclosures`);
+            const data = unwrapApiData(response.data);
+            return {
+                available: data.available,
+                message: data.message,
+                disclosures: (data.disclosures ?? []).map(toDartDisclosure)
+            };
+        },
+        async createDartAnalysis(workspaceId, payload) {
+            const response = await httpClient.post(`/api/workspaces/${workspaceId}/dart/analyses`, payload);
+            return toDartAnalysis(unwrapApiData(response.data));
+        },
+        async getDartAnalysis(workspaceId, analysisId) {
+            const response = await httpClient.get(`/api/workspaces/${workspaceId}/dart/analyses/${analysisId}`);
+            return toDartAnalysis(unwrapApiData(response.data));
+        },
+        async saveDartAnalysisReference(workspaceId, analysisId) {
+            const response = await httpClient.post(`/api/workspaces/${workspaceId}/dart/analyses/${analysisId}/save-reference`, {});
+            return toWorkspaceReference(unwrapApiData(response.data));
+        },
         async getReference(referenceId) {
             const response = await httpClient.get(`/api/references/${referenceId}`);
             return toWorkspaceReference(unwrapApiData(response.data));
@@ -237,6 +258,37 @@ function toWorkspaceReference(reference) {
         title: reference.title,
         body: reference.body,
         url: reference.url
+    };
+}
+function toDartDisclosure(disclosure) {
+    return {
+        rceptNo: disclosure.rceptNo,
+        reportName: disclosure.reportName,
+        reportType: disclosure.reportType,
+        receivedDate: disclosure.receivedDate,
+        corpName: disclosure.corpName,
+        recommended: Boolean(disclosure.recommended),
+        sourceUrl: disclosure.sourceUrl
+    };
+}
+function toDartAnalysis(analysis) {
+    return {
+        id: String(analysis.id),
+        workspaceId: String(analysis.workspaceId),
+        rceptNo: analysis.rceptNo,
+        reportName: analysis.reportName,
+        companyName: analysis.companyName,
+        status: analysis.status,
+        model: analysis.model,
+        sourceUrl: analysis.sourceUrl,
+        result: analysis.result ?? {
+            evidenceCards: [],
+            appealPoints: [],
+            suggestedSentences: [],
+            cautions: [],
+            missingInfo: []
+        },
+        errorMessage: analysis.errorMessage
     };
 }
 function readConfig(httpClient) {

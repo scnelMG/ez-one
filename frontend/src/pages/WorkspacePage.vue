@@ -588,6 +588,7 @@ import { computed, h, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch
 import * as Diff from 'diff';
 import { useRoute } from 'vue-router';
 import { rememberRecentWorkspace } from '@/features/basket/recentWorkspaces';
+import { workspaceApi } from '@/features/workspace/api/workspaceApi';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import AppLayout from '@/shared/AppLayout.vue';
 import StatePanel from '@/shared/StatePanel.vue';
@@ -1208,6 +1209,14 @@ function createBoardDraft(type) {
       notes: ''
     },
     dartEntries: [],
+    dartDisclosures: [],
+    dartDisclosureStatus: 'idle',
+    dartDisclosureMessage: '',
+    selectedDartRceptNo: '',
+    dartAnalysisStatus: 'idle',
+    dartAnalysis: null,
+    dartAnalysisMessage: '',
+    dartSaveStatus: 'idle',
     profileSections: createProfileSections(),
     prompts: [],
     isAddingPrompt: false,
@@ -1375,6 +1384,79 @@ function addDartEntry(draft) {
     contracts: '',
     notes: ''
   };
+}
+
+function selectedDartDisclosure(draft) {
+  return (draft.dartDisclosures || []).find((item) => item.rceptNo === draft.selectedDartRceptNo) ?? null;
+}
+
+async function loadDartDisclosures(draft) {
+  draft.dartDisclosureStatus = 'loading';
+  draft.dartDisclosureMessage = '';
+  draft.dartSaveStatus = 'idle';
+  try {
+    const response = await workspaceApi.listDartDisclosures(workspaceId.value);
+    draft.dartDisclosures = response.disclosures || [];
+    draft.dartDisclosureStatus = response.available ? 'ready' : 'error';
+    draft.dartDisclosureMessage = response.message || '';
+    const recommended = draft.dartDisclosures.find((item) => item.recommended) || draft.dartDisclosures[0];
+    draft.selectedDartRceptNo = recommended?.rceptNo || '';
+  } catch (error) {
+    draft.dartDisclosures = [];
+    draft.selectedDartRceptNo = '';
+    draft.dartDisclosureStatus = 'error';
+    draft.dartDisclosureMessage = 'DART disclosures are unavailable. You can still write a manual memo.';
+  }
+}
+
+async function createDartAnalysis(draft) {
+  const disclosure = selectedDartDisclosure(draft);
+  if (!disclosure) return;
+  draft.dartAnalysisStatus = 'loading';
+  draft.dartAnalysisMessage = '';
+  draft.dartSaveStatus = 'idle';
+  try {
+    const analysis = await workspaceApi.createDartAnalysis(workspaceId.value, {
+      rceptNo: disclosure.rceptNo,
+      reportName: disclosure.reportName,
+      companyName: workspaceStore.workspace?.companyName || disclosure.corpName || '',
+      positionTitle: workspaceStore.workspace?.positionTitle || '',
+      essayQuestions: (workspaceStore.workspace?.questions || []).map((question) => question.prompt),
+      documentText: dartManualContext(draft)
+    });
+    draft.dartAnalysis = analysis;
+    draft.dartAnalysisStatus = analysis.status === 'COMPLETED' ? 'completed' : 'error';
+    draft.dartAnalysisMessage = analysis.errorMessage || '';
+  } catch (error) {
+    draft.dartAnalysis = null;
+    draft.dartAnalysisStatus = 'error';
+    draft.dartAnalysisMessage = 'AI analysis failed. You can still write a manual DART memo.';
+  }
+}
+
+async function saveDartAnalysisReference(draft) {
+  if (!draft.dartAnalysis?.id || draft.dartAnalysis.status !== 'COMPLETED') return;
+  draft.dartSaveStatus = 'saving';
+  try {
+    const reference = await workspaceApi.saveDartAnalysisReference(workspaceId.value, draft.dartAnalysis.id);
+    if (workspaceStore.workspace) {
+      workspaceStore.workspace = {
+        ...workspaceStore.workspace,
+        references: [reference, ...(workspaceStore.workspace.references || [])]
+      };
+    }
+    workspaceStore.activeReference = reference;
+    draft.dartSaveStatus = 'saved';
+  } catch (error) {
+    draft.dartSaveStatus = 'error';
+  }
+}
+
+function dartManualContext(draft) {
+  return Object.values(draft.dartSections || {})
+    .map((value) => normalizeCompanyValue(value || ''))
+    .filter(Boolean)
+    .join('\n\n');
 }
 
 function addPromptCard(draft) {
@@ -1747,6 +1829,91 @@ const MarkdownBoard = {
       ]);
     }
 
+    function renderDartAiPanel(draft) {
+      const selected = selectedDartDisclosure(draft);
+      const analysis = draft.dartAnalysis;
+      return h('section', { class: 'dart-ai-panel' }, [
+        h('div', { class: 'dart-ai-toolbar' }, [
+          h('div', [
+            h('strong', 'DART AI analysis'),
+            h('p', 'Select a disclosure, review AI evidence cards, then save it as a DART reference.')
+          ]),
+          h('button', {
+            type: 'button',
+            class: 'ghost-button',
+            'data-testid': 'load-dart-disclosures',
+            disabled: draft.dartDisclosureStatus === 'loading',
+            onClick: () => loadDartDisclosures(draft)
+          }, draft.dartDisclosureStatus === 'loading' ? 'Loading disclosures' : 'Load disclosures')
+        ]),
+        draft.dartDisclosureMessage ? h('p', { class: 'dart-ai-status' }, draft.dartDisclosureMessage) : null,
+        draft.dartDisclosures.length ? h('div', { class: 'dart-disclosure-list' }, draft.dartDisclosures.map((disclosure) => h('button', {
+          type: 'button',
+          class: ['dart-disclosure-card', { active: disclosure.rceptNo === draft.selectedDartRceptNo }],
+          key: disclosure.rceptNo,
+          'data-testid': `dart-disclosure-${disclosure.rceptNo}`,
+          onClick: () => {
+            draft.selectedDartRceptNo = disclosure.rceptNo;
+            draft.dartAnalysis = null;
+            draft.dartAnalysisStatus = 'idle';
+            draft.dartSaveStatus = 'idle';
+          }
+        }, [
+          h('span', disclosure.recommended ? 'Recommended' : 'Report'),
+          h('strong', disclosure.reportName),
+          h('small', `${disclosure.receivedDate || ''} ${disclosure.rceptNo}`)
+        ]))) : null,
+        h('div', { class: 'dart-ai-actions' }, [
+          h('button', {
+            type: 'button',
+            class: 'primary-button',
+            'data-testid': 'create-dart-analysis',
+            disabled: !selected || draft.dartAnalysisStatus === 'loading',
+            onClick: () => createDartAnalysis(draft)
+          }, draft.dartAnalysisStatus === 'loading' ? 'Analyzing' : 'Analyze with GMS AI')
+        ]),
+        draft.dartAnalysisStatus === 'error'
+          ? h('p', { class: 'dart-ai-status error' }, draft.dartAnalysisMessage || 'AI analysis failed.')
+          : null,
+        analysis ? h('section', { class: 'dart-analysis-preview', 'data-testid': 'dart-analysis-result' }, [
+          h('header', [
+            h('span', analysis.model || 'AI'),
+            h('strong', `${analysis.reportName} · ${analysis.status}`)
+          ]),
+          ...(analysis.result?.evidenceCards || []).map((card) => h('article', { class: 'dart-evidence-card', key: `${card.rceptNo}-${card.title}` }, [
+            h('strong', card.title),
+            h('p', card.summary),
+            h('small', `${card.sourceSection} · ${card.rceptNo} · ${card.relevanceScore}`)
+          ])),
+          renderDartAnalysisList('Appeal points', analysis.result?.appealPoints || []),
+          renderDartAnalysisList('Suggested sentences', analysis.result?.suggestedSentences || []),
+          renderDartAnalysisList('Cautions', analysis.result?.cautions || []),
+          renderDartAnalysisList('Missing info', analysis.result?.missingInfo || []),
+          h('button', {
+            type: 'button',
+            class: 'primary-button',
+            'data-testid': 'save-dart-analysis-reference',
+            disabled: analysis.status !== 'COMPLETED' || draft.dartSaveStatus === 'saving' || draft.dartSaveStatus === 'saved',
+            onClick: () => saveDartAnalysisReference(draft)
+          }, draft.dartSaveStatus === 'saved'
+            ? 'Saved as DART reference'
+            : draft.dartSaveStatus === 'saving'
+              ? 'Saving'
+              : 'Save as DART reference'),
+          draft.dartSaveStatus === 'saved' ? h('p', { class: 'dart-ai-status saved' }, 'DART reference saved') : null,
+          draft.dartSaveStatus === 'error' ? h('p', { class: 'dart-ai-status error' }, 'DART reference save failed') : null
+        ]) : null
+      ]);
+    }
+
+    function renderDartAnalysisList(title, items) {
+      if (!items.length) return null;
+      return h('div', { class: 'dart-analysis-list' }, [
+        h('b', title),
+        h('ul', items.map((item) => h('li', item)))
+      ]);
+    }
+
     function renderDartBoard(draft) {
       const sectionMeta = [
         ['products', '주요 제품 및 서비스'],
@@ -1754,6 +1921,7 @@ const MarkdownBoard = {
         ['notes', '기타 참고사항']
       ];
       return h('section', { class: 'drawer-board dart-board-page' }, [
+        renderDartAiPanel(draft),
         h('div', { class: 'board-source-path' }, [
           h('p', '전자공시(DART)에서 타깃기업 정보를 가져와 자유롭게 정리'),
           h('div', { class: 'dart-route-box' }, [

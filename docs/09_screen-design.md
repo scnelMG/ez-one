@@ -476,3 +476,11 @@ frontend/src/
 - Table search filters the loaded rows by company, position, normalized result, deadline, or source URL, and the table toolbar provides status filtering plus sorting.
 - Each table row opens `/workspaces/{workspaceId}` so past applications reuse the existing workspace reading/editing surface. A separate 원본 공고 link opens the imported source URL.
 - Retrospective memo, AI summary, and percentile comparison remain out of scope.
+
+## 2026-06-19 DART GMS AI Analysis Screen Update
+
+- Requirement: `REF-003`, `JOB-018`, `REF-008`, `AI-004`, `AI-006`.
+- Workspace DART board includes a disclosure loading action, recommended periodic report list, selected-report GMS AI analysis action, evidence card preview, and `Save as DART reference` action.
+- The existing manual DART memo fields remain available when OpenDART or GMS is unavailable.
+- AI evidence cards are shown in the right push drawer only. They do not auto-fill or overwrite the essay draft editor.
+- Saved DART analysis results become normal reference material and can be reused through the existing reference side panel.

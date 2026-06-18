@@ -17,7 +17,11 @@ const mocks = vi.hoisted(() => ({
     createQuestion: vi.fn(),
     compareVersions: vi.fn(),
     updateQuestion: vi.fn(),
-    deleteQuestion: vi.fn()
+    deleteQuestion: vi.fn(),
+    listDartDisclosures: vi.fn(),
+    createDartAnalysis: vi.fn(),
+    getDartAnalysis: vi.fn(),
+    saveDartAnalysisReference: vi.fn()
 }));
 
 vi.mock('@/features/workspace/api/workspaceApi', () => ({
@@ -34,7 +38,11 @@ vi.mock('@/features/workspace/api/workspaceApi', () => ({
         createQuestion: mocks.createQuestion,
         compareVersions: mocks.compareVersions,
         updateQuestion: mocks.updateQuestion,
-        deleteQuestion: mocks.deleteQuestion
+        deleteQuestion: mocks.deleteQuestion,
+        listDartDisclosures: mocks.listDartDisclosures,
+        createDartAnalysis: mocks.createDartAnalysis,
+        getDartAnalysis: mocks.getDartAnalysis,
+        saveDartAnalysisReference: mocks.saveDartAnalysisReference
     }
 }));
 
@@ -184,6 +192,56 @@ describe('WorkspacePage', () => {
             maxLength: 700
         });
         mocks.deleteQuestion.mockResolvedValue(undefined);
+        mocks.listDartDisclosures.mockResolvedValue({
+            available: true,
+            message: null,
+            disclosures: [
+                {
+                    rceptNo: '20260330000123',
+                    reportName: '사업보고서',
+                    reportType: 'A001',
+                    receivedDate: '2026-03-30',
+                    corpName: 'Naver',
+                    recommended: true,
+                    sourceUrl: 'https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260330000123'
+                }
+            ]
+        });
+        mocks.createDartAnalysis.mockResolvedValue({
+            id: '901',
+            workspaceId: '102',
+            rceptNo: '20260330000123',
+            reportName: '사업보고서',
+            companyName: 'Naver',
+            status: 'COMPLETED',
+            model: 'gpt-4.1',
+            sourceUrl: 'https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260330000123',
+            result: {
+                evidenceCards: [
+                    {
+                        title: 'AI platform investment',
+                        summary: 'The report describes AI platform investment.',
+                        sourceSection: 'Business overview',
+                        rceptNo: '20260330000123',
+                        relevanceScore: 92
+                    }
+                ],
+                appealPoints: ['Connect platform investment to backend reliability experience.'],
+                suggestedSentences: ['I can contribute to reliable AI platform operations.'],
+                cautions: ['Do not describe this as investment advice.'],
+                missingInfo: []
+            },
+            errorMessage: null
+        });
+        mocks.getDartAnalysis.mockResolvedValue(null);
+        mocks.saveDartAnalysisReference.mockResolvedValue({
+            id: '778',
+            boardName: 'DART',
+            type: 'DART',
+            title: 'DART AI analysis - 사업보고서',
+            body: 'The report describes AI platform investment.',
+            url: 'https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260330000123'
+        });
     });
 
     it('WS-002/WS-027/WS-028: renders the workspace wireframe with job/company info and fixed bottom modes', async () => {
@@ -366,6 +424,39 @@ describe('WorkspacePage', () => {
         expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('프로젝트');
         expect(wrapper.find('[data-testid="award-title-0"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="project-title-0"]').exists()).toBe(true);
+    });
+
+    it('REF-003/JOB-018/REF-008/AI-004/AI-006: loads DART disclosures, renders AI evidence cards, and saves only after review', async () => {
+        const wrapper = await mountWorkspace();
+
+        await wrapper.get('[data-testid="panel-trigger-DART"]').trigger('click');
+        await wrapper.get('[data-testid="load-dart-disclosures"]').trigger('click');
+        await flushPromises();
+
+        expect(mocks.listDartDisclosures).toHaveBeenCalledWith('102');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('사업보고서');
+
+        await wrapper.get('[data-testid="create-dart-analysis"]').trigger('click');
+        await flushPromises();
+
+        expect(mocks.createDartAnalysis).toHaveBeenCalledWith('102', {
+            rceptNo: '20260330000123',
+            reportName: '사업보고서',
+            companyName: 'Naver',
+            positionTitle: 'Backend Engineer',
+            essayQuestions: ['지원동기를 작성하세요.'],
+            documentText: ''
+        });
+        expect(wrapper.get('[data-testid="dart-analysis-result"]').text()).toContain('AI platform investment');
+        expect(wrapper.get('[data-testid="dart-analysis-result"]').text()).toContain('Business overview');
+        expect(getDraftText(wrapper)).toBe('기존 초안');
+
+        await wrapper.get('[data-testid="save-dart-analysis-reference"]').trigger('click');
+        await flushPromises();
+
+        expect(mocks.saveDartAnalysisReference).toHaveBeenCalledWith('102', '901');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('DART reference saved');
+        expect(wrapper.get('[data-testid="save-dart-analysis-reference"]').attributes('disabled')).toBeDefined();
     });
 
     it('REF-004/REF-005: saves JD notes into the local board list', async () => {

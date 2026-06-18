@@ -4,6 +4,8 @@ import com.ezone.backend.client.GoogleOAuthException;
 import com.ezone.backend.dto.ApiError;
 import com.ezone.backend.dto.ApiResponse;
 import com.ezone.backend.security.InvalidRefreshTokenException;
+import com.ezone.backend.service.DartAnalysisInvalidStateException;
+import com.ezone.backend.service.DartAnalysisUnavailableException;
 import com.ezone.backend.service.ForbiddenResourceException;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
@@ -37,6 +39,26 @@ public class ApiExceptionHandler {
             false,
             null,
             new ApiError("NOT_FOUND", exception.getMessage(), Map.of())
+        );
+    }
+
+    @ExceptionHandler(DartAnalysisUnavailableException.class)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    public ApiResponse<Void> handleDartAnalysisUnavailable(DartAnalysisUnavailableException exception) {
+        return new ApiResponse<>(
+            false,
+            null,
+            new ApiError("SERVICE_UNAVAILABLE", exception.getMessage(), Map.of())
+        );
+    }
+
+    @ExceptionHandler(DartAnalysisInvalidStateException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiResponse<Void> handleDartAnalysisInvalidState(DartAnalysisInvalidStateException exception) {
+        return new ApiResponse<>(
+            false,
+            null,
+            new ApiError("VALIDATION_ERROR", exception.getMessage(), Map.of())
         );
     }
 
