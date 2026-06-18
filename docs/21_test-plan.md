@@ -73,6 +73,8 @@
 - `TC-EXT-LOGO-001`: Extension extractor returns an absolute `logoUrl` candidate from explicit logo images or metadata.
 - `TC-JOB-LOGO-001`: Backend stores a valid optional job `logoUrl` on the linked company record only when the company has no logo.
 - `TC-JOB-LOGO-002`: Basket responses expose `companyLogoUrl`; workspace responses expose `companyDetails.logoUrl`.
+- `TC-COMPANY-OFFICIAL-001`: Realtime official company enrichment stores only source-backed profile fields and keeps basket/workspace save successful when external collection fails.
+- `TC-WORKSPACE-COMPANY-001`: Workspace company info renders available official fields and hides unavailable `미확인`/`unknown` placeholder rows.
 - `TC-EXT-DOC-AUTOFILL-001`: Extension parser fills basic/document standard fields from labels, placeholders, name/id, tables, and nearby text.
 - `TC-EXT-DOC-AUTOFILL-002`: Essay and long-form textarea fields are excluded from automatic input and reported for manual review.
 - Real company application pages remain manual smoke-test territory because login, personal data, and accidental submission risk make automated E2E unsafe.
@@ -128,6 +130,7 @@
 
 - `TC-HISTORY-001`: Router registers `/history` and the common nav exposes the active history link while remaining P2 routes stay disabled.
 - `TC-HISTORY-002`: `historyApi.listApplications` calls `GET /api/history/applications` with period/result-stage params and normalizes row IDs.
+- `TC-HISTORY-002A`: History API rows preserve `companyLogoUrl`; `PastHistoryPage` renders the logo when present and falls back to the initials badge otherwise.
 - `TC-HISTORY-003`: `PastHistoryPage` renders period options, selected-period metrics, company-type counts, and imported rows.
 - `TC-HISTORY-004`: Changing the half-year period reloads history data.
 - `TC-HISTORY-005`: Clicking a history row navigates to `/workspaces/{workspaceId}`.
@@ -135,9 +138,12 @@
 - `TC-HISTORY-007`: Migration contract verifies `application_history` schema and confirms personal email/data are not embedded in migration SQL.
 - `TC-HISTORY-008`: Basket page exposes a `과거 지원 내역` link to `/history`.
 - `TC-HISTORY-009`: History summary exposes the standard status counts 지원완료, 미지원, 진행 중, 지원 전.
-- `TC-HISTORY-010`: History table search filters visible rows by keyword while explicit status/result/company-type label filters work independently, and reset clears search, filters, and custom sort.
+- `TC-HISTORY-010`: History table search filters visible rows by keyword while explicit status filtering and sorting work independently, and reset clears search, filters, and custom sort.
+- `TC-HISTORY-010A`: History table rows display normalized 지원 결과 labels such as 서류 탈락, 필기 탈락, 면접 탈락, 진행 중, and 미지원 without exposing raw CSV result strings.
 - `TC-HISTORY-012`: History table sorts visible rows by deadline and company name without changing the loaded period/result-stage data.
 - `TC-HISTORY-011`: History row navigation opens the workspace while the original posting link remains a separate external link.
+- `TC-HISTORY-013`: Basket save prefers official company classification over job-board URL fallback when a company matches the official registry, and records provenance in `company_profile_sources`.
+- `TC-HISTORY-014`: Basket save attempts realtime official company enrichment for unknown companies, records official provenance on success, and still saves the job/workspace when the realtime provider fails.
 
 ## 2026-06-17 Study Security Regression Tests
 

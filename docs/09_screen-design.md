@@ -183,6 +183,7 @@ frontend/src/features/workspace/
 - 장바구니는 전체, 진행중, 지원 전, 마감 임박 필터를 제공한다.
 - 공고 row 클릭은 해당 workspace로 이동한다.
 - workspace 상단 지원/기업 정보는 하단 탭 전환 중 유지된다.
+- workspace 기업정보 패널은 공식/저장 데이터로 확인된 기업유형, 산업/분야, 설립일, 대표자, 홈페이지, 주요정보, 주소만 표시하고 `미확인`/`unknown` 값은 placeholder 행으로 노출하지 않는다.
 - workspace 참고자료는 overlay가 아니라 persistent/inline drawer 방식으로 열린다. drawer가 열리면 main content가 drawer 너비만큼 축소되고 화면 비율에 맞게 reflow된다.
 - 없는 workspace는 404, 다른 사용자의 workspace는 403 상태로 처리한다.
 
@@ -470,7 +471,8 @@ frontend/src/
 
 - `/history` is now an active authenticated route rendered by `PastHistoryPage`.
 - The page follows the uploaded wireframe structure: period select, summary dashboard, company-type distribution, and table rows.
-- The summary dashboard exposes the standard status metrics 지원완료, 미지원, 진행 중, 지원 전. Result-stage chips remain as secondary row filters.
-- The company-type distribution doubles as a table filter, table search filters the loaded rows by company, position, result, or source URL, and the table toolbar provides separate status/result label filters plus sorting.
+- The summary dashboard exposes the standard status metrics 지원완료, 미지원, 진행 중, 지원 전, plus a compact result-stage chart.
+- The history table shows a row-level 지원 결과 column using the same normalized labels as the chart: 서류 탈락, 필기 탈락, 면접 탈락, 진행 중, 미지원.
+- Table search filters the loaded rows by company, position, normalized result, deadline, or source URL, and the table toolbar provides status filtering plus sorting.
 - Each table row opens `/workspaces/{workspaceId}` so past applications reuse the existing workspace reading/editing surface. A separate 원본 공고 link opens the imported source URL.
 - Retrospective memo, AI summary, and percentile comparison remain out of scope.

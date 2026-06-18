@@ -151,7 +151,7 @@ Mattermost source는 서버에서 `user_profiles.is_ssafy = true`를 재검증�
 
 | Method | Path | Description |
 | --- | --- | --- |
-| GET | `/api/history/applications?period=ALL&resultStage=` | Returns past application periods, selected-period summary, company-type counts, and rows with `workspaceId` links. `period` uses `ALL` or `YYYY-H1`/`YYYY-H2`. `resultStage` is optional and may be `DOCUMENT_FAILED`, `TEST_FAILED`, `INTERVIEW_FAILED`, `NOT_APPLIED`, or `IN_PROGRESS`. |
+| GET | `/api/history/applications?period=ALL&resultStage=` | Returns past application periods, selected-period summary, company-type counts, and rows with `workspaceId` links plus `companyLogoUrl` when stored company logo metadata exists. `period` uses `ALL` or `YYYY-H1`/`YYYY-H2`. `resultStage` is optional and may be `DOCUMENT_FAILED`, `TEST_FAILED`, `INTERVIEW_FAILED`, `NOT_APPLIED`, or `IN_PROGRESS`. |
 
 History rows are stored in `application_history`. The import process creates linked `basket_jobs` and `workspaces` for workspace navigation, but `basket_jobs.saved_source = 'HISTORY_IMPORT'` is excluded from the active basket list. Normal basket jobs are copied into `application_history` when their status changes away from `READY`. The history query also includes existing active basket jobs whose status is already `COMPLETED`, `IN_PROGRESS`, `NOT_APPLIED`, or past-deadline `READY`, so previously saved application progress remains visible without requiring delete/archive. Delete alone is treated as removing a mistaken basket entry, not as evidence of a past application.
 
@@ -185,3 +185,29 @@ History rows are stored in `application_history`. The import process creates lin
 - `requestType` must be `INQUIRY` or `PARTNERSHIP`.
 - Created requests start with `status: "RECEIVED"`.
 - Optional partnership fields are `companyName`, `contactName`, `contactEmail`, and `contactPhone`.
+
+## 2026-06-18 Realtime Official Company Enrichment Addendum
+
+- Requirement: `DATA-002`, `DATA-004`, `JOB-016`, `HISTORY-008`.
+- `POST /api/basket/jobs`, `PATCH /api/basket/jobs/{basketJobId}`, recommendation save, and extension save share the same company enrichment path.
+- If the static official registry has no match, the backend attempts realtime official-provider enrichment by company name.
+- Realtime enrichment is best-effort. API timeouts, missing keys, malformed responses, or empty matches must not roll back the basket job, workspace, or imported history link.
+- Successful realtime matches update `companies.company_type`, `companies.size`, and eligible placeholder/job-board domains, then upsert `company_profiles` with `source_priority = REALTIME_OFFICIAL_API`.
+- Public institution matches may populate `company_profiles.industry`, `homepage_url`, `founded_at`, `profile_summary`, and `address` from the official response.
+- FTC business-group affiliate matches may populate `company_profiles.industry`, `founded_at`, `ceo_name`, and `profile_summary`; legal/business registration numbers are not exposed in the workspace UI.
+- Realtime provenance is recorded in `company_profile_sources` with one of `ALIO_PUBLIC_INSTITUTION`, `FTC_BUSINESS_GROUP`, or `MME_CONFIRMATION`.
+- Saved posting URLs remain in `company_info_sources` as `SAVED_JOB_URL/UNVERIFIED`; they are context, not official classification evidence.
+- Runtime configuration: `PUBLIC_DATA_API_KEY`, `COMPANY_ENRICHMENT_REALTIME_ENABLED`, `PUBLIC_INSTITUTION_API_URL`, `FTC_AFFILIATE_API_URL`, optional `FTC_PRESENTN_YEAR`, `FTC_AFFILIATE_MAX_PAGES`, and optional `MIDDLE_MARKET_API_URL`.
+- `PUBLIC_INSTITUTION_API_URL` defaults to the public institution `/list` operation, not only the API base URL.
+- The FTC affiliate API requires `presentnYear`; when `FTC_PRESENTN_YEAR` is empty, the backend uses the current year and scans pages up to `FTC_AFFILIATE_MAX_PAGES`.
+
+## 2026-06-18 Official Company Classification Addendum
+
+- Requirement: `DATA-002`, `JOB-016`, `HISTORY-008`.
+- When a basket job is created or updated, the backend first checks the official company registry by company name.
+- Official registry matches override job-board URL domains such as `jasoseol.com` and populate `companies.company_type`, `companies.size`, and `company_profiles.homepage_url`.
+- The backend records official provenance in `company_profile_sources`.
+- Initial official classification sources:
+  - `FTC_BUSINESS_GROUP`: 공정거래위원회 기업집단포털, used for 대기업/공시대상기업집단 affiliate classification.
+  - `ALIO_PUBLIC_INSTITUTION`: ALIO 공공기관 경영정보 공개시스템, used for 공공기관 classification.
+- `company_info_sources` still records the saved posting URL as `SAVED_JOB_URL/UNVERIFIED`; it is not treated as official company classification evidence.

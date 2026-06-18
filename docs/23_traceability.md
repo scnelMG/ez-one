@@ -75,3 +75,10 @@
 | Frontend rendering safety | Shared essay body uses text interpolation instead of raw HTML rendering | `StudyDetailPage.test.js` |
 
 Study still needs a formal requirement ID if it remains an active product surface. Until then, this traceability entry documents a security remediation for existing active code rather than new P1 scope.
+
+## 2026-06-18 Official Company Classification Traceability Update
+
+| Requirement | Implementation | Verification |
+| --- | --- | --- |
+| `DATA-002`, `JOB-016`, `HISTORY-008` | Basket save/update checks the official company registry before internal fallback rules, writes official company type/profile data, and records source provenance in `company_profile_sources`. Existing history-linked companies are backfilled through `V31__backfill_official_company_classifications.sql`. | `MyBatisP1WorkspaceServiceTest` |
+| `DATA-002`, `DATA-004`, `JOB-016`, `HISTORY-008` | Unknown companies saved from basket/recommendation/extension flows attempt realtime official API enrichment after the company row is linked. Successful matches write `REALTIME_OFFICIAL_API` profile data and source provenance; provider failures fall back without blocking save. | `MyBatisP1WorkspaceServiceTest` |

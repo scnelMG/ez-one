@@ -102,3 +102,19 @@ erDiagram
 - Active basket jobs are also eligible for history display when their status is `COMPLETED`, `IN_PROGRESS`, `NOT_APPLIED`, or past-deadline `READY`; status changes away from `READY` upsert a durable `application_history` snapshot.
 - Key columns: `user_id`, `workspace_id`, `company_name`, `position_title`, `application_status`, `result_stage`, `raw_result`, `deadline_date`, `period_key`, `period_year`, `period_half`, `source_url`, `company_type`.
 - Indexes: `idx_application_history_user_period (user_id, period_key)` and `idx_application_history_user_result (user_id, result_stage)`.
+
+## 2026-06-18 Realtime Company Enrichment Update
+
+- `companies.company_type`, `companies.size`, and placeholder/job-board `companies.domain` values may be updated after a saved job is linked to a company.
+- `company_profiles.source_priority = REALTIME_OFFICIAL_API` means the row was populated by a realtime official-provider lookup during basket/history-linked save.
+- `company_profile_sources.source_type` additionally supports `ALIO_PUBLIC_INSTITUTION`, `FTC_BUSINESS_GROUP`, and `MME_CONFIRMATION`.
+- Realtime provider failures are not persisted as blocking errors and must not roll back `jobs`, `basket_jobs`, or `workspaces`.
+
+## 2026-06-18 Official Company Classification Update
+
+- `companies.company_type` and `companies.size` may be populated from an official classification registry before falling back to internal rules.
+- `company_profiles.source_priority = OFFICIAL_CLASSIFICATION` means the company profile was populated from an official classification source rather than a saved job URL.
+- `company_profile_sources.source_type` records the provenance:
+  - `FTC_BUSINESS_GROUP` for 공정거래위원회 기업집단포털.
+  - `ALIO_PUBLIC_INSTITUTION` for ALIO 공공기관 경영정보 공개시스템.
+- Saved posting URLs remain in `company_info_sources` as `SAVED_JOB_URL/UNVERIFIED` and must not be used as official company-type evidence.

@@ -44,6 +44,12 @@
 | 기업 정보 | P1에서 자동 수집하지 않는다. 필요한 값은 비워둘 수 있다. |
 | 외부 실패 | Notion, Mattermost, 추천 수집 실패는 핵심 DB 저장 트랜잭션과 분리한다. |
 
+## 2026-06-18 User-approved Realtime Company Enrichment Exception
+
+- New saved companies may be enriched through realtime official API lookups after the core save succeeds.
+- External lookup failure, missing API keys, or empty official matches must not block job save, workspace creation, or history linkage.
+- Saved posting URLs remain unverified context unless an official provider confirms company classification.
+
 ## Notion
 
 | 정책 | 기준 |
