@@ -192,6 +192,15 @@ class P1ApiContractTest {
     }
 
     @Test
+    void historyApplicationsAreScopedToAuthenticatedUser() throws Exception {
+        mockMvc.perform(get("/api/history/applications").with(user("2")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.summary.total").value(0))
+            .andExpect(jsonPath("$.data.rows", hasSize(0)));
+    }
+
+    @Test
     void deletingReadyBasketJobDoesNotCreatePastApplicationHistory() throws Exception {
         String createdBody = mockMvc.perform(post("/api/basket/jobs")
                 .contentType(MediaType.APPLICATION_JSON)

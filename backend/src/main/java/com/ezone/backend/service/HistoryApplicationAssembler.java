@@ -127,6 +127,7 @@ final class HistoryApplicationAssembler {
             row.getRawResult(),
             row.getDeadlineLabel(),
             row.getSourceUrl(),
+            row.getCompanyLogoUrl(),
             valueOrUnknown(row.getCompanyType()),
             valueOrUnknown(row.getCompanyIndustry()),
             normalizedDataSource(row)

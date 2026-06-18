@@ -47,6 +47,7 @@ public record HistoryApplicationResponse(
         String rawResult,
         String deadlineLabel,
         String sourceUrl,
+        String companyLogoUrl,
         String companyType,
         String companyIndustry,
         String companyDataSource

@@ -51,6 +51,7 @@ function toHistoryRow(dto) {
         rawResult: dto.rawResult,
         deadlineLabel: dto.deadlineLabel,
         sourceUrl: dto.sourceUrl,
+        companyLogoUrl: dto.companyLogoUrl,
         companyType: dto.companyType,
         companyIndustry: dto.companyIndustry,
         companyDataSource: dto.companyDataSource

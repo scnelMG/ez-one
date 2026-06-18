@@ -23,6 +23,7 @@ describe('historyApi', () => {
                         rawResult: '서류탈락',
                         deadlineLabel: '2025.03.23',
                         sourceUrl: 'https://example.com',
+                        companyLogoUrl: 'https://logo.example.com/dalpha.png',
                         companyType: '스타트업',
                         companyIndustry: 'AI',
                         companyDataSource: 'RULE'
@@ -45,6 +46,7 @@ describe('historyApi', () => {
             companyName: '달파',
             resultStage: 'DOCUMENT_FAILED',
             resultLabel: '서류 단계 종료',
+            companyLogoUrl: 'https://logo.example.com/dalpha.png',
             companyIndustry: 'AI',
             companyDataSource: 'RULE'
         });

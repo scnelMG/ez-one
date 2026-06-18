@@ -18,6 +18,7 @@ public class HistoryApplicationRow {
     private Integer periodYear;
     private String periodHalf;
     private String sourceUrl;
+    private String companyLogoUrl;
     private String companyType;
     private String companyIndustry;
     private String companyDataSource;
@@ -132,6 +133,14 @@ public class HistoryApplicationRow {
 
     public void setSourceUrl(String sourceUrl) {
         this.sourceUrl = sourceUrl;
+    }
+
+    public String getCompanyLogoUrl() {
+        return companyLogoUrl;
+    }
+
+    public void setCompanyLogoUrl(String companyLogoUrl) {
+        this.companyLogoUrl = companyLogoUrl;
     }
 
     public String getCompanyType() {

@@ -29,10 +29,6 @@
           <span>지원전</span>
           <strong>{{ summary.ready }}</strong>
         </div>
-        <div class="history-metric" data-testid="metric-not-applied">
-          <span>미지원</span>
-          <strong>{{ summary.notApplied }}</strong>
-        </div>
         <div class="history-metric" data-testid="metric-in-progress">
           <span>진행 중</span>
           <strong>{{ summary.inProgress }}</strong>
@@ -41,6 +37,74 @@
           <span>지원완료</span>
           <strong>{{ summary.completed }}</strong>
         </div>
+        <div class="history-metric" data-testid="metric-not-applied">
+          <span>미지원</span>
+          <strong>{{ summary.notApplied }}</strong>
+        </div>
+      </section>
+
+      <section
+        class="history-insight-dashboard"
+        data-testid="history-insight-dashboard"
+        aria-label="과거 지원 통계 대시보드"
+      >
+        <article class="history-insight-card history-action-card" data-testid="history-action-insight">
+          <div>
+            <h2>실행률</h2>
+          </div>
+          <strong data-testid="history-execution-rate">{{ executionRate }}%</strong>
+          <span>지원완료+진행 중 / 전체</span>
+        </article>
+
+        <article class="history-insight-card" data-testid="history-status-stack">
+          <div class="history-insight-heading">
+            <h2>상태 분포</h2>
+          </div>
+          <div class="history-stack-chart" aria-hidden="true">
+            <i
+              v-for="item in statusDistribution"
+              :key="item.key"
+              :class="`history-stack-${item.key}`"
+              :style="{ width: `${chartPercent(item.count, summary.total)}%` }"
+            ></i>
+          </div>
+          <div class="history-chart-legend">
+            <span v-for="item in statusDistribution" :key="`legend-${item.key}`">
+              <b :class="`history-dot-${item.key}`"></b>{{ item.label }} {{ item.count }}
+            </span>
+          </div>
+        </article>
+
+        <article class="history-insight-card" data-testid="history-stage-chart">
+          <div class="history-insight-heading">
+            <h2>결과</h2>
+          </div>
+          <div class="history-mini-bars">
+            <div v-for="item in stageDistribution" :key="item.key" class="history-mini-bar">
+              <span>{{ item.label }}</span>
+              <div aria-hidden="true">
+                <i :class="`history-bar-${item.key}`" :style="{ width: `${barPercent(item.count, maxStageCount)}%` }"></i>
+              </div>
+              <strong>{{ item.count }}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article class="history-insight-card" data-testid="history-company-chart">
+          <div class="history-insight-heading">
+            <h2>기업 유형</h2>
+          </div>
+          <div v-if="companyTypeInsights.length" class="history-mini-bars">
+            <div v-for="item in companyTypeInsights" :key="item.type" class="history-mini-bar">
+              <span>{{ item.type }}</span>
+              <div aria-hidden="true">
+                <i :style="{ width: `${barPercent(item.count, maxCompanyTypeCount)}%` }"></i>
+              </div>
+              <strong>{{ item.count }}</strong>
+            </div>
+          </div>
+          <p v-else class="history-muted compact">기업 유형 데이터가 아직 없습니다.</p>
+        </article>
       </section>
 
       <section class="history-table-panel">
@@ -119,9 +183,9 @@
             <span>회사명</span>
             <span>직무</span>
             <span>상태</span>
+            <span>지원 결과</span>
             <span>마감일</span>
             <span>채용 사이트 링크</span>
-            <span>최근 작업</span>
           </div>
           <article
             v-for="row in visibleRows"
@@ -131,7 +195,13 @@
           >
             <RouterLink class="job-main-link company-cell" :to="`/workspaces/${row.workspaceId}`">
               <span class="company-logo-badge" aria-hidden="true">
-                <span>{{ companyInitial(row.companyName) }}</span>
+                <img
+                  v-if="row.companyLogoUrl"
+                  :src="row.companyLogoUrl"
+                  :alt="`${row.companyName} logo`"
+                  @error="row.companyLogoUrl = null"
+                />
+                <span v-else>{{ companyInitial(row.companyName) }}</span>
               </span>
               <strong data-testid="history-row-company">{{ row.companyName }}</strong>
             </RouterLink>
@@ -140,6 +210,9 @@
             </RouterLink>
             <span>
               <em class="status-tag" :class="statusClass(row.applicationStatus)">{{ statusLabel(row.applicationStatus) }}</em>
+            </span>
+            <span>
+              <em class="result-tag" :class="resultClass(row.resultStage)">{{ resultDisplayLabel(row) }}</em>
             </span>
             <RouterLink class="job-main-link deadline-cell" :to="`/workspaces/${row.workspaceId}`">
               <span>{{ row.deadlineLabel || '-' }}</span>
@@ -155,13 +228,6 @@
               바로가기
             </a>
             <span v-else></span>
-            <RouterLink
-              class="recent-work-badge"
-              :data-testid="`history-workspace-${row.id}`"
-              :to="`/workspaces/${row.workspaceId}`"
-            >
-              이어가기
-            </RouterLink>
           </article>
         </div>
       </section>
@@ -194,12 +260,57 @@ const periods = computed(() => {
 });
 const summary = computed(() => historyData.value.summary);
 const rows = computed(() => historyData.value.rows);
+const executionRate = computed(() => {
+    if (!summary.value.total) {
+        return 0;
+    }
+    return Math.round(((summary.value.completed + summary.value.inProgress) / summary.value.total) * 100);
+});
+const statusDistribution = computed(() => [
+    { key: 'ready', label: '지원전', count: summary.value.ready },
+    { key: 'progress', label: '진행 중', count: summary.value.inProgress },
+    { key: 'completed', label: '지원완료', count: summary.value.completed },
+    { key: 'notApplied', label: '미지원', count: summary.value.notApplied }
+].filter((item) => item.count > 0));
+const stageDistribution = computed(() => [
+    { key: 'document', label: '서류 탈락', count: summary.value.documentFailed },
+    { key: 'test', label: '필기 탈락', count: summary.value.testFailed },
+    { key: 'interview', label: '면접 탈락', count: summary.value.interviewFailed },
+    { key: 'progress', label: '진행 중', count: summary.value.inProgress },
+    { key: 'notApplied', label: '미지원', count: summary.value.notApplied }
+].filter((item) => item.count > 0));
+const maxStageCount = computed(() => Math.max(1, ...stageDistribution.value.map((item) => item.count)));
+const companyTypeInsights = computed(() => {
+    const groups = new Map();
+    rows.value.forEach((row) => {
+        const type = String(row.companyType ?? '').trim();
+        if (!type) {
+            return;
+        }
+        const current = groups.get(type) ?? { type, count: 0 };
+        current.count += 1;
+        groups.set(type, current);
+    });
+    if (!groups.size) {
+        (historyData.value.companyTypes ?? []).forEach((item) => {
+            const type = String(item.type ?? '').trim();
+            if (type) {
+                groups.set(type, { type, count: Number(item.count) || 0 });
+            }
+        });
+    }
+    return [...groups.values()]
+        .filter((item) => item.count > 0)
+        .sort((left, right) => right.count - left.count || left.type.localeCompare(right.type, 'ko-KR'))
+        .slice(0, 4);
+});
+const maxCompanyTypeCount = computed(() => Math.max(1, ...companyTypeInsights.value.map((item) => item.count)));
 const applicationStatusOptions = [
     { value: '', label: '전체' },
     { value: 'READY', label: '지원전' },
-    { value: 'NOT_APPLIED', label: '미지원' },
     { value: 'IN_PROGRESS', label: '진행 중' },
-    { value: 'COMPLETED', label: '지원완료' }
+    { value: 'COMPLETED', label: '지원완료' },
+    { value: 'NOT_APPLIED', label: '미지원' }
 ];
 const hasClientFilters = computed(() => Boolean(
     selectedApplicationStatus.value ||
@@ -218,6 +329,7 @@ const visibleRows = computed(() => {
         return [
             row.companyName,
             row.positionTitle,
+            resultDisplayLabel(row),
             row.deadlineLabel,
             row.sourceUrl
         ].some((value) => String(value ?? '').toLowerCase().includes(keyword));
@@ -298,8 +410,63 @@ function compareDeadline(leftDeadline, rightDeadline, direction) {
 }
 
 function statusRank(status) {
-    const rank = ['READY', 'NOT_APPLIED', 'IN_PROGRESS', 'COMPLETED'].indexOf(status);
+    const rank = ['READY', 'IN_PROGRESS', 'COMPLETED', 'NOT_APPLIED'].indexOf(status);
     return rank === -1 ? Number.MAX_SAFE_INTEGER : rank;
+}
+
+function resultDisplayLabel(row) {
+    const stageLabels = {
+        DOCUMENT_FAILED: '서류 탈락',
+        TEST_FAILED: '필기 탈락',
+        INTERVIEW_FAILED: '면접 탈락',
+        IN_PROGRESS: '진행 중',
+        NOT_APPLIED: '미지원'
+    };
+    if (stageLabels[row?.resultStage]) {
+        return stageLabels[row.resultStage];
+    }
+    return normalizeResultLabel(row?.resultLabel) || statusLabel(row?.applicationStatus);
+}
+
+function normalizeResultLabel(label) {
+    const value = String(label ?? '').trim();
+    if (!value) {
+        return '';
+    }
+    if (value.includes('서류')) {
+        return '서류 탈락';
+    }
+    if (value.includes('필기') || value.includes('역량')) {
+        return '필기 탈락';
+    }
+    if (value.includes('면접')) {
+        return '면접 탈락';
+    }
+    return value;
+}
+
+function resultClass(resultStage) {
+    return {
+        'is-document-failed': resultStage === 'DOCUMENT_FAILED',
+        'is-test-failed': resultStage === 'TEST_FAILED',
+        'is-interview-failed': resultStage === 'INTERVIEW_FAILED',
+        'is-in-progress': resultStage === 'IN_PROGRESS',
+        'is-not-applied': resultStage === 'NOT_APPLIED'
+    };
+}
+
+function chartPercent(count, total) {
+    if (!total || !count) {
+        return 0;
+    }
+    return Math.max(3, Math.round((count / total) * 100));
+}
+
+function barPercent(count, maxCount) {
+    if (!maxCount || !count) {
+        return 0;
+    }
+    return Math.max(8, Math.round((count / maxCount) * 100));
 }
 
 function emptySummary() {

@@ -18,6 +18,7 @@
     <result property="periodYear" column="period_year"/>
     <result property="periodHalf" column="period_half"/>
     <result property="sourceUrl" column="source_url"/>
+    <result property="companyLogoUrl" column="company_logo_url"/>
     <result property="companyType" column="company_type"/>
     <result property="companyIndustry" column="company_industry"/>
     <result property="companyDataSource" column="company_data_source"/>
@@ -27,6 +28,7 @@
     SELECT ah.id, ah.user_id, ah.workspace_id, ah.company_name, ah.position_title, ah.application_status,
            ah.result_stage, ah.result_label, ah.raw_result, ah.deadline_label, ah.period_key, ah.period_year,
            ah.period_half, ah.source_url,
+           c.logo_url AS company_logo_url,
            COALESCE(NULLIF(c.company_type, ''), NULLIF(ah.company_type, ''), '미확인') AS company_type,
            NULLIF(cp.industry, '') AS company_industry,
            CASE

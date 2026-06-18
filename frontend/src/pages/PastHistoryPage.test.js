@@ -48,19 +48,10 @@ const historyFixture = {
         interviewFailed: 2
     },
     companyTypes: [
+        { type: '스타트업', count: 24 },
         { type: '대기업', count: 52 },
         { type: '공공기관', count: 41 }
     ],
-    industryStats: [
-        { industry: '금융', count: 61 },
-        { industry: 'IT', count: 48 }
-    ],
-    dataQuality: {
-        total: 194,
-        companyMaster: 31,
-        ruleBased: 119,
-        unknown: 44
-    },
     rows: [
         {
             id: '1',
@@ -72,7 +63,9 @@ const historyFixture = {
             resultLabel: '서류 단계 종료',
             rawResult: '서류탈락',
             deadlineLabel: '2025.03.23',
-            sourceUrl: 'https://example.com/dalpha'
+            sourceUrl: 'https://example.com/dalpha',
+            companyLogoUrl: 'https://logo.example.com/dalpha.png',
+            companyType: '스타트업'
         },
         {
             id: '2',
@@ -84,7 +77,8 @@ const historyFixture = {
             resultLabel: '미지원',
             rawResult: '미지원',
             deadlineLabel: '마감일 미기록',
-            sourceUrl: 'https://example.com/nexon'
+            sourceUrl: 'https://example.com/nexon',
+            companyType: '대기업'
         },
         {
             id: '3',
@@ -96,7 +90,8 @@ const historyFixture = {
             resultLabel: '진행 중',
             rawResult: '진행중',
             deadlineLabel: '2026.02.01',
-            sourceUrl: 'https://example.com/kepco'
+            sourceUrl: 'https://example.com/kepco',
+            companyType: '공공기관'
         }
     ]
 };
@@ -134,11 +129,45 @@ describe('PastHistoryPage', () => {
         expect(wrapper.get('[data-testid="metric-not-applied"]').text()).toContain('109');
         expect(wrapper.get('[data-testid="metric-in-progress"]').text()).toContain('6');
         expect(wrapper.get('[data-testid="metric-completed"]').text()).toContain('79');
-        expect(wrapper.find('[data-testid="company-type-chart"]').exists()).toBe(false);
-        expect(wrapper.find('[data-testid="industry-chart"]').exists()).toBe(false);
-        expect(wrapper.find('[data-testid="company-data-quality"]').exists()).toBe(false);
+        expect(wrapper.findAll('.history-summary .history-metric span').map((metric) => metric.text())).toEqual([
+            '전체 공고',
+            '지원전',
+            '진행 중',
+            '지원완료',
+            '미지원'
+        ]);
+        expect(wrapper.findAll('.filter-bar .filter-chip').map((chip) => chip.text())).toEqual([
+            '전체',
+            '지원전',
+            '진행 중',
+            '지원완료',
+            '미지원'
+        ]);
         expect(wrapper.find('[data-testid="history-result-label-filter"]').exists()).toBe(false);
         expect(rowCompanies(wrapper)).toEqual(['달파', '넥슨코리아', '한국전력공사']);
+    });
+
+    it('HISTORY-006/HISTORY-008: shows readable charts without mixing raw CSV labels into row status', async () => {
+        const wrapper = await mountHistory('/history');
+
+        expect(wrapper.get('[data-testid="history-insight-dashboard"]').exists()).toBe(true);
+        expect(wrapper.get('[data-testid="history-execution-rate"]').text()).toContain('44%');
+        expect(wrapper.get('[data-testid="history-status-stack"]').text()).toContain('지원완료 79');
+        expect(wrapper.get('[data-testid="history-status-stack"]').text()).toContain('미지원 109');
+        expect(wrapper.get('[data-testid="history-stage-chart"]').text()).toContain('결과');
+        expect(wrapper.get('[data-testid="history-stage-chart"]').text()).toContain('서류 탈락');
+        expect(wrapper.get('[data-testid="history-stage-chart"]').text()).toContain('필기 탈락');
+        expect(wrapper.get('[data-testid="history-stage-chart"]').text()).toContain('면접 탈락');
+        expect(wrapper.get('[data-testid="history-stage-chart"]').text()).toContain('68');
+        expect(wrapper.get('[data-testid="history-company-chart"]').text()).toContain('스타트업');
+        expect(wrapper.get('[data-testid="history-company-chart"]').text()).toContain('대기업');
+        expect(wrapper.get('[data-testid="history-action-insight"]').text()).toContain('지원완료+진행 중 / 전체');
+        expect(wrapper.get('[data-testid="history-action-insight"]').text()).not.toContain('가장 많이 멈췄어요');
+        expect(wrapper.get('[data-testid="history-status-stack"]').text()).not.toContain('장바구니와 같은 라벨');
+        expect(wrapper.get('[data-testid="history-stage-chart"]').text()).not.toContain('회고용 지표');
+        expect(wrapper.get('[data-testid="history-company-chart"]').text()).not.toContain('상위 4개');
+        expect(wrapper.text()).toContain('서류 탈락');
+        expect(wrapper.text()).not.toContain('서류탈락');
     });
 
     it('HISTORY-004: reloads the page data when a half-year period is selected', async () => {
@@ -157,19 +186,22 @@ describe('PastHistoryPage', () => {
             '회사명',
             '직무',
             '상태',
+            '지원 결과',
             '마감일',
-            '채용 사이트 링크',
-            '최근 작업'
+            '채용 사이트 링크'
         ]);
         const firstRow = wrapper.get('[data-testid="history-row"]');
         expect(firstRow.text()).toContain('달파');
         expect(firstRow.text()).toContain(statusLabel('COMPLETED'));
+        expect(firstRow.text()).toContain('서류 탈락');
         expect(firstRow.text()).not.toContain('서류 단계 종료');
         expect(firstRow.text()).not.toContain('서류탈락');
         expect(firstRow.element.children.length).toBe(wrapper.get('.history-table-head').element.children.length);
+        expect(firstRow.get('.company-cell').attributes('href')).toBe('/workspaces/102');
+        expect(firstRow.get('.company-logo-badge img').attributes('src')).toBe('https://logo.example.com/dalpha.png');
         expect(wrapper.get('[data-testid="history-source-1"]').attributes('href')).toBe('https://example.com/dalpha');
         expect(wrapper.get('[data-testid="history-source-1"]').text()).toBe('바로가기');
-        expect(wrapper.get('[data-testid="history-workspace-1"]').attributes('href')).toBe('/workspaces/102');
+        expect(wrapper.find('[data-testid="history-workspace-1"]').exists()).toBe(false);
     });
 
     it('filters the visible rows by search keyword without exposing raw result labels as searchable UI copy', async () => {
