@@ -72,9 +72,11 @@ Mattermost source는 서버에서 `user_profiles.is_ssafy = true`를 재검증�
 
 | 메서드 | 경로 | 목적 |
 | --- | --- | --- |
-| POST | `/api/integrations/mattermost/webhook` | `X-MM-Webhook-Secret` 검증 후 Mattermost 원문을 저장하고 채용공고 후보를 생성 |
+| POST | `/api/integrations/mattermost/webhook` | `X-MM-Webhook-Secret` 또는 body `token` 검증 후 Mattermost 원문을 저장하고 채용공고 후보를 생성 |
 | GET | `/api/admin/mattermost/job-candidates?status=NEEDS_REVIEW` | 검토 대기 Mattermost 후보 조회 |
 | PATCH | `/api/admin/mattermost/job-candidates/{candidateId}/review` | 후보를 `APPROVED` 또는 `REJECTED`로 검토. 승인 시 추천 공고로 승격 |
+
+Mattermost webhook secret은 단일 채널이면 `MATTERMOST_WEBHOOK_SECRET`, 여러 채널이면 쉼표 구분 `MATTERMOST_WEBHOOK_SECRETS`로 설정한다. 두 설정이 모두 있으면 두 목록을 합쳐 허용한다.
 
 ## 서류 입력 정보
 
@@ -143,7 +145,7 @@ Mattermost source는 서버에서 `user_profiles.is_ssafy = true`를 재검증�
 - `POST /api/extension/jobs/save` accepts optional `logoUrl` with the extracted posting payload.
 - `POST /api/basket/jobs` also accepts optional `logoUrl` for manually or externally created saved jobs.
 - `BasketJobResponse` includes `companyLogoUrl`.
-- `GET /api/recommendations/jobs` returns each recommendation with `companyLogoUrl` when stored company logo metadata exists.
+- `GET /api/recommendations/jobs` returns each recommendation with `companyLogoUrl` when stored company logo metadata exists. Mattermost recommendations may also include `companyDomain`, `companyType`, `postedAt` for the original Mattermost post time, and `collectedAt` for backend receipt time.
 - `GET /api/workspaces/{workspaceId}` includes `companyDetails.logoUrl`.
 - Invalid or missing `logoUrl` values must not fail the core job save flow; the server ignores invalid logo candidates.
 - `GET /api/extension/document-profile` is part of the approved P1 extension auto-fill scope. It uses the existing Bearer token and returns the current user's document profile for the active-tab injection flow.

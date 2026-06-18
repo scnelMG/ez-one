@@ -10,6 +10,7 @@ public class MattermostMessageRow {
     private String messageType;
     private String parseStatus;
     private String parseError;
+    private String postedAt;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -29,4 +30,6 @@ public class MattermostMessageRow {
     public void setParseStatus(String parseStatus) { this.parseStatus = parseStatus; }
     public String getParseError() { return parseError; }
     public void setParseError(String parseError) { this.parseError = parseError; }
+    public String getPostedAt() { return postedAt; }
+    public void setPostedAt(String postedAt) { this.postedAt = postedAt; }
 }

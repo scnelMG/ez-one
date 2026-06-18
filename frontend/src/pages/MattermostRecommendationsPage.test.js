@@ -19,7 +19,13 @@ const jobs = [
         positionTitle: 'Server Platform Engineer',
         deadlineLabel: 'D-7',
         sourceUrl: 'https://careers.linecorp.com/jobs/102',
-        companyLogoUrl: 'https://www.google.com/s2/favicons?domain=linecorp.com&sz=128'
+        companyLogoUrl: 'https://www.google.com/s2/favicons?domain=linecorp.com&sz=128',
+        companyDomain: 'line.me',
+        companyType: '대기업',
+        recommendationScore: 90,
+        recommendationReason: '마감이 가까운 공고라 우선 추천',
+        postedAt: '2026-04-16T15:26:00',
+        collectedAt: '2026-06-18T20:30:00'
     }
 ];
 
@@ -36,14 +42,24 @@ describe('MattermostRecommendationsPage', () => {
         });
     });
 
-    it('MM-001: renders Mattermost recommendation cards with a compact review-oriented design', async () => {
+    it('MM-001: renders a trusted Mattermost job feed without internal review labels', async () => {
         const wrapper = await mountPage();
 
         expect(recommendationApi.listMattermostJobs).toHaveBeenCalled();
         expect(wrapper.get('[data-testid="mm-recommendation-title"]').text()).toContain('Mattermost');
+        expect(wrapper.text()).toContain('마감 전 공고');
+        expect(wrapper.text()).toContain('Webhook 수집 기준');
         expect(wrapper.get('[data-testid="mm-recommendation-card-9101"]').text()).toContain('Line');
         expect(wrapper.get('[data-testid="mm-recommendation-card-9101"]').text()).toContain('Server Platform Engineer');
+        expect(wrapper.get('[data-testid="mm-recommendation-card-9101"]').text()).toContain('line.me');
+        expect(wrapper.get('[data-testid="mm-recommendation-card-9101"]').text()).toContain('대기업');
+        expect(wrapper.get('[data-testid="mm-recommendation-card-9101"]').text()).toContain('90');
+        expect(wrapper.get('[data-testid="mm-recommendation-card-9101"]').text()).toContain('마감이 가까운 공고라 우선 추천');
+        expect(wrapper.get('[data-testid="mm-recommendation-card-9101"]').text()).toContain('게시');
+        expect(wrapper.get('[data-testid="mm-recommendation-card-9101"]').text()).not.toContain('수집 6. 18.');
+        expect(wrapper.get('[data-testid="mm-recommendation-card-9101"]').text()).not.toContain('승인 후보');
         expect(wrapper.get('[data-testid="mm-recommendation-source-9101"]').attributes('href')).toBe('https://careers.linecorp.com/jobs/102');
+        expect(wrapper.get('[data-testid="mm-save-9101"]').text()).toBe('공고 장바구니 저장');
     });
 
     it('MM-001: saves a Mattermost recommendation into the basket and exposes the workspace link', async () => {

@@ -10,6 +10,8 @@ public class MattermostParsedJobPostRow {
     private String reviewStatus;
     private Long reviewerUserId;
     private Long promotedJobId;
+    private String postedAt;
+    private String receivedAt;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -29,4 +31,8 @@ public class MattermostParsedJobPostRow {
     public void setReviewerUserId(Long reviewerUserId) { this.reviewerUserId = reviewerUserId; }
     public Long getPromotedJobId() { return promotedJobId; }
     public void setPromotedJobId(Long promotedJobId) { this.promotedJobId = promotedJobId; }
+    public String getPostedAt() { return postedAt; }
+    public void setPostedAt(String postedAt) { this.postedAt = postedAt; }
+    public String getReceivedAt() { return receivedAt; }
+    public void setReceivedAt(String receivedAt) { this.receivedAt = receivedAt; }
 }

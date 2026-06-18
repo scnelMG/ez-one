@@ -289,6 +289,47 @@ class MyBatisP1WorkspaceServiceTest {
         );
     }
 
+    @Test
+    void saveMattermostRecommendationUsesMattermostSourceAndLogoInBasketFlow() {
+        JobRow recommendation = recommendationRow(
+            9101L,
+            "한국교육학술정보원",
+            "정보기술 서비스 기획",
+            "04/27(월)",
+            "https://www.google.com/s2/favicons?domain=keris.or.kr&sz=128"
+        );
+        recommendation.setSourceUrl("https://keris.recruiter.co.kr/app/jobnotice/view?jobnoticeSn=250774");
+        when(mapper.findRecommendationJobBySource(9101L, "MATTERMOST")).thenReturn(Optional.of(recommendation));
+        when(mapper.findDuplicateBasketJob(
+            1L,
+            "한국교육학술정보원",
+            "https://keris.recruiter.co.kr/app/jobnotice/view?jobnoticeSn=250774",
+            "정보기술 서비스 기획"
+        )).thenReturn(Optional.empty());
+        stubCreateBasketPersistence(11L, 21L, 31L, 41L);
+
+        service.saveRecommendation(1L, 9101L, "mattermost");
+
+        verify(mapper).upsertCompany(argThat(row ->
+            "한국교육학술정보원".equals(row.getCompanyName())
+                && "keris.or.kr".equals(row.getCompanyDomain())
+                && "https://www.google.com/s2/favicons?domain=keris.or.kr&sz=128".equals(row.getCompanyLogoUrl())
+        ));
+        verify(mapper).insertBasketJob(argThat(row ->
+            row.getUserId().equals(1L)
+                && row.getJobId().equals(21L)
+        ));
+        verify(mapper).insertJob(argThat(row ->
+            "MATTERMOST".equals(row.getSource())
+                && "한국교육학술정보원".equals(row.getCompanyName())
+                && "정보기술 서비스 기획".equals(row.getPositionTitle())
+        ));
+        verify(mapper).insertWorkspace(argThat(row ->
+            row.getUserId().equals(1L)
+                && row.getBasketJobId().equals(31L)
+        ));
+    }
+
     private void stubCreateBasketPersistence(Long companyId, Long jobId, Long basketJobId, Long workspaceId) {
         doAnswer(invocation -> {
             JobRow row = invocation.getArgument(0);

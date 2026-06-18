@@ -18,6 +18,27 @@ mm 채널에는 채용공고, 채용 관련 공지, 합격 후기, 일반 공지
 | Non-job retention | 합격 후기와 일반 공지는 raw로 보존하되 후보 공고에서는 제외한다. |
 | Attachment handling | 파일-only 메시지는 첨부 처리 전까지 pending 상태로 둔다. |
 
+## 시각 기준
+
+- `mm_messages.posted_at`은 Mattermost 원본 게시 시각이다. webhook payload의 `timestamp`, `create_at`, `post_create_at` 또는 백필 원문 날짜/시간에서 채운다.
+- `mm_messages.received_at`은 backend가 webhook/backfill 요청을 실제 수신한 시각이다.
+- 사용자 추천 UI는 `posted_at`이 있으면 “게시” 시각을 우선 표시하고, 없을 때만 `received_at` 기반 “수집” 시각으로 fallback한다.
+- 붙여넣기 백필 원문은 연도를 포함하지 않으므로 `MATTERMOST_BACKFILL_YEAR`를 실제 원문 연도로 설정한 뒤 실행한다. 미설정 시 실행 시점의 현재 연도를 사용한다.
+
+## 회사 정보 보강
+
+- Mattermost 공고가 Wanted, JobKorea, Saramin 등 채용 플랫폼 URL로 들어오면 플랫폼 도메인을 회사 홈페이지로 사용하지 않는다.
+- 회사명이 공식 회사 레지스트리 또는 Mattermost 회사 기본값에 있으면 `companyDomain`, `companyType`, favicon 기반 `companyLogoUrl`을 추천 응답에 포함한다.
+- 회사 공식 도메인을 확인하지 못한 공고는 임의 도메인을 만들지 않고 원문 공고 URL만 유지한다.
+- 주간 공고 행의 직무명에 `Node.js`, `Next.js` 같은 기술명이 들어 있어도 이를 URL로 저장하지 않고 인접한 실제 채용 URL을 사용한다.
+
+## Webhook 연결
+
+- Mattermost Outgoing Webhook callback URL은 Spring endpoint `/api/integrations/mattermost/webhook` 또는 이를 전달하는 Worker URL로 설정한다.
+- 단일 채널 token은 backend `.env`의 `MATTERMOST_WEBHOOK_SECRET`으로 검증한다.
+- 채널별 token이 여러 개이면 `MATTERMOST_WEBHOOK_SECRETS=token1,token2`처럼 쉼표로 구분해 설정한다.
+- 요청 body `token` 또는 `X-MM-Webhook-Secret` header 값이 설정된 token 중 하나와 일치해야 수집한다.
+
 ## 메시지 유형
 
 | 유형 | 의미 | 후보 생성 |
