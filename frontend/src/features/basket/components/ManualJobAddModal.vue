@@ -13,7 +13,7 @@
             id="companyName"
             v-model="form.companyName"
             type="text"
-            placeholder="공고에 등록된 정확한 법인명을 입력하세요 (예: 우아한형제들 O, 배민 X)"
+            placeholder="정확한 법인명 입력 (예: 우아한형제들 O, 배민 X)"
             required
             @input="onSearchInput"
             @focus="showDropdown = true"

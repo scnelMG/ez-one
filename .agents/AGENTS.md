@@ -1,0 +1,1 @@
+- Always execute 'git commit' after making code changes or completing a task.
