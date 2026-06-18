@@ -15,6 +15,19 @@ public record MattermostWebhookRequest(
     String text,
     List<String> attachments,
     @JsonAlias("raw_payload")
-    Map<String, Object> rawPayload
+    Map<String, Object> rawPayload,
+    @JsonAlias({"timestamp", "create_at", "post_create_at", "postCreateAt", "posted_at"})
+    Object postedAt
 ) {
+    public MattermostWebhookRequest(
+        String token,
+        String channelId,
+        String messageId,
+        String senderName,
+        String text,
+        List<String> attachments,
+        Map<String, Object> rawPayload
+    ) {
+        this(token, channelId, messageId, senderName, text, attachments, rawPayload, null);
+    }
 }

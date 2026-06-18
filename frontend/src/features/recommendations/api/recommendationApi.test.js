@@ -13,7 +13,13 @@ describe('recommendationApi', () => {
                         companyName: 'Line',
                         positionTitle: 'Server Platform Engineer',
                         deadlineLabel: 'D-7',
-                        companyLogoUrl: 'https://www.google.com/s2/favicons?domain=linecorp.com&sz=128'
+                        companyLogoUrl: 'https://www.google.com/s2/favicons?domain=linecorp.com&sz=128',
+                        companyDomain: 'line.me',
+                        companyType: '대기업',
+                        recommendationScore: 90,
+                        recommendationReason: '마감이 가까운 공고라 우선 추천',
+                        postedAt: '2026-04-16T15:26:00',
+                        collectedAt: '2026-06-18T20:30:00'
                     }
                 ]
             }
@@ -32,7 +38,13 @@ describe('recommendationApi', () => {
             companyName: 'Line',
             positionTitle: 'Server Platform Engineer',
             deadlineLabel: 'D-7',
-            companyLogoUrl: 'https://www.google.com/s2/favicons?domain=linecorp.com&sz=128'
+            companyLogoUrl: 'https://www.google.com/s2/favicons?domain=linecorp.com&sz=128',
+            companyDomain: 'line.me',
+            companyType: '대기업',
+            recommendationScore: 90,
+            recommendationReason: '마감이 가까운 공고라 우선 추천',
+            postedAt: '2026-04-16T15:26:00',
+            collectedAt: '2026-06-18T20:30:00'
         });
     });
 

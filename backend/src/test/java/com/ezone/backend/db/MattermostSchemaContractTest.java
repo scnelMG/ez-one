@@ -12,7 +12,9 @@ class MattermostSchemaContractTest {
     void schemaDefinesMattermostRawAndCandidateTables() throws IOException {
         String schema = readResource("/schema-mysql.sql").toLowerCase();
         assertThat(schema).contains("create table if not exists mm_messages");
+        assertThat(schema).contains("posted_at timestamp null");
         assertThat(schema).contains("unique key uk_mm_messages_message_id (message_id)");
+        assertThat(schema).contains("key idx_mm_messages_channel_posted (channel_id, posted_at)");
         assertThat(schema).contains("create table if not exists mm_parsed_job_posts");
         assertThat(schema).contains("constraint fk_mm_parsed_job_posts_message");
         assertThat(schema).contains("promoted_job_id bigint null");
@@ -24,6 +26,14 @@ class MattermostSchemaContractTest {
         assertThat(migration).contains("create table if not exists mm_messages");
         assertThat(migration).contains("create table if not exists mm_parsed_job_posts");
         assertThat(migration).contains("review_status varchar(64) not null default 'needs_review'");
+    }
+
+    @Test
+    void migrationAddsMattermostOriginalPostedAt() throws IOException {
+        String migration = readResource("/db/migration/V33__add_mattermost_posted_at.sql").toLowerCase();
+        assertThat(migration).contains("alter table mm_messages");
+        assertThat(migration).contains("add column posted_at timestamp null");
+        assertThat(migration).contains("idx_mm_messages_channel_posted");
     }
 
     private String readResource(String resourcePath) throws IOException {

@@ -17,14 +17,26 @@ public interface MattermostMapper {
     @Select("SELECT id FROM mm_messages WHERE message_id = #{messageId} LIMIT 1")
     Optional<Long> findMessageId(@Param("messageId") String messageId);
 
+    @Update("""
+        UPDATE mm_messages
+        SET posted_at = CASE WHEN #{postedAt} IS NULL THEN posted_at ELSE STR_TO_DATE(#{postedAt}, '%Y-%m-%dT%H:%i:%s') END,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE message_id = #{messageId}
+          AND posted_at IS NULL
+          AND #{postedAt} IS NOT NULL
+        """)
+    void updateMessagePostedAtIfMissing(@Param("messageId") String messageId, @Param("postedAt") String postedAt);
+
     @Insert("""
         INSERT INTO mm_messages (
           channel_id, message_id, sender_name, raw_text, raw_payload_json,
-          message_type, parse_status, parse_error, received_at, created_at, updated_at
+          message_type, parse_status, parse_error, posted_at, received_at, created_at, updated_at
         )
         VALUES (
           #{channelId}, #{messageId}, #{senderName}, #{rawText}, #{rawPayloadJson},
-          #{messageType}, #{parseStatus}, #{parseError}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+          #{messageType}, #{parseStatus}, #{parseError},
+          CASE WHEN #{postedAt} IS NULL THEN NULL ELSE STR_TO_DATE(#{postedAt}, '%Y-%m-%dT%H:%i:%s') END,
+          CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
         )
         """)
     @Options(useGeneratedKeys = true, keyProperty = "id")
@@ -50,7 +62,8 @@ public interface MattermostMapper {
     @Select("""
         SELECT id, mm_message_id AS messageId, company_name AS companyName, title, url,
                deadline_label AS deadlineLabel, review_status AS reviewStatus,
-               reviewer_user_id AS reviewerUserId, promoted_job_id AS promotedJobId
+               reviewer_user_id AS reviewerUserId, promoted_job_id AS promotedJobId,
+               NULL AS postedAt, NULL AS receivedAt
         FROM mm_parsed_job_posts
         WHERE id = #{id}
         LIMIT 1
@@ -60,12 +73,26 @@ public interface MattermostMapper {
     @Select("""
         SELECT id, mm_message_id AS messageId, company_name AS companyName, title, url,
                deadline_label AS deadlineLabel, review_status AS reviewStatus,
-               reviewer_user_id AS reviewerUserId, promoted_job_id AS promotedJobId
+               reviewer_user_id AS reviewerUserId, promoted_job_id AS promotedJobId,
+               NULL AS postedAt, NULL AS receivedAt
         FROM mm_parsed_job_posts
         WHERE review_status = #{reviewStatus}
         ORDER BY id DESC
         """)
     List<MattermostParsedJobPostRow> listParsedJobPosts(@Param("reviewStatus") String reviewStatus);
+
+    @Select("""
+        SELECT p.id, p.mm_message_id AS messageId, p.company_name AS companyName, p.title, p.url,
+               p.deadline_label AS deadlineLabel, p.review_status AS reviewStatus,
+               p.reviewer_user_id AS reviewerUserId, p.promoted_job_id AS promotedJobId,
+               DATE_FORMAT(m.posted_at, '%Y-%m-%dT%H:%i:%s') AS postedAt,
+               DATE_FORMAT(m.received_at, '%Y-%m-%dT%H:%i:%s') AS receivedAt
+        FROM mm_parsed_job_posts p
+        JOIN mm_messages m ON m.id = p.mm_message_id
+        WHERE p.review_status IN ('NEEDS_REVIEW', 'APPROVED')
+        ORDER BY p.id DESC
+        """)
+    List<MattermostParsedJobPostRow> listRecommendationCandidates();
 
     @Update("""
         UPDATE mm_parsed_job_posts

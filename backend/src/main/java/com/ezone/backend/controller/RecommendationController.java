@@ -4,6 +4,7 @@ import com.ezone.backend.dto.ApiResponse;
 import com.ezone.backend.dto.basket.BasketJobResponse;
 import com.ezone.backend.dto.dashboard.DashboardJobResponse;
 import com.ezone.backend.service.ForbiddenResourceException;
+import com.ezone.backend.service.MattermostRecommendationService;
 import com.ezone.backend.service.P1WorkspaceService;
 import com.ezone.backend.service.ProfileService;
 import java.util.List;
@@ -20,10 +21,16 @@ public class RecommendationController {
 
     private final P1WorkspaceService workspaceService;
     private final ProfileService profileService;
+    private final MattermostRecommendationService mattermostRecommendationService;
 
-    public RecommendationController(P1WorkspaceService workspaceService, ProfileService profileService) {
+    public RecommendationController(
+        P1WorkspaceService workspaceService,
+        ProfileService profileService,
+        MattermostRecommendationService mattermostRecommendationService
+    ) {
         this.workspaceService = workspaceService;
         this.profileService = profileService;
+        this.mattermostRecommendationService = mattermostRecommendationService;
     }
 
     @GetMapping
@@ -32,6 +39,9 @@ public class RecommendationController {
     ) {
         Long userId = CurrentUserSupport.currentUserId();
         requireSsafyForMattermost(userId, source);
+        if (isMattermostSource(source)) {
+            return ApiResponse.success(mattermostRecommendationService.listOpenRecommendations(userId));
+        }
         return ApiResponse.success(workspaceService.listRecommendationJobs(userId, source));
     }
 
@@ -42,6 +52,9 @@ public class RecommendationController {
     ) {
         Long userId = CurrentUserSupport.currentUserId();
         requireSsafyForMattermost(userId, source);
+        if (isMattermostSource(source)) {
+            return ApiResponse.success(mattermostRecommendationService.saveRecommendation(userId, recommendationId));
+        }
         return ApiResponse.success(workspaceService.saveRecommendation(
             userId,
             recommendationId,
@@ -50,11 +63,15 @@ public class RecommendationController {
     }
 
     private void requireSsafyForMattermost(Long userId, String source) {
-        if (!"mattermost".equalsIgnoreCase(source) && !"MATTERMOST".equalsIgnoreCase(source)) {
+        if (!isMattermostSource(source)) {
             return;
         }
         if (!profileService.getUserProfile(userId).ssafy()) {
             throw new ForbiddenResourceException("Mattermost recommendations are only available to SSAFY users.");
         }
+    }
+
+    private boolean isMattermostSource(String source) {
+        return "mattermost".equalsIgnoreCase(source) || "MATTERMOST".equalsIgnoreCase(source);
     }
 }

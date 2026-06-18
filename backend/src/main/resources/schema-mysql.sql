@@ -179,10 +179,12 @@ CREATE TABLE IF NOT EXISTS mm_messages (
   message_type VARCHAR(64) NOT NULL,
   parse_status VARCHAR(64) NOT NULL,
   parse_error TEXT NULL,
+  posted_at TIMESTAMP NULL,
   received_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uk_mm_messages_message_id (message_id),
+  KEY idx_mm_messages_channel_posted (channel_id, posted_at),
   KEY idx_mm_messages_channel_received (channel_id, received_at),
   KEY idx_mm_messages_parse_status (parse_status)
 );

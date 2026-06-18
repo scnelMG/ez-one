@@ -27,7 +27,13 @@ function toRecommendationJob(dto) {
         positionTitle: dto.positionTitle,
         deadlineLabel: dto.deadlineLabel,
         companyLogoUrl: resolveCompanyLogoUrl(dto),
-        sourceUrl: dto.sourceUrl ?? ''
+        companyDomain: dto.companyDomain ?? '',
+        companyType: dto.companyType ?? '',
+        sourceUrl: dto.sourceUrl ?? '',
+        recommendationScore: dto.recommendationScore ?? null,
+        recommendationReason: dto.recommendationReason ?? '',
+        postedAt: dto.postedAt ?? '',
+        collectedAt: dto.collectedAt ?? ''
     };
 }
 

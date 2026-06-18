@@ -45,7 +45,7 @@ class MattermostIngestionServiceTest {
             "recruiter",
             "[네이버] Backend Engineer 채용 https://recruit.navercorp.com/jobs/101 마감 D-7",
             List.of(),
-            Map.of("team", "employment")
+            Map.of("team", "employment", "timestamp", "2026-06-18T20:30:00")
         );
         when(mattermostMapper.findMessageId("mm-101")).thenReturn(Optional.empty());
         doAnswer(invocation -> {
@@ -62,6 +62,7 @@ class MattermostIngestionServiceTest {
             "JOB_POSTING".equals(row.getMessageType())
                 && "PARSED".equals(row.getParseStatus())
                 && row.getRawText().contains("Backend Engineer")
+                && "2026-06-18T20:30:00".equals(row.getPostedAt())
         ));
         verify(mattermostMapper).insertParsedJobPost(argThat(row ->
             row.getMessageId().equals(10L)
@@ -119,6 +120,125 @@ class MattermostIngestionServiceTest {
                 "https://jumpit.saramin.co.kr/position/52664559",
                 "https://www.wanted.co.kr/wd/324638"
             );
+    }
+
+    @Test
+    void ingestDuplicateMessageBackfillsOriginalPostedAtWhenMissing() {
+        MattermostWebhookRequest request = new MattermostWebhookRequest(
+            null,
+            "employment-info",
+            "mm-duplicate-posted-at",
+            "career-center",
+            "채용공고 안내",
+            List.of(),
+            Map.of("timestamp", "2026-04-16T15:26:00")
+        );
+        when(mattermostMapper.findMessageId("mm-duplicate-posted-at")).thenReturn(Optional.of(99L));
+
+        var response = service.ingest(request);
+
+        assertThat(response.messageType()).isEqualTo("DUPLICATE");
+        verify(mattermostMapper).updateMessagePostedAtIfMissing("mm-duplicate-posted-at", "2026-04-16T15:26:00");
+        verify(mattermostMapper, never()).insertMessage(any());
+    }
+
+    @Test
+    void ingestNormalizesSchemeLessRecruitmentUrlsFromWeeklyJobListingRows() {
+        MattermostWebhookRequest request = new MattermostWebhookRequest(
+            null,
+            "employment-info",
+            "mm-scheme-less-url",
+            "career-center",
+            """
+            [SW개발직무]
+             :love_letter: 한국일보 / 프론트엔드 백엔드 / -01/27(월)
+            hankookilbo.careerlink.kr/jobs/RC20260113023174
+            """,
+            List.of(),
+            Map.of("channel_name", "[취업] 취업정보")
+        );
+        when(mattermostMapper.findMessageId("mm-scheme-less-url")).thenReturn(Optional.empty());
+        doAnswer(invocation -> {
+            MattermostMessageRow row = invocation.getArgument(0);
+            row.setId(23L);
+            return null;
+        }).when(mattermostMapper).insertMessage(any());
+
+        var response = service.ingest(request);
+
+        assertThat(response.createdParsedJobPost()).isTrue();
+        verify(mattermostMapper).insertParsedJobPost(argThat(row ->
+            row.getCompanyName().equals("한국일보")
+                && row.getTitle().equals("프론트엔드 백엔드")
+                && row.getUrl().equals("https://hankookilbo.careerlink.kr/jobs/RC20260113023174")
+                && row.getDeadlineLabel().equals("01/27(월)")
+        ));
+    }
+
+    @Test
+    void ingestUsesAdjacentRecruitmentUrlWhenTitleContainsTechDomainLikeToken() {
+        MattermostWebhookRequest request = new MattermostWebhookRequest(
+            null,
+            "employment-info",
+            "mm-tech-token-url",
+            "career-center",
+            """
+            [SW개발직무]
+             :love_letter: 이스트게임즈 / 웹 개발자 (TypeScript, Next.js, Java, Spring) / -상시/수시/채용 시 마감 공고
+            https://estfamily.career.greetinghr.com/ko/o/107360
+
+             :love_letter: 넛지헬스케어 / [병역특례 현역/보충역] 백엔드 개발자(Node.js) (서울) / -상시/수시/채용 시 마감 공고
+            https://www.wanted.co.kr/wd/85836
+            """,
+            List.of(),
+            Map.of("channel_name", "[취업] 취업정보")
+        );
+        when(mattermostMapper.findMessageId("mm-tech-token-url")).thenReturn(Optional.empty());
+        doAnswer(invocation -> {
+            MattermostMessageRow row = invocation.getArgument(0);
+            row.setId(25L);
+            return null;
+        }).when(mattermostMapper).insertMessage(any());
+
+        service.ingest(request);
+
+        ArgumentCaptor<MattermostParsedJobPostRow> captor = ArgumentCaptor.forClass(MattermostParsedJobPostRow.class);
+        verify(mattermostMapper, times(2)).insertParsedJobPost(captor.capture());
+        assertThat(captor.getAllValues())
+            .extracting(MattermostParsedJobPostRow::getUrl)
+            .containsExactly(
+                "https://estfamily.career.greetinghr.com/ko/o/107360",
+                "https://www.wanted.co.kr/wd/85836"
+            );
+    }
+
+    @Test
+    void ingestStoresNoticeChannelRawOnlyEvenWhenTextContainsJobLikeRows() {
+        MattermostWebhookRequest request = new MattermostWebhookRequest(
+            null,
+            "employment-notice",
+            "mm-notice-job-like-row",
+            "career-center",
+            """
+            [공지] 채용설명회 안내
+            삼성화재 / 채용설명회 사전 신청 / -03/06(금)
+            https://forms.gle/84cCDfruWGfTg1UV7
+            """,
+            List.of(),
+            Map.of("channel_name", "[취업] 공지사항")
+        );
+        when(mattermostMapper.findMessageId("mm-notice-job-like-row")).thenReturn(Optional.empty());
+        doAnswer(invocation -> {
+            MattermostMessageRow row = invocation.getArgument(0);
+            row.setId(24L);
+            return null;
+        }).when(mattermostMapper).insertMessage(any());
+
+        var response = service.ingest(request);
+
+        assertThat(response.createdParsedJobPost()).isFalse();
+        assertThat(response.parseStatus()).isEqualTo("IGNORED");
+        verify(mattermostMapper, never()).insertParsedJobPost(any());
     }
 
     @Test

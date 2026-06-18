@@ -18,6 +18,10 @@ final class OfficialCompanyRegistry {
     private static final String ALIO_SOURCE_URL = "https://alio.go.kr/";
     private static final String ALIO_NOTE = "공공기관 경영정보 공개시스템 기준";
 
+    private static final String OFFICIAL_SITE_SOURCE_TYPE = "OFFICIAL_SITE";
+    private static final String OFFICIAL_SITE_SOURCE_NAME = "공식 홈페이지";
+    private static final String OFFICIAL_SITE_NOTE = "회사 공식 홈페이지 기준";
+
     private static final Map<String, OfficialCompany> COMPANIES = buildCompanies();
 
     private OfficialCompanyRegistry() {
@@ -69,6 +73,16 @@ final class OfficialCompanyRegistry {
             ALIO_SOURCE_TYPE, ALIO_SOURCE_NAME, ALIO_SOURCE_URL, ALIO_NOTE);
         put(companies, "전력거래소", "kpx.or.kr", "공공기관", "공공기관", "공공/에너지", "https://www.kpx.or.kr",
             ALIO_SOURCE_TYPE, ALIO_SOURCE_NAME, ALIO_SOURCE_URL, ALIO_NOTE);
+        put(companies, "한국언론진흥재단", "kpf.or.kr", "공공기관", "공공기관", "공공/언론", "https://www.kpf.or.kr",
+            OFFICIAL_SITE_SOURCE_TYPE, OFFICIAL_SITE_SOURCE_NAME, "https://www.kpf.or.kr", OFFICIAL_SITE_NOTE);
+        put(companies, "한국교육학술정보원", "keris.or.kr", "공공기관", "공공기관", "교육/공공", "https://www.keris.or.kr",
+            OFFICIAL_SITE_SOURCE_TYPE, OFFICIAL_SITE_SOURCE_NAME, "https://www.keris.or.kr", OFFICIAL_SITE_NOTE);
+        put(companies, "현대글로비스", "glovis.net", "대기업", "대기업", "물류/SCM", "https://www.glovis.net",
+            OFFICIAL_SITE_SOURCE_TYPE, OFFICIAL_SITE_SOURCE_NAME, "https://www.glovis.net", OFFICIAL_SITE_NOTE);
+        put(companies, "디지털대성", "digitaldaesung.co.kr", "중견기업", "중견기업", "교육", "https://www.digitaldaesung.co.kr",
+            OFFICIAL_SITE_SOURCE_TYPE, OFFICIAL_SITE_SOURCE_NAME, "https://www.digitaldaesung.co.kr", OFFICIAL_SITE_NOTE);
+        put(companies, "빗썸", "bithumb.com", "대기업", "대기업", "금융/가상자산", "https://www.bithumb.com",
+            OFFICIAL_SITE_SOURCE_TYPE, OFFICIAL_SITE_SOURCE_NAME, "https://www.bithumb.com", OFFICIAL_SITE_NOTE);
         return Collections.unmodifiableMap(companies);
     }
 

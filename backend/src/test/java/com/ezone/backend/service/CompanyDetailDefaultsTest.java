@@ -20,6 +20,18 @@ class CompanyDetailDefaultsTest {
     }
 
     @Test
+    void resolvesMattermostCompaniesWithJobBoardUrlsToOfficialDomains() {
+        assertThat(CompanyDetailDefaults.resolve("업스테이지", "https://www.wanted.co.kr/wd/313220").domain())
+            .isEqualTo("upstage.ai");
+        assertThat(CompanyDetailDefaults.resolve("채널코퍼레이션", "https://www.wanted.co.kr/wd/324638").domain())
+            .isEqualTo("channel.io");
+        assertThat(CompanyDetailDefaults.resolve("넛지헬스케어", "https://www.wanted.co.kr/wd/85836").domain())
+            .isEqualTo("cashwalk.com");
+        assertThat(CompanyDetailDefaults.resolve("펜타시큐리티", "https://www.wanted.co.kr/wd/96948").domain())
+            .isEqualTo("pentasecurity.co.kr");
+    }
+
+    @Test
     void doesNotUseJobBoardDomainAsCompanyHomepageForUnknownCompany() {
         CompanyDetailDefaults.CompanyDefaults defaults = CompanyDetailDefaults.resolve(
             "알수없는회사",

@@ -8,6 +8,11 @@ import com.ezone.backend.dto.mattermost.MattermostWebhookRequest;
 import com.ezone.backend.mapper.MattermostMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -24,7 +29,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class MattermostIngestionService {
 
-    private static final Pattern URL_PATTERN = Pattern.compile("https?://\\S+");
+    private static final Pattern URL_PATTERN = Pattern.compile("(?i)(?:https?://)?(?:[a-z0-9-]+\\.)+[a-z]{2,}[^\\s\\])>,]*");
+    private static final DateTimeFormatter POSTED_AT_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
     private static final Pattern BRACKET_COMPANY_PATTERN = Pattern.compile("^\\[([^\\]]+)]\\s*(.+)$");
     private static final Pattern DEADLINE_PATTERN = Pattern.compile(
         "(D-\\d+|\\d{4}\\.\\d{2}\\.\\d{2}|\\d{1,2}/\\d{1,2}\\([^)]+\\)|상시/수시/채용 시 마감 공고)"
@@ -36,7 +42,9 @@ public class MattermostIngestionService {
         "youtube.com",
         "forms.gle",
         "docs.google.com",
-        "work24.go.kr"
+        "work24.go.kr",
+        "node.js",
+        "next.js"
     );
 
     @Autowired(required = false)
@@ -52,8 +60,10 @@ public class MattermostIngestionService {
 
     @Transactional
     public MattermostIngestResponse ingest(MattermostWebhookRequest request) {
+        Optional<String> postedAt = extractPostedAt(request);
         Optional<Long> existingMessageId = findMessageId(request.messageId());
         if (existingMessageId.isPresent()) {
+            updateMessagePostedAtIfMissing(request.messageId(), postedAt.orElse(null));
             return new MattermostIngestResponse(existingMessageId.get(), "DUPLICATE", "RAW_SAVED", false, null);
         }
 
@@ -66,6 +76,7 @@ public class MattermostIngestionService {
         message.setRawPayloadJson(toJson(request.rawPayload()));
         message.setMessageType(parsed.messageType());
         message.setParseStatus(parsed.parseStatus());
+        message.setPostedAt(postedAt.orElse(null));
         insertMessage(message);
 
         MattermostParsedJobPostRow firstCandidate = null;
@@ -126,6 +137,10 @@ public class MattermostIngestionService {
         }
         if (text.isBlank() && request.attachments() != null && !request.attachments().isEmpty()) {
             return ParsedMattermostMessage.filePending();
+        }
+
+        if (isNoticeChannel(request)) {
+            return ParsedMattermostMessage.ignored("JOB_RELATED_NOTICE");
         }
 
         List<ParsedJobCandidate> candidates = extractJobCandidates(text);
@@ -189,13 +204,20 @@ public class MattermostIngestionService {
 
     private Optional<String> findRecruitmentUrlNear(List<String> lines, int listingLineIndex) {
         int lastIndex = Math.min(lines.size() - 1, listingLineIndex + 2);
-        for (int index = listingLineIndex; index <= lastIndex; index++) {
+        for (int index = listingLineIndex + 1; index <= lastIndex; index++) {
             Matcher matcher = URL_PATTERN.matcher(lines.get(index));
             if (matcher.find()) {
-                String url = cleanUrl(matcher.group());
+                String url = normalizeUrl(matcher.group());
                 if (isRecruitmentUrl(url)) {
                     return Optional.of(url);
                 }
+            }
+        }
+        Matcher matcher = URL_PATTERN.matcher(lines.get(listingLineIndex));
+        if (matcher.find()) {
+            String url = normalizeUrl(matcher.group());
+            if (isRecruitmentUrl(url)) {
+                return Optional.of(url);
             }
         }
         return Optional.empty();
@@ -238,6 +260,61 @@ public class MattermostIngestionService {
         return matcher.find() ? Optional.of(matcher.group(1)) : Optional.empty();
     }
 
+    private Optional<String> extractPostedAt(MattermostWebhookRequest request) {
+        Optional<String> direct = normalizePostedAt(request.postedAt());
+        if (direct.isPresent()) {
+            return direct;
+        }
+        if (request.rawPayload() == null) {
+            return Optional.empty();
+        }
+        for (String key : List.of("timestamp", "create_at", "post_create_at", "postCreateAt", "posted_at")) {
+            Optional<String> value = normalizePostedAt(request.rawPayload().get(key));
+            if (value.isPresent()) {
+                return value;
+            }
+        }
+        return Optional.empty();
+    }
+
+    private Optional<String> normalizePostedAt(Object value) {
+        if (value == null) {
+            return Optional.empty();
+        }
+        if (value instanceof Number number) {
+            long raw = number.longValue();
+            Instant instant = raw > 10_000_000_000L ? Instant.ofEpochMilli(raw) : Instant.ofEpochSecond(raw);
+            return Optional.of(LocalDateTime.ofInstant(instant, ZoneId.systemDefault()).format(POSTED_AT_FORMAT));
+        }
+
+        String text = value.toString().trim();
+        if (text.isBlank()) {
+            return Optional.empty();
+        }
+        if (text.matches("\\d+")) {
+            return normalizePostedAt(Long.parseLong(text));
+        }
+        try {
+            return Optional.of(LocalDateTime.parse(text.replace(" ", "T")).format(POSTED_AT_FORMAT));
+        } catch (DateTimeParseException ignored) {
+            // Try ISO instant below.
+        }
+        try {
+            return Optional.of(LocalDateTime.ofInstant(Instant.parse(text), ZoneId.systemDefault()).format(POSTED_AT_FORMAT));
+        } catch (DateTimeParseException ignored) {
+            return Optional.empty();
+        }
+    }
+
+    private boolean isNoticeChannel(MattermostWebhookRequest request) {
+        String channelId = safeText(request.channelId()).toLowerCase(Locale.ROOT);
+        if (channelId.contains("notice")) {
+            return true;
+        }
+        Object channelName = request.rawPayload() == null ? null : request.rawPayload().get("channel_name");
+        return channelName != null && channelName.toString().contains("공지");
+    }
+
     private Optional<Long> findMessageId(String messageId) {
         if (mattermostMapper != null) {
             return mattermostMapper.findMessageId(messageId);
@@ -255,6 +332,21 @@ public class MattermostIngestionService {
         }
         row.setId(inMemoryIds.getAndIncrement());
         inMemoryMessages.add(row);
+    }
+
+    private void updateMessagePostedAtIfMissing(String messageId, String postedAt) {
+        if (postedAt == null || postedAt.isBlank()) {
+            return;
+        }
+        if (mattermostMapper != null) {
+            mattermostMapper.updateMessagePostedAtIfMissing(messageId, postedAt);
+            return;
+        }
+        inMemoryMessages.stream()
+            .filter(row -> row.getMessageId().equals(messageId))
+            .filter(row -> row.getPostedAt() == null || row.getPostedAt().isBlank())
+            .findFirst()
+            .ifPresent(row -> row.setPostedAt(postedAt));
     }
 
     private void insertParsedJobPost(MattermostParsedJobPostRow row) {
@@ -304,6 +396,11 @@ public class MattermostIngestionService {
 
     private String cleanUrl(String url) {
         return url.replaceAll("[\\]),.]+$", "");
+    }
+
+    private String normalizeUrl(String url) {
+        String cleaned = cleanUrl(url);
+        return cleaned.matches("(?i)^https?://.*") ? cleaned : "https://" + cleaned;
     }
 
     private String toJson(Map<String, Object> payload) {

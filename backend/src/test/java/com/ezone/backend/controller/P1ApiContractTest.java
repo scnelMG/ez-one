@@ -30,6 +30,7 @@ import com.ezone.backend.service.InMemoryHistoryService;
 import com.ezone.backend.service.InMemoryP1WorkspaceService;
 import com.ezone.backend.service.InMemoryProfileService;
 import com.ezone.backend.service.MattermostIngestionService;
+import com.ezone.backend.service.MattermostRecommendationService;
 import com.ezone.backend.service.NotionIntegrationService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -76,7 +77,10 @@ import org.springframework.test.web.servlet.MockMvc;
 })
 @WithMockUser(username = "1")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
-@TestPropertySource(properties = "mattermost.webhook.secret=test-mm-secret")
+@TestPropertySource(properties = {
+    "mattermost.webhook.secret=test-mm-secret",
+    "mattermost.webhook.secrets=test-mm-secret,channel-two-secret"
+})
 class P1ApiContractTest {
 
     @Autowired
@@ -97,6 +101,9 @@ class P1ApiContractTest {
     @MockitoBean
     private DocumentProfileMapper documentProfileMapper;
 
+    @MockitoBean
+    private MattermostRecommendationService mattermostRecommendationService;
+
     @BeforeEach
     void setUp() {
         when(userAccountMapper.findById(1L)).thenReturn(Optional.of(new UserAccount(
@@ -114,6 +121,7 @@ class P1ApiContractTest {
             "2026-06-17T10:00:00"
         )));
         when(documentProfileMapper.findLastSavedAt(1L)).thenReturn(Optional.of("2026-06-17T10:00:00"));
+        when(mattermostRecommendationService.listOpenRecommendations(1L)).thenReturn(List.of());
     }
 
     @Test
@@ -1060,6 +1068,58 @@ class P1ApiContractTest {
             .andExpect(jsonPath("$.data.messageType").value("JOB_POSTING"))
             .andExpect(jsonPath("$.data.parseStatus").value("PARSED"))
             .andExpect(jsonPath("$.data.createdParsedJobPost").value(true));
+    }
+
+    @Test
+    void mattermostWebhookAcceptsAnyConfiguredChannelToken() throws Exception {
+        mockMvc.perform(post("/api/integrations/mattermost/webhook")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "token": "channel-two-secret",
+                      "channel_id": "jobs-channel-two",
+                      "post_id": "mm-contract-channel-2",
+                      "user_name": "recruiter",
+                      "text": "카카오 / Backend Developer / -D-5\\nhttps://careers.kakao.com/jobs/105",
+                      "attachments": []
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.messageType").value("JOB_POSTING"))
+            .andExpect(jsonPath("$.data.parseStatus").value("PARSED"))
+            .andExpect(jsonPath("$.data.createdParsedJobPost").value(true));
+
+        mockMvc.perform(post("/api/integrations/mattermost/webhook")
+                .header("X-MM-Webhook-Secret", "channel-two-secret")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "channel_id": "jobs-channel-two",
+                      "post_id": "mm-contract-channel-2-header",
+                      "user_name": "recruiter",
+                      "text": "네이버 / Platform Engineer / -D-4\\nhttps://recruit.navercorp.com/jobs/104",
+                      "attachments": []
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.messageType").value("JOB_POSTING"))
+            .andExpect(jsonPath("$.data.parseStatus").value("PARSED"))
+            .andExpect(jsonPath("$.data.createdParsedJobPost").value(true));
+
+        mockMvc.perform(post("/api/integrations/mattermost/webhook")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "token": "wrong-secret",
+                      "channel_id": "jobs-channel-two",
+                      "post_id": "mm-contract-channel-2-wrong",
+                      "user_name": "recruiter",
+                      "text": "라인 / Server Developer / -D-3\\nhttps://careers.linecorp.com/jobs/103",
+                      "attachments": []
+                    }
+                    """))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.success").value(false));
     }
 
     @Test
