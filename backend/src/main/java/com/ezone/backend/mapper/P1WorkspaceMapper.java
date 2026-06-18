@@ -28,6 +28,32 @@ public interface P1WorkspaceMapper {
         @Param("homepageUrl") String homepageUrl
     );
 
+    void upsertOfficialCompanyProfile(
+        @Param("companyId") Long companyId,
+        @Param("industry") String industry,
+        @Param("homepageUrl") String homepageUrl,
+        @Param("sourcePriority") String sourcePriority,
+        @Param("foundedAt") String foundedAt,
+        @Param("representative") String representative,
+        @Param("businessSummary") String businessSummary,
+        @Param("address") String address
+    );
+
+    void updateCompanyClassification(
+        @Param("companyId") Long companyId,
+        @Param("domain") String domain,
+        @Param("companyType") String companyType,
+        @Param("size") String size
+    );
+
+    void recordCompanyProfileSource(
+        @Param("companyId") Long companyId,
+        @Param("sourceType") String sourceType,
+        @Param("sourceName") String sourceName,
+        @Param("sourceUrl") String sourceUrl,
+        @Param("licenseNote") String licenseNote
+    );
+
     void recordCompanyInfoSource(
         @Param("companyId") Long companyId,
         @Param("sourceName") String sourceName,

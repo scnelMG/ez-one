@@ -40,6 +40,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,12 +50,20 @@ import org.springframework.transaction.annotation.Transactional;
 @Profile("mysql")
 public class MyBatisP1WorkspaceService implements P1WorkspaceService {
 
+    private static final Logger log = LoggerFactory.getLogger(MyBatisP1WorkspaceService.class);
+
     private final P1WorkspaceMapper mapper;
     private final ActivityMapper activityMapper;
+    private final RealtimeCompanyEnrichmentService realtimeCompanyEnrichmentService;
 
-    public MyBatisP1WorkspaceService(P1WorkspaceMapper mapper, ActivityMapper activityMapper) {
+    public MyBatisP1WorkspaceService(
+        P1WorkspaceMapper mapper,
+        ActivityMapper activityMapper,
+        RealtimeCompanyEnrichmentService realtimeCompanyEnrichmentService
+    ) {
         this.mapper = mapper;
         this.activityMapper = activityMapper;
+        this.realtimeCompanyEnrichmentService = realtimeCompanyEnrichmentService;
     }
 
     @Override
@@ -129,26 +139,26 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         if (request.companyId() != null) {
             job.setCompanyId(request.companyId());
             job.setCompanyName(request.companyName());
-            CompanyDetailDefaults.CompanyDefaults defaults = applyCompanyDetailDefaults(job, request.companyName(), request.sourceUrl());
+            CompanyEnrichment enrichment = applyCompanyEnrichment(job, request.companyName(), request.sourceUrl());
             applyCompanyLogoCandidate(job, request.sourceUrl(), request.logoUrl());
             job.setPositionTitle(request.positionTitle());
             job.setDeadlineLabel(normalizeDeadline(request.deadlineLabel()));
             job.setSourceUrl(request.sourceUrl());
             job.setSource(normalizeJobSource(request.savedSource()));
             // No need to upsertCompany if companyId is provided, just record info and insert job
-            upsertRuleBasedCompanyProfile(job, defaults);
+            upsertCompanyProfile(job, enrichment);
             recordUnverifiedCompanyInfoSource(job);
             mapper.insertJob(job);
         } else {
             job.setCompanyName(request.companyName());
-            CompanyDetailDefaults.CompanyDefaults defaults = applyCompanyDetailDefaults(job, request.companyName(), request.sourceUrl());
+            CompanyEnrichment enrichment = applyCompanyEnrichment(job, request.companyName(), request.sourceUrl());
             applyCompanyLogoCandidate(job, request.sourceUrl(), request.logoUrl());
             job.setPositionTitle(request.positionTitle());
             job.setDeadlineLabel(normalizeDeadline(request.deadlineLabel()));
             job.setSourceUrl(request.sourceUrl());
             job.setSource(normalizeJobSource(request.savedSource()));
             mapper.upsertCompany(job);
-            upsertRuleBasedCompanyProfile(job, defaults);
+            upsertCompanyProfile(job, enrichment);
             recordUnverifiedCompanyInfoSource(job);
             mapper.insertJob(job);
         }
@@ -206,19 +216,101 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         mapper.insertEssayDraft(question);
     }
 
-    private CompanyDetailDefaults.CompanyDefaults applyCompanyDetailDefaults(JobRow job, String companyName, String sourceUrl) {
+    private CompanyEnrichment applyCompanyEnrichment(JobRow job, String companyName, String sourceUrl) {
+        Optional<OfficialCompanyRegistry.OfficialCompany> official = OfficialCompanyRegistry.resolve(companyName);
+        if (official.isPresent()) {
+            OfficialCompanyRegistry.OfficialCompany company = official.get();
+            job.setCompanyDomain(company.domain());
+            job.setCompanyType(company.companyType());
+            job.setCompanySize(company.size());
+            return new CompanyEnrichment(null, company);
+        }
+
         CompanyDetailDefaults.CompanyDefaults defaults = CompanyDetailDefaults.resolve(companyName, sourceUrl);
         job.setCompanyDomain(defaults.domain());
         job.setCompanyType(defaults.companyType());
         job.setCompanySize(defaults.size());
-        return defaults;
+        return new CompanyEnrichment(defaults, null);
     }
 
-    private void upsertRuleBasedCompanyProfile(JobRow job, CompanyDetailDefaults.CompanyDefaults defaults) {
-        if (job.getCompanyId() == null || CompanyDetailDefaults.UNKNOWN_DOMAIN.equals(defaults.domain())) {
+    private void upsertCompanyProfile(JobRow job, CompanyEnrichment enrichment) {
+        if (job.getCompanyId() == null) {
             return;
         }
-        mapper.upsertRuleBasedCompanyProfile(job.getCompanyId(), defaults.industry(), defaults.domain());
+        if (enrichment.official() != null) {
+            OfficialCompanyRegistry.OfficialCompany official = enrichment.official();
+            mapper.upsertOfficialCompanyProfile(
+                job.getCompanyId(),
+                official.industry(),
+                official.homepageUrl(),
+                "OFFICIAL_CLASSIFICATION",
+                null,
+                null,
+                null,
+                null
+            );
+            mapper.recordCompanyProfileSource(
+                job.getCompanyId(),
+                official.sourceType(),
+                official.sourceName(),
+                official.sourceUrl(),
+                official.sourceNote()
+            );
+            return;
+        }
+        if (applyRealtimeCompanyEnrichment(job)) {
+            return;
+        }
+        mapper.upsertRuleBasedCompanyProfile(
+            job.getCompanyId(),
+            enrichment.defaults().industry(),
+            enrichment.defaults().domain()
+        );
+    }
+
+    private boolean applyRealtimeCompanyEnrichment(JobRow job) {
+        try {
+            Optional<RealtimeCompanyEnrichment> enrichment = realtimeCompanyEnrichmentService.enrich(job.getCompanyName());
+            if (enrichment.isEmpty()) {
+                return false;
+            }
+
+            RealtimeCompanyEnrichment official = enrichment.get();
+            job.setCompanyDomain(official.domain());
+            job.setCompanyType(official.companyType());
+            job.setCompanySize(official.size());
+            mapper.updateCompanyClassification(
+                job.getCompanyId(),
+                official.domain(),
+                official.companyType(),
+                official.size()
+            );
+            mapper.upsertOfficialCompanyProfile(
+                job.getCompanyId(),
+                official.industry(),
+                official.homepageUrl(),
+                "REALTIME_OFFICIAL_API",
+                official.foundedAt(),
+                official.representative(),
+                official.businessSummary(),
+                official.address()
+            );
+            mapper.recordCompanyProfileSource(
+                job.getCompanyId(),
+                official.sourceType(),
+                official.sourceName(),
+                official.sourceUrl(),
+                official.sourceNote()
+            );
+            return true;
+        } catch (RuntimeException exception) {
+            log.warn(
+                "Realtime company enrichment failed for {}: {}",
+                job.getCompanyName(),
+                exception.getMessage()
+            );
+            return false;
+        }
     }
 
     private void applyCompanyLogoCandidate(JobRow job, String sourceUrl, String logoUrl) {
@@ -252,13 +344,13 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         JobRow job = new JobRow();
         job.setId(current.getJobId());
         job.setCompanyName(request.companyName());
-        CompanyDetailDefaults.CompanyDefaults defaults = applyCompanyDetailDefaults(job, request.companyName(), request.sourceUrl());
+        CompanyEnrichment enrichment = applyCompanyEnrichment(job, request.companyName(), request.sourceUrl());
         applyCompanyLogoCandidate(job, request.sourceUrl(), null);
         job.setPositionTitle(request.positionTitle());
         job.setDeadlineLabel(normalizeDeadline(request.deadlineLabel()));
         job.setSourceUrl(request.sourceUrl());
         mapper.upsertCompany(job);
-        upsertRuleBasedCompanyProfile(job, defaults);
+        upsertCompanyProfile(job, enrichment);
         recordUnverifiedCompanyInfoSource(job);
         if (mapper.updateJob(job) == 0) {
             throw new IllegalArgumentException("Basket job not found");
@@ -270,6 +362,12 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
             mapper.markBasketJobInProgress(userId, basketJobId);
         }
         return getBasketJob(userId, basketJobId);
+    }
+
+    private record CompanyEnrichment(
+        CompanyDetailDefaults.CompanyDefaults defaults,
+        OfficialCompanyRegistry.OfficialCompany official
+    ) {
     }
 
     @Override

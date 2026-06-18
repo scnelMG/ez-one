@@ -38,6 +38,18 @@ public-data:
   api:
     key: ${PUBLIC_DATA_API_KEY:}
 
+company-enrichment:
+  realtime:
+    enabled: ${COMPANY_ENRICHMENT_REALTIME_ENABLED:true}
+  public-institution:
+    url: ${PUBLIC_INSTITUTION_API_URL:http://apis.data.go.kr/1051000/public_inst/list}
+  large-enterprise-affiliate:
+    url: ${FTC_AFFILIATE_API_URL:http://apis.data.go.kr/1130000/appnGroupAffiList/appnGroupAffiListApi}
+    presentn-year: ${FTC_PRESENTN_YEAR:}
+    max-pages: ${FTC_AFFILIATE_MAX_PAGES:50}
+  middle-market:
+    url: ${MIDDLE_MARKET_API_URL:}
+
 mybatis:
   mapper-locations: classpath:mapper/**/*.xml
 

@@ -73,43 +73,28 @@
           <div class="workspace-section-title">
             <h2>기업정보</h2>
           </div>
-          <dl class="info-grid compact">
-            <div>
-              <dt>기업유형</dt>
-              <dd>{{ companyTypeLabel }}</dd>
-            </div>
-            <div>
-              <dt>사원수</dt>
-              <dd>{{ displayValue(workspaceStore.workspace.companyDetails?.employeeCount) }}</dd>
-            </div>
-            <div>
-              <dt>설립일</dt>
-              <dd>{{ displayValue(workspaceStore.workspace.companyDetails?.foundedAt) }}</dd>
-            </div>
-            <div>
-              <dt>홈페이지</dt>
+          <dl v-if="availableCompanyInfoRows.length" class="info-grid compact">
+            <div
+              v-for="row in availableCompanyInfoRows"
+              :key="row.key"
+              :class="{ 'wide-info-row': row.wide }"
+            >
+              <dt>{{ row.label }}</dt>
               <dd>
                 <a
-                  v-if="companyHomepageUrl"
+                  v-if="row.href"
                   class="info-link"
-                  :href="companyHomepageUrl"
+                  :href="row.href"
                   target="_blank"
                   rel="noreferrer"
                 >
-                  {{ companyHomepageLabel }}
+                  {{ row.value }}
                 </a>
-                <span v-else>-</span>
+                <span v-else>{{ row.value }}</span>
               </dd>
             </div>
-            <div class="wide-info-row">
-              <dt>주요사업</dt>
-              <dd>{{ displayValue(cleanCompanyBusiness) }}</dd>
-            </div>
-            <div class="wide-info-row">
-              <dt>주소</dt>
-              <dd>{{ displayValue(workspaceStore.workspace.companyDetails?.address) }}</dd>
-            </div>
           </dl>
+          <p v-else class="company-info-empty">공식 API에서 확인된 기업 상세 정보가 아직 없습니다.</p>
         </article>
       </section>
 
@@ -687,7 +672,7 @@ const companyTypeLabel = computed(() => {
 const companyHomepageLabel = computed(() => normalizeCompanyValue(companyDetails.value.homepage ?? companyDetails.value.domain));
 const companyHomepageUrl = computed(() => {
   const homepage = companyHomepageLabel.value;
-  if (!homepage || homepage === '-') return '';
+  if (!visibleCompanyInfoValue(homepage)) return '';
   return /^https?:\/\//i.test(homepage) ? homepage : `https://${homepage}`;
 });
 const cleanCompanyBusiness = computed(() => {
@@ -696,6 +681,53 @@ const cleanCompanyBusiness = computed(() => {
   const looksLikeMetadataOnly = /대표자\s*:|설립일\s*:|주소\s*:|홈페이지\s*:/u.test(business);
   return looksLikeMetadataOnly ? '' : business;
 });
+const availableCompanyInfoRows = computed(() => [
+  {
+    key: 'type',
+    label: '기업유형',
+    value: companyTypeLabel.value
+  },
+  {
+    key: 'industry',
+    label: '산업/분야',
+    value: normalizeCompanyValue(companyDetails.value.industry)
+  },
+  {
+    key: 'employeeCount',
+    label: '사원수',
+    value: formatEmployeeCount(companyDetails.value.employeeCount)
+  },
+  {
+    key: 'foundedAt',
+    label: '설립일',
+    value: normalizeCompanyValue(companyDetails.value.foundedAt)
+  },
+  {
+    key: 'representative',
+    label: '대표자',
+    value: normalizeCompanyValue(companyDetails.value.representative)
+  },
+  {
+    key: 'homepage',
+    label: '홈페이지',
+    value: companyHomepageLabel.value,
+    href: companyHomepageUrl.value
+  },
+  {
+    key: 'business',
+    label: '주요정보',
+    value: cleanCompanyBusiness.value,
+    wide: true
+  },
+  {
+    key: 'address',
+    label: '주소',
+    value: normalizeCompanyValue(companyDetails.value.address),
+    wide: true
+  }
+]
+  .map((row) => ({ ...row, value: visibleCompanyInfoValue(row.value) }))
+  .filter((row) => row.value));
 const workspaceStatusClass = computed(() => statusClassFromLabel(workspaceStore.workspace?.statusLabel));
 const currentQuestionVersions = computed(() => {
   if (!currentQuestion.value) return [];
@@ -826,6 +858,21 @@ function normalizeCompanyValue(value) {
 
 function displayValue(value) {
   return normalizeCompanyValue(value) || '-';
+}
+
+function visibleCompanyInfoValue(value) {
+  const normalized = normalizeCompanyValue(value);
+  if (!normalized) return '';
+  const lowered = normalized.toLowerCase();
+  if (['-', '미확인', 'unverified', 'unknown'].includes(lowered)) return '';
+  return normalized;
+}
+
+function formatEmployeeCount(value) {
+  const normalized = normalizeCompanyValue(value);
+  if (!normalized) return '';
+  const numeric = Number(normalized);
+  return Number.isFinite(numeric) ? `${numeric.toLocaleString('ko-KR')}명` : normalized;
 }
 
 function statusClassFromLabel(label) {

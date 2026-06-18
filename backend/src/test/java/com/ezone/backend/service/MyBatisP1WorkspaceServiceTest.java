@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.groups.Tuple.tuple;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -31,6 +32,9 @@ class MyBatisP1WorkspaceServiceTest {
 
     @Mock
     private ActivityMapper activityMapper;
+
+    @Mock
+    private RealtimeCompanyEnrichmentService realtimeCompanyEnrichmentService;
 
     @InjectMocks
     private MyBatisP1WorkspaceService service;
@@ -83,7 +87,134 @@ class MyBatisP1WorkspaceServiceTest {
                 && "대기업".equals(row.getCompanyType())
                 && "대기업".equals(row.getCompanySize())
         ));
-        verify(mapper).upsertRuleBasedCompanyProfile(10L, "금융", "kakaobank.com");
+        verify(mapper).upsertOfficialCompanyProfile(
+            10L,
+            "금융",
+            "https://www.kakaobank.com",
+            "OFFICIAL_CLASSIFICATION",
+            null,
+            null,
+            null,
+            null
+        );
+    }
+
+    @Test
+    void createBasketJobPrefersOfficialCompanyClassificationOverJobBoardUrl() {
+        String sourceUrl = "https://jasoseol.com/recruit?ec=104614";
+        String positionTitle = "인턴 · 정보보호 데이터 엔지니어";
+        when(mapper.findDuplicateBasketJob(1L, "카카오뱅크", sourceUrl, positionTitle)).thenReturn(Optional.empty());
+        stubCreateBasketPersistence(10L, 20L, 30L, 40L);
+
+        service.createBasketJob(1L, new CreateBasketJobRequest(
+            null,
+            "카카오뱅크",
+            positionTitle,
+            "2026.07.03",
+            sourceUrl,
+            "",
+            "MANUAL"
+        ));
+
+        verify(mapper).upsertCompany(argThat(row ->
+            "카카오뱅크".equals(row.getCompanyName())
+                && "kakaobank.com".equals(row.getCompanyDomain())
+                && "대기업".equals(row.getCompanyType())
+                && "대기업".equals(row.getCompanySize())
+        ));
+        verify(mapper).upsertOfficialCompanyProfile(
+            10L,
+            "금융",
+            "https://www.kakaobank.com",
+            "OFFICIAL_CLASSIFICATION",
+            null,
+            null,
+            null,
+            null
+        );
+        verify(mapper).recordCompanyProfileSource(
+            10L,
+            "FTC_BUSINESS_GROUP",
+            "공정거래위원회 기업집단포털",
+            "https://www.egroup.go.kr/",
+            "공시대상기업집단 소속회사 기준"
+        );
+    }
+
+    @Test
+    void createBasketJobEnrichesUnknownCompanyFromRealtimeOfficialProvider() {
+        String sourceUrl = "https://jasoseol.com/recruit?rec=777";
+        String positionTitle = "데이터 분석가";
+        when(mapper.findDuplicateBasketJob(1L, "새공공기관", sourceUrl, positionTitle)).thenReturn(Optional.empty());
+        when(realtimeCompanyEnrichmentService.enrich("새공공기관")).thenReturn(Optional.of(
+            new RealtimeCompanyEnrichment(
+                "public.example.or.kr",
+                "공공기관",
+                "공공기관",
+                "공공",
+                "https://public.example.or.kr",
+                "1961-07-01",
+                null,
+                "기관유형: 공기업(시장형) · 주무부처: 기후에너지환경부 · 분야: 공공",
+                "전라남도 나주시 전력로 55",
+                "ALIO_PUBLIC_INSTITUTION",
+                "ALIO 공공기관 경영정보 공개시스템",
+                "https://alio.go.kr/",
+                "공공기관 경영정보 공개시스템 기준"
+            )
+        ));
+        stubCreateBasketPersistence(10L, 20L, 30L, 40L);
+
+        service.createBasketJob(1L, new CreateBasketJobRequest(
+            null,
+            "새공공기관",
+            positionTitle,
+            "D-10",
+            sourceUrl,
+            "",
+            "MANUAL"
+        ));
+
+        verify(mapper).updateCompanyClassification(10L, "public.example.or.kr", "공공기관", "공공기관");
+        verify(mapper).upsertOfficialCompanyProfile(
+            10L,
+            "공공",
+            "https://public.example.or.kr",
+            "REALTIME_OFFICIAL_API",
+            "1961-07-01",
+            null,
+            "기관유형: 공기업(시장형) · 주무부처: 기후에너지환경부 · 분야: 공공",
+            "전라남도 나주시 전력로 55"
+        );
+        verify(mapper).recordCompanyProfileSource(
+            10L,
+            "ALIO_PUBLIC_INSTITUTION",
+            "ALIO 공공기관 경영정보 공개시스템",
+            "https://alio.go.kr/",
+            "공공기관 경영정보 공개시스템 기준"
+        );
+    }
+
+    @Test
+    void createBasketJobDoesNotFailWhenRealtimeEnrichmentFails() {
+        String sourceUrl = "https://careers.example.com/jobs/data";
+        String positionTitle = "Data Analyst";
+        when(mapper.findDuplicateBasketJob(1L, "Example Unknown", sourceUrl, positionTitle)).thenReturn(Optional.empty());
+        doThrow(new IllegalStateException("api timeout")).when(realtimeCompanyEnrichmentService).enrich("Example Unknown");
+        stubCreateBasketPersistence(10L, 20L, 30L, 40L);
+
+        service.createBasketJob(1L, new CreateBasketJobRequest(
+            null,
+            "Example Unknown",
+            positionTitle,
+            "D-10",
+            sourceUrl,
+            "",
+            "MANUAL"
+        ));
+
+        verify(mapper).upsertRuleBasedCompanyProfile(10L, "미확인", "careers.example.com");
+        verify(mapper).insertBasketJob(org.mockito.ArgumentMatchers.any());
     }
 
     @Test
@@ -146,7 +277,16 @@ class MyBatisP1WorkspaceServiceTest {
                 && "대기업".equals(row.getCompanyType())
                 && "https://static.example.com/line-logo.png".equals(row.getCompanyLogoUrl())
         ));
-        verify(mapper).upsertRuleBasedCompanyProfile(10L, "IT/플랫폼", "line.me");
+        verify(mapper).upsertOfficialCompanyProfile(
+            10L,
+            "IT/플랫폼",
+            "https://line.me",
+            "OFFICIAL_CLASSIFICATION",
+            null,
+            null,
+            null,
+            null
+        );
     }
 
     private void stubCreateBasketPersistence(Long companyId, Long jobId, Long basketJobId, Long workspaceId) {

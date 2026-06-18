@@ -119,6 +119,79 @@
       homepage_url = COALESCE(NULLIF(homepage_url, ''), VALUES(homepage_url))
   </insert>
 
+  <insert id="upsertOfficialCompanyProfile">
+    INSERT INTO company_profiles (
+      company_id,
+      industry,
+      homepage_url,
+      source_priority,
+      founded_at,
+      ceo_name,
+      profile_summary,
+      address,
+      source_updated_at,
+      created_at
+    )
+    VALUES (
+      #{companyId},
+      #{industry},
+      #{homepageUrl},
+      #{sourcePriority},
+      #{foundedAt},
+      #{representative},
+      #{businessSummary},
+      #{address},
+      CURRENT_TIMESTAMP,
+      CURRENT_TIMESTAMP
+    )
+    ON DUPLICATE KEY UPDATE
+      industry = VALUES(industry),
+      homepage_url = COALESCE(NULLIF(VALUES(homepage_url), ''), homepage_url),
+      founded_at = COALESCE(VALUES(founded_at), founded_at),
+      ceo_name = COALESCE(NULLIF(VALUES(ceo_name), ''), ceo_name),
+      profile_summary = COALESCE(NULLIF(VALUES(profile_summary), ''), profile_summary),
+      address = COALESCE(NULLIF(VALUES(address), ''), address),
+      source_priority = VALUES(source_priority),
+      source_updated_at = CURRENT_TIMESTAMP
+  </insert>
+
+  <update id="updateCompanyClassification">
+    UPDATE companies
+    SET domain = CASE
+          WHEN #{domain} IS NULL OR #{domain} = '' THEN domain
+          WHEN domain IS NULL OR domain = '' OR domain = 'unknown' THEN #{domain}
+          WHEN domain = 'jasoseol.com' OR domain = 'www.jasoseol.com' OR domain LIKE '%.jasoseol.com' THEN #{domain}
+          ELSE domain
+        END,
+        company_type = COALESCE(NULLIF(#{companyType}, ''), company_type),
+        size = COALESCE(NULLIF(#{size}, ''), size),
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = #{companyId}
+  </update>
+
+  <insert id="recordCompanyProfileSource">
+    INSERT INTO company_profile_sources (
+      company_id,
+      source_type,
+      source_name,
+      source_url,
+      license_note,
+      collected_at
+    )
+    VALUES (
+      #{companyId},
+      #{sourceType},
+      #{sourceName},
+      #{sourceUrl},
+      #{licenseNote},
+      CURRENT_TIMESTAMP
+    )
+    ON DUPLICATE KEY UPDATE
+      source_name = VALUES(source_name),
+      license_note = VALUES(license_note),
+      collected_at = VALUES(collected_at)
+  </insert>
+
   <insert id="recordCompanyInfoSource">
     INSERT INTO company_info_sources (company_id, source_name, source_url, status, collected_at, created_at)
     VALUES (#{companyId}, #{sourceName}, #{sourceUrl}, #{status}, NULL, CURRENT_TIMESTAMP)

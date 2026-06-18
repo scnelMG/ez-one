@@ -71,9 +71,13 @@ describe('WorkspacePage', () => {
                 domain: 'naver.com',
                 companyType: '대기업',
                 size: '1,000명 이상',
-                rating: 4.2,
-                startingSalary: 5000,
-                financialStatus: 'stable'
+                financialStatus: 'collected',
+                industry: '대기업집단',
+                foundedAt: '1999.06.02',
+                representative: '최수연',
+                homepage: 'https://www.navercorp.com',
+                business: '기업집단: 네이버',
+                address: '경기도 성남시 분당구 정자동'
             },
             questions: [
                 {
@@ -192,11 +196,41 @@ describe('WorkspacePage', () => {
         expect(wrapper.text()).toContain('지원 워크스페이스');
         expect(wrapper.text()).toContain('Naver');
         expect(wrapper.text()).toContain('Backend Engineer');
-        expect(wrapper.text()).toContain('naver.com');
         expect(wrapper.get('.workspace-info-panel').text()).toContain('지원정보');
         expect(wrapper.get('.workspace-info-panel').text()).toContain('기업정보');
+        expect(wrapper.get('.workspace-info-panel').text()).toContain('산업/분야');
+        expect(wrapper.get('.workspace-info-panel').text()).toContain('대기업집단');
+        expect(wrapper.get('.workspace-info-panel').text()).toContain('최수연');
+        expect(wrapper.get('.workspace-info-panel').text()).toContain('기업집단: 네이버');
+        expect(wrapper.get('.workspace-info-panel').text()).not.toContain('사원수');
         expect(wrapper.get('[data-testid="workspace-bottom-tabs"]').text()).toContain('도화지');
         expect(wrapper.get('[data-testid="workspace-bottom-tabs"]').text()).toContain('자소서 버전관리');
+    });
+
+    it('DATA-002: hides unavailable company fields instead of rendering placeholder rows', async () => {
+        mocks.getWorkspace.mockResolvedValueOnce({
+            id: '102',
+            companyName: 'Unknown Labs',
+            positionTitle: 'Data Analyst',
+            deadlineLabel: 'D-3',
+            statusLabel: '진행 중',
+            sourceUrl: 'https://www.jasoseol.com/',
+            companyDetails: {
+                domain: 'unknown',
+                companyType: '미확인',
+                size: '미확인',
+                financialStatus: 'unverified'
+            },
+            questions: [],
+            references: []
+        });
+
+        const wrapper = await mountWorkspace();
+
+        const companyPanel = wrapper.findAll('.workspace-info-section')[1];
+        expect(companyPanel.text()).toContain('공식 API에서 확인된 기업 상세 정보가 아직 없습니다.');
+        expect(companyPanel.text()).not.toContain('기업유형');
+        expect(companyPanel.text()).not.toContain('홈페이지');
     });
 
     it('WS-011: keeps draft editing on auto-save and removes explicit header save actions', async () => {
