@@ -5,3 +5,7 @@ auth:
   google:
     client-id: test-google-client-id
     client-secret: test-google-client-secret
+
+logging:
+  level:
+    com.ezone.backend.service.MyBatisP1WorkspaceService: ERROR
