@@ -105,3 +105,18 @@ flowchart LR
 - The basket page exposes a `과거 지원 내역` entry point to `/history`.
 - Changing a normal basket job away from `READY` snapshots it into `application_history`. Deleting a basket job only removes it from the active list and does not create history by itself.
 - AI commentary and anonymous percentile comparison are excluded from this implementation.
+
+## 2026-06-19 DART GMS AI Analysis
+
+Requirement: `REF-003`, `JOB-018`, `REF-008`, `AI-004`, `AI-006`.
+
+| Feature | Input | Processing | Output | Failure handling |
+| --- | --- | --- | --- | --- |
+| DART disclosure lookup | workspaceId, workspace company | Verify ownership, resolve OpenDART corp code, fetch recent periodic disclosures | recommended report list | Missing key, empty match, or provider failure returns non-blocking empty/unavailable state |
+| DART AI analysis | selected `rceptNo`, report name, company/job/question context | Check GMS key/credit status, fetch/prepare report text, call GMS OpenAI-compatible `/responses` with structured JSON prompt | evidence cards, appeal points, suggested sentences, cautions, missing info | GMS unavailable blocks analysis only; workspace and manual memo remain usable |
+| DART AI evaluation | structured AI result, selected `rceptNo` | Run deterministic quality gate for source grounding, policy safety, output normalization, and usefulness scoring | improved analysis result or failed analysis | Ungrounded or prohibited output is removed; no valid evidence means `FAILED` |
+| Save DART reference | completed analysisId | Verify same user/workspace, format reviewed result, save via existing reference material flow | `DART` reference material | Failed/foreign analysis cannot be saved |
+
+Prompt rules: use only report-provided facts, include source section and receipt number for core claims, prioritize essay evidence over generic company introduction, and exclude investment advice, stock outlooks, hiring probability, and unsupported claims. The AI result never auto-edits essay drafts.
+
+Evaluation details and regression history are recorded in `docs/34_dart-ai-evaluation.md`.

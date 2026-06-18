@@ -337,3 +337,11 @@
 - Implemented scope: `/history` page, basket-to-history entry point, half-year period filter, standard status summary metrics, company-type aggregation/filtering, imported history rows, archived basket history rows, table search, row navigation to `/workspaces/{workspaceId}`, and separate original posting links.
 - `HISTORY-009` and `HISTORY-010` remain out of scope: no AI summary and no anonymous percentile comparison.
 - Imported history data must not be hardcoded in Flyway migrations. Use `tools/import-history-csv.ps1` to generate reviewed SQL for a specific local account and CSV.
+
+## 2026-06-19 DART GMS AI Analysis Scope Update
+
+- Approved requirement IDs: `REF-003`, `JOB-018`, `REF-008`, `AI-004`, and `AI-006`.
+- The workspace DART board may load OpenDART periodic disclosures, request GMS-backed AI analysis for a selected report, preview source-grounded evidence cards, and save the reviewed result as a `DART` reference material.
+- AI output must not automatically modify essay drafts. Users review the result first and explicitly save it as reference material.
+- Out of scope: investment advice, stock outlooks, hiring probability prediction, automatic essay rewriting, a separate AI server, new frontend framework, or new database engine.
+- OpenDART and GMS failures must not block existing workspace loading or manual DART memo writing.

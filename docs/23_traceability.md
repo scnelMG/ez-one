@@ -82,3 +82,12 @@ Study still needs a formal requirement ID if it remains an active product surfac
 | --- | --- | --- |
 | `DATA-002`, `JOB-016`, `HISTORY-008` | Basket save/update checks the official company registry before internal fallback rules, writes official company type/profile data, and records source provenance in `company_profile_sources`. Existing history-linked companies are backfilled through `V31__backfill_official_company_classifications.sql`. | `MyBatisP1WorkspaceServiceTest` |
 | `DATA-002`, `DATA-004`, `JOB-016`, `HISTORY-008` | Unknown companies saved from basket/recommendation/extension flows attempt realtime official API enrichment after the company row is linked. Successful matches write `REALTIME_OFFICIAL_API` profile data and source provenance; provider failures fall back without blocking save. | `MyBatisP1WorkspaceServiceTest` |
+
+## 2026-06-19 DART GMS AI Analysis Traceability Update
+
+| Requirement | Implementation | Verification |
+| --- | --- | --- |
+| `REF-003`, `JOB-018` | Workspace DART board calls backend OpenDART disclosure lookup for selected workspace company. OpenDART key absence, empty results, and provider failure return a non-blocking unavailable/empty state. | `DartAnalysisServiceTest`, `WorkspacePage.test.js` |
+| `REF-008`, `AI-004`, `AI-006` | GMS-backed DART analysis produces structured evidence cards and appeal material for user review only. Saving requires an explicit user action and creates a `DART` reference material; essay drafts are not auto-mutated. | `DartAnalysisServiceTest`, `workspaceApi.test.js`, `WorkspacePage.test.js` |
+| Workspace ownership | DART disclosure, analysis, read, and save-reference endpoints run through workspace/user ownership checks before returning or saving data. | `DartAnalysisServiceTest` |
+| DART AI output quality | AI output is evaluated through structured JSON, prompt self-check, deterministic source/policy guardrails, score normalization, and regression tests before it can become a completed analysis. See `docs/34_dart-ai-evaluation.md`. | `DartAnalysisQualityEvaluatorTest`, `DartAnalysisServiceTest` |

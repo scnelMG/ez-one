@@ -79,6 +79,14 @@ erDiagram
 | `reference_display_mode` | `FULL_PAGE`, `SIDE_PANEL`, `BOTH` |
 | `source_status` | `NOT_COLLECTED`, `COLLECTED`, `FAILED`, `MANUAL` |
 
+## 2026-06-19 DART GMS AI Analysis Data Note
+
+- Requirement: `REF-003`, `JOB-018`, `REF-008`, `AI-004`, `AI-006`.
+- Current implementation stores reviewed DART AI output in existing `reference_materials` with `reference_type = DART` and `board_name = DART`.
+- OpenDART disclosure lookup and GMS analysis preview are non-blocking integration steps. The initial analysis preview cache is runtime-scoped and does not introduce a required migration.
+- If async processing, durable cache, or cross-session retrieval becomes required, add `dart_analysis_jobs` with `workspace_id`, `company_id`, `rcept_no`, `status`, `model`, `result_json`, `error_message`, `created_at`, and `updated_at`, plus a unique key on `(workspace_id, rcept_no)`.
+- Secrets remain outside the database and are read only from backend environment/configuration.
+
 ## 구현 주의사항
 
 - 모든 사용자 소유 테이블은 API/service에서 ownership을 검증한다.

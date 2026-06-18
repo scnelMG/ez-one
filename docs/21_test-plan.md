@@ -159,3 +159,15 @@
 - `TC-AUTH-WITHDRAW-001`: `P1ApiContractTest.currentUserCanWithdrawAndRevokeSessions` verifies `DELETE /api/me` revokes sessions and anonymizes the user.
 - `TC-SUPPORT-REQUEST-001`: Backend contract tests and frontend `MyPage.test.js`/`supportApi.test.js` verify inquiry and partnership forms call `/api/support/requests` instead of local-only alerts.
 - `TC-STUDY-PERMISSION-UI-001`: `StudyDetailPage.test.js` verifies the page uses the authenticated session email instead of a hardcoded user fallback.
+
+## 2026-06-19 DART GMS AI Analysis Tests
+
+Requirement: `REF-003`, `JOB-018`, `REF-008`, `AI-004`, `AI-006`.
+
+- `TC-DART-API-001`: `DartAnalysisServiceTest` verifies disclosure lookup uses workspace ownership and returns periodic reports without exposing secrets.
+- `TC-DART-GMS-001`: `DartAnalysisServiceTest` verifies missing/exhausted GMS credit blocks analysis while preserving manual DART memo flow.
+- `TC-DART-AI-001`: `DartAnalysisServiceTest` verifies structured evidence cards, appeal points, cautions, and receipt numbers are stored for user review.
+- `TC-DART-AI-EVAL-001`: `DartAnalysisQualityEvaluatorTest` verifies ungrounded cards, prohibited investment/hiring-probability wording, score overflow, and duplicate/blank output are corrected before user review.
+- `TC-DART-REFERENCE-001`: `DartAnalysisServiceTest` verifies completed analysis is saved as `reference_type = DART`, and another user cannot save it.
+- `TC-DART-FRONTEND-001`: `workspaceApi.test.js` verifies DART disclosure, analysis, analysis read, and save-reference endpoint paths.
+- `TC-DART-FRONTEND-002`: `WorkspacePage.test.js` verifies the DART board loads disclosures, renders AI evidence cards, saves only after user action, and does not auto-insert AI text into the essay draft.

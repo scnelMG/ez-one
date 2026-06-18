@@ -370,4 +370,120 @@ describe('workspaceApi', () => {
             url: 'https://example.com/news'
         });
     });
+    it('REF-003/JOB-018/REF-008/AI-006: calls DART disclosure, analysis, and reference endpoints', async () => {
+        const get = vi.fn()
+            .mockResolvedValueOnce({
+                data: {
+                    success: true,
+                    data: {
+                        available: true,
+                        message: null,
+                        disclosures: [
+                            {
+                                rceptNo: '20260330000123',
+                                reportName: '사업보고서',
+                                reportType: 'A001',
+                                receivedDate: '2026-03-30',
+                                corpName: 'Naver',
+                                recommended: true,
+                                sourceUrl: 'https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260330000123'
+                            }
+                        ]
+                    },
+                    error: null
+                }
+            })
+            .mockResolvedValueOnce({
+                data: {
+                    success: true,
+                    data: {
+                        id: 901,
+                        workspaceId: 102,
+                        rceptNo: '20260330000123',
+                        reportName: '사업보고서',
+                        companyName: 'Naver',
+                        status: 'COMPLETED',
+                        model: 'gpt-4.1',
+                        sourceUrl: 'https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260330000123',
+                        result: {
+                            evidenceCards: [],
+                            appealPoints: [],
+                            suggestedSentences: [],
+                            cautions: [],
+                            missingInfo: []
+                        },
+                        errorMessage: null
+                    },
+                    error: null
+                }
+            });
+        const post = vi.fn()
+            .mockResolvedValueOnce({
+                data: {
+                    success: true,
+                    data: {
+                        id: 901,
+                        workspaceId: 102,
+                        rceptNo: '20260330000123',
+                        reportName: '사업보고서',
+                        companyName: 'Naver',
+                        status: 'COMPLETED',
+                        model: 'gpt-4.1',
+                        sourceUrl: 'https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260330000123',
+                        result: {
+                            evidenceCards: [{ title: 'AI', summary: 'AI investment', sourceSection: 'Business', rceptNo: '20260330000123', relevanceScore: 91 }],
+                            appealPoints: ['Use AI platform work as evidence.'],
+                            suggestedSentences: ['I can contribute to reliable AI platforms.'],
+                            cautions: ['Do not add unsupported claims.'],
+                            missingInfo: []
+                        },
+                        errorMessage: null
+                    },
+                    error: null
+                }
+            })
+            .mockResolvedValueOnce({
+                data: {
+                    success: true,
+                    data: {
+                        id: 777,
+                        boardName: 'DART',
+                        referenceType: 'DART',
+                        title: 'DART AI analysis - 사업보고서',
+                        body: 'AI investment',
+                        url: 'https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260330000123'
+                    },
+                    error: null
+                }
+            });
+        const api = createWorkspaceApi({ get, patch: vi.fn(), post });
+
+        const disclosures = await api.listDartDisclosures('102');
+        const analysis = await api.createDartAnalysis('102', {
+            rceptNo: '20260330000123',
+            reportName: '사업보고서',
+            companyName: 'Naver',
+            positionTitle: 'Backend Engineer',
+            essayQuestions: ['Why company?'],
+            documentText: ''
+        });
+        const opened = await api.getDartAnalysis('102', '901');
+        const reference = await api.saveDartAnalysisReference('102', '901');
+
+        expect(get).toHaveBeenNthCalledWith(1, '/api/workspaces/102/dart/disclosures');
+        expect(post).toHaveBeenNthCalledWith(1, '/api/workspaces/102/dart/analyses', {
+            rceptNo: '20260330000123',
+            reportName: '사업보고서',
+            companyName: 'Naver',
+            positionTitle: 'Backend Engineer',
+            essayQuestions: ['Why company?'],
+            documentText: ''
+        });
+        expect(get).toHaveBeenNthCalledWith(2, '/api/workspaces/102/dart/analyses/901');
+        expect(post).toHaveBeenNthCalledWith(2, '/api/workspaces/102/dart/analyses/901/save-reference', {});
+        expect(disclosures.disclosures[0]).toMatchObject({ rceptNo: '20260330000123', recommended: true });
+        expect(analysis.result.evidenceCards[0].sourceSection).toBe('Business');
+        expect(opened.id).toBe('901');
+        expect(reference).toMatchObject({ id: '777', type: 'DART' });
+    });
 });

@@ -6628,6 +6628,117 @@ li {
   color: #7c8795;
 }
 
+.dart-ai-panel {
+  display: grid;
+  gap: 12px;
+  border: 1px solid #dbe4f5;
+  border-radius: 8px;
+  background: #f8fbff;
+  padding: 14px;
+}
+
+.dart-ai-toolbar,
+.dart-ai-actions,
+.dart-analysis-preview header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dart-ai-toolbar strong,
+.dart-analysis-preview strong {
+  color: var(--color-ink);
+  font-weight: 900;
+}
+
+.dart-ai-toolbar p,
+.dart-ai-status {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.84rem;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.dart-disclosure-list {
+  display: grid;
+  gap: 8px;
+}
+
+.dart-disclosure-card {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  border: 1px solid #d8dde8;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--color-ink);
+  padding: 12px;
+  text-align: left;
+}
+
+.dart-disclosure-card.active {
+  border-color: #4d7cff;
+  background: #eef4ff;
+}
+
+.dart-disclosure-card span,
+.dart-analysis-preview header span {
+  justify-self: start;
+  border-radius: 999px;
+  background: #e8eefc;
+  color: #3568e8;
+  font-size: 0.76rem;
+  font-weight: 900;
+  padding: 4px 9px;
+}
+
+.dart-disclosure-card small,
+.dart-evidence-card small {
+  color: #6b7280;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.dart-analysis-preview {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid #dbe4f5;
+  padding-top: 12px;
+}
+
+.dart-evidence-card,
+.dart-analysis-list {
+  display: grid;
+  gap: 6px;
+  border: 1px solid #e1e7f2;
+  border-radius: 8px;
+  background: #fff;
+  padding: 12px;
+}
+
+.dart-evidence-card p,
+.dart-analysis-list ul {
+  margin: 0;
+  color: #475569;
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1.55;
+}
+
+.dart-analysis-list ul {
+  padding-left: 18px;
+}
+
+.dart-ai-status.saved {
+  color: #15803d;
+}
+
+.dart-ai-status.error {
+  color: #b42318;
+}
+
 .dart-section-list {
   display: grid;
   gap: 14px;
