@@ -185,7 +185,6 @@ flowchart TD
     MyPage --> Support[고객지원]
     Support --> Qna[QnA / FAQ]
     Support --> OneToOne[1:1 문의]
-    Support --> Partnership[제휴 문의]
     Support --> Terms[이용약관]
 
     Alert[알림] --> AlertDeadline[공고 마감]

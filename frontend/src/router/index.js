@@ -123,12 +123,6 @@ export const router = createRouter({
             meta: { requiresAuth: true, mypageSection: 'inquiry' }
         },
         {
-            path: '/mypage/partnership',
-            name: 'mypage-partnership',
-            component: MyPage,
-            meta: { requiresAuth: true, mypageSection: 'partnership' }
-        },
-        {
             path: '/mypage/terms',
             name: 'mypage-terms',
             component: MyPage,

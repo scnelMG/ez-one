@@ -184,9 +184,10 @@ History rows are stored in `application_history`. The import process creates lin
 
 - Requirement: `SUPPORT-001`
 - Auth: required
-- `requestType` must be `INQUIRY` or `PARTNERSHIP`.
+- `requestType` must be `INQUIRY`.
+- Required fields are `category`, `title`, and `body`.
 - Created requests start with `status: "RECEIVED"`.
-- Optional partnership fields are `companyName`, `contactName`, `contactEmail`, and `contactPhone`.
+- Public request and response DTOs do not expose legacy business-contact columns.
 
 ## 2026-06-18 Realtime Official Company Enrichment Addendum
 

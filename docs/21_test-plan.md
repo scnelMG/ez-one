@@ -117,11 +117,11 @@
 
 ## 2026-06-06 MVP MyPage Dropdown/Page Tests
 
-- `TC-MYPAGE-DROPDOWN-001`: Header profile trigger opens the mypage dropdown by hover/click and exposes links for account, Notion sync, onboarding, QnA, inquiry, partnership, and terms.
+- `TC-MYPAGE-DROPDOWN-001`: Header profile trigger opens the mypage dropdown by hover/click and exposes links for account, Notion sync, onboarding, QnA, inquiry, and terms.
 - `TC-MYPAGE-ACCOUNT-001`: Account page removes the old left board list and shows profile, Google login account, Notion account mismatch guidance, and account actions.
 - `TC-MYPAGE-NOTION-001`: Notion sync page removes the old left board list, separates Google and Notion accounts, and toggles auto sync items.
 - `TC-MYPAGE-ONBOARDING-001`: Onboarding page saves recommendation preferences from chip-style controls.
-- `TC-MYPAGE-SUPPORT-001`: QnA, 1:1 inquiry, partnership inquiry, and terms routes render as independent mypage support pages.
+- `TC-MYPAGE-SUPPORT-001`: QnA, 1:1 inquiry, and terms routes render as independent mypage support pages. QnA search uses a labeled search input and button filters.
 - `TC-AUTH-SWITCH-ENTRY-001`: Default `/login` hides account switching, while `/login?switch=account` renders the account-switch callout and starts Google OAuth with `prompt=select_account`.
 - `TC-AUTH-OAUTH-STATE-001`: OAuth state is stored by nonce so parallel login tabs or retries do not overwrite each other.
 - `TC-AUTH-OAUTH-CANCEL-001`: Google OAuth error callbacks such as `access_denied` show a clear retry message without calling the backend token exchange.
@@ -157,7 +157,7 @@
 
 - `TC-LAYOUT-FOOTER-001`: `AppLayout.test.js` verifies P1-only global navigation, disabled alert affordance, and production-style footer links/copy.
 - `TC-AUTH-WITHDRAW-001`: `P1ApiContractTest.currentUserCanWithdrawAndRevokeSessions` verifies `DELETE /api/me` revokes sessions and anonymizes the user.
-- `TC-SUPPORT-REQUEST-001`: Backend contract tests and frontend `MyPage.test.js`/`supportApi.test.js` verify inquiry and partnership forms call `/api/support/requests` instead of local-only alerts.
+- `TC-SUPPORT-REQUEST-001`: Backend contract tests and frontend `MyPage.test.js`/`supportApi.test.js` verify inquiry requests call `/api/support/requests`, while retired business-contact payloads are rejected.
 - `TC-STUDY-PERMISSION-UI-001`: `StudyDetailPage.test.js` verifies the page uses the authenticated session email instead of a hardcoded user fallback.
 
 ## 2026-06-19 DART GMS AI Analysis Tests

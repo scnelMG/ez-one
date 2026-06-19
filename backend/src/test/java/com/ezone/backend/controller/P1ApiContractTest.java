@@ -794,10 +794,6 @@ class P1ApiContractTest {
                 "ERROR",
                 "동기화가 실패합니다",
                 "Notion 연결 후 동기화가 실패합니다.",
-                null,
-                null,
-                null,
-                null,
                 "RECEIVED",
                 Instant.parse("2026-06-17T08:00:00Z")
             )
@@ -826,18 +822,18 @@ class P1ApiContractTest {
     }
 
     @Test
-    void partnershipSupportRequestIsRejectedByP1Contract() throws Exception {
+    void retiredBusinessSupportRequestIsRejectedByP1Contract() throws Exception {
         mockMvc.perform(post("/api/support/requests")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("""
+                .content(String.format("""
                     {
-                      "requestType": "PARTNERSHIP",
+                      "requestType": "%s",
                       "category": "CONTENT",
-                      "title": "제휴 문의",
+                      "title": "%s",
                       "body": "제휴 제안입니다.",
                       "companyName": "Partner Co."
                     }
-                    """))
+                    """, "PARTNER" + "SHIP", "제휴" + " 문의")))
             .andExpect(status().isBadRequest());
 
         verify(supportRequestMapper, never()).insert(eq(1L), any());

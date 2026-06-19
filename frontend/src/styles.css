@@ -7237,16 +7237,20 @@ li {
 }
 
 .mypage-page {
-  gap: 22px;
+  gap: 18px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
 }
 
 .mypage-panel {
   display: grid;
   gap: 18px;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background: #fff;
-  padding: clamp(18px, 2.4vw, 28px);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
 }
 
 .account-profile-card,
@@ -7413,13 +7417,22 @@ li {
   gap: 8px;
 }
 
-.faq-filter-row span {
+.faq-filter-button {
   border: 1px solid var(--color-border);
   border-radius: 999px;
   background: #fff;
   color: var(--color-muted);
+  cursor: pointer;
+  font: inherit;
   font-weight: 900;
   padding: 8px 12px;
+}
+
+.faq-filter-button.active,
+.faq-filter-button:hover {
+  border-color: rgba(47, 91, 255, 0.32);
+  background: #eef3ff;
+  color: var(--color-primary-strong);
 }
 
 .faq-row {

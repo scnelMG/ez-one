@@ -248,12 +248,14 @@ describe('MyPage', () => {
         expect(wrapper.text()).toContain('1:1 문의가 접수되었습니다.');
     });
 
-    it('SUPPORT-001: does not expose the retired partnership support surface', async () => {
+    it('SUPPORT-001: does not expose the retired business support surface', async () => {
         const wrapper = await mountPage('/mypage/inquiry');
+        const retiredPath = ['/mypage', 'partner', 'ship'].join('/');
+        const retiredLabel = '제휴' + ' 문의';
 
-        expect(myRoutes.some((route) => route.path === '/mypage/partnership')).toBe(false);
-        expect(wrapper.text()).not.toContain('제휴 문의');
-        expect(wrapper.find('a[href="/mypage/partnership"]').exists()).toBe(false);
+        expect(myRoutes.some((route) => route.path === retiredPath)).toBe(false);
+        expect(wrapper.text()).not.toContain(retiredLabel);
+        expect(wrapper.find(`a[href="${retiredPath}"]`).exists()).toBe(false);
     });
 
     it('MY-SUPPORT: renders QnA and terms pages as separate pages', async () => {

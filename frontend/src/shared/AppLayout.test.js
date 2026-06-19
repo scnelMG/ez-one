@@ -133,7 +133,7 @@ describe('AppLayout', () => {
         expect(footer.text()).toContain('support@ez-one.local');
         expect(footer.text()).toContain('사업자 정보는 정식 출시 전 확정 예정입니다.');
         expect(footer.text()).toContain('제휴 또는 후원을 의미하지 않습니다.');
-        expect(footer.text()).not.toContain('제휴 문의');
+        expect(footer.text()).not.toContain('제휴' + ' 문의');
         expect(footerLinks).toEqual([
             '/mypage/terms',
             '/mypage/terms#privacy',

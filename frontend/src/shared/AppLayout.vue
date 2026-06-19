@@ -101,7 +101,6 @@
         <RouterLink to="/mypage/terms">이용약관</RouterLink>
         <RouterLink to="/mypage/terms#privacy">개인정보 처리 기준</RouterLink>
         <RouterLink to="/mypage/inquiry">고객지원</RouterLink>
-        <RouterLink to="/mypage/partnership">제휴 문의</RouterLink>
       </nav>
       <p class="app-footer-meta">
         운영 문의: <a href="mailto:support@ez-one.local">support@ez-one.local</a>

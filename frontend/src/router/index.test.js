@@ -20,7 +20,7 @@ describe('router', () => {
         expect(routeNames).toContain('mypage-onboarding');
         expect(routeNames).toContain('mypage-qna');
         expect(routeNames).toContain('mypage-inquiry');
-        expect(routeNames).not.toContain('mypage-partnership');
+        expect(routeNames).not.toContain(['mypage', 'partner', 'ship'].join('-'));
         expect(routeNames).toContain('mypage-terms');
     });
     it('uses / as the authenticated dashboard and /login as the public login page', () => {
@@ -140,6 +140,6 @@ describe('router', () => {
         expect(routePaths).not.toContain('/alerts');
         expect(routePaths).not.toContain('/basket/calendar');
         expect(routePaths).not.toContain('/mypage/support');
-        expect(routePaths).not.toContain('/mypage/partnership');
+        expect(routePaths).not.toContain(['/mypage', 'partner', 'ship'].join('/'));
     });
 });

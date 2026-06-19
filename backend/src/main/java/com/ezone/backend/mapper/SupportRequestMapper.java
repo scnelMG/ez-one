@@ -33,10 +33,10 @@ public interface SupportRequestMapper {
             #{request.category},
             #{request.title},
             #{request.body},
-            #{request.companyName},
-            #{request.contactName},
-            #{request.contactEmail},
-            #{request.contactPhone},
+            NULL,
+            NULL,
+            NULL,
+            NULL,
             'RECEIVED',
             CURRENT_TIMESTAMP
         )
@@ -50,10 +50,6 @@ public interface SupportRequestMapper {
             category,
             title,
             body,
-            company_name,
-            contact_name,
-            contact_email,
-            contact_phone,
             status,
             created_at
         FROM support_requests
@@ -66,10 +62,6 @@ public interface SupportRequestMapper {
         @Arg(column = "category", javaType = String.class),
         @Arg(column = "title", javaType = String.class),
         @Arg(column = "body", javaType = String.class),
-        @Arg(column = "company_name", javaType = String.class),
-        @Arg(column = "contact_name", javaType = String.class),
-        @Arg(column = "contact_email", javaType = String.class),
-        @Arg(column = "contact_phone", javaType = String.class),
         @Arg(column = "status", javaType = String.class),
         @Arg(column = "created_at", javaType = java.time.Instant.class)
     })
