@@ -1235,19 +1235,18 @@ legend {
   padding: 9px 0 9px 10px;
 }
 
-.autofill-result-list li.is-section-open {
+.autofill-result-list li.is-profile-missing {
   margin: 0 0 4px;
   border: 0;
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid #3b82f6;
   border-radius: 0;
-  background: #f7f5ff;
+  background: #eff6ff;
   padding: 9px 0 9px 10px;
 }
 
-.autofill-result-list li.is-section-open .autofill-result-badge {
-  border-color: rgba(91, 69, 240, 0.2);
-  background: #eeeaff;
-  color: var(--accent);
+.autofill-result-list li.is-profile-missing .autofill-result-badge {
+  border-color: rgba(59, 130, 246, 0.2);
+  color: #1d4ed8;
 }
 
 .autofill-result-list li.is-empty {
@@ -1263,6 +1262,7 @@ legend {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 8px;
   min-width: 0;
 }
@@ -1368,9 +1368,9 @@ legend {
 }
 
 .autofill-result-note {
-  color: #7a4d13 !important;
-  font-size: 0.67rem !important;
-  font-weight: 600 !important;
+  color: #65430f !important;
+  font-size: 0.72rem !important;
+  font-weight: 750 !important;
   line-height: 1.45 !important;
 }
 

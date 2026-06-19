@@ -917,7 +917,7 @@ function renderAutoFillResult(result) {
     const filled = Array.isArray(result?.filled) ? result.filled : [];
     const failed = Array.isArray(result?.failed) ? result.failed : [];
     const copyCandidates = Array.isArray(result?.copyCandidates) ? result.copyCandidates : [];
-    const primaryItems = uniqueAutoFillItems(isPreview ? planned : filled);
+    const primaryItems = uniqueAutoFillItems((isPreview ? planned : filled).filter(isUserVisibleAutoFillItem));
     const primaryFieldKeys = new Set(primaryItems.map((item) => item?.fieldKey).filter(Boolean));
     const visibleCopyCandidates = copyCandidates.filter((item) => !primaryFieldKeys.has(item?.key));
     documentResultTitle.textContent = isPreview ? '입력 전 확인' : '입력이 끝났습니다';
@@ -970,23 +970,14 @@ function uniqueAutoFillItems(items) {
 }
 
 function getPrimaryAutoFillDisplay(item, isPreview) {
-    if (isSectionOpenItem(item)) {
-        return {
-            title: item.label ?? '\uC785\uB825\uCE78 \uC5F4\uAE30',
-            badge: isPreview ? '\uBA3C\uC800 \uC2E4\uD589' : '\uC5F4\uAE30 \uC644\uB8CC',
-            body: isPreview
-                ? '\uC811\uD78C \uC9C0\uC6D0\uC11C \uC601\uC5ED\uC744 \uC5F4\uC5B4\uC57C \uC774\uC5B4\uC11C \uC785\uB825\uD560 \uC218 \uC788\uC5B4\uC694.'
-                : '\uC811\uD78C \uC9C0\uC6D0\uC11C \uC601\uC5ED\uC744 \uC5F4\uC5C8\uC2B5\uB2C8\uB2E4.',
-            note: isPreview
-                ? '\uC790\uB3D9 \uC785\uB825 \uBC84\uD2BC\uC744 \uB204\uB974\uBA74 \uC774 \uC791\uC5C5\uC774 \uBA3C\uC800 \uC2E4\uD589\uB429\uB2C8\uB2E4.'
-                : '\uC0C8\uB85C \uC5F4\uB9B0 \uC785\uB825\uCE78\uC740 \uB2E4\uC2DC \uC778\uC2DD\uD558\uBA74 \uCD94\uAC00\uB85C \uD655\uC778\uB429\uB2C8\uB2E4.',
-            variant: 'section-open'
-        };
-    }
     return {
         title: item.label ?? item.fieldKey,
         body: item.value
     };
+}
+
+function isUserVisibleAutoFillItem(item) {
+    return !isSectionOpenItem(item);
 }
 
 function isSectionOpenItem(item) {
@@ -1011,6 +1002,13 @@ function getAutofillFailureDisplay(item) {
             variant: 'action-needed',
             badge: '직무 맞춤 필요',
             body: '아래 복사 후보에서 활동을 골라 지원 직무에 맞게 붙여넣어 주세요.'
+        };
+    }
+    if (reason === 'missing_profile_value') {
+        return {
+            variant: 'profile-missing',
+            badge: '\uC11C\uBE44\uC2A4\uC5D0 \uC5C6\uB294 \uC815\uBCF4',
+            body: '\uB0B4 \uC11C\uBE44\uC2A4\uC5D0\uC11C \uC785\uB825\uD558\uC9C0 \uC54A\uC740 \uC815\uBCF4\uB77C \uC790\uB3D9\uC73C\uB85C \uB123\uC744 \uC218 \uC5C6\uC5B4\uC694. EZ-ONE\uC5D0 \uAC12\uC744 \uCD94\uAC00\uD558\uBA74 \uB2E4\uC74C\uBD80\uD130 \uC790\uB3D9 \uC785\uB825\uB429\uB2C8\uB2E4.'
         };
     }
     return {

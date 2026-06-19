@@ -676,8 +676,9 @@ describe('DocumentProfilePage', () => {
         expect(wrapper.get('[data-testid="universities-0-graduationDate-picker"]').attributes('type')).toBe('date');
         expect(wrapper.get('[data-testid="universities-0-gradeScale"]').element.closest('label')?.textContent)
             .toContain('만점');
-        expect(wrapper.get('[data-testid="universities-0-subMajor"]').element.closest('label')?.textContent)
-            .toContain('복수전공/부전공');
+        expect(wrapper.get('[data-testid="universities-0-majors-0-major"]').element.closest('label')?.textContent)
+            .toContain('\uC804\uACF5\uBA85');
+        expect(wrapper.get('[data-testid="universities-0-majors-0-majorType"]').exists()).toBe(true);
         expect(wrapper.get('[data-testid="universities-0-isTransfer"]').element.closest('label')?.textContent)
             .toContain('편입 여부');
         expect(wrapper.get('[data-testid="universities-0-majorGrade"]').element.closest('label')?.textContent)
@@ -690,8 +691,8 @@ describe('DocumentProfilePage', () => {
             .toContain('학점 백분율');
         expect(wrapper.get('[data-testid="graduateSchools-0-completedCredits"]').element.closest('label')?.textContent)
             .toContain('\uC774\uC218\uD559\uC810');
-        expect(wrapper.get('[data-testid="graduateSchools-0-subMajor"]').element.closest('label')?.textContent)
-            .toContain('복수전공/부전공');
+        expect(wrapper.get('[data-testid="graduateSchools-0-majors-0-major"]').element.closest('label')?.textContent)
+            .toContain('\uC804\uACF5\uBA85');
     });
 
     it('PROFILE-012/013: saves completed credits from university education entries', async () => {
@@ -716,12 +717,12 @@ describe('DocumentProfilePage', () => {
         expect(wrapper.get('[data-testid="highSchool-track"]').exists()).toBe(true);
         expect(wrapper.get('[data-testid="universities-0-location"]').exists()).toBe(true);
         expect(wrapper.get('[data-testid="universities-0-campusType"]').exists()).toBe(true);
-        expect(wrapper.get('[data-testid="universities-0-majorCategory"]').exists()).toBe(true);
+        expect(wrapper.get('[data-testid="universities-0-majors-0-majorCategory"]').exists()).toBe(true);
 
         await wrapper.get('[data-testid="highSchool-track"]').setValue('인문계');
         await wrapper.get('[data-testid="universities-0-location"]').setValue('부산');
         await wrapper.get('[data-testid="universities-0-campusType"]').setValue('본교');
-        await wrapper.get('[data-testid="universities-0-majorCategory"]').setValue('공학계열');
+        await wrapper.get('[data-testid="universities-0-majors-0-majorCategory"]').setValue('\uACF5\uD559\uACC4\uC5F4(\uC0B0\uC5C5)');
         await wrapper.get('[data-testid="save-document-profile"]').trigger('click');
         await flushPromises();
 
@@ -733,7 +734,82 @@ describe('DocumentProfilePage', () => {
                 expect.objectContaining({
                     location: '부산',
                     campusType: '본교',
-                    majorCategory: '공학계열'
+                    majors: [
+                        expect.objectContaining({
+                            majorCategory: '\uACF5\uD559\uACC4\uC5F4(\uC0B0\uC5C5)'
+                        })
+                    ]
+                })
+            ]
+        }));
+    });
+
+    it('PROFILE-012/013: captures major details required by recruiter forms', async () => {
+        const wrapper = await mountPage('/document-profile?section=education');
+
+        expect(wrapper.get('[data-testid="universities-0-majors-0-major"]').element.closest('label')?.textContent)
+            .toContain('\uC804\uACF5\uBA85');
+        expect(wrapper.get('[data-testid="universities-0-majors-0-majorType"]').exists()).toBe(true);
+        expect(wrapper.get('[data-testid="universities-0-majors-0-majorCategory"]').exists()).toBe(true);
+        expect(wrapper.get('[data-testid="universities-0-majors-0-dayNight"]').exists()).toBe(true);
+        expect(Array.from(wrapper.get('[data-testid="universities-0-majors-0-majorCategory"]').element.options).map((option) => option.value))
+            .toContain('\uACF5\uD559\uACC4\uC5F4(\uC0B0\uC5C5)');
+
+        await wrapper.get('[data-testid="universities-0-majors-0-major"]').setValue('\uAE30\uACC4\uACF5\uD559');
+        await wrapper.get('[data-testid="universities-0-majors-0-majorType"]').setValue('\uC8FC\uC804\uACF5');
+        await wrapper.get('[data-testid="universities-0-majors-0-majorCategory"]').setValue('\uACF5\uD559\uACC4\uC5F4(\uC0B0\uC5C5)');
+        await wrapper.get('[data-testid="universities-0-majors-0-dayNight"]').setValue('\uC8FC\uAC04');
+        await wrapper.get('[data-testid="save-document-profile"]').trigger('click');
+        await flushPromises();
+
+        expect(mocks.saveSection).toHaveBeenLastCalledWith('education', expect.objectContaining({
+            universities: [
+                expect.objectContaining({
+                    majors: [
+                        expect.objectContaining({
+                            major: '\uAE30\uACC4\uACF5\uD559',
+                            majorType: '\uC8FC\uC804\uACF5',
+                            majorCategory: '\uACF5\uD559\uACC4\uC5F4(\uC0B0\uC5C5)',
+                            dayNight: '\uC8FC\uAC04'
+                        })
+                    ]
+                })
+            ]
+        }));
+    });
+
+    it('PROFILE-012/013: saves each major with its own category and major type', async () => {
+        const wrapper = await mountPage('/document-profile?section=education');
+
+        await wrapper.get('[data-testid="universities-0-majors-0-major"]').setValue('\uC0B0\uC5C5\uACF5\uD559\uACFC');
+        await wrapper.get('[data-testid="universities-0-majors-0-majorCategory"]').setValue('\uACF5\uD559\uACC4\uC5F4(\uC0B0\uC5C5)');
+        await wrapper.get('[data-testid="universities-0-majors-0-majorType"]').setValue('\uC8FC\uC804\uACF5');
+        await wrapper.get('[data-testid="add-universities-0-majors"]').trigger('click');
+        await wrapper.get('[data-testid="universities-0-majors-1-major"]').setValue('\uBE45\uB370\uC774\uD130\uC5F0\uACC4\uC804\uACF5');
+        await wrapper.get('[data-testid="universities-0-majors-1-majorCategory"]').setValue('\uACF5\uD559\uACC4\uC5F4(\uCEF4\uD4E8\uD130\u00B7\uD1B5\uC2E0)');
+        await wrapper.get('[data-testid="universities-0-majors-1-majorType"]').setValue('\uC5F0\uACC4\uC804\uACF5');
+
+        expect(wrapper.get('[data-testid="delete-universities-0-majors-0"]').text()).toContain('\uC0AD\uC81C');
+        expect(wrapper.get('[data-testid="delete-universities-0-majors-1"]').text()).toContain('\uC0AD\uC81C');
+
+        await wrapper.get('[data-testid="save-document-profile"]').trigger('click');
+        await flushPromises();
+
+        expect(mocks.saveSection).toHaveBeenLastCalledWith('education', expect.objectContaining({
+            universities: [
+                expect.objectContaining({
+                    majors: [
+                        expect.objectContaining({
+                            major: '\uC0B0\uC5C5\uACF5\uD559\uACFC',
+                            majorCategory: '\uACF5\uD559\uACC4\uC5F4(\uC0B0\uC5C5)',
+                            majorType: '\uC8FC\uC804\uACF5'
+                        }),
+                        expect.objectContaining({
+                            major: '\uBE45\uB370\uC774\uD130\uC5F0\uACC4\uC804\uACF5',
+                            majorCategory: '\uACF5\uD559\uACC4\uC5F4(\uCEF4\uD4E8\uD130\u00B7\uD1B5\uC2E0)',
+                            majorType: '\uC5F0\uACC4\uC804\uACF5'
+                        })
+                    ]
                 })
             ]
         }));

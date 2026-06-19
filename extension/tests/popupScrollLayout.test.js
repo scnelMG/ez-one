@@ -79,6 +79,9 @@ describe('extension popup scroll layout', () => {
         expect(css).toContain('.autofill-result-section[data-tone="warning"]::before');
         expect(css).toContain('.autofill-result-list');
         expect(css).toContain('.autofill-result-list li.is-empty');
+        expect(css).toContain('.autofill-result-list li.is-profile-missing');
+        expect(css).toContain('.autofill-result-list li.is-profile-missing .autofill-result-badge');
+        expect(css).not.toContain('li.is-section-open');
         expect(css).toContain('max-height: 184px;');
         expect(css).toContain('border-top: 1px solid var(--line);');
         expect(css).toContain('border-bottom: 1px solid var(--line);');

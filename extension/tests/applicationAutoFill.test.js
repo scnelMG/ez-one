@@ -52,6 +52,66 @@ describe('applicationAutoFill', () => {
         ]));
     });
 
+    it('EXT-013: matches Midas row labels outside the input wrapper', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <div class="remix-css-t25awl">
+          <div class="remix-css-ke50n9">
+            <p>생년월일</p>
+          </div>
+          <div class="remix-css-3btwcy">
+            <div>
+              <div>
+                <input placeholder="YYYY.MM.DD" type="text" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+    `;
+
+        const result = applyAutoFillPlan(buildAutoFillPlan(doc, profile));
+
+        expect(result.filled).toEqual([
+            expect.objectContaining({ fieldKey: 'basicInfo.birthdate', label: '생년월일', value: '1998.01.02' })
+        ]);
+        expect(doc.querySelector('input').value).toBe('1998.01.02');
+    });
+
+    it('EXT-013: matches Midas radio options from wrapping label text', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <div class="remix-css-t25awl">
+          <div class="remix-css-ke50n9"><p>\uC131\uBCC4</p></div>
+          <div class="remix-css-3btwcy">
+            <fieldset>
+              <label><input id="gender-male" type="radio" name="gender" /><p>\uB0A8</p></label>
+              <label><input id="gender-female" type="radio" name="gender" /><p>\uC5EC</p></label>
+            </fieldset>
+          </div>
+        </div>
+      </form>
+    `;
+        const genderProfile = {
+            sections: {
+                basicInfo: {
+                    gender: '\uB0A8\uC131'
+                }
+            },
+            customFields: []
+        };
+
+        const result = applyAutoFillPlan(buildAutoFillPlan(doc, genderProfile));
+
+        expect(result.filled).toEqual([
+            expect.objectContaining({ fieldKey: 'basicInfo.gender', label: '\uC131\uBCC4', value: '\uB0A8' })
+        ]);
+        expect(doc.getElementById('gender-male').checked).toBe(true);
+        expect(doc.getElementById('gender-female').checked).toBe(false);
+    });
+
     it('EXT-027: exposes saved document values as fallback copy candidates', () => {
         const doc = document.implementation.createHTMLDocument('application');
         doc.body.innerHTML = `
@@ -77,6 +137,82 @@ describe('applicationAutoFill', () => {
             expect.objectContaining({ key: 'basicInfo.nameKo', value: 'Hong Gil Dong' }),
             expect.objectContaining({ key: 'basicInfo.phone', value: '010-1234-5678' })
         ]));
+    });
+
+    it('EXT-027: narrows copy candidates to visible Midas first-page fields', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <div class="remix-css-t25awl">
+          <div class="remix-css-ke50n9"><p>\uC774\uB984</p></div>
+          <div class="remix-css-3btwcy"><input readonly name="basicInfoGroupAnswers.name" /></div>
+        </div>
+        <div class="remix-css-t25awl">
+          <div class="remix-css-ke50n9"><p>\uD578\uB4DC\uD3F0\uBC88\uD638</p></div>
+          <div class="remix-css-3btwcy"><input readonly name="basicInfoGroupAnswers.mobilePhone" /></div>
+        </div>
+        <div class="remix-css-t25awl">
+          <div class="remix-css-ke50n9"><p>\uC774\uBA54\uC77C\uC8FC\uC18C</p></div>
+          <div class="remix-css-3btwcy"><input readonly name="basicInfoGroupAnswers.email" /></div>
+        </div>
+        <div class="remix-css-t25awl">
+          <div class="remix-css-ke50n9"><p>\uC0DD\uB144\uC6D4\uC77C</p></div>
+          <div class="remix-css-3btwcy"><input placeholder="YYYY.MM.DD" /></div>
+        </div>
+        <div class="remix-css-t25awl">
+          <div class="remix-css-ke50n9"><p>\uC131\uBCC4</p></div>
+          <div class="remix-css-3btwcy">
+            <label><input type="radio" name="gender" /><p>\uB0A8</p></label>
+            <label><input type="radio" name="gender" /><p>\uC5EC</p></label>
+          </div>
+        </div>
+        <div class="remix-css-t25awl">
+          <div class="remix-css-ke50n9"><p>\uC8FC\uC18C</p></div>
+          <div class="remix-css-3btwcy"><input readonly name="addressGroupResumeItemAnswers.currentAddress.address" /></div>
+        </div>
+        <label>\uC0C1\uC138\uC8FC\uC18C<input /></label>
+      </form>
+    `;
+        const firstPageProfile = {
+            sections: {
+                basicInfo: {
+                    nameKo: '\uBC15\uBBFC\uADDC',
+                    phone: '010-5464-9945',
+                    email: 'qkralsrb4407@naver.com',
+                    birthdate: '2001-03-28',
+                    gender: '\uB0A8\uC131',
+                    address: '\uD559\uD558\uC11C\uB85C 121\uBC88\uAE38 120',
+                    addressDetail: '\uC138\uC885\uBE4C\uB529 302\uD638'
+                },
+                education: [
+                    { schoolName: '\uBD80\uC0B0\uB3D9\uACE0\uB4F1\uD559\uAD50' }
+                ],
+                projects: [
+                    { title: 'EZ-ONE', summary: 'Job application workspace' }
+                ]
+            },
+            customFields: [
+                { id: 7, label: 'Portfolio URL', value: 'https://portfolio.example.com' }
+            ]
+        };
+
+        const preview = previewAutoFillPlan(buildAutoFillPlan(doc, firstPageProfile));
+        const candidateKeys = preview.copyCandidates.map((item) => item.key);
+
+        expect(preview.planned).toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'basicInfo.birthdate' }),
+            expect.objectContaining({ fieldKey: 'basicInfo.gender' }),
+            expect.objectContaining({ fieldKey: 'basicInfo.addressDetail' })
+        ]));
+        expect(candidateKeys).toEqual(expect.arrayContaining([
+            'basicInfo.nameKo',
+            'basicInfo.phone',
+            'basicInfo.email',
+            'basicInfo.address'
+        ]));
+        expect(candidateKeys).not.toContain('education.0.schoolName');
+        expect(candidateKeys).not.toContain('projects.0.title');
+        expect(candidateKeys).not.toContain('customFields.7');
     });
 
     it('EXT-013: prefers specific Korean document labels over generic name matches', () => {
@@ -351,6 +487,131 @@ describe('applicationAutoFill', () => {
         expect(doc.getElementById('discharge-type').textContent).toContain('\uC18C\uC9D1\uD574\uC81C');
     });
 
+    it('EXT-031: clicks Midas parent choices before filling dependent dropdowns', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <div class="remix-css-re11db">
+          <div class="remix-css-ke50n9"><p>병역</p></div>
+          <div class="remix-css-3btwcy">
+            <li><button id="military-none" type="button"><p>비대상</p></button></li>
+            <li><button id="military-completed" type="button"><p>군필</p></button></li>
+            <li><button type="button"><p>미필</p></button></li>
+          </div>
+        </div>
+        <label>입대일<input id="enlistment-date" /></label>
+        <label>제대일<input id="discharge-date" /></label>
+        <button id="rank" type="button" aria-haspopup="listbox" disabled><p>계급을 선택해주세요.</p></button>
+        <button id="discharge-type" type="button" aria-haspopup="listbox" disabled><p>제대구분을 선택해주세요.</p></button>
+        <div class="remix-css-re11db">
+          <div class="remix-css-ke50n9"><p>보훈여부</p></div>
+          <div class="remix-css-3btwcy">
+            <li><button id="veteran-no" type="button"><p>비대상</p></button></li>
+            <li><button id="veteran-yes" type="button"><p>대상</p></button></li>
+            <button id="veteran-ratio" type="button" aria-haspopup="listbox" disabled><p>보훈비율을 선택해주세요.</p></button>
+          </div>
+        </div>
+      </form>
+    `;
+        doc.getElementById('military-completed').addEventListener('click', () => {
+            doc.getElementById('rank').disabled = false;
+            doc.getElementById('discharge-type').disabled = false;
+        });
+        const openDropdown = (trigger, options) => {
+            if (trigger.disabled || doc.getElementById(`${trigger.id}-options`)) return;
+            const dropdown = doc.createElement('div');
+            dropdown.id = `${trigger.id}-options`;
+            dropdown.innerHTML = options.map((option) => `<button type="button">${option}</button>`).join('');
+            dropdown.querySelectorAll('button').forEach((optionButton) => {
+                optionButton.addEventListener('mousedown', () => {
+                    trigger.querySelector('p').textContent = optionButton.textContent.trim();
+                    dropdown.remove();
+                });
+            });
+            doc.body.append(dropdown);
+        };
+        doc.getElementById('rank').addEventListener('mousedown', () => openDropdown(doc.getElementById('rank'), ['이병', '병장']));
+        doc.getElementById('discharge-type').addEventListener('mousedown', () => openDropdown(doc.getElementById('discharge-type'), ['만기제대', '소집해제']));
+        const militaryProfile = {
+            sections: {
+                military: {
+                    military: [{
+                        status: '군필',
+                        enlistmentDate: '2023-07-31',
+                        dischargeDate: '2025-04-30',
+                        rank: '이병',
+                        dischargeType: '소집해제',
+                        isVeteran: false
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanAsync(buildAutoFillPlan(doc, militaryProfile));
+
+        expect(result.failed).toEqual([]);
+        expect(result.filled).toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'military.status', value: '군필' }),
+            expect.objectContaining({ fieldKey: 'military.rank', value: '이병' }),
+            expect.objectContaining({ fieldKey: 'military.dischargeType', value: '소집해제' }),
+            expect.objectContaining({ fieldKey: 'military.isVeteran', value: '비대상' })
+        ]));
+        expect(doc.getElementById('rank').textContent).toContain('이병');
+        expect(doc.getElementById('discharge-type').textContent).toContain('소집해제');
+    });
+
+    it('EXT-031: plans and fills military dates that appear after selecting completed service', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <div class="remix-css-re11db">
+          <div class="remix-css-ke50n9"><p>\uBCD1\uC5ED</p></div>
+          <div class="remix-css-3btwcy">
+            <li><button id="military-none" type="button"><p>\uBE44\uB300\uC0C1</p></button></li>
+            <li><button id="military-completed" type="button"><p>\uAD70\uD544</p></button></li>
+          </div>
+        </div>
+        <div id="military-detail"></div>
+      </form>
+    `;
+        doc.getElementById('military-completed').addEventListener('click', () => {
+            if (doc.getElementById('enlistment-date')) return;
+            doc.getElementById('military-detail').innerHTML = `
+          <label>\uC785\uB300\uC77C<input id="enlistment-date" placeholder="\uC785\uB300\uC77C" /></label>
+          <label>\uC81C\uB300\uC77C<input id="discharge-date" placeholder="\uC81C\uB300\uC77C" /></label>
+        `;
+        });
+        const militaryProfile = {
+            sections: {
+                military: {
+                    military: [{
+                        status: '\uAD70\uD544',
+                        enlistmentDate: '2023-07-31',
+                        dischargeDate: '2025-04-30'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const plan = buildAutoFillPlan(doc, militaryProfile);
+        const result = await applyAutoFillPlanAsync(plan);
+
+        expect(plan.fillable).toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'military.status', value: '\uAD70\uD544' }),
+            expect.objectContaining({ fieldKey: 'military.enlistmentDate', value: '2023-07-31' }),
+            expect.objectContaining({ fieldKey: 'military.dischargeDate', value: '2025-04-30' })
+        ]));
+        expect(result.failed).toEqual([]);
+        expect(result.filled).toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'military.enlistmentDate', value: '2023-07-31' }),
+            expect.objectContaining({ fieldKey: 'military.dischargeDate', value: '2025-04-30' })
+        ]));
+        expect(doc.getElementById('enlistment-date').value).toBe('2023-07-31');
+        expect(doc.getElementById('discharge-date').value).toBe('2025-04-30');
+    });
+
     it('EXT-025: keeps high school and university education fields in their own sections', () => {
         const doc = document.implementation.createHTMLDocument('application');
         doc.body.innerHTML = `
@@ -407,6 +668,781 @@ describe('applicationAutoFill', () => {
         expect(doc.getElementById('university-end').value).toBe('2026-02-20');
         expect(doc.getElementById('university-grade').value).toBe('3.93');
         expect(doc.getElementById('university-credits').value).toBe('149');
+    });
+
+    it('EXT-031: opens Midas education sections before filling fields that render later', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <div>
+          <h5>\uD559\uB825\uC0AC\uD56D</h5>
+          <div id="high-school-section">
+            <button id="open-high-school" type="button"><p>\uACE0\uB4F1\uD559\uAD50 *</p></button>
+          </div>
+          <div id="university-section">
+            <button id="open-university" type="button"><p>\uB300\uD559\uAD50 *</p></button>
+          </div>
+        </div>
+      </form>
+    `;
+        doc.getElementById('open-high-school').addEventListener('click', () => {
+            if (doc.getElementById('high-school-name')) return;
+            doc.getElementById('high-school-section').insertAdjacentHTML('beforeend', `
+          <section aria-label="\uACE0\uB4F1\uD559\uAD50">
+            <h3>\uACE0\uB4F1\uD559\uAD50</h3>
+            <label>\uD559\uAD50\uC815\uBCF4<input id="high-school-name" /></label>
+            <label>\uC7AC\uD559\uAE30\uAC04<input id="high-school-start" placeholder="\uC785\uD559\uC77C" /></label>
+            <label>\uC7AC\uD559\uAE30\uAC04<input id="high-school-end" placeholder="\uC878\uC5C5\uC77C" /></label>
+          </section>
+        `);
+        });
+        doc.getElementById('open-university').addEventListener('click', () => {
+            if (doc.getElementById('university-name')) return;
+            doc.getElementById('university-section').insertAdjacentHTML('beforeend', `
+          <section aria-label="\uB300\uD559\uAD50">
+            <h3>\uB300\uD559\uAD50</h3>
+            <label>\uD559\uAD50\uC815\uBCF4<input id="university-name" /></label>
+            <label>\uC7AC\uD559\uAE30\uAC04<input id="university-start" placeholder="\uC785\uD559\uC77C" /></label>
+            <label>\uC7AC\uD559\uAE30\uAC04<input id="university-end" placeholder="\uC878\uC5C5\uC77C" /></label>
+            <label>\uD559\uC5C5\uC131\uC801<input id="university-grade" /></label>
+          </section>
+        `);
+        });
+        const educationProfile = {
+            sections: {
+                education: {
+                    highSchool: {
+                        schoolName: '\uBD80\uC0B0\uB3D9\uACE0\uB4F1\uD559\uAD50',
+                        admissionDate: '2017-03-02',
+                        graduationDate: '2020-02-28'
+                    },
+                    universities: [{
+                        schoolName: '\uBD80\uC0B0\uB300\uD559\uAD50',
+                        admissionDate: '2020-03-02',
+                        graduationDate: '2026-02-20',
+                        grade: '3.93'
+                    }]
+                },
+                projects: [
+                    { title: 'EZ-ONE', summary: 'Job application workspace' }
+                ]
+            },
+            customFields: [
+                { id: 7, label: 'Portfolio URL', value: 'https://portfolio.example.com' }
+            ]
+        };
+
+        const plan = buildAutoFillPlan(doc, educationProfile);
+        const preview = previewAutoFillPlan(plan);
+        const result = await applyAutoFillPlanAsync(plan);
+
+        expect(preview.planned).toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'education.highSchool.open', sectionOpenControl: true }),
+            expect.objectContaining({ fieldKey: 'education.highSchool.schoolName' }),
+            expect.objectContaining({ fieldKey: 'education.universities.0.open', sectionOpenControl: true }),
+            expect.objectContaining({ fieldKey: 'education.universities.0.schoolName' })
+        ]));
+        expect(preview.copyCandidates.map((item) => item.key)).not.toContain('projects.0.title');
+        expect(preview.copyCandidates.map((item) => item.key)).not.toContain('customFields.7');
+        expect(result.failed).toEqual([]);
+        expect(doc.getElementById('high-school-name').value).toBe('\uBD80\uC0B0\uB3D9\uACE0\uB4F1\uD559\uAD50');
+        expect(doc.getElementById('high-school-start').value).toBe('2017-03-02');
+        expect(doc.getElementById('high-school-end').value).toBe('2020-02-28');
+        expect(doc.getElementById('university-name').value).toBe('\uBD80\uC0B0\uB300\uD559\uAD50');
+        expect(doc.getElementById('university-start').value).toBe('2020-03-02');
+        expect(doc.getElementById('university-end').value).toBe('2026-02-20');
+        expect(doc.getElementById('university-grade').value).toBe('3.93');
+    });
+
+    it('EXT-031: selects school autocomplete options for fields created by section openers', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <div id="high-school-section">
+          <button id="open-high-school" type="button"><p>\uACE0\uB4F1\uD559\uAD50 *</p></button>
+        </div>
+      </form>
+    `;
+        doc.getElementById('open-high-school').addEventListener('click', () => {
+            if (doc.getElementById('high-school-name')) return;
+            doc.getElementById('high-school-section').insertAdjacentHTML('beforeend', `
+          <section aria-label="\uACE0\uB4F1\uD559\uAD50">
+            <h3>\uACE0\uB4F1\uD559\uAD50</h3>
+            <label>\uD559\uAD50\uC815\uBCF4<input id="high-school-name" placeholder="\uD559\uAD50\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." /></label>
+            <div id="high-school-detail"></div>
+          </section>
+        `);
+            doc.getElementById('high-school-name').addEventListener('input', () => {
+                if (doc.getElementById('high-school-name-option')) return;
+                const option = doc.createElement('button');
+                option.id = 'high-school-name-option';
+                option.type = 'button';
+                option.textContent = '\uBD80\uC0B0\uB3D9\uACE0\uB4F1\uD559\uAD50';
+                option.addEventListener('mousedown', () => {
+                    doc.getElementById('high-school-name').value = option.textContent;
+                    option.remove();
+                    doc.getElementById('high-school-detail').innerHTML = `
+              <label>\uC878\uC5C5\uC77C<input id="high-school-graduation-date" placeholder="YYYY.MM.DD" /></label>
+            `;
+                });
+                doc.body.append(option);
+            });
+        });
+        const educationProfile = {
+            sections: {
+                education: {
+                    highSchool: {
+                        schoolName: '\uBD80\uC0B0\uB3D9\uACE0\uB4F1\uD559\uAD50',
+                        graduationDate: '2020-02-28'
+                    }
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanAsync(buildAutoFillPlan(doc, educationProfile));
+
+        expect(result.failed).toEqual([]);
+        expect(doc.getElementById('high-school-name-option')).toBeNull();
+        expect(doc.getElementById('high-school-name').value).toBe('\uBD80\uC0B0\uB3D9\uACE0\uB4F1\uD559\uAD50');
+        expect(doc.getElementById('high-school-graduation-date').value).toBe('2020.02.28');
+    });
+
+    it('EXT-031: waits long enough to select delayed school autocomplete options before period fields render', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uB300\uD559\uAD50">
+          <h3>\uB300\uD559\uAD50</h3>
+          <label>\uD559\uAD50\uC815\uBCF4<input id="university-name" placeholder="\uD559\uAD50\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." /></label>
+          <div id="university-detail"></div>
+        </section>
+      </form>
+    `;
+        doc.getElementById('university-name').addEventListener('input', () => {
+            if (doc.getElementById('university-name-option')) return;
+            setTimeout(() => {
+                const option = doc.createElement('div');
+                option.id = 'university-name-option';
+                option.setAttribute('role', 'option');
+                option.setAttribute('tabindex', '0');
+                option.textContent = '\uBD80\uC0B0\uB300\uD559\uAD50';
+                option.addEventListener('mousedown', () => {
+                    doc.getElementById('university-name').value = option.textContent;
+                    option.remove();
+                    doc.getElementById('university-detail').innerHTML = `
+              <div class="period-row">
+                <p>\uC7AC\uD559\uAE30\uAC04 *</p>
+                <span>\uC785\uD559\uC77C</span>
+                <input id="university-start" placeholder="YYYY.MM.DD" />
+                <span>\uC878\uC5C5\uC77C</span>
+                <input id="university-end" placeholder="YYYY.MM.DD" />
+              </div>
+              <p>\uC804\uACF5 *</p>
+              <button id="add-major" type="button"><p>\uCD94\uAC00\uD558\uAE30</p></button>
+              <div id="major-container"></div>
+            `;
+                    doc.getElementById('add-major').addEventListener('click', () => {
+                        if (doc.getElementById('university-major')) return;
+                        doc.getElementById('major-container').innerHTML = `
+                  <label>\uC804\uACF5\uBA85<input id="university-major" /></label>
+                `;
+                    });
+                });
+                doc.body.append(option);
+            }, 1100);
+        });
+        const educationProfile = {
+            sections: {
+                education: {
+                    universities: [{
+                        schoolName: '\uBD80\uC0B0\uB300\uD559\uAD50',
+                        admissionDate: '2020-03-02',
+                        graduationDate: '2026-02-20',
+                        majors: [{
+                            major: '\uC0B0\uC5C5\uACF5\uD559\uACFC'
+                        }]
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanAsync(buildAutoFillPlan(doc, educationProfile));
+
+        expect(result.failed).toEqual([]);
+        expect(doc.getElementById('university-name-option')).toBeNull();
+        expect(doc.getElementById('university-start').value).toBe('2020.03.02');
+        expect(doc.getElementById('university-end').value).toBe('2026.02.20');
+        expect(doc.getElementById('university-major').value).toBe('\uC0B0\uC5C5\uACF5\uD559\uACFC');
+    });
+
+    it('EXT-031: fills Midas education period, school location, grade scale, credits, and added major fields', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uACE0\uB4F1\uD559\uAD50">
+          <h3>\uACE0\uB4F1\uD559\uAD50</h3>
+          <div class="period-row">
+            <p>\uC7AC\uD559\uAE30\uAC04 *</p>
+            <span>\uC785\uD559\uC77C</span>
+            <input id="high-school-start" placeholder="YYYY.MM.DD" />
+            <span>\uC878\uC5C5\uC77C</span>
+            <input id="high-school-end" placeholder="YYYY.MM.DD" />
+          </div>
+        </section>
+        <section aria-label="\uB300\uD559\uAD50">
+          <h3>\uB300\uD559\uAD50</h3>
+          <p>\uD559\uAD50\uC815\uBCF4</p>
+          <button id="university-location" type="button" aria-haspopup="listbox"><p>\uD559\uAD50 \uC18C\uC7AC\uC9C0\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
+          <div class="period-row">
+            <p>\uC7AC\uD559\uAE30\uAC04 *</p>
+            <span>\uC785\uD559\uC77C</span>
+            <input id="university-start" placeholder="YYYY.MM.DD" />
+            <span>\uC878\uC5C5\uC77C</span>
+            <input id="university-end" placeholder="YYYY.MM.DD" />
+          </div>
+          <p>\uD559\uC5C5\uC131\uC801 *</p>
+          <input id="university-grade" />
+          <span>/</span>
+          <button id="university-grade-scale" type="button" aria-haspopup="listbox"><p>\uB9CC\uC810\uAE30\uC900</p></button>
+          <p>\uC774\uC218\uD559\uC810 *</p>
+          <input id="university-credits" />
+          <p>\uC804\uACF5 *</p>
+          <button id="add-major" type="button"><p>\uCD94\uAC00\uD558\uAE30</p></button>
+          <div id="major-container"></div>
+        </section>
+      </form>
+    `;
+        const clickedMajorChoices = [];
+        const addSelectBehavior = (trigger, options) => {
+            trigger.addEventListener('mousedown', () => {
+                if (doc.getElementById(`${trigger.id}-options`)) return;
+                const menu = doc.createElement('div');
+                menu.id = `${trigger.id}-options`;
+                menu.innerHTML = options.map((option) => `<button type="button"><p>${option}</p></button>`).join('');
+                menu.querySelectorAll('button').forEach((optionButton) => {
+                    optionButton.addEventListener('mousedown', () => {
+                        trigger.querySelector('p').textContent = optionButton.textContent.trim();
+                        menu.remove();
+                    });
+                });
+                doc.body.append(menu);
+            });
+        };
+        addSelectBehavior(doc.getElementById('university-location'), ['\uC11C\uC6B8', '\uBD80\uC0B0']);
+        addSelectBehavior(doc.getElementById('university-grade-scale'), ['4.3', '4.5']);
+        let majorRowCount = 0;
+        doc.getElementById('add-major').addEventListener('click', () => {
+            const majorIndex = majorRowCount;
+            majorRowCount += 1;
+            doc.getElementById('major-container').insertAdjacentHTML('beforeend', `
+              <div class="major-row">
+              <label>\uC804\uACF5\uBA85<input id="university-major-${majorIndex}" /></label>
+              <div>
+                <p>\uC804\uACF5\uAD6C\uBD84</p>
+                <button type="button" data-choice="majorType">\uC8FC\uC804\uACF5</button>
+                <button type="button" data-choice="majorType">\uC5F0\uACC4\uC804\uACF5</button>
+                <button type="button" data-choice="majorType">\uBCF5\uC218\uC804\uACF5</button>
+              </div>
+              <button id="university-major-category-${majorIndex}" type="button" aria-haspopup="listbox"><p>\uC804\uACF5\uACC4\uC5F4\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
+              <div>
+                <p>\uC8FC\uAC04/\uC57C\uAC04</p>
+                <button type="button" data-choice="dayNight">\uC8FC\uAC04</button>
+                <button type="button" data-choice="dayNight">\uC57C\uAC04</button>
+              </div>
+              </div>
+            `);
+            addSelectBehavior(doc.getElementById(`university-major-category-${majorIndex}`), [
+                '\uACF5\uD559\uACC4\uC5F4(\uC0B0\uC5C5)',
+                '\uACF5\uD559\uACC4\uC5F4(\uCEF4\uD4E8\uD130\u00B7\uD1B5\uC2E0)'
+            ]);
+            doc.querySelectorAll(`#major-container .major-row:nth-child(${majorIndex + 1}) button[data-choice]`).forEach((button) => {
+                button.addEventListener('click', () => clickedMajorChoices.push(button.textContent.trim()));
+            });
+        });
+        const educationProfile = {
+            sections: {
+                education: {
+                    highSchool: {
+                        admissionDate: '2017-03-02',
+                        graduationDate: '2020-02-28'
+                    },
+                    universities: [{
+                        schoolName: '\uBD80\uC0B0\uB300\uD559\uAD50',
+                        admissionDate: '2020-03-02',
+                        graduationDate: '2026-02-20',
+                        location: '\uBD80\uC0B0',
+                        grade: '3.93',
+                        gradeScale: '4.5',
+                        completedCredits: '149',
+                        majors: [{
+                            major: '\uAE30\uACC4\uACF5\uD559',
+                            majorType: '\uC8FC\uC804\uACF5',
+                            majorCategory: '\uACF5\uD559\uACC4\uC5F4(\uC0B0\uC5C5)',
+                            dayNight: '\uC8FC\uAC04'
+                        }, {
+                            major: '\uBE45\uB370\uC774\uD130\uC5F0\uACC4\uC804\uACF5',
+                            majorType: '\uC5F0\uACC4\uC804\uACF5',
+                            majorCategory: '\uACF5\uD559\uACC4\uC5F4(\uCEF4\uD4E8\uD130\u00B7\uD1B5\uC2E0)',
+                            dayNight: '\uC8FC\uAC04'
+                        }]
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanAsync(buildAutoFillPlan(doc, educationProfile));
+
+        expect(result.failed).toEqual([]);
+        expect(doc.getElementById('high-school-start').value).toBe('2017.03.02');
+        expect(doc.getElementById('high-school-end').value).toBe('2020.02.28');
+        expect(doc.getElementById('university-location').textContent).toContain('\uBD80\uC0B0');
+        expect(doc.getElementById('university-start').value).toBe('2020.03.02');
+        expect(doc.getElementById('university-end').value).toBe('2026.02.20');
+        expect(doc.getElementById('university-grade').value).toBe('3.93');
+        expect(doc.getElementById('university-grade-scale').textContent).toContain('4.5');
+        expect(doc.getElementById('university-credits').value).toBe('149');
+        expect(doc.getElementById('university-major-0').value).toBe('\uAE30\uACC4\uACF5\uD559');
+        expect(doc.getElementById('university-major-category-0').textContent).toContain('\uACF5\uD559\uACC4\uC5F4(\uC0B0\uC5C5)');
+        expect(doc.getElementById('university-major-1').value).toBe('\uBE45\uB370\uC774\uD130\uC5F0\uACC4\uC804\uACF5');
+        expect(doc.getElementById('university-major-category-1').textContent).toContain('\uACF5\uD559\uACC4\uC5F4(\uCEF4\uD4E8\uD130\u00B7\uD1B5\uC2E0)');
+        expect(clickedMajorChoices).toEqual(['\uC8FC\uC804\uACF5', '\uC8FC\uAC04', '\uC5F0\uACC4\uC804\uACF5', '\uC8FC\uAC04']);
+    });
+
+    it('EXT-031: does not refill education fields already handled after school autocomplete', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <div id="high-school-section">
+          <button id="open-high-school" type="button"><p>\uACE0\uB4F1\uD559\uAD50 *</p></button>
+        </div>
+      </form>
+    `;
+        let graduationDateInputCount = 0;
+        doc.getElementById('open-high-school').addEventListener('click', () => {
+            if (doc.getElementById('high-school-name')) return;
+            doc.getElementById('high-school-section').insertAdjacentHTML('beforeend', `
+          <section aria-label="\uACE0\uB4F1\uD559\uAD50">
+            <label>\uD559\uAD50\uC815\uBCF4<input id="high-school-name" placeholder="\uD559\uAD50\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." /></label>
+            <div id="high-school-detail"></div>
+          </section>
+        `);
+            doc.getElementById('high-school-name').addEventListener('input', () => {
+                if (doc.getElementById('high-school-name-option')) return;
+                const option = doc.createElement('button');
+                option.id = 'high-school-name-option';
+                option.type = 'button';
+                option.textContent = '\uBD80\uC0B0\uB3D9\uACE0\uB4F1\uD559\uAD50';
+                option.addEventListener('mousedown', () => {
+                    doc.getElementById('high-school-name').value = option.textContent;
+                    option.remove();
+                    doc.getElementById('high-school-detail').innerHTML = `
+                <label>\uC878\uC5C5\uC77C<input id="high-school-graduation-date" placeholder="YYYY.MM.DD" /></label>
+              `;
+                    doc.getElementById('high-school-graduation-date').addEventListener('input', () => {
+                        graduationDateInputCount += 1;
+                    });
+                });
+                doc.body.append(option);
+            });
+        });
+        const educationProfile = {
+            sections: {
+                education: {
+                    highSchool: {
+                        schoolName: '\uBD80\uC0B0\uB3D9\uACE0\uB4F1\uD559\uAD50',
+                        graduationDate: '2020-02-28'
+                    }
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanAsync(buildAutoFillPlan(doc, educationProfile));
+
+        expect(result.failed).toEqual([]);
+        expect(doc.getElementById('high-school-graduation-date').value).toBe('2020.02.28');
+        expect(graduationDateInputCount).toBe(1);
+    });
+
+    it('EXT-031: fills newly opened Midas education dates and select fields in one run', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <div id="high-school-section">
+          <button id="open-high-school" type="button"><p>\uACE0\uB4F1\uD559\uAD50 *</p></button>
+        </div>
+        <div id="university-section">
+          <button id="open-university" type="button"><p>\uB300\uD559\uAD50 *</p></button>
+        </div>
+      </form>
+    `;
+        const addSelectBehavior = (trigger, options) => {
+            trigger.addEventListener('mousedown', () => {
+                if (doc.getElementById(`${trigger.id}-options`)) return;
+                const menu = doc.createElement('div');
+                menu.id = `${trigger.id}-options`;
+                menu.innerHTML = options.map((option) => `<button type="button"><p>${option}</p></button>`).join('');
+                menu.querySelectorAll('button').forEach((optionButton) => {
+                    optionButton.addEventListener('mousedown', () => {
+                        trigger.querySelector('p').textContent = optionButton.textContent.trim();
+                        menu.remove();
+                    });
+                });
+                doc.body.append(menu);
+            });
+        };
+        doc.getElementById('open-high-school').addEventListener('click', () => {
+            if (doc.getElementById('high-school-graduation-date')) return;
+            doc.getElementById('high-school-section').insertAdjacentHTML('beforeend', `
+          <section aria-label="\uACE0\uB4F1\uD559\uAD50">
+            <h3>\uACE0\uB4F1\uD559\uAD50</h3>
+            <label>\uC878\uC5C5\uC77C<input id="high-school-graduation-date" name="highSchoolGroupAnswers.graduationDate" placeholder="YYYY.MM.DD" /></label>
+            <button id="high-school-graduation-status" type="button" aria-haspopup="listbox"><p>\uC878\uC5C5\uAD6C\uBD84\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
+            <button id="high-school-location" type="button" aria-haspopup="listbox"><p>\uD559\uAD50 \uC18C\uC7AC\uC9C0\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
+          </section>
+        `);
+            addSelectBehavior(doc.getElementById('high-school-graduation-status'), ['\uC878\uC5C5', '\uC878\uC5C5\uC608\uC815']);
+            addSelectBehavior(doc.getElementById('high-school-location'), ['\uC11C\uC6B8', '\uBD80\uC0B0']);
+        });
+        doc.getElementById('open-university').addEventListener('click', () => {
+            if (doc.getElementById('university-graduation-date')) return;
+            doc.getElementById('university-section').insertAdjacentHTML('beforeend', `
+          <section aria-label="\uB300\uD559\uAD50">
+            <h3>\uB300\uD559\uAD50</h3>
+            <label>\uC878\uC5C5\uC77C<input id="university-graduation-date" name="collegeGroupAnswers.0.graduationDate" placeholder="YYYY.MM.DD" /></label>
+            <button id="university-graduation-status" type="button" aria-haspopup="listbox"><p>\uC878\uC5C5\uAD6C\uBD84\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
+            <button id="university-degree-type" type="button" aria-haspopup="listbox"><p>\uD559\uC704\uAD6C\uBD84\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
+            <button id="university-location" type="button" aria-haspopup="listbox"><p>\uD559\uAD50 \uC18C\uC7AC\uC9C0\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
+            <button id="university-campus-type" type="button" aria-haspopup="listbox"><p>\uBCF8\uAD50/\uBD84\uAD50\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
+          </section>
+        `);
+            addSelectBehavior(doc.getElementById('university-graduation-status'), ['\uC878\uC5C5', '\uC878\uC5C5\uC608\uC815']);
+            addSelectBehavior(doc.getElementById('university-degree-type'), ['\uD559\uC0AC', '\uC11D\uC0AC']);
+            addSelectBehavior(doc.getElementById('university-location'), ['\uC11C\uC6B8', '\uBD80\uC0B0']);
+            addSelectBehavior(doc.getElementById('university-campus-type'), ['\uBCF8\uAD50', '\uBD84\uAD50']);
+        });
+        const educationProfile = {
+            sections: {
+                education: {
+                    highSchool: {
+                        graduationDate: '2020-02-28',
+                        graduationStatus: '\uC878\uC5C5',
+                        location: '\uBD80\uC0B0'
+                    },
+                    universities: [{
+                        graduationDate: '2026-02-20',
+                        graduationStatus: '\uC878\uC5C5',
+                        degreeType: '\uD559\uC0AC',
+                        location: '\uBD80\uC0B0',
+                        campusType: '\uBCF8\uAD50'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanAsync(buildAutoFillPlan(doc, educationProfile));
+
+        expect(result.failed).toEqual([]);
+        expect(doc.getElementById('high-school-graduation-date').value).toBe('2020.02.28');
+        expect(doc.getElementById('high-school-graduation-status').textContent).toContain('\uC878\uC5C5');
+        expect(doc.getElementById('high-school-location').textContent).toContain('\uBD80\uC0B0');
+        expect(doc.getElementById('university-graduation-date').value).toBe('2026.02.20');
+        expect(doc.getElementById('university-graduation-status').textContent).toContain('\uC878\uC5C5');
+        expect(doc.getElementById('university-degree-type').textContent).toContain('\uD559\uC0AC');
+        expect(doc.getElementById('university-location').textContent).toContain('\uBD80\uC0B0');
+        expect(doc.getElementById('university-campus-type').textContent).toContain('\uBCF8\uAD50');
+    });
+
+    it('EXT-031: waits for education detail fields that render after school name input settles', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <div id="high-school-section">
+          <button id="open-high-school" type="button"><p>\uACE0\uB4F1\uD559\uAD50 *</p></button>
+        </div>
+        <div id="university-section">
+          <button id="open-university" type="button"><p>\uB300\uD559\uAD50 *</p></button>
+        </div>
+      </form>
+    `;
+        const addSelectBehavior = (trigger, options) => {
+            trigger.addEventListener('mousedown', () => {
+                if (doc.getElementById(`${trigger.id}-options`)) return;
+                const menu = doc.createElement('div');
+                menu.id = `${trigger.id}-options`;
+                menu.innerHTML = options.map((option) => `<button type="button"><p>${option}</p></button>`).join('');
+                menu.querySelectorAll('button').forEach((optionButton) => {
+                    optionButton.addEventListener('mousedown', () => {
+                        trigger.querySelector('p').textContent = optionButton.textContent.trim();
+                        menu.remove();
+                    });
+                });
+                doc.body.append(menu);
+            });
+        };
+        doc.getElementById('open-high-school').addEventListener('click', () => {
+            if (doc.getElementById('high-school-name')) return;
+            doc.getElementById('high-school-section').insertAdjacentHTML('beforeend', `
+          <section aria-label="\uACE0\uB4F1\uD559\uAD50">
+            <h3>\uACE0\uB4F1\uD559\uAD50</h3>
+            <label>\uD559\uAD50\uC815\uBCF4<input id="high-school-name" placeholder="\uD559\uAD50\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." /></label>
+            <div id="high-school-detail"></div>
+          </section>
+        `);
+            doc.getElementById('high-school-name').addEventListener('change', () => {
+                setTimeout(() => {
+                    if (doc.getElementById('high-school-graduation-date')) return;
+                    doc.getElementById('high-school-detail').innerHTML = `
+              <label>\uC878\uC5C5\uC77C<input id="high-school-graduation-date" placeholder="YYYY.MM.DD" /></label>
+              <button id="high-school-graduation-status" type="button" aria-haspopup="listbox"><p>\uC878\uC5C5\uAD6C\uBD84\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
+              <button id="high-school-location" type="button" aria-haspopup="listbox"><p>\uD559\uAD50 \uC18C\uC7AC\uC9C0\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
+            `;
+                    addSelectBehavior(doc.getElementById('high-school-graduation-status'), ['\uC878\uC5C5', '\uC878\uC5C5\uC608\uC815']);
+                    addSelectBehavior(doc.getElementById('high-school-location'), ['\uC11C\uC6B8', '\uBD80\uC0B0']);
+                }, 1350);
+            });
+        });
+        doc.getElementById('open-university').addEventListener('click', () => {
+            if (doc.getElementById('university-name')) return;
+            doc.getElementById('university-section').insertAdjacentHTML('beforeend', `
+          <section aria-label="\uB300\uD559\uAD50">
+            <h3>\uB300\uD559\uAD50</h3>
+            <label>\uD559\uAD50\uC815\uBCF4<input id="university-name" placeholder="\uD559\uAD50\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." /></label>
+            <div id="university-detail"></div>
+          </section>
+        `);
+            doc.getElementById('university-name').addEventListener('change', () => {
+                setTimeout(() => {
+                    if (doc.getElementById('university-graduation-date')) return;
+                    doc.getElementById('university-detail').innerHTML = `
+              <label>\uC878\uC5C5\uC77C<input id="university-graduation-date" placeholder="YYYY.MM.DD" /></label>
+              <button id="university-graduation-status" type="button" aria-haspopup="listbox"><p>\uC878\uC5C5\uAD6C\uBD84\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
+              <button id="university-degree-type" type="button" aria-haspopup="listbox"><p>\uD559\uC704\uAD6C\uBD84\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
+              <button id="university-location" type="button" aria-haspopup="listbox"><p>\uD559\uAD50 \uC18C\uC7AC\uC9C0\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
+              <button id="university-campus-type" type="button" aria-haspopup="listbox"><p>\uBCF8\uAD50/\uBD84\uAD50\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
+            `;
+                    addSelectBehavior(doc.getElementById('university-graduation-status'), ['\uC878\uC5C5', '\uC878\uC5C5\uC608\uC815']);
+                    addSelectBehavior(doc.getElementById('university-degree-type'), ['\uD559\uC0AC', '\uC11D\uC0AC']);
+                    addSelectBehavior(doc.getElementById('university-location'), ['\uC11C\uC6B8', '\uBD80\uC0B0']);
+                    addSelectBehavior(doc.getElementById('university-campus-type'), ['\uBCF8\uAD50', '\uBD84\uAD50']);
+                }, 1350);
+            });
+        });
+        const educationProfile = {
+            sections: {
+                education: {
+                    highSchool: {
+                        schoolName: '\uBD80\uC0B0\uB3D9\uACE0\uB4F1\uD559\uAD50',
+                        graduationDate: '2020-02-28',
+                        graduationStatus: '\uC878\uC5C5',
+                        location: '\uBD80\uC0B0'
+                    },
+                    universities: [{
+                        schoolName: '\uBD80\uC0B0\uB300\uD559\uAD50',
+                        graduationDate: '2026-02-20',
+                        graduationStatus: '\uC878\uC5C5',
+                        degreeType: '\uD559\uC0AC',
+                        location: '\uBD80\uC0B0',
+                        campusType: '\uBCF8\uAD50'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanAsync(buildAutoFillPlan(doc, educationProfile));
+
+        expect(result.failed).toEqual([]);
+        expect(doc.getElementById('high-school-graduation-date').value).toBe('2020.02.28');
+        expect(doc.getElementById('high-school-graduation-status').textContent).toContain('\uC878\uC5C5');
+        expect(doc.getElementById('high-school-location').textContent).toContain('\uBD80\uC0B0');
+        expect(doc.getElementById('university-graduation-date').value).toBe('2026.02.20');
+        expect(doc.getElementById('university-graduation-status').textContent).toContain('\uC878\uC5C5');
+        expect(doc.getElementById('university-degree-type').textContent).toContain('\uD559\uC0AC');
+        expect(doc.getElementById('university-location').textContent).toContain('\uBD80\uC0B0');
+        expect(doc.getElementById('university-campus-type').textContent).toContain('\uBCF8\uAD50');
+    });
+
+    it('EXT-031: selects Midas school autocomplete options before filling dependent education fields', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uACE0\uB4F1\uD559\uAD50">
+          <h3>\uACE0\uB4F1\uD559\uAD50</h3>
+          <label>\uD559\uAD50\uC815\uBCF4<input id="high-school-name" placeholder="\uD559\uAD50\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." /></label>
+          <div id="high-school-detail"></div>
+        </section>
+        <section aria-label="\uB300\uD559\uAD50">
+          <h3>\uB300\uD559\uAD50</h3>
+          <label>\uD559\uAD50\uC815\uBCF4<input id="university-name" placeholder="\uD559\uAD50\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." /></label>
+          <div id="university-detail"></div>
+        </section>
+      </form>
+    `;
+        const addSchoolSearchBehavior = (input, optionText, detailTargetId, detailMarkup, onDetailReady = () => {}) => {
+            input.addEventListener('input', () => {
+                if (doc.getElementById(`${input.id}-option`)) return;
+                const option = doc.createElement('button');
+                option.id = `${input.id}-option`;
+                option.type = 'button';
+                option.textContent = optionText;
+                option.addEventListener('mousedown', () => {
+                    input.value = optionText;
+                    option.remove();
+                    setTimeout(() => {
+                        doc.getElementById(detailTargetId).innerHTML = detailMarkup;
+                        onDetailReady();
+                    }, 1350);
+                });
+                doc.body.append(option);
+            });
+        };
+        const addSelectBehavior = (trigger, options) => {
+            trigger.addEventListener('mousedown', () => {
+                if (doc.getElementById(`${trigger.id}-options`)) return;
+                const menu = doc.createElement('div');
+                menu.id = `${trigger.id}-options`;
+                menu.innerHTML = options.map((option) => `<button type="button"><p>${option}</p></button>`).join('');
+                menu.querySelectorAll('button').forEach((optionButton) => {
+                    optionButton.addEventListener('mousedown', () => {
+                        trigger.querySelector('p').textContent = optionButton.textContent.trim();
+                        menu.remove();
+                    });
+                });
+                doc.body.append(menu);
+            });
+        };
+        addSchoolSearchBehavior(
+            doc.getElementById('high-school-name'),
+            '\uBD80\uC0B0\uB3D9\uACE0\uB4F1\uD559\uAD50',
+            'high-school-detail',
+            `
+          <label>\uC878\uC5C5\uC77C<input id="high-school-graduation-date" placeholder="YYYY.MM.DD" /></label>
+          <button id="high-school-graduation-status" type="button" aria-haspopup="listbox"><p>\uC878\uC5C5\uAD6C\uBD84\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
+        `
+            ,
+            () => addSelectBehavior(doc.getElementById('high-school-graduation-status'), ['\uC878\uC5C5', '\uC878\uC5C5\uC608\uC815'])
+        );
+        addSchoolSearchBehavior(
+            doc.getElementById('university-name'),
+            '\uBD80\uC0B0\uB300\uD559\uAD50',
+            'university-detail',
+            `
+          <label>\uC878\uC5C5\uC77C<input id="university-graduation-date" placeholder="YYYY.MM.DD" /></label>
+          <button id="university-graduation-status" type="button" aria-haspopup="listbox"><p>\uC878\uC5C5\uAD6C\uBD84\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
+          <button id="university-degree-type" type="button" aria-haspopup="listbox"><p>\uD559\uC704\uAD6C\uBD84\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
+        `
+            ,
+            () => {
+                addSelectBehavior(doc.getElementById('university-graduation-status'), ['\uC878\uC5C5', '\uC878\uC5C5\uC608\uC815']);
+                addSelectBehavior(doc.getElementById('university-degree-type'), ['\uD559\uC0AC', '\uC11D\uC0AC']);
+            }
+        );
+        const educationProfile = {
+            sections: {
+                education: {
+                    highSchool: {
+                        schoolName: '\uBD80\uC0B0\uB3D9\uACE0\uB4F1\uD559\uAD50',
+                        graduationDate: '2020-02-28',
+                        graduationStatus: '\uC878\uC5C5'
+                    },
+                    universities: [{
+                        schoolName: '\uBD80\uC0B0\uB300\uD559\uAD50',
+                        graduationDate: '2026-02-20',
+                        graduationStatus: '\uC878\uC5C5',
+                        degreeType: '\uD559\uC0AC'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanAsync(buildAutoFillPlan(doc, educationProfile));
+
+        expect(result.failed).toEqual([]);
+        expect(doc.getElementById('high-school-name-option')).toBeNull();
+        expect(doc.getElementById('university-name-option')).toBeNull();
+        expect(doc.getElementById('high-school-graduation-date').value).toBe('2020.02.28');
+        expect(doc.getElementById('high-school-graduation-status').textContent).toContain('\uC878\uC5C5');
+        expect(doc.getElementById('university-graduation-date').value).toBe('2026.02.20');
+        expect(doc.getElementById('university-graduation-status').textContent).toContain('\uC878\uC5C5');
+        expect(doc.getElementById('university-degree-type').textContent).toContain('\uD559\uC0AC');
+    });
+
+    it('EXT-031: distinguishes high school and university fields in shared Midas containers', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <div>
+          <div class="remix-css-1iyoj2o">
+            <div class="remix-css-uf1ume"><p>- \uACE0\uB4F1\uD559\uAD50</p></div>
+            <div class="remix-css-t25awl">
+              <div class="remix-css-ke50n9"><p>\uC878\uC5C5\uC77C</p></div>
+              <div class="remix-css-3btwcy"><input id="high-school-end" placeholder="YYYY.MM.DD" /></div>
+            </div>
+          </div>
+          <div class="remix-css-1iyoj2o">
+            <div tabindex="0" class="remix-css-1eqh85h"><div><p>\uB300\uD559\uAD50</p></div></div>
+            <div class="remix-css-t25awl">
+              <div class="remix-css-ke50n9"><p>\uC878\uC5C5\uC77C</p></div>
+              <div class="remix-css-3btwcy"><input id="university-end" placeholder="YYYY.MM.DD" /></div>
+            </div>
+          </div>
+        </div>
+      </form>
+    `;
+        const educationProfile = {
+            sections: {
+                education: {
+                    highSchool: {
+                        graduationDate: '2020-02-28'
+                    },
+                    universities: [{
+                        graduationDate: '2026-02-20'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = applyAutoFillPlan(buildAutoFillPlan(doc, educationProfile));
+
+        expect(result.failed).toEqual([]);
+        expect(doc.getElementById('high-school-end').value).toBe('2020.02.28');
+        expect(doc.getElementById('university-end').value).toBe('2026.02.20');
+    });
+
+    it('EXT-031: does not treat Midas select placeholders as document values', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uB300\uD559\uAD50">
+          <h3>\uB300\uD559\uAD50</h3>
+          <button id="major-category" type="button" aria-haspopup="listbox"><p>\uD559\uACFC\uACC4\uC5F4\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
+        </section>
+      </form>
+    `;
+        const educationProfile = {
+            sections: {
+                education: {
+                    universities: [{
+                        majorCategory: '\uD559\uACFC\uACC4\uC5F4\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694.'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const preview = previewAutoFillPlan(buildAutoFillPlan(doc, educationProfile));
+
+        expect(preview.planned.map((item) => item.fieldKey)).not.toContain('education.universities.0.majorCategory');
+        expect(preview.failed).toEqual([
+            expect.objectContaining({ fieldKey: 'education.universities.*.majorCategory', reason: 'missing_profile_value' })
+        ]);
     });
 
     it('EXT-026: keeps language test score out of acquired date fields', () => {

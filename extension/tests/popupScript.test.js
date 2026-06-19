@@ -81,6 +81,12 @@ describe('extension popup script', () => {
         expect(script).toContain('\\uC11C\\uB958 \\uC785\\uB825 \\uC815\\uBCF4\\uC5D0 \\uAC12\\uC744 \\uCD94\\uAC00');
     });
 
+    it('separates fields that cannot be filled because the service profile has no value', () => {
+        expect(script).toContain("variant: 'profile-missing'");
+        expect(script).toContain("\\uC11C\\uBE44\\uC2A4\\uC5D0 \\uC5C6\\uB294 \\uC815\\uBCF4");
+        expect(script).toContain('\\uB0B4 \\uC11C\\uBE44\\uC2A4\\uC5D0\\uC11C \\uC785\\uB825\\uD558\\uC9C0 \\uC54A\\uC740 \\uC815\\uBCF4');
+    });
+
     it('explains application-specific fields that the document profile does not model', () => {
         expect(script).toContain("reason === 'unsupported_profile_field'");
         expect(script).toContain('\\uC9C0\\uC6D0\\uC11C\\uC5D0\\uC11C \\uC9C1\\uC811 \\uC785\\uB825');
@@ -110,13 +116,16 @@ describe('extension popup script', () => {
         expect(script).toContain('아래 복사 후보에서 활동을 골라 지원 직무에 맞게 붙여넣어 주세요.');
     });
 
-    it('highlights section-opening steps separately from normal autofill values', () => {
+    it('hides internal section-opening steps from user-facing autofill results', () => {
         expect(script).toContain('function getPrimaryAutoFillDisplay');
+        expect(script).toContain('function isUserVisibleAutoFillItem');
         expect(script).toContain('function isSectionOpenItem');
         expect(script).toContain('item?.sectionOpenControl');
-        expect(script).toContain("variant: 'section-open'");
-        expect(script).toContain('\\uBA3C\\uC800 \\uC2E4\\uD589');
-        expect(script).toContain('\\uC5F4\\uAE30 \\uC644\\uB8CC');
+        expect(script).toContain('.filter(isUserVisibleAutoFillItem)');
+        expect(script).toContain('return !isSectionOpenItem(item);');
+        expect(script).not.toContain("variant: 'section-open'");
+        expect(script).not.toContain('1\\uB2E8\\uACC4');
+        expect(script).not.toContain('\\uC790\\uB3D9 \\uC785\\uB825 \\uBC84\\uD2BC \\uD55C \\uBC88\\uC73C\\uB85C \\uCC98\\uB9AC\\uB429\\uB2C8\\uB2E4.');
         expect(script).toContain('endsWith(\'.open\')');
     });
 

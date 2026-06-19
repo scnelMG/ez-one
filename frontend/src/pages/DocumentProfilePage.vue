@@ -290,7 +290,60 @@
                     </div>
                     <div class="profile-field-grid" :class="`columns-${group.columns ?? 3}`">
                       <template v-for="field in visibleGroupFields(group)" :key="field.key">
-                        <div v-if="field.type === 'checkbox'" class="checkbox-field-wrapper" :class="{ wide: field.wide, full: field.full }">
+                        <div v-if="field.type === 'majorList'" class="profile-nested-list full">
+                          <div class="profile-nested-list-head">
+                            <span>{{ field.label }}</span>
+                          </div>
+                          <article
+                            v-for="(majorItem, majorIndex) in ensureNestedList(item, field)"
+                            :key="`${group.key}-${index}-${field.key}-${majorIndex}`"
+                            class="profile-nested-entry"
+                          >
+                            <div class="profile-nested-entry-head">
+                              <strong>{{ field.itemLabel }} {{ majorIndex + 1 }}</strong>
+                              <button
+                                v-if="item[field.key].length > 1"
+                                class="ghost-button compact"
+                                type="button"
+                                :data-testid="`delete-${group.key}-${index}-${field.key}-${majorIndex}`"
+                                @click="removeNestedItem(item, field, majorIndex)"
+                              >
+                                삭제
+                              </button>
+                            </div>
+                            <div class="profile-field-grid columns-4">
+                              <label v-for="nestedField in field.fields" :key="nestedField.key" :class="{ wide: nestedField.wide, full: nestedField.full }">
+                                {{ nestedField.label }}
+                                <select
+                                  v-if="nestedField.type === 'select'"
+                                  v-model="majorItem[nestedField.key]"
+                                  :data-testid="`${group.key}-${index}-${field.key}-${majorIndex}-${nestedField.key}`"
+                                  @change="updateChoiceField(majorItem, nestedField.key, $event)"
+                                >
+                                  <option v-for="option in nestedField.options" :key="option.value" :value="option.value">
+                                    {{ option.label }}
+                                  </option>
+                                </select>
+                                <input
+                                  v-else
+                                  v-model="majorItem[nestedField.key]"
+                                  :type="nestedField.type ?? 'text'"
+                                  :placeholder="nestedField.placeholder"
+                                  :data-testid="`${group.key}-${index}-${field.key}-${majorIndex}-${nestedField.key}`"
+                                />
+                              </label>
+                            </div>
+                          </article>
+                          <button
+                            class="secondary-button compact-button"
+                            type="button"
+                            :data-testid="`add-${group.key}-${index}-${field.key}`"
+                            @click="addNestedItem(item, field)"
+                          >
+                            + {{ field.addLabel }}
+                          </button>
+                        </div>
+                        <div v-else-if="field.type === 'checkbox'" class="checkbox-field-wrapper" :class="{ wide: field.wide, full: field.full }">
                           <span class="checkbox-top-label">&nbsp;</span>
                           <label class="checkbox-field">
                             <input
@@ -658,15 +711,56 @@ const selectOptions = {
     { label: '분교', value: '분교' }
   ],
   majorCategory: [
-    { label: '선택', value: '' },
-    { label: '인문계열', value: '인문계열' },
-    { label: '사회계열', value: '사회계열' },
-    { label: '상경계열', value: '상경계열' },
-    { label: '공학계열', value: '공학계열' },
-    { label: '자연계열', value: '자연계열' },
-    { label: '의약계열', value: '의약계열' },
-    { label: '예체능계열', value: '예체능계열' },
+    { label: '선택안함', value: '' },
+    { label: '인문계열(언어ㆍ문학)', value: '인문계열(언어ㆍ문학)' },
+    { label: '인문계열(인문과학)', value: '인문계열(인문과학)' },
+    { label: '상경계열(경영·경제)', value: '상경계열(경영·경제)' },
+    { label: '상경계열(회계·금융)', value: '상경계열(회계·금융)' },
+    { label: '상경계열(통계)', value: '상경계열(통계)' },
+    { label: '상경계열(무역)', value: '상경계열(무역)' },
+    { label: '사회계열(법률)', value: '사회계열(법률)' },
+    { label: '사회계열(사회과학)', value: '사회계열(사회과학)' },
+    { label: '교육계열(교육일반)', value: '교육계열(교육일반)' },
+    { label: '교육계열(유아교육)', value: '교육계열(유아교육)' },
+    { label: '교육계열(특수교육)', value: '교육계열(특수교육)' },
+    { label: '교육계열(초등교육)', value: '교육계열(초등교육)' },
+    { label: '교육계열(중등교육)', value: '교육계열(중등교육)' },
+    { label: '공학계열(건축)', value: '공학계열(건축)' },
+    { label: '공학계열(토목·도시)', value: '공학계열(토목·도시)' },
+    { label: '공학계열(교통·운송)', value: '공학계열(교통·운송)' },
+    { label: '공학계열(기계·금속)', value: '공학계열(기계·금속)' },
+    { label: '공학계열(전기·전자)', value: '공학계열(전기·전자)' },
+    { label: '공학계열(정밀·에너지)', value: '공학계열(정밀·에너지)' },
+    { label: '공학계열(소재·재료)', value: '공학계열(소재·재료)' },
+    { label: '공학계열(컴퓨터·통신)', value: '공학계열(컴퓨터·통신)' },
+    { label: '공학계열(산업)', value: '공학계열(산업)' },
+    { label: '공학계열(화공)', value: '공학계열(화공)' },
+    { label: '공학계열(환경)', value: '공학계열(환경)' },
+    { label: '공학계열(조선해양)', value: '공학계열(조선해양)' },
+    { label: '자연계열(농림·수산)', value: '자연계열(농림·수산)' },
+    { label: '자연계열(생물·화학·환경)', value: '자연계열(생물·화학·환경)' },
+    { label: '자연계열(생활과학)', value: '자연계열(생활과학)' },
+    { label: '자연계열(수학·물리·천문·지리)', value: '자연계열(수학·물리·천문·지리)' },
+    { label: '자연계열(교통.운송)', value: '자연계열(교통.운송)' },
+    { label: '의약계열(의료)', value: '의약계열(의료)' },
+    { label: '의약계열(간호)', value: '의약계열(간호)' },
+    { label: '의약계열(약학)', value: '의약계열(약학)' },
+    { label: '의약계열(치료·보건)', value: '의약계열(치료·보건)' },
+    { label: '예체능계열(디자인)', value: '예체능계열(디자인)' },
+    { label: '예체능계열(응용예술)', value: '예체능계열(응용예술)' },
+    { label: '예체능계열(무용·체육)', value: '예체능계열(무용·체육)' },
+    { label: '예체능계열(미술·조형)', value: '예체능계열(미술·조형)' },
+    { label: '예체능계열(연극·영화)', value: '예체능계열(연극·영화)' },
+    { label: '예체능계열(음악)', value: '예체능계열(음악)' },
     { label: '기타', value: '기타' }
+  ],
+  majorType: [
+    { label: '선택', value: '' },
+    { label: '주전공', value: '주전공' },
+    { label: '복수전공', value: '복수전공' },
+    { label: '부전공', value: '부전공' },
+    { label: '연계전공', value: '연계전공' },
+    { label: '융합전공', value: '융합전공' }
   ],
   militaryStatus: [
     { label: '선택', value: '' },
@@ -1477,6 +1571,24 @@ function addGroupItem(groupKey) {
   activeSectionForm[groupKey].push(emptyGroupItem(group));
 }
 
+function ensureNestedList(record, field) {
+  if (!record) return [];
+  if (!Array.isArray(record[field.key]) || record[field.key].length === 0) {
+    record[field.key] = [emptyNestedItem(field)];
+  }
+  return record[field.key];
+}
+
+function addNestedItem(record, field) {
+  ensureNestedList(record, field).push(emptyNestedItem(field));
+}
+
+function removeNestedItem(record, field, index) {
+  const items = ensureNestedList(record, field);
+  if (items.length <= 1) return;
+  items.splice(index, 1);
+}
+
 function requestDeleteGroupItem(groupKey, index) {
   if (!Array.isArray(activeSectionForm[groupKey])) return;
   pendingDelete.value = { groupKey, index };
@@ -1526,10 +1638,26 @@ function syncRepeatableGroupFromDom(group) {
 function syncGroupRecordFromDom(group, record, testIdPrefix) {
   if (!record) return;
   group.fields.forEach((field) => {
+    if (field.type === 'majorList') {
+      syncNestedListFromDom(field, record, testIdPrefix);
+      return;
+    }
     const fieldValue = readFieldValueFromDom(field, testIdPrefix, record[field.key]);
     if (fieldValue !== undefined) {
       record[field.key] = fieldValue;
     }
+  });
+}
+
+function syncNestedListFromDom(field, record, testIdPrefix) {
+  const items = ensureNestedList(record, field);
+  items.forEach((item, index) => {
+    field.fields.forEach((nestedField) => {
+      const fieldValue = readFieldValueFromDom(nestedField, `${testIdPrefix}-${field.key}-${index}`, item[nestedField.key]);
+      if (fieldValue !== undefined) {
+        item[nestedField.key] = fieldValue;
+      }
+    });
   });
 }
 
@@ -1654,7 +1782,9 @@ function extendDocumentProfileSchemasForApplicationAutofill() {
   for (const group of [sectionSchemas.education?.groups?.[1], sectionSchemas.education?.groups?.[2]]) {
     insertFieldAfter(group?.fields, 'schoolName', textField('location', '학교 소재지', '예: 부산'));
     insertFieldAfter(group?.fields, 'location', selectField('campusType', '본교/분교', selectOptions.campusType));
-    insertFieldAfter(group?.fields, 'major', selectField('majorCategory', '학과계열', selectOptions.majorCategory));
+    if (!group?.fields?.some((field) => field.type === 'majorList')) {
+      insertFieldAfter(group?.fields, 'major', selectField('majorCategory', '학과계열', selectOptions.majorCategory));
+    }
   }
 }
 
@@ -1688,11 +1818,27 @@ function checkboxField(key, checkboxLabel, wide = true, headerPlacement = '') {
   return { key, label: '', checkboxLabel, type: 'checkbox', wide, headerPlacement };
 }
 
+function majorListField() {
+  return {
+    key: 'majors',
+    label: '전공',
+    itemLabel: '전공',
+    addLabel: '전공 추가',
+    type: 'majorList',
+    full: true,
+    fields: [
+      textField('major', '전공명', '전공명을 입력해주세요', true),
+      selectField('majorCategory', '학과계열', selectOptions.majorCategory),
+      selectField('majorType', '전공구분', selectOptions.majorType),
+      selectField('dayNight', '주간/야간', selectOptions.dayNight)
+    ]
+  };
+}
+
 function educationDegreeFields(degreeOptions) {
   return [
     textField('schoolName', '학교명', '학교명'),
-    textField('major', '전공', '전공명'),
-    textField('subMajor', '복수전공/부전공'),
+    majorListField(),
     selectField('degreeType', '학위구분', degreeOptions),
     dateField('entranceDate', '입학일'),
     dateField('graduationDate', '졸업일'),
@@ -1714,18 +1860,83 @@ function mergeSectionDefaults(schema, savedPayload) {
       const hasSavedGroup = Object.prototype.hasOwnProperty.call(payload, group.key);
       const savedItems = Array.isArray(payload[group.key]) ? payload[group.key] : [];
       section[group.key] = hasSavedGroup
-        ? savedItems.map((item) => ({ ...emptyGroupItem(group), ...item }))
+        ? savedItems.map((item) => mergeGroupItem(group, item))
         : [emptyGroupItem(group)];
       return section;
     }
-    section[group.key] = { ...emptyGroupItem(group), ...(payload[group.key] ?? {}) };
+    section[group.key] = mergeGroupItem(group, payload[group.key]);
     return section;
   }, {});
 }
 
 function emptyGroupItem(group) {
   return group.fields.reduce((item, field) => {
-    item[field.key] = field.type === 'checkbox' ? false : '';
+    if (field.type === 'checkbox') {
+      item[field.key] = false;
+    }
+    else if (field.type === 'majorList') {
+      item[field.key] = [emptyNestedItem(field)];
+    }
+    else {
+      item[field.key] = '';
+    }
+    return item;
+  }, {});
+}
+
+function mergeGroupItem(group, savedItem) {
+  const source = plainRecord(savedItem);
+  const item = { ...emptyGroupItem(group), ...source };
+  group.fields.forEach((field) => {
+    if (field.type !== 'majorList') return;
+    item[field.key] = normalizeMajorItems(field, source);
+    delete item.major;
+    delete item.majorName;
+    delete item.majorType;
+    delete item.majorCategory;
+    delete item.dayNight;
+    delete item.subMajor;
+  });
+  return item;
+}
+
+function normalizeMajorItems(field, source) {
+  const savedMajors = Array.isArray(source?.[field.key]) ? source[field.key] : [];
+  const majors = savedMajors.length ? savedMajors : legacyMajorItems(source);
+  return (majors.length ? majors : [emptyNestedItem(field)]).map((major) => ({
+    ...emptyNestedItem(field),
+    ...plainRecord(major)
+  }));
+}
+
+function legacyMajorItems(source) {
+  const primaryMajor = source?.major ?? source?.majorName;
+  const primary = {
+    major: cleanRecordText(primaryMajor),
+    majorType: cleanRecordText(source?.majorType),
+    majorCategory: cleanRecordText(source?.majorCategory),
+    dayNight: cleanRecordText(source?.dayNight)
+  };
+  const majors = hasMajorValue(primary) ? [primary] : [];
+  const subMajor = cleanRecordText(source?.subMajor);
+  if (subMajor) {
+    majors.push({
+      major: subMajor,
+      majorType: '',
+      majorCategory: cleanRecordText(source?.majorCategory),
+      dayNight: cleanRecordText(source?.dayNight)
+    });
+  }
+  return majors;
+}
+
+function hasMajorValue(major) {
+  return Object.values(major).some((value) => cleanRecordText(value));
+}
+
+function emptyNestedItem(field) {
+  return (field.fields ?? []).reduce((item, nestedField) => {
+    item[nestedField.key] = nestedField.type === 'checkbox' ? false : '';
     return item;
   }, {});
 }

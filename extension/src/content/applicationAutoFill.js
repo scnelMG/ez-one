@@ -3,8 +3,11 @@ const APPLICATION_FORM_CHANGE_DEBOUNCE_MS = 500;
 const AUTOFILL_ASYNC_WAIT_TIMEOUT_MS = 1200;
 const AUTOFILL_ASYNC_WAIT_INTERVAL_MS = 40;
 const AUTOFILL_DEPENDENT_FIELD_SETTLE_MS = 80;
+const AUTOFILL_DEPENDENT_CONTROL_WAIT_TIMEOUT_MS = 3200;
+const AUTOFILL_EDUCATION_AUTOCOMPLETE_OPTION_WAIT_TIMEOUT_MS = 2200;
 const PANEL_HOST_ID = 'ezone-extension-panel-host';
 const APPLICATION_FORM_SELECTOR = 'input, textarea, select, button, [role="combobox"], [role="radio"], [role="checkbox"], [role="switch"], [aria-haspopup], [data-value], [data-option]';
+const EDUCATION_MAJOR_DETAIL_FIELDS = new Set(['majorName', 'majorType', 'majorCategory', 'dayNight']);
 
 const BASIC_FIELDS = [
     { key: 'basicInfo.nameKo', label: '이름', section: 'basicInfo', field: 'nameKo', terms: ['이름', '성명', '지원자명', 'applicantname', 'username', 'name'] },
@@ -49,7 +52,14 @@ const MILITARY_DEPENDENT_DATE_KEYS = new Set(['military.enlistmentDate', 'milita
 const MILITARY_DEPENDENT_SELECT_KEYS = new Set(['military.rank', 'military.dischargeType']);
 const ESSAY_TERMS = ['자기소개', '자소서', '지원동기', '입사후', '성장과정', '장단점', 'essay', 'motivation', 'coverletter', 'selfintroduction'];
 const ACTION_BUTTON_TERMS = ['다음', '이전', '저장', '닫기', '취소', '삭제', '추가', '복사', '주소입력', '주소 입력', '사진 등록'].map(normalize);
-const CHOICE_BUTTON_TERMS = ['남', '여', '남성', '여성', '비대상', '대상', '예', '아니오', '군필', '미필', '면제', '복무중', '신입', '경력', '인턴', '신입/경력'].map(normalize);
+const CHOICE_BUTTON_TERMS = [
+    '남', '여', '남성', '여성',
+    '비대상', '대상', '예', '아니오',
+    '군필', '미필', '면제', '복무중',
+    '신입', '경력', '인턴', '신입/경력',
+    '주전공', '복수전공', '부전공', '연계전공', '융합전공',
+    '주간', '야간'
+].map(normalize);
 
 export function flattenDocumentProfileValues(profile) {
     const values = [];
@@ -118,7 +128,7 @@ export function buildAutoFillPlan(documentRef = document, profile) {
         const fallbackMatch = !directKey ? findBestValue(context.normalized, values) : null;
         const match = directMatch || fallbackMatch;
         if (match) {
-            const autocompleteSearchControl = isAutocompleteSearchControl(control) && isAutocompletePrimaryFieldKey(match.key);
+            const autocompleteSearchControl = isAutocompleteSearchControlForField(control, match.key);
             fillable.push({
                 element: control,
                 fieldKey: match.key,
@@ -139,12 +149,20 @@ export function buildAutoFillPlan(documentRef = document, profile) {
         }
     }
 
+    addDeferredMilitaryDateItems(values, fillable);
+    addDeferredEducationSectionItems(documentRef, values, fillable);
+    addDeferredEducationMajorItems(documentRef, values, fillable);
+
     const sortedFillable = sortAutoFillItems(fillable);
+    const excludedFieldKeys = new Set(sortedFillable.map((item) => item.fieldKey));
+    const visibleFieldKeys = collectVisibleProfileFieldKeys(documentRef);
+    const scopedFieldKeys = scopedCopyCandidateFieldKeys(visibleFieldKeys, sortedFillable);
+    const copyCandidateKeys = visibleCopyCandidateKeys(scopedFieldKeys, excludedFieldKeys);
     return {
         fillable: sortedFillable,
         failed,
         skipped,
-        copyCandidates: copyCandidatesFromValues(values, new Set(sortedFillable.map((item) => item.fieldKey)))
+        copyCandidates: copyCandidatesFromValues(values, excludedFieldKeys, copyCandidateKeys)
     };
 }
 
@@ -174,12 +192,18 @@ export function applyAutoFillPlan(plan) {
 export async function applyAutoFillPlanAsync(plan) {
     const filled = [];
     const failed = [...plan.failed];
+    const completedFieldKeys = new Set();
     for (const item of plan.fillable) {
+        if (completedFieldKeys.has(item.fieldKey)) continue;
         const element = await resolveControlForFillAsync(item);
         const result = await setControlValueAsync(element, item.value, item);
         if (result.success) {
             filled.push({ fieldKey: item.fieldKey, label: item.label, value: result.value, sectionOpenControl: Boolean(item.sectionOpenControl) });
-            if (Array.isArray(result.extraFilled)) filled.push(...result.extraFilled);
+            completedFieldKeys.add(item.fieldKey);
+            if (Array.isArray(result.extraFilled)) {
+                filled.push(...result.extraFilled);
+                result.extraFilled.forEach((extraItem) => completedFieldKeys.add(extraItem.fieldKey));
+            }
         }
         else {
             failed.push({ fieldKey: item.fieldKey, label: item.label, value: item.value, reason: result.reason });
@@ -257,7 +281,7 @@ function addChoiceItems(documentRef, values, fillable) {
     const controls = Array.from(new Set(getApplicationFormElements(documentRef, 'input[type="radio"], input[type="checkbox"], button[type="button"], button:not([type]), [role="button"], [role="radio"], [role="checkbox"], [role="switch"], [aria-pressed], [aria-selected], [data-value], [data-option]')))
         .filter(isChoiceButtonCandidate);
     for (const control of controls) {
-        const optionText = cleanText(labelText(control)) || choiceElementText(control);
+        const optionText = choiceCandidateText(control);
         const context = collectChoiceText(control, optionText);
         const match = findBestChoiceValue(optionText, context.normalized, values, usedFieldKeys);
         if (!match) continue;
@@ -291,26 +315,187 @@ function addCustomSelectItems(documentRef, values, fillable, failed) {
     }
 }
 
+function addDeferredMilitaryDateItems(values, fillable) {
+    const statusItem = fillable.find((item) => item.fieldKey === 'military.status' && isCompletedMilitaryStatus(item.value));
+    if (!statusItem) return;
+    for (const fieldKey of MILITARY_DEPENDENT_DATE_KEYS) {
+        if (fillable.some((item) => item.fieldKey === fieldKey)) continue;
+        const match = values.find((value) => value.key === fieldKey);
+        if (!match) continue;
+        fillable.push({
+            element: statusItem.element,
+            fieldKey,
+            label: match.label,
+            value: match.value,
+            waitForControlBeforeFill: true
+        });
+    }
+}
+
+function addDeferredEducationSectionItems(documentRef, values, fillable) {
+    addDeferredEducationGroupItems({
+        documentRef,
+        values: values.filter((value) => value.key.startsWith('education.highSchool.')),
+        fillable,
+        openKey: 'education.highSchool.open',
+        openLabel: '\uACE0\uB4F1\uD559\uAD50 \uC785\uB825\uCE78 \uC5F4\uAE30',
+        buttonTerms: ['\uACE0\uB4F1\uD559\uAD50']
+    });
+    addDeferredRepeatedEducationGroupItems(documentRef, values, fillable, {
+        group: 'universities',
+        openLabel: '\uB300\uD559\uAD50 \uC785\uB825\uCE78 \uC5F4\uAE30',
+        buttonTerms: ['\uB300\uD559\uAD50']
+    });
+    addDeferredRepeatedEducationGroupItems(documentRef, values, fillable, {
+        group: 'graduateSchools',
+        openLabel: '\uB300\uD559\uC6D0 \uC785\uB825\uCE78 \uC5F4\uAE30',
+        buttonTerms: ['\uB300\uD559\uC6D0']
+    });
+}
+
+function addDeferredRepeatedEducationGroupItems(documentRef, values, fillable, config) {
+    const grouped = new Map();
+    const pattern = new RegExp(`^education\\.${config.group}\\.(\\d+)\\.`);
+    for (const value of values) {
+        const match = value.key.match(pattern);
+        if (!match) continue;
+        const index = match[1];
+        if (!grouped.has(index)) grouped.set(index, []);
+        grouped.get(index).push(value);
+    }
+    for (const [index, groupValues] of grouped) {
+        addDeferredEducationGroupItems({
+            documentRef,
+            values: groupValues,
+            fillable,
+            openKey: `education.${config.group}.${index}.open`,
+            openLabel: config.openLabel,
+            buttonTerms: config.buttonTerms
+        });
+    }
+}
+
+function addDeferredEducationGroupItems({ documentRef, values, fillable, openKey, openLabel, buttonTerms }) {
+    const missingValues = values.filter((value) => !fillable.some((item) => item.fieldKey === value.key));
+    if (!missingValues.length) return;
+    const opener = findEducationSectionOpenControl(documentRef, buttonTerms);
+    if (!opener) return;
+    if (!fillable.some((item) => item.fieldKey === openKey)) {
+        fillable.push({
+            element: opener,
+            fieldKey: openKey,
+            label: openLabel,
+            value: '\uC785\uB825\uCE78 \uC5F4\uAE30',
+            sectionOpenControl: true
+        });
+    }
+    for (const value of missingValues) {
+        const autocompleteSearchControl = isEducationSchoolNameField(value.key);
+        fillable.push({
+            element: opener,
+            fieldKey: value.key,
+            label: value.label,
+            value: value.value,
+            waitForControlBeforeFill: true,
+            autocompleteSearchControl,
+            relatedValues: autocompleteSearchControl ? relatedValuesForAutocomplete(values, value.key) : []
+        });
+    }
+}
+
+function findEducationSectionOpenControl(documentRef, buttonTerms) {
+    const controls = getApplicationFormElements(documentRef, 'button[type="button"], button:not([type]), [role="button"]');
+    return controls.find((control) => {
+        const text = normalize(choiceCandidateText(control));
+        if (!text) return false;
+        return buttonTerms.some((term) => text.includes(normalize(term)));
+    }) ?? null;
+}
+
+function addDeferredEducationMajorItems(documentRef, values, fillable) {
+    const majorValues = values.filter((value) => /\.majorName$/.test(value.key) && !fillable.some((item) => item.fieldKey === value.key));
+    for (const value of majorValues) {
+        const opener = findEducationMajorOpenControl(documentRef, value.key);
+        if (!opener) continue;
+        const majorDetailValues = values.filter((candidate) => {
+            if (fillable.some((item) => item.fieldKey === candidate.key)) return false;
+            return educationMajorDetailBase(candidate.key) === educationMajorDetailBase(value.key);
+        });
+        const openKey = `${value.key}.open`;
+        if (!fillable.some((item) => item.fieldKey === openKey)) {
+            fillable.push({
+                element: opener,
+                fieldKey: openKey,
+                label: `${value.label} \uC785\uB825\uCE78 \uC5F4\uAE30`,
+                value: '\uC785\uB825\uCE78 \uC5F4\uAE30',
+                sectionOpenControl: true
+            });
+        }
+        for (const detailValue of majorDetailValues) {
+            fillable.push({
+                element: opener,
+                fieldKey: detailValue.key,
+                label: detailValue.label,
+                value: detailValue.value,
+                waitForControlBeforeFill: true
+            });
+        }
+    }
+}
+
+function educationMajorDetailBase(fieldKey) {
+    const match = String(fieldKey ?? '').match(/^(education\.(?:universities|graduateSchools)\.\d+\.majors\.\d+)\.([^.]+)$/) ??
+        String(fieldKey ?? '').match(/^(education\.(?:universities|graduateSchools)\.\d+)\.([^.]+)$/);
+    if (!match || !EDUCATION_MAJOR_DETAIL_FIELDS.has(match[2])) return null;
+    return match[1];
+}
+
+function findEducationMajorOpenControl(documentRef, fieldKey) {
+    const controls = getApplicationFormElements(documentRef, 'button[type="button"], button:not([type]), [role="button"]');
+    return controls.find((control) => {
+        const context = collectChoiceText(control, choiceElementText(control));
+        const signature = normalize([
+            context.normalized,
+            choiceElementText(control),
+            educationSectionContextText(control)
+        ].filter(Boolean).join(' '));
+        return signature.includes(normalize('\uc804\uacf5')) &&
+            signature.includes(normalize('\ucd94\uac00')) &&
+            educationFieldKeyMatchesContext(fieldKey, signature);
+    }) ?? null;
+}
+
+function educationFieldKeyMatchesContext(fieldKey, context) {
+    if (fieldKey.startsWith('education.highSchool.')) return context.includes(normalize('\uace0\ub4f1\ud559\uad50')) || context.includes('highschool');
+    if (fieldKey.startsWith('education.universities.')) return context.includes(normalize('\ub300\ud559\uad50')) || context.includes(normalize('\ub300\ud559')) || context.includes('university');
+    if (fieldKey.startsWith('education.graduateSchools.')) return context.includes(normalize('\ub300\ud559\uc6d0')) || context.includes('graduate');
+    return true;
+}
+
 function collectControlText(control) {
-    const visibleTexts = [
-        labelText(control),
-        tableHeaderText(control),
-        nearbyText(control),
-        previousSiblingText(control),
-        educationSectionContextText(control)
-    ].filter(Boolean);
     const fallbackTexts = [
         control.getAttribute('aria-label'),
         control.getAttribute('placeholder'),
         control.getAttribute('name'),
         control.id
     ].filter(Boolean);
+    const ancestorRowLabel = directFieldKeyFromText(fallbackTexts.join(' '))
+        ? ''
+        : ancestorPreviousSiblingText(control);
+    const visibleTexts = [
+        labelText(control),
+        tableHeaderText(control),
+        nearbyText(control),
+        ancestorRowLabel,
+        previousSiblingText(control),
+        educationSectionContextText(control)
+    ].filter(Boolean);
     const texts = [...visibleTexts, ...fallbackTexts];
     return { displayLabel: cleanText(texts[0]) || '', normalized: normalize(texts.join(' ')) };
 }
 
 function collectChoiceText(control, optionText) {
-    const fieldText = previousChoiceContextText(control, optionText) || nearbyText(control, optionText);
+    const fieldText = previousChoiceContextText(control, optionText) || nearbyText(control, optionText) || ancestorPreviousSiblingText(control);
     const fallbackTexts = [
         control.getAttribute('aria-label'),
         control.getAttribute('name'),
@@ -326,6 +511,52 @@ function collectCustomSelectText(control) {
         displayLabel: context.displayLabel || choiceElementText(control) || '',
         normalized: normalize([context.normalized, choiceElementText(control)].join(' '))
     };
+}
+
+function collectVisibleProfileFieldKeys(documentRef) {
+    const keys = new Set();
+    const controls = getApplicationFormElements(documentRef, 'input, textarea, select');
+    for (const control of controls) {
+        const context = collectControlText(control);
+        const key = directFieldKeyForControl(control, context) || directFieldKeyFromText(context.displayLabel);
+        if (key && !key.includes('*')) keys.add(key);
+    }
+
+    const choiceControls = Array.from(new Set(getApplicationFormElements(documentRef, 'input[type="radio"], input[type="checkbox"], button[type="button"], button:not([type]), [role="button"], [role="radio"], [role="checkbox"], [role="switch"], [aria-pressed], [aria-selected], [data-value], [data-option]')))
+        .filter(isChoiceButtonCandidate);
+    for (const control of choiceControls) {
+        const optionText = choiceCandidateText(control);
+        const context = collectChoiceText(control, optionText);
+        const key = directFieldKeyForControl(control, context) || directFieldKeyFromText(context.displayLabel);
+        if (key && !key.includes('*')) keys.add(key);
+    }
+
+    const customSelectControls = Array.from(new Set(getApplicationFormElements(documentRef, '[role="combobox"], [aria-haspopup="listbox"], [aria-haspopup="true"], button[type="button"], button:not([type]), [tabindex]:not(input):not(textarea):not(select)')))
+        .filter((control) => militaryDependentSelectKeyFromText(choiceElementText(control)) || isPotentialCustomSelectControl(control));
+    for (const control of customSelectControls) {
+        const context = collectCustomSelectText(control);
+        const key = militaryDependentSelectKeyFromText(choiceElementText(control)) || directFieldKeyForControl(control, context) || directFieldKeyFromText(choiceElementText(control)) || directFieldKeyFromText(context.displayLabel);
+        if (key && !key.includes('*')) keys.add(key);
+    }
+    return keys;
+}
+
+function visibleCopyCandidateKeys(visibleFieldKeys, excludedFieldKeys) {
+    if (visibleFieldKeys.size < 2) return null;
+    const remaining = new Set();
+    for (const key of visibleFieldKeys) {
+        if (!excludedFieldKeys.has(key)) remaining.add(key);
+    }
+    return remaining;
+}
+
+function scopedCopyCandidateFieldKeys(visibleFieldKeys, fillable) {
+    const keys = new Set(visibleFieldKeys);
+    for (const item of fillable) {
+        if (!item?.fieldKey || item.sectionOpenControl || item.fieldKey.endsWith('.open')) continue;
+        keys.add(item.fieldKey);
+    }
+    return keys;
 }
 
 function labelText(control) {
@@ -353,6 +584,25 @@ function previousSiblingText(control) {
         current = current.previousElementSibling;
     }
     return values.join(' ');
+}
+
+function ancestorPreviousSiblingText(control) {
+    let current = control.parentElement;
+    let depth = 0;
+    while (current && current !== control.ownerDocument.body && depth < 8) {
+        const siblingText = elementOwnText(current.previousElementSibling);
+        if (siblingText && siblingText.length <= 60 && !isChoiceText(siblingText)) return siblingText;
+        current = current.parentElement;
+        depth += 1;
+    }
+    return '';
+}
+
+function elementOwnText(element) {
+    if (!element) return '';
+    const clone = element.cloneNode(true);
+    clone.querySelectorAll('input, textarea, select, button, svg').forEach((item) => item.remove());
+    return cleanText(clone.textContent) || '';
 }
 
 function educationSectionContextText(control) {
@@ -391,16 +641,18 @@ function educationGroupFromContext(context) {
 function directEducationFieldKeyForControl(control, signature) {
     const section = closestEducationSection(control);
     const sectionContext = normalize(educationSectionContextText(control));
+    const midasNameKey = directMidasEducationFieldKeyFromText(signature);
+    if (midasNameKey) return midasNameKey;
     const group = educationGroupFromContext([signature, sectionContext].join(' '));
     if (!group) return null;
-    if (signature.includes(normalize('\ud559\uad50\uc815\ubcf4')) || signature.includes(normalize('\ud559\uad50\uba85')) || signature.includes('schoolname')) {
-        return educationFieldKey(group, 'schoolName');
-    }
     if (signature.includes(normalize('\ud559\uad50\uc18c\uc7ac\uc9c0')) || signature.includes(normalize('\uc18c\uc7ac\uc9c0')) || signature.includes('schoollocation')) {
         return educationFieldKey(group, 'location');
     }
     if (signature === normalize('\uacc4\uc5f4') || signature.includes(normalize('\uacc4\uc5f4')) || signature.includes('schooltrack')) {
         return educationFieldKey(group, group === 'highSchool' ? 'track' : 'majorCategory');
+    }
+    if (signature.includes(normalize('\ub9cc\uc810\uae30\uc900')) || signature.includes('gradescale') || signature.includes('fullscore') || signature.includes('maxgrade')) {
+        return educationFieldKey(group, 'gradeScale');
     }
     if (signature.includes(normalize('\ud559\uc5c5\uc131\uc801')) || signature.includes(normalize('\uc131\uc801\ud3c9\uc810')) || signature.includes(normalize('\ud3c9\uc810')) || signature.includes('gpa') || signature.includes('grade')) {
         return educationFieldKey(group, 'grade');
@@ -411,12 +663,77 @@ function directEducationFieldKeyForControl(control, signature) {
     if (signature.includes(normalize('\uc7ac\ud559\uae30\uac04')) || signature.includes(normalize('\uc785\ud559\uc77c')) || signature.includes(normalize('\uc878\uc5c5\uc77c'))) {
         return educationFieldKey(group, educationPeriodFieldForControl(control, section, signature));
     }
+    if (signature.includes(normalize('\uc878\uc5c5\uad6c\ubd84')) || signature.includes('graduationstatus')) {
+        return educationFieldKey(group, 'graduationStatus');
+    }
+    if (signature.includes(normalize('\ud559\uc704\uad6c\ubd84')) || signature.includes('degreetype')) {
+        return educationFieldKey(group, 'degreeType');
+    }
+    if (signature.includes(normalize('\uc785\ud559\uad6c\ubd84')) || signature.includes('admissiontype')) {
+        return educationFieldKey(group, 'admissionType');
+    }
+    if (signature.includes(normalize('\uc804\uacf5\uad6c\ubd84')) || signature.includes('majortype')) {
+        return educationFieldKey(group, 'majorType');
+    }
+    if (signature.includes(normalize('\uc8fc\uac04')) || signature.includes(normalize('\uc57c\uac04')) || signature.includes('daynight')) {
+        return educationFieldKey(group, 'dayNight');
+    }
+    if (signature.includes(normalize('\uc804\uacf5\uba85')) || signature === normalize('\uc804\uacf5') || signature.includes('majorname')) {
+        return educationFieldKey(group, 'majorName');
+    }
+    if (signature.includes(normalize('\ubcf8\uad50\ubd84\uad50')) || signature.includes(normalize('\ubcf8\uad50/\ubd84\uad50')) || signature.includes('campustype')) {
+        return educationFieldKey(group, 'campusType');
+    }
+    if (signature.includes(normalize('\ud559\uad50\uc815\ubcf4')) || signature.includes(normalize('\ud559\uad50\uba85')) || signature.includes('schoolname')) {
+        return educationFieldKey(group, 'schoolName');
+    }
+    return null;
+}
+
+function directMidasEducationFieldKeyFromText(text) {
+    const normalized = normalize(text);
+    const field = midasEducationFieldFromText(normalized);
+    if (!field) return null;
+    if (normalized.includes('highschoolgroupanswers') || normalized.includes('highschool')) {
+        return `education.highSchool.${field}`;
+    }
+    const collegeMatch = normalized.match(/collegegroupanswers(\d+)/);
+    if (collegeMatch) return `education.universities.${collegeMatch[1]}.${field}`;
+    if (normalized.includes('collegegroupanswers') || normalized.includes('university')) {
+        return `education.universities.*.${field}`;
+    }
+    const graduateMatch = normalized.match(/graduateschoolgroupanswers(\d+)/);
+    if (graduateMatch) return `education.graduateSchools.${graduateMatch[1]}.${field}`;
+    if (normalized.includes('graduateschoolgroupanswers') || normalized.includes('graduate')) {
+        return `education.graduateSchools.*.${field}`;
+    }
+    return null;
+}
+
+function midasEducationFieldFromText(normalized) {
+    if (normalized.includes('schoolname')) return 'schoolName';
+    if (normalized.includes('admissiondate') || normalized.includes('entrancedate') || normalized.includes('startdate')) return 'admissionDate';
+    if (normalized.includes('graduationdate') || normalized.includes('enddate')) return 'graduationDate';
+    if (normalized.includes('graduationstatus') || normalized.includes('graduationtype')) return 'graduationStatus';
+    if (normalized.includes('degreetype')) return 'degreeType';
+    if (normalized.includes('admissiontype')) return 'admissionType';
+    if (normalized.includes('campustype')) return 'campusType';
+    if (normalized.includes('majorcategory') || normalized.includes('departmentcategory')) return 'majorCategory';
+    if (normalized.includes('majortype')) return 'majorType';
+    if (normalized.includes('daynight')) return 'dayNight';
+    if (normalized.includes('gradescale') || normalized.includes('fullscore') || normalized.includes('maxgrade')) return 'gradeScale';
+    if (normalized.includes('collegegrade') || normalized.includes('gradescore') || normalized.includes('gpa')) return 'grade';
+    if (normalized.includes('majorcredits') || normalized.includes('credits')) return 'credits';
+    if (normalized.includes('schoollocation') || normalized.includes('location') || normalized.includes('schoolarea')) return 'location';
+    if (normalized.includes('schooltrack') || normalized.includes('track')) return 'track';
     return null;
 }
 
 function educationPeriodFieldForControl(control, section, signature) {
-    if (signature.includes(normalize('\uc785\ud559\uc77c')) || signature.includes('start')) return 'admissionDate';
-    if (signature.includes(normalize('\uc878\uc5c5\uc77c')) || signature.includes('end')) return 'graduationDate';
+    const hasAdmissionText = signature.includes(normalize('\uc785\ud559\uc77c')) || signature.includes('admissiondate') || signature.includes('start');
+    const hasGraduationText = signature.includes(normalize('\uc878\uc5c5\uc77c')) || signature.includes('graduationdate') || signature.includes('end');
+    if (hasAdmissionText && !hasGraduationText) return 'admissionDate';
+    if (hasGraduationText && !hasAdmissionText) return 'graduationDate';
     const periodControls = Array.from((section ?? control.ownerDocument).querySelectorAll('input, textarea, select'))
         .filter((candidate) => {
             const candidateContext = normalize([
@@ -428,7 +745,22 @@ function educationPeriodFieldForControl(control, section, signature) {
             ].filter(Boolean).join(' '));
             return candidateContext.includes(normalize('\uc7ac\ud559\uae30\uac04'));
         });
-    return periodControls.indexOf(control) % 2 === 1 ? 'graduationDate' : 'admissionDate';
+    const scopedPeriodControls = periodControls.length ? periodControls : siblingDateControlsForPeriod(control, section);
+    return scopedPeriodControls.indexOf(control) % 2 === 1 ? 'graduationDate' : 'admissionDate';
+}
+
+function siblingDateControlsForPeriod(control, section) {
+    const container = control.closest('label, .field, .form-group, .input-group, li, div') ?? section ?? control.ownerDocument;
+    return Array.from(container.querySelectorAll('input, textarea, select')).filter((candidate) => {
+        if (candidate.type && ['hidden', 'button', 'submit', 'reset', 'checkbox', 'radio'].includes(candidate.type.toLowerCase())) return false;
+        const signature = normalize([
+            candidate.getAttribute('placeholder'),
+            candidate.getAttribute('aria-label'),
+            candidate.getAttribute('name'),
+            candidate.id
+        ].filter(Boolean).join(' '));
+        return signature.includes('yyyy') || signature.includes('date') || signature.includes(normalize('\uc77c'));
+    });
 }
 
 function educationFieldKey(group, field) {
@@ -492,11 +824,13 @@ function certificateFieldKey(group, field) {
 }
 
 function isAutocompletePrimaryFieldKey(fieldKey) {
-    return /^certificates\.(?:certificates|languageTests)\.(?:\d+|\*)\.(?:certificateName|testName)$/.test(fieldKey);
+    return /^certificates\.(?:certificates|languageTests)\.(?:\d+|\*)\.(?:certificateName|testName)$/.test(fieldKey) ||
+        /^education\.(?:highSchool|universities\.(?:\d+|\*)|graduateSchools\.(?:\d+|\*))\.schoolName$/.test(fieldKey);
 }
 
 function relatedValuesForAutocomplete(values, fieldKey) {
-    const match = fieldKey.match(/^(certificates\.(?:certificates|languageTests)\.\d+)\.(?:certificateName|testName)$/);
+    const match = fieldKey.match(/^(certificates\.(?:certificates|languageTests)\.\d+)\.(?:certificateName|testName)$/) ??
+        fieldKey.match(/^(education\.(?:highSchool|universities\.\d+|graduateSchools\.\d+))\.schoolName$/);
     if (!match) return [];
     const prefix = `${match[1]}.`;
     return values.filter((value) => value.key.startsWith(prefix) && value.key !== fieldKey);
@@ -620,12 +954,16 @@ function directFieldKeyFromText(text) {
     if (has('\uc7a5\uc560', 'disability')) return 'military.hasDisability';
     if (has('\ubcf4\ud6c8', 'veteran')) return 'military.isVeteran';
     if (has('\ud559\uacfc\uacc4\uc5f4', '\uc804\uacf5\uacc4\uc5f4', 'majorcategory', 'departmentcategory')) return 'education.*.majorCategory';
+    if (has('\uc804\uacf5\uad6c\ubd84', 'majortype')) return 'education.*.majorType';
+    if (has('\uc8fc\uac04', '\uc57c\uac04', '\uc8fc\uac04/\uc57c\uac04', 'daynight')) return 'education.*.dayNight';
+    if (has('\ud559\uad50\uc18c\uc7ac\uc9c0', '\uc18c\uc7ac\uc9c0', 'schoollocation')) return 'education.*.location';
     if (has('\ud559\uad50\uc815\ubcf4', '\ud559\uad50\uba85', 'schoolname')) return 'education.*.schoolName';
+    if (has('\ub9cc\uc810\uae30\uc900', 'gradescale', 'fullscore', 'maxgrade')) return 'education.*.gradeScale';
     if (has('\ud559\uc5c5\uc131\uc801', '\uc131\uc801\ud3c9\uc810', '\ud3c9\uc810', 'gpa', 'grade')) return 'education.*.grade';
     if (has('\uc774\uc218\ud559\uc810', '\ucde8\ub4dd\ud559\uc810', 'credits', 'credit')) return 'education.*.credits';
     if (has('\ubcf8\uad50\ubd84\uad50', '\ubcf8\uad50/\ubd84\uad50', 'campustype')) return 'education.*.campusType';
-    if (has('\ud559\uad50\uc18c\uc7ac\uc9c0', '\uc18c\uc7ac\uc9c0', 'schoollocation')) return 'education.*.location';
     if (normalized === normalize('\uacc4\uc5f4') || has('schooltrack')) return 'education.*.track';
+    if (normalized === normalize('\uc804\uacf5') || has('\uc804\uacf5\uba85', 'majorname')) return 'education.*.majorName';
     if (containsAny(normalized, ['영문이름', '영문 이름', 'englishname', 'nameen'])) return 'basicInfo.nameEn';
     if (containsAny(normalized, ['상세주소', 'detailaddress', 'addressdetail'])) return 'basicInfo.addressDetail';
     if (containsAny(normalized, ['이메일', 'emailaddress', 'email', 'mail'])) return 'basicInfo.email';
@@ -735,7 +1073,10 @@ function setControlValue(control, value, item = {}) {
     if (!control) return { success: false, reason: 'control_not_ready' };
     if (control.disabled && item.requiresEnabledBeforeFill) return { success: false, reason: 'control_not_ready' };
     let displayValue = value;
-    if (item.customSelectControl) {
+    if (item.sectionOpenControl) {
+        activateElement(control);
+    }
+    else if (item.customSelectControl) {
         const result = setCustomSelectValue(control, value);
         if (!result.success) return result;
         displayValue = result.value;
@@ -766,24 +1107,28 @@ function setControlValue(control, value, item = {}) {
 async function setControlValueAsync(control, value, item = {}) {
     if (!control) return { success: false, reason: 'control_not_ready' };
     if (control.disabled && item.requiresEnabledBeforeFill) return { success: false, reason: 'control_not_ready' };
+    const fillValue = item.waitForControlBeforeFill ? formatValueForControl(control, value, item.fieldKey) : value;
     let displayValue = value;
     if (item.autocompleteSearchControl) {
-        const result = await setAutocompleteSearchValueAsync(control, value, item);
+        const result = await setAutocompleteSearchValueAsync(control, fillValue, item);
         if (!result.success) return result;
         displayValue = result.value;
         return { success: true, value: displayValue, extraFilled: result.extraFilled };
     }
-    if (item.customSelectControl) {
-        const result = await setCustomSelectValueAsync(control, value);
+    if (item.customSelectControl || (item.waitForControlBeforeFill && isPotentialCustomSelectControl(control))) {
+        const result = await setCustomSelectValueAsync(control, fillValue);
         if (!result.success) return result;
         displayValue = result.value;
     }
     else {
-        const result = setControlValue(control, value, item);
+        const result = setControlValue(control, fillValue, item);
         if (!result.success) return result;
         displayValue = result.value;
     }
     if (MILITARY_DEPENDENT_DATE_KEYS.has(item.fieldKey)) {
+        await sleep(AUTOFILL_DEPENDENT_FIELD_SETTLE_MS);
+    }
+    if (item.sectionOpenControl) {
         await sleep(AUTOFILL_DEPENDENT_FIELD_SETTLE_MS);
     }
     return { success: true, value: displayValue };
@@ -816,9 +1161,18 @@ async function setAutocompleteSearchValueAsync(control, value, item = {}) {
     setNativeControlValue(control, value);
     dispatchInputEvents(control);
     if (control.hasAttribute('aria-expanded')) control.setAttribute('aria-expanded', 'true');
-    const option = await waitForValue(() => findMatchingCustomOption(control.ownerDocument, value, control));
-    if (!option) return { success: false, reason: 'select_option_not_found' };
-    option.click();
+    const option = await waitForAutocompleteOptionOrRelatedControl(control, value, item);
+    if (!option) {
+        if (isEducationSchoolNameField(item.fieldKey)) {
+            return {
+                success: true,
+                value,
+                extraFilled: await fillRelatedAutocompleteValues(control, item.relatedValues ?? [])
+            };
+        }
+        return { success: false, reason: 'select_option_not_found' };
+    }
+    activateElement(option);
     setChoiceState(option);
     await sleep(AUTOFILL_DEPENDENT_FIELD_SETTLE_MS);
     return {
@@ -828,17 +1182,77 @@ async function setAutocompleteSearchValueAsync(control, value, item = {}) {
     };
 }
 
+async function waitForAutocompleteOptionOrRelatedControl(control, value, item = {}) {
+    const deadline = Date.now() + autocompleteOptionWaitTimeoutMs(item.fieldKey);
+    while (Date.now() < deadline) {
+        const option = findMatchingCustomOption(control.ownerDocument, value, control);
+        if (option) return option;
+        if (isEducationSchoolNameField(item.fieldKey) && autocompleteRelatedControlReady(control.ownerDocument, item.relatedValues ?? [])) {
+            return null;
+        }
+        await sleep(AUTOFILL_ASYNC_WAIT_INTERVAL_MS);
+    }
+    return findMatchingCustomOption(control.ownerDocument, value, control);
+}
+
+function autocompleteRelatedControlReady(documentRef, relatedValues) {
+    return relatedValues.some((value) => {
+        if (!cleanText(value?.value)) return false;
+        const target = findCurrentControlForFieldKey(documentRef, value.key, value.value);
+        return target && !target.disabled && !target.readOnly;
+    });
+}
+
 async function fillRelatedAutocompleteValues(sourceControl, relatedValues) {
     const filled = [];
-    for (const value of relatedValues) {
-        const target = await waitForValue(() => findCurrentControlForFieldKey(sourceControl.ownerDocument, value.key));
-        if (!target || target.disabled || target.readOnly) continue;
-        const result = setControlValue(target, formatValueForControl(target, value.value, value.key), { fieldKey: value.key });
-        if (result.success) {
-            filled.push({ fieldKey: value.key, label: value.label, value: result.value });
+    const pending = relatedValues.filter((value) => cleanText(value?.value));
+    const deadline = Date.now() + dependentAutocompleteWaitTimeoutMs(pending);
+    const openedMajorBases = new Set();
+
+    while (pending.length) {
+        let handledAny = false;
+
+        for (let index = 0; index < pending.length; index += 1) {
+            const value = pending[index];
+            const target = findCurrentControlForFieldKey(sourceControl.ownerDocument, value.key, value.value);
+            if (!target || target.disabled || target.readOnly) {
+                const majorBase = educationMajorDetailBase(value.key);
+                if (majorBase && !openedMajorBases.has(majorBase)) {
+                    const opener = findEducationMajorOpenControl(sourceControl.ownerDocument, value.key);
+                    if (opener) {
+                        openedMajorBases.add(majorBase);
+                        activateElement(opener);
+                        handledAny = true;
+                    }
+                }
+                continue;
+            }
+
+            const result = await setControlValueAsync(target, value.value, { fieldKey: value.key, waitForControlBeforeFill: true });
+            pending.splice(index, 1);
+            index -= 1;
+            handledAny = true;
+            if (result.success) {
+                filled.push({ fieldKey: value.key, label: value.label, value: result.value });
+            }
         }
+
+        if (!pending.length || Date.now() >= deadline) break;
+        await sleep(handledAny ? AUTOFILL_DEPENDENT_FIELD_SETTLE_MS : AUTOFILL_ASYNC_WAIT_INTERVAL_MS);
     }
     return filled;
+}
+
+function dependentAutocompleteWaitTimeoutMs(relatedValues) {
+    return relatedValues.some((value) => dependentControlWaitTimeoutMs(value.key) === AUTOFILL_DEPENDENT_CONTROL_WAIT_TIMEOUT_MS)
+        ? AUTOFILL_DEPENDENT_CONTROL_WAIT_TIMEOUT_MS
+        : AUTOFILL_ASYNC_WAIT_TIMEOUT_MS;
+}
+
+function autocompleteOptionWaitTimeoutMs(fieldKey) {
+    return isEducationSchoolNameField(fieldKey)
+        ? AUTOFILL_EDUCATION_AUTOCOMPLETE_OPTION_WAIT_TIMEOUT_MS
+        : AUTOFILL_ASYNC_WAIT_TIMEOUT_MS;
 }
 
 function setChoiceState(control) {
@@ -850,6 +1264,10 @@ function setChoiceState(control) {
 
 function activateElement(element) {
     const eventWindow = element.ownerDocument?.defaultView ?? window;
+    const pointerEvent = eventWindow.PointerEvent ?? eventWindow.MouseEvent;
+    for (const type of ['pointerdown', 'pointerup']) {
+        element.dispatchEvent(new pointerEvent(type, { bubbles: true, cancelable: true }));
+    }
     for (const type of ['mousedown', 'mouseup', 'click']) {
         element.dispatchEvent(new eventWindow.MouseEvent(type, { bubbles: true, cancelable: true }));
     }
@@ -859,6 +1277,7 @@ function findMatchingCustomOption(documentRef, value, sourceControl) {
     const normalizedValue = normalize(value);
     const candidates = Array.from(documentRef.querySelectorAll('[role="option"], [data-value], [data-option], li, button[type="button"], button:not([type]), [role="button"], [tabindex]:not(input):not(textarea):not(select)'))
         .filter((element) => element !== sourceControl && !element.disabled && element.getAttribute('aria-disabled') !== 'true' && !isAutomationControl(element))
+        .filter((element) => !isPotentialCustomSelectControl(element))
         .filter((element) => !(element.matches('li') && element.querySelector('button, [role="option"], [data-value], [data-option]')));
     return candidates.find((element) => {
         const optionText = normalize(choiceElementText(element));
@@ -869,35 +1288,131 @@ function findMatchingCustomOption(documentRef, value, sourceControl) {
 }
 
 function resolveControlForFill(item) {
+    if (item.waitForControlBeforeFill) {
+        return findCurrentControlForFieldKey(item.element?.ownerDocument, item.fieldKey, item.value);
+    }
     if (!item.requiresEnabledBeforeFill) return item.element;
     if (item.element?.isConnected && !item.element.disabled) return item.element;
-    return findCurrentControlForFieldKey(item.element?.ownerDocument, item.fieldKey) ?? item.element;
+    return findCurrentControlForFieldKey(item.element?.ownerDocument, item.fieldKey, item.value) ?? item.element;
 }
 
 async function resolveControlForFillAsync(item) {
+    if (item.waitForControlBeforeFill) {
+        return await waitForValue(() => {
+            const current = findCurrentControlForFieldKey(item.element?.ownerDocument, item.fieldKey, item.value);
+            return current && !current.disabled && !current.readOnly ? current : null;
+        }, null, dependentControlWaitTimeoutMs(item.fieldKey));
+    }
     if (!item.requiresEnabledBeforeFill) return item.element;
     if (item.element?.isConnected && !item.element.disabled) return item.element;
     return await waitForValue(() => {
-        const current = findCurrentControlForFieldKey(item.element?.ownerDocument, item.fieldKey);
+        const current = findCurrentControlForFieldKey(item.element?.ownerDocument, item.fieldKey, item.value);
         return current && !current.disabled ? current : null;
     }, item.element);
 }
 
-function findCurrentControlForFieldKey(documentRef, fieldKey) {
+function dependentControlWaitTimeoutMs(fieldKey) {
+    return String(fieldKey ?? '').startsWith('education.')
+        ? AUTOFILL_DEPENDENT_CONTROL_WAIT_TIMEOUT_MS
+        : AUTOFILL_ASYNC_WAIT_TIMEOUT_MS;
+}
+
+function findCurrentControlForFieldKey(documentRef, fieldKey, value = '') {
     if (!documentRef) return null;
-    const controls = [
+    const nestedMajor = parseNestedEducationMajorFieldKey(fieldKey);
+    if (nestedMajor) {
+        const nestedControl = findNestedEducationMajorControl(documentRef, nestedMajor, value);
+        if (nestedControl) return nestedControl;
+    }
+    const controls = Array.from(new Set([
         ...getApplicationFormElements(documentRef, 'input, textarea, select').filter(isFillableControl),
-        ...getApplicationFormElements(documentRef, '[role="combobox"], [aria-haspopup="listbox"], [aria-haspopup="true"], button[type="button"], button:not([type]), [tabindex]:not(input):not(textarea):not(select)').filter(isPotentialCustomSelectControl)
-    ];
+        ...getApplicationFormElements(documentRef, '[role="combobox"], [aria-haspopup="listbox"], [aria-haspopup="true"], button[type="button"], button:not([type]), [tabindex]:not(input):not(textarea):not(select)').filter(isPotentialCustomSelectControl),
+        ...getApplicationFormElements(documentRef, 'input[type="radio"], input[type="checkbox"], button[type="button"], button:not([type]), [role="button"], [role="radio"], [role="checkbox"], [role="switch"], [aria-pressed], [aria-selected], [data-value], [data-option]').filter(isChoiceButtonCandidate)
+    ]));
     return controls.find((control) => {
-        const context = ['input', 'textarea', 'select'].includes(control.tagName.toLowerCase())
+        const tagName = control.tagName.toLowerCase();
+        const context = ['input', 'textarea', 'select'].includes(tagName)
             ? collectControlText(control)
-            : collectCustomSelectText(control);
+            : isPotentialCustomSelectControl(control)
+                ? collectCustomSelectText(control)
+                : collectChoiceText(control, choiceCandidateText(control));
         const directKey = directFieldKeyForControl(control, context) || directFieldKeyFromText(choiceElementText(control)) || directFieldKeyFromText(context.displayLabel);
         if (directKey === fieldKey) return true;
         const match = directKey ? findDirectValueMatch([{ key: fieldKey, label: fieldKey, value: fieldKey, terms: [] }], directKey, context, control) : null;
         return match?.key === fieldKey;
     }) ?? null;
+}
+
+function parseNestedEducationMajorFieldKey(fieldKey) {
+    const match = String(fieldKey ?? '').match(/^education\.(universities|graduateSchools)\.(\d+)\.majors\.(\d+)\.([^.]+)$/);
+    if (!match || !EDUCATION_MAJOR_DETAIL_FIELDS.has(match[4])) return null;
+    return {
+        group: match[1],
+        educationIndex: Number(match[2]),
+        majorIndex: Number(match[3]),
+        field: match[4]
+    };
+}
+
+function findNestedEducationMajorControl(documentRef, target, value = '') {
+    const directKey = `education.${target.group}.${target.educationIndex}.${target.field}`;
+    const wildcardKey = `education.${target.group}.*.${target.field}`;
+    const controls = Array.from(new Set([
+        ...getApplicationFormElements(documentRef, 'input, textarea, select').filter(isFillableControl),
+        ...getApplicationFormElements(documentRef, '[role="combobox"], [aria-haspopup="listbox"], [aria-haspopup="true"], button[type="button"], button:not([type]), [tabindex]:not(input):not(textarea):not(select)').filter(isPotentialCustomSelectControl),
+        ...getApplicationFormElements(documentRef, 'input[type="radio"], input[type="checkbox"], button[type="button"], button:not([type]), [role="button"], [role="radio"], [role="checkbox"], [role="switch"], [aria-pressed], [aria-selected], [data-value], [data-option]').filter(isChoiceButtonCandidate)
+    ]));
+    const matches = controls.filter((control) => {
+        const tagName = control.tagName.toLowerCase();
+        const context = ['input', 'textarea', 'select'].includes(tagName)
+            ? collectControlText(control)
+            : isPotentialCustomSelectControl(control)
+                ? collectCustomSelectText(control)
+                : collectChoiceText(control, choiceCandidateText(control));
+        const key = directFieldKeyForControl(control, context) || directFieldKeyFromText(choiceElementText(control)) || directFieldKeyFromText(context.displayLabel);
+        if (key === directKey || key === wildcardKey) return true;
+        const match = key ? findDirectValueMatch([{ key: directKey, label: directKey, value: directKey, terms: [] }], key, context, control) : null;
+        return match?.key === directKey;
+    });
+    const groupedMatches = groupControlsByMajorEntry(matches);
+    const rowMatches = groupedMatches[target.majorIndex] ?? [];
+    const normalizedValue = normalize(value);
+    return rowMatches.find((control) => {
+        const text = normalize(choiceCandidateText(control) || choiceElementText(control));
+        const optionValue = normalize(control.getAttribute('data-value') || control.getAttribute('data-option') || control.getAttribute('value'));
+        return normalizedValue && (text === normalizedValue || optionValue === normalizedValue);
+    }) ?? rowMatches[0] ?? null;
+}
+
+function groupControlsByMajorEntry(controls) {
+    const groups = [];
+    const groupKeys = [];
+    for (const control of controls) {
+        const groupElement = closestEducationMajorEntry(control) ?? control;
+        let index = groupKeys.indexOf(groupElement);
+        if (index < 0) {
+            groupKeys.push(groupElement);
+            groups.push([]);
+            index = groups.length - 1;
+        }
+        groups[index].push(control);
+    }
+    return groups;
+}
+
+function closestEducationMajorEntry(control) {
+    let current = control?.parentElement;
+    let depth = 0;
+    while (current && current !== control.ownerDocument.body && depth < 8) {
+        const text = normalize(current.textContent);
+        if (text.includes(normalize('\uc804\uacf5\uba85')) &&
+            (text.includes(normalize('\uc804\uacf5\uad6c\ubd84')) || text.includes(normalize('\ud559\uacfc\uacc4\uc5f4')) || text.includes(normalize('\uc8fc\uac04')) || text.includes('majortype'))) {
+            return current;
+        }
+        current = current.parentElement;
+        depth += 1;
+    }
+    return null;
 }
 
 function setNativeControlValue(control, value) {
@@ -1016,11 +1531,31 @@ function addEducationGroupValues(values, records, group, label) {
         addValue(values, record, 'admissionType', `education.${group}.${index}.admissionType`, `${label} \uc785\ud559\uad6c\ubd84`, ['\uc785\ud559\uad6c\ubd84', 'admissiontype']);
         addValue(values, record, 'location', `education.${group}.${index}.location`, `${label} 학교 소재지`, ['학교소재지', '소재지', 'location']);
         addValue(values, record, 'campusType', `education.${group}.${index}.campusType`, `${label} 본교/분교`, ['본교', '분교', '본교분교', 'campustype']);
-        addValue(values, record, 'majorCategory', `education.${group}.${index}.majorCategory`, `${label} 학과계열`, ['학과계열', '전공계열', 'majorcategory']);
+        addEducationMajorValues(values, record, group, index, label);
         addValue(values, record, 'grade', `education.${group}.${index}.grade`, `${label} \uc131\uc801 \ud3c9\uc810`, ['\ud559\uc5c5\uc131\uc801', '\uc131\uc801\ud3c9\uc810', '\ud3c9\uc810', 'gpa', 'grade']);
-        addValue(values, record, 'credits', `education.${group}.${index}.credits`, `${label} \uc774\uc218\ud559\uc810`, ['\uc774\uc218\ud559\uc810', '\ucde8\ub4dd\ud559\uc810', 'credits', 'credit']);
-        addValue(values, record, 'majorName', `education.${group}.${index}.majorName`, `${label} \uc804\uacf5`, ['\uc804\uacf5', 'major']);
+        addFirstValue(values, record, ['gradeScale', 'gradeMax', 'maxGrade', 'fullScore'], `education.${group}.${index}.gradeScale`, `${label} \ub9cc\uc810\uae30\uc900`, ['\ub9cc\uc810\uae30\uc900', 'gradescale', 'fullscore', 'maxgrade']);
+        addFirstValue(values, record, ['credits', 'completedCredits'], `education.${group}.${index}.credits`, `${label} \uc774\uc218\ud559\uc810`, ['\uc774\uc218\ud559\uc810', '\ucde8\ub4dd\ud559\uc810', 'credits', 'credit']);
     });
+}
+
+function addEducationMajorValues(values, record, group, educationIndex, label) {
+    const majors = Array.isArray(record?.majors)
+        ? record.majors.map(asRecord).filter(Boolean)
+        : [];
+    if (!majors.length) {
+        addEducationMajorValueSet(values, record, `education.${group}.${educationIndex}`, label);
+        return;
+    }
+    majors.forEach((major, majorIndex) => {
+        addEducationMajorValueSet(values, major, `education.${group}.${educationIndex}.majors.${majorIndex}`, `${label} \uc804\uacf5 ${majorIndex + 1}`);
+    });
+}
+
+function addEducationMajorValueSet(values, record, keyPrefix, label) {
+    addValue(values, record, 'majorCategory', `${keyPrefix}.majorCategory`, `${label} \ud559\uacfc\uacc4\uc5f4`, ['\ud559\uacfc\uacc4\uc5f4', '\uc804\uacf5\uacc4\uc5f4', 'majorcategory']);
+    addValue(values, record, 'majorType', `${keyPrefix}.majorType`, `${label} \uc804\uacf5\uad6c\ubd84`, ['\uc804\uacf5\uad6c\ubd84', 'majortype']);
+    addValue(values, record, 'dayNight', `${keyPrefix}.dayNight`, `${label} \uc8fc\uac04/\uc57c\uac04`, ['\uc8fc\uac04', '\uc57c\uac04', '\uc8fc\uac04/\uc57c\uac04', 'daynight']);
+    addFirstValue(values, record, ['majorName', 'major'], `${keyPrefix}.majorName`, `${label} \uc804\uacf5\uba85`, ['\uc804\uacf5', '\uc804\uacf5\uba85', 'major', 'majorname']);
 }
 
 function addCertificateValues(values, certificateSection) {
@@ -1069,12 +1604,28 @@ function addActivityCopyValues(values, sections) {
 
 function addValue(values, record, field, key, label, terms) {
     const value = cleanText(record?.[field]);
-    if (value) values.push({ key, label, value, terms: terms.map(normalize) });
+    if (value && !isPlaceholderProfileValue(value)) values.push({ key, label, value, terms: terms.map(normalize) });
+}
+
+function addFirstValue(values, record, fields, key, label, terms) {
+    const field = fields.find((candidate) => cleanText(record?.[candidate]));
+    if (!field) return;
+    addValue(values, record, field, key, label, terms);
 }
 
 function addCopyOnlyValue(values, label, key, rawValue) {
     const value = cleanText(rawValue);
     if (value) values.push({ key, label, value, terms: [normalize(`copyonly${key}`)] });
+}
+
+function isPlaceholderProfileValue(value) {
+    const normalized = normalize(value);
+    return normalized.includes(normalize('\uc120\ud0dd\ud574\uc8fc\uc138\uc694')) ||
+        normalized.includes(normalize('\uc785\ub825\ud574\uc8fc\uc138\uc694')) ||
+        normalized.includes(normalize('\uc120\ud0dd\ud558\uc138\uc694')) ||
+        normalized.includes(normalize('\uc785\ub825\ud558\uc138\uc694')) ||
+        normalized.includes('pleaseselect') ||
+        normalized.includes('pleaseenter');
 }
 
 function addApplicableValue(values, record, field, key, label, terms) {
@@ -1132,6 +1683,30 @@ function isAutocompleteSearchControl(control) {
     return role === 'combobox' || ['list', 'both', 'inline'].includes(ariaAutocomplete) || ariaHasPopup === 'listbox';
 }
 
+function isAutocompleteSearchControlForField(control, fieldKey) {
+    if (!isAutocompletePrimaryFieldKey(fieldKey)) return false;
+    if (isAutocompleteSearchControl(control)) return true;
+    return isEducationSchoolNameField(fieldKey) && isMidasSchoolSearchInput(control);
+}
+
+function isEducationSchoolNameField(fieldKey) {
+    return /^education\.(?:highSchool|universities\.(?:\d+|\*)|graduateSchools\.(?:\d+|\*))\.schoolName$/.test(fieldKey);
+}
+
+function isMidasSchoolSearchInput(control) {
+    if (control?.tagName?.toLowerCase() !== 'input') return false;
+    const signature = normalize([
+        control.getAttribute('placeholder'),
+        control.getAttribute('aria-label'),
+        control.getAttribute('name'),
+        labelText(control),
+        nearbyText(control)
+    ].filter(Boolean).join(' '));
+    return signature.includes(normalize('\ud559\uad50\uba85')) ||
+        signature.includes(normalize('\ud559\uad50\uc815\ubcf4')) ||
+        signature.includes('schoolname');
+}
+
 function militaryDependentSelectKeyFromText(text) {
     const normalized = normalize(text);
     if (!normalized) return null;
@@ -1143,7 +1718,7 @@ function militaryDependentSelectKeyFromText(text) {
 function isChoiceButtonCandidate(control) {
     if (control.disabled || control.getAttribute('aria-disabled') === 'true') return false;
     if (isAutomationControl(control)) return false;
-    const text = choiceElementText(control);
+    const text = choiceCandidateText(control);
     if (isMilitaryServicePeriodChoiceText(text)) return false;
     if (!text || text.length > 20 || !isChoiceText(text)) return false;
     return !ACTION_BUTTON_TERMS.includes(normalize(text));
@@ -1173,6 +1748,10 @@ function isMilitaryServicePeriodChoiceText(text) {
     return ['18', '21', '24'].some((months) => normalized === `${months}${normalize('개월')}` || normalized === months);
 }
 
+function isCompletedMilitaryStatus(value) {
+    return normalize(value) === normalize('\uAD70\uD544');
+}
+
 function isButtonLikeChoiceControl(control) {
     const tagName = control.tagName.toLowerCase();
     const role = (control.getAttribute('role') ?? '').toLowerCase();
@@ -1185,6 +1764,10 @@ function choiceElementText(element) {
         cleanText(element?.getAttribute?.('data-value')) ||
         cleanText(element?.getAttribute?.('data-option')) ||
         cleanText(element?.getAttribute?.('value'));
+}
+
+function choiceCandidateText(control) {
+    return cleanText(labelText(control)) || choiceElementText(control);
 }
 
 function isChoiceOnlyText(text, optionText) {
@@ -1287,11 +1870,12 @@ function copyCandidatesFromFailures(failures) {
     return candidates;
 }
 
-function copyCandidatesFromValues(values, excludedFieldKeys = new Set()) {
+function copyCandidatesFromValues(values, excludedFieldKeys = new Set(), allowedFieldKeys = null) {
     const candidates = [];
     const seen = new Set();
     for (const value of values) {
         if (!value?.key || excludedFieldKeys.has(value.key)) continue;
+        if (allowedFieldKeys && !allowedFieldKeys.has(value.key)) continue;
         const text = cleanText(value.value);
         if (!text) continue;
         const dedupeKey = `${value.key}|${normalize(text)}`;
