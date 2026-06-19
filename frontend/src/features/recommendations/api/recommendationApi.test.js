@@ -20,6 +20,20 @@ describe('recommendationApi', () => {
                         recommendationReason: '마감이 가까운 공고라 우선 추천',
                         postedAt: '2026-04-16T15:26:00',
                         collectedAt: '2026-06-18T20:30:00'
+                    },
+                    {
+                        basketJobId: 9102,
+                        workspaceId: null,
+                        companyName: 'Channel Corp',
+                        positionTitle: 'Frontend Engineer',
+                        deadlineLabel: '상시 채용',
+                        companyLogoUrl: 'https://www.google.com/s2/favicons?domain=channel.io&sz=128',
+                        companyDomain: 'channel.io',
+                        companyType: '스타트업',
+                        recommendationScore: null,
+                        recommendationReason: 'AI 점수 계산 중',
+                        postedAt: '2026-01-13T15:26:00',
+                        collectedAt: '2026-06-18T20:31:00'
                     }
                 ]
             }
@@ -45,6 +59,13 @@ describe('recommendationApi', () => {
             recommendationReason: '마감이 가까운 공고라 우선 추천',
             postedAt: '2026-04-16T15:26:00',
             collectedAt: '2026-06-18T20:30:00'
+        });
+        expect(jobs[1]).toMatchObject({
+            id: '9102',
+            deadlineLabel: '상시 채용',
+            companyDomain: 'channel.io',
+            recommendationScore: null,
+            recommendationReason: 'AI 점수 계산 중'
         });
     });
 
