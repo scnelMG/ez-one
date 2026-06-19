@@ -307,7 +307,7 @@ class DartGmsLiveSmokeEvaluationTest {
                 values.getOrDefault("OPENDART_API_KEY", ""),
                 values.getOrDefault("GMS_API_KEY", ""),
                 values.getOrDefault("GMS_AI_BASE_URL", "https://gms.ssafy.io/gmsapi/api.openai.com/v1"),
-                values.getOrDefault("DART_AI_ANALYSIS_MODEL", "gpt-5.4-mini")
+                values.getOrDefault("DART_AI_ANALYSIS_MODEL", "gpt-4.1")
             );
         }
     }

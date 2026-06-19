@@ -74,13 +74,23 @@ Result:
 
 Live smoke tests are opt-in and are not part of default CI because they call OpenDART/GMS and consume GMS credit.
 
-Command:
+Operational default smoke command:
+
+```powershell
+$env:DART_LIVE_SMOKE_ENABLED='true'
+$env:DART_AI_ANALYSIS_MODEL='gpt-4.1'
+.\mvnw.cmd "-Dtest=DartGmsLiveSmokeEvaluationTest" test
+```
+
+High-quality candidate reproduction command:
 
 ```powershell
 $env:DART_LIVE_SMOKE_ENABLED='true'
 $env:DART_AI_ANALYSIS_MODEL='gpt-5.4-mini'
 .\mvnw.cmd "-Dtest=DartGmsLiveSmokeEvaluationTest" test
 ```
+
+Use the `gpt-5.4-mini` command only when intentionally rechecking the higher-cost candidate. Routine smoke checks should use `gpt-4.1` or omit `DART_AI_ANALYSIS_MODEL` so the backend default applies.
 
 Result date: 2026-06-19 KST
 
@@ -96,6 +106,7 @@ Summary:
 - Average evidence cards: 8.33.
 - GMS key check passed; remaining credit and expiry were checked without recording the key.
 - Raw DART report text, full prompts, full AI output, and secrets were not committed.
+- Later GMS usage review showed `gpt-5.4-mini` averaged about 267 credits per DART analysis in this workload, while `gpt-4.1` averaged about 23 credits. Because DART reports are long, the operational default is `gpt-4.1`; `gpt-5.4-mini` remains a high-quality reanalysis candidate.
 
 ## Improvement Log
 
@@ -103,7 +114,8 @@ Summary:
 2. A short structured-output probe confirmed GMS accepts the OpenAI-compatible `/responses` endpoint and the hyphenated model IDs such as `gpt-5.4-mini`.
 3. OpenDART document preparation was improved to focus long reports around job-application signals such as business content, products, services, R&D, investment, risk, finance, sales, and new business. This reduced the report text limit from 60,000 to 24,000 characters.
 4. OpenDART company matching was improved to choose the most specific bidirectional corp-name match, allowing `KB금융지주` to resolve to OpenDART's listed `KB금융`.
-5. After those changes, `gpt-5.4-mini` passed all three live samples at 14 Credit per call, so the default DART analysis model was changed from `gpt-4.1` to `gpt-5.4-mini`.
+5. After those changes, `gpt-5.4-mini` passed all three live samples at 14 listed Credit per call.
+6. Actual project usage showed `gpt-5.4-mini` consumed much more credit than expected on long DART inputs, so the default DART analysis model was set back to `gpt-4.1` for cost-controlled production use.
 
 ## Remaining Review Policy
 
