@@ -55,7 +55,6 @@ function makeRouter() {
             { path: '/mypage/notion', component: { template: '<div>notion</div>' } },
             { path: '/mypage/onboarding', component: { template: '<div>onboarding</div>' } },
             { path: '/mypage/inquiry', component: { template: '<div>inquiry</div>' } },
-            { path: '/mypage/partnership', component: { template: '<div>partnership</div>' } },
             { path: '/mypage/terms', component: { template: '<div>terms</div>' } }
         ]
     });
@@ -133,11 +132,12 @@ describe('AppLayout', () => {
         expect(footer.text()).toContain('채용 공고, 작성 자료, 서류 정보를 한곳에서 관리하는 취업 준비 워크스페이스입니다.');
         expect(footer.text()).toContain('support@ez-one.local');
         expect(footer.text()).toContain('사업자 정보는 정식 출시 전 확정 예정입니다.');
+        expect(footer.text()).toContain('제휴 또는 후원을 의미하지 않습니다.');
+        expect(footer.text()).not.toContain('제휴' + ' 문의');
         expect(footerLinks).toEqual([
             '/mypage/terms',
             '/mypage/terms#privacy',
             '/mypage/inquiry',
-            '/mypage/partnership',
             'mailto:support@ez-one.local'
         ]);
     });

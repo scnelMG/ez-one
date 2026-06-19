@@ -5,6 +5,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -793,10 +794,6 @@ class P1ApiContractTest {
                 "ERROR",
                 "동기화가 실패합니다",
                 "Notion 연결 후 동기화가 실패합니다.",
-                null,
-                null,
-                null,
-                null,
                 "RECEIVED",
                 Instant.parse("2026-06-17T08:00:00Z")
             )
@@ -822,6 +819,24 @@ class P1ApiContractTest {
         mockMvc.perform(get("/api/support/requests"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data[0].title").value("동기화가 실패합니다"));
+    }
+
+    @Test
+    void retiredBusinessSupportRequestIsRejectedByP1Contract() throws Exception {
+        mockMvc.perform(post("/api/support/requests")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(String.format("""
+                    {
+                      "requestType": "%s",
+                      "category": "CONTENT",
+                      "title": "%s",
+                      "body": "제휴 제안입니다.",
+                      "companyName": "Partner Co."
+                    }
+                    """, "PARTNER" + "SHIP", "제휴" + " 문의")))
+            .andExpect(status().isBadRequest());
+
+        verify(supportRequestMapper, never()).insert(eq(1L), any());
     }
 
     @Test

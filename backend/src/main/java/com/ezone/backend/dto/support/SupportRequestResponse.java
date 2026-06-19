@@ -8,10 +8,6 @@ public record SupportRequestResponse(
     String category,
     String title,
     String body,
-    String companyName,
-    String contactName,
-    String contactEmail,
-    String contactPhone,
     String status,
     Instant createdAt
 ) {

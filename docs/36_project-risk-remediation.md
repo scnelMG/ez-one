@@ -80,13 +80,13 @@ Fix:
 
 Fixed:
 
-- Rebuilt the app footer with service identity, support/policy/partnership links, support mail, trademark notice, and explicit pre-launch business-information wording.
+- Rebuilt the app footer with service identity, support/policy links, support mail, trademark notice, and explicit pre-launch business-information wording.
 - Removed Mattermost from the global P1 navigation while leaving its direct route available for product-scope review.
 - Restored the Study global navigation entry as `취업 스터디` by explicit product-owner request; the route remains active while Study scope is reviewed.
 - Rebuilt `MyPage.vue` and `MyPageNav.vue` with clean Korean copy.
 - Added `DELETE /api/me` for account withdrawal. The endpoint revokes active sessions and anonymizes the user account.
 - Added `support_requests` persistence plus `/api/support/requests` GET/POST APIs.
-- Replaced MyPage inquiry/partnership `alert()`-only behavior with API-backed submission and persisted inquiry history.
+- Replaced MyPage local-only support alerts with API-backed inquiry submission and persisted inquiry history.
 - Removed the hardcoded Study permission email fallback from `StudyDetailPage.vue`.
 
 Verification:

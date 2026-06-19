@@ -39,4 +39,18 @@ describe('supportApi', () => {
         expect(post).toHaveBeenCalledWith('/api/support/requests', request);
         expect(response.status).toBe('RECEIVED');
     });
+
+    it('SUPPORT-001: rejects retired business support payloads before posting', async () => {
+        const post = vi.fn();
+        const api = createSupportApi({ get: vi.fn(), post });
+
+        await expect(api.createRequest({
+            requestType: ['PARTNER', 'SHIP'].join(''),
+            category: 'CONTENT',
+            title: '제휴' + ' 문의',
+            body: '제휴 제안입니다.',
+            companyName: 'Partner Co.'
+        })).rejects.toThrow('Only inquiry support requests are supported.');
+        expect(post).not.toHaveBeenCalled();
+    });
 });

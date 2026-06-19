@@ -39,18 +39,7 @@ public class SupportRequestController {
             request.requestType().trim(),
             request.category().trim(),
             request.title().trim(),
-            request.body().trim(),
-            trimToNull(request.companyName()),
-            trimToNull(request.contactName()),
-            trimToNull(request.contactEmail()),
-            trimToNull(request.contactPhone())
+            request.body().trim()
         );
-    }
-
-    private String trimToNull(String value) {
-        if (value == null || value.trim().isEmpty()) {
-            return null;
-        }
-        return value.trim();
     }
 }
