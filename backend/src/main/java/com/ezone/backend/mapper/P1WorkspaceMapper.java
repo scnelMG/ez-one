@@ -33,8 +33,13 @@ public interface P1WorkspaceMapper {
         @Param("industry") String industry,
         @Param("homepageUrl") String homepageUrl,
         @Param("sourcePriority") String sourcePriority,
+        @Param("corpCode") String corpCode,
+        @Param("stockCode") String stockCode,
+        @Param("businessNumber") String businessNumber,
+        @Param("companyCategory") String companyCategory,
         @Param("foundedAt") String foundedAt,
         @Param("representative") String representative,
+        @Param("employeeCount") Integer employeeCount,
         @Param("businessSummary") String businessSummary,
         @Param("address") String address
     );

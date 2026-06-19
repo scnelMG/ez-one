@@ -173,3 +173,12 @@ Requirement: `REF-003`, `JOB-018`, `REF-008`, `AI-004`, `AI-006`.
 - `TC-DART-REFERENCE-001`: `DartAnalysisServiceTest` verifies completed analysis is saved as `reference_type = DART`, and another user cannot save it.
 - `TC-DART-FRONTEND-001`: `workspaceApi.test.js` verifies DART disclosure, analysis, analysis read, and save-reference endpoint paths.
 - `TC-DART-FRONTEND-002`: `WorkspacePage.test.js` verifies the DART board loads disclosures, renders AI evidence cards, saves only after user action, and does not auto-insert AI text into the essay draft.
+
+## 2026-06-20 Company Enrichment Tests
+
+Requirement: `DATA-002`, `DATA-004`, `JOB-016`, `WS-028`.
+
+- `TC-COMPANY-FINANCIAL-001`: `FinancialCommissionCompanyInfoProviderTest` verifies company-name exact match, field mapping, missing key, empty match, and non-blocking empty result.
+- `TC-COMPANY-OPENDART-001`: `OpenDartCompanyOverviewProviderTest` verifies `corpCode.xml` matching, `company.json` mapping, and most-specific bidirectional name selection.
+- `TC-COMPANY-MERGE-001`: `MyBatisP1WorkspaceServiceTest` verifies 금융위 primary fields plus OpenDART provenance are persisted and both sources are recorded.
+- `TC-WORKSPACE-COMPANY-STATUS-001`: `WorkspacePage.test.js` verifies `공식 확인됨`, `일부 확인됨`, and `미확인` rendering while hidden fields stay hidden.

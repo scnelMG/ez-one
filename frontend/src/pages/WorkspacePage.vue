@@ -72,6 +72,10 @@
         <article class="workspace-info-section">
           <div class="workspace-section-title">
             <h2>기업정보</h2>
+            <div class="company-source-meta">
+              <span class="company-source-status">{{ companySourceStatusLabel }}</span>
+              <span v-if="companySourceNamesLabel" class="company-source-names">{{ companySourceNamesLabel }}</span>
+            </div>
           </div>
           <dl v-if="availableCompanyInfoRows.length" class="info-grid compact">
             <div
@@ -94,7 +98,7 @@
               </dd>
             </div>
           </dl>
-          <p v-else class="company-info-empty">공식 API에서 확인된 기업 상세 정보가 아직 없습니다.</p>
+          <p v-else class="company-info-empty">{{ companySourceStatusLabel }} · 공식 API에서 확인된 기업 상세 정보가 아직 없습니다.</p>
         </article>
       </section>
 
@@ -681,6 +685,19 @@ const cleanCompanyBusiness = computed(() => {
   if (!business) return '';
   const looksLikeMetadataOnly = /대표자\s*:|설립일\s*:|주소\s*:|홈페이지\s*:/u.test(business);
   return looksLikeMetadataOnly ? '' : business;
+});
+const companySourceStatusLabel = computed(() => {
+  const status = String(companyDetails.value.sourceStatus ?? '').toUpperCase();
+  if (status === 'OFFICIAL') return '공식 확인됨';
+  if (status === 'PARTIAL') return '일부 확인됨';
+  return '미확인';
+});
+const companySourceNamesLabel = computed(() => {
+  const names = companyDetails.value.sourceNames;
+  if (Array.isArray(names)) {
+    return names.filter(Boolean).join(', ');
+  }
+  return normalizeCompanyValue(names);
 });
 const availableCompanyInfoRows = computed(() => [
   {

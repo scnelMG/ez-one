@@ -41,6 +41,8 @@ public-data:
 company-enrichment:
   realtime:
     enabled: ${COMPANY_ENRICHMENT_REALTIME_ENABLED:true}
+  financial-company-basic-info:
+    url: ${FINANCIAL_COMPANY_BASIC_INFO_URL:}
   public-institution:
     url: ${PUBLIC_INSTITUTION_API_URL:http://apis.data.go.kr/1051000/public_inst/list}
   large-enterprise-affiliate:

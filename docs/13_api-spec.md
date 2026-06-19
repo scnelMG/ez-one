@@ -248,3 +248,13 @@ Analysis response `result` is structured as:
 ```
 
 AI output is preview-only until the user explicitly saves it as reference material. It must not update essay drafts automatically.
+
+## 2026-06-20 Company Enrichment API Addendum
+
+Requirement: `DATA-002`, `DATA-004`, `JOB-016`, `WS-028`.
+
+- 공고 저장 API(`POST /api/basket/jobs`, 추천 저장, 확장 저장)는 core 저장을 먼저 성공시킨 뒤 기업정보 보강을 best-effort로 수행한다. 금융위원회/OpenDART API 키 누락, 응답 오류, 미매칭은 저장 실패로 전파하지 않는다.
+- 기업 보강 우선순위는 `FINANCIAL_COMMISSION_COMPANY_BASIC` -> `OPENDART_COMPANY_OVERVIEW` -> 기존 공식 registry/내부 기본값이다. OpenDART는 금융위 결과의 누락 필드를 보강한다.
+- `GET /api/workspaces/{workspaceId}`의 `companyDetails`는 기존 필드를 유지하고 `sourceStatus`, `sourceNames`, `lastUpdatedAt`을 추가로 내려줄 수 있다.
+- `sourceStatus`는 `OFFICIAL`, `PARTIAL`, `UNVERIFIED` 중 하나다. 공식 출처에서 유효 필드가 2개 이상이면 `OFFICIAL`, 출처는 있으나 핵심 필드가 부족하면 `PARTIAL`, 공식 API 매칭이 없으면 `UNVERIFIED`다.
+- Runtime configuration: `PUBLIC_DATA_API_KEY`, `FINANCIAL_COMPANY_BASIC_INFO_URL`, `OPENDART_API_KEY`, `COMPANY_ENRICHMENT_REALTIME_ENABLED`.

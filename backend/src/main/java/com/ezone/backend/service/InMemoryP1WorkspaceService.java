@@ -734,6 +734,9 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
                 null,
                 defaults.domain(),
                 null,
+                null,
+                "UNVERIFIED",
+                "",
                 null
             ),
             record.questions().stream().map(this::toQuestionResponse).toList(),
