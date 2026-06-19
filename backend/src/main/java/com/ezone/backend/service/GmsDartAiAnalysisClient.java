@@ -30,13 +30,13 @@ public class GmsDartAiAnalysisClient implements DartAiAnalysisClient {
         ObjectMapper objectMapper,
         @Value("${gms.ai.api-key:}") String apiKey,
         @Value("${gms.ai.base-url:" + DEFAULT_BASE_URL + "}") String baseUrl,
-        @Value("${dart.ai.analysis-model:gpt-4.1}") String analysisModel
+        @Value("${dart.ai.analysis-model:gpt-5.4-mini}") String analysisModel
     ) {
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
         this.apiKey = apiKey;
         this.baseUrl = StringUtils.hasText(baseUrl) ? baseUrl : DEFAULT_BASE_URL;
-        this.analysisModel = StringUtils.hasText(analysisModel) ? analysisModel : "gpt-4.1";
+        this.analysisModel = StringUtils.hasText(analysisModel) ? analysisModel : "gpt-5.4-mini";
     }
 
     @Override

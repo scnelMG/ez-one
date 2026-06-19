@@ -168,6 +168,8 @@ Requirement: `REF-003`, `JOB-018`, `REF-008`, `AI-004`, `AI-006`.
 - `TC-DART-GMS-001`: `DartAnalysisServiceTest` verifies missing/exhausted GMS credit blocks analysis while preserving manual DART memo flow.
 - `TC-DART-AI-001`: `DartAnalysisServiceTest` verifies structured evidence cards, appeal points, cautions, and receipt numbers are stored for user review.
 - `TC-DART-AI-EVAL-001`: `DartAnalysisQualityEvaluatorTest` verifies ungrounded cards, prohibited investment/hiring-probability wording, score overflow, and duplicate/blank output are corrected before user review.
+- `TC-DART-AI-LIVE-001`: `DartGmsLiveSmokeEvaluationTest` is opt-in with `DART_LIVE_SMOKE_ENABLED=true` and verifies live OpenDART/GMS analysis for Samsung Electronics, Kakao, and KB Financial Group without logging secrets, raw DART text, full prompts, or full AI output.
+- `TC-DART-OPENDART-001`: `OpenDartHttpClientTest` verifies long DART documents are focused to job-application signal sections and user company names such as `KB금융지주` resolve to the most specific OpenDART corp name.
 - `TC-DART-REFERENCE-001`: `DartAnalysisServiceTest` verifies completed analysis is saved as `reference_type = DART`, and another user cannot save it.
 - `TC-DART-FRONTEND-001`: `workspaceApi.test.js` verifies DART disclosure, analysis, analysis read, and save-reference endpoint paths.
 - `TC-DART-FRONTEND-002`: `WorkspacePage.test.js` verifies the DART board loads disclosures, renders AI evidence cards, saves only after user action, and does not auto-insert AI text into the essay draft.

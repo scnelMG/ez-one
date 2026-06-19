@@ -28,4 +28,21 @@ class LocalConfigurationContractTest {
             .doesNotContain("MAIL_PASSWORD:dummy")
             .doesNotContain("test@gmail.com");
     }
+
+    @Test
+    void mavenCompilationUsesUtf8ForKoreanDisclosureNames() throws IOException {
+        String pom = Files.readString(Path.of("pom.xml"), StandardCharsets.UTF_8);
+
+        assertThat(pom)
+            .contains("<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>")
+            .contains("<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>");
+    }
+
+    @Test
+    void dartAiAnalysisModelDefaultsToLiveSmokeValidatedCostEfficientModel() throws IOException {
+        String applicationYaml = Files.readString(Path.of("src/main/resources/application.yml"), StandardCharsets.UTF_8);
+
+        assertThat(applicationYaml)
+            .contains("analysis-model: ${DART_AI_ANALYSIS_MODEL:gpt-5.4-mini}");
+    }
 }

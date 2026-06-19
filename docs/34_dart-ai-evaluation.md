@@ -70,6 +70,41 @@ Result:
 - `DartAnalysisServiceTest`: 5 passed
 - Total targeted DART AI eval tests: 7 passed
 
+## Live Smoke Evaluation
+
+Live smoke tests are opt-in and are not part of default CI because they call OpenDART/GMS and consume GMS credit.
+
+Command:
+
+```powershell
+$env:DART_LIVE_SMOKE_ENABLED='true'
+$env:DART_AI_ANALYSIS_MODEL='gpt-5.4-mini'
+.\mvnw.cmd "-Dtest=DartGmsLiveSmokeEvaluationTest" test
+```
+
+Result date: 2026-06-19 KST
+
+| Company | Industry | Report | Receipt no. | Model | Credit | Score | Evidence cards | Result |
+| --- | --- | --- | --- | --- | ---: | ---: | ---: | --- |
+| 삼성전자 | Manufacturing | 사업보고서 (2025.12) | 20260310002820 | gpt-5.4-mini | 14 | 100 | 8 | PASS |
+| 카카오 | IT platform | 사업보고서 (2025.12) | 20260318001423 | gpt-5.4-mini | 14 | 100 | 8 | PASS |
+| KB금융지주 | Finance | [기재정정]사업보고서 (2025.12) | 20260324000835 | gpt-5.4-mini | 14 | 100 | 9 | PASS |
+
+Summary:
+
+- Primary model pass rate: 3/3.
+- Average evidence cards: 8.33.
+- GMS key check passed; remaining credit and expiry were checked without recording the key.
+- Raw DART report text, full prompts, full AI output, and secrets were not committed.
+
+## Improvement Log
+
+1. First live run with full DART text failed at GMS analysis for Samsung/Kakao and could not find a finance disclosure for `KB금융지주`.
+2. A short structured-output probe confirmed GMS accepts the OpenAI-compatible `/responses` endpoint and the hyphenated model IDs such as `gpt-5.4-mini`.
+3. OpenDART document preparation was improved to focus long reports around job-application signals such as business content, products, services, R&D, investment, risk, finance, sales, and new business. This reduced the report text limit from 60,000 to 24,000 characters.
+4. OpenDART company matching was improved to choose the most specific bidirectional corp-name match, allowing `KB금융지주` to resolve to OpenDART's listed `KB금융`.
+5. After those changes, `gpt-5.4-mini` passed all three live samples at 14 Credit per call, so the default DART analysis model was changed from `gpt-4.1` to `gpt-5.4-mini`.
+
 ## Remaining Review Policy
 
 The evaluator is intentionally conservative. It does not verify whether a report claim is semantically true beyond the supplied DART text and receipt metadata. Human review remains required before using a saved DART reference in an essay.
@@ -77,6 +112,6 @@ The evaluator is intentionally conservative. It does not verify whether a report
 Future improvement candidates:
 
 - Add a durable eval fixture set with representative DART report excerpts.
-- Add pass@3 tracking across `gpt-4.1`, `gpt-4.1-mini`, and `gemini-2.5-flash`.
+- Add pass@3 tracking across `gpt-5.4-mini`, `gpt-4.1`, and `gemini-2.5-flash`.
 - Add a separate human review checklist for high-impact public-company claims.
 - Add latency and credit-cost logging without recording prompts that contain sensitive user data.
