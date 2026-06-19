@@ -18,11 +18,29 @@
         </div>
         <article class="account-profile-card">
           <span class="profile-avatar-fallback large">{{ profileInitial }}</span>
-          <label>
-            이름
-            <input v-model="nickname" data-testid="nickname-input" maxlength="50" />
-          </label>
-          <button class="icon-edit-button" type="button" aria-label="이름 저장" @click="saveProfile">저장</button>
+          <div class="account-profile-fields">
+            <label>
+              이름
+              <input
+                v-model="nickname"
+                data-testid="nickname-input"
+                name="nickname"
+                autocomplete="name"
+                maxlength="50"
+                placeholder="서비스에서 사용할 이름…"
+              />
+            </label>
+            <p>상단 프로필과 문의 내역에 표시되는 이름입니다.</p>
+          </div>
+          <button
+            class="primary-button"
+            type="button"
+            data-testid="save-account-profile"
+            :disabled="saving"
+            @click="saveProfile"
+          >
+            {{ saving ? '저장 중…' : '이름 저장' }}
+          </button>
         </article>
 
         <article class="account-login-card">
@@ -46,9 +64,6 @@
         <div class="account-actions">
           <button class="ghost-button" type="button" @click="handleLogout">로그아웃</button>
           <button class="text-button danger" type="button" @click="handleWithdraw">회원 탈퇴</button>
-          <button class="primary-button" type="button" data-testid="save-account-profile" @click="saveProfile">
-            {{ saving ? '저장 중' : '저장' }}
-          </button>
         </div>
         <p v-if="statusMessage" class="form-status" role="status">{{ statusMessage }}</p>
       </section>
@@ -60,6 +75,18 @@
             <h2>마이페이지 · 온보딩 정보</h2>
           </div>
           <small>지원 준비 기본 정보로 사용됩니다. 언제든 수정할 수 있습니다.</small>
+        </div>
+        <div class="mypage-summary-strip" aria-label="온보딩 정보 사용처">
+          <div>
+            <span>추천 기준</span>
+            <strong>직무 · 기업 · 지역</strong>
+            <p>저장한 선호 정보로 공고 추천과 필터 기준을 맞춥니다.</p>
+          </div>
+          <div>
+            <span>문서 기본값</span>
+            <strong>기술 · SSAFY 여부</strong>
+            <p>지원 문서와 확장 프로그램 보조 정보의 기본값으로 사용합니다.</p>
+          </div>
         </div>
         <div class="preference-chip-form">
           <section class="onboarding-field-group" aria-label="희망 직무">
@@ -164,9 +191,11 @@
         </div>
         <div class="form-actions">
           <p v-if="preferenceStatusMessage" class="form-status" role="status">{{ preferenceStatusMessage }}</p>
-          <button class="ghost-button" type="button" @click="cancelPreferences">취소</button>
-          <button class="primary-button" type="button" data-testid="save-onboarding-profile" @click="savePreferences">
-            저장
+          <button class="ghost-button" type="button" data-testid="cancel-onboarding-profile" :disabled="profileStore.status === 'saving'" @click="cancelPreferences">
+            취소
+          </button>
+          <button class="primary-button" type="button" data-testid="save-onboarding-profile" :disabled="profileStore.status === 'saving'" @click="savePreferences">
+            {{ profileStore.status === 'saving' ? '저장 중' : '저장' }}
           </button>
         </div>
       </section>
@@ -177,7 +206,12 @@
             <p class="section-kicker">QnA</p>
             <h2>마이페이지 · 자주 묻는 질문</h2>
           </div>
-          <input class="mypage-search" placeholder="궁금한 내용을 검색하세요" />
+          <input
+            v-model="faqSearch"
+            class="mypage-search"
+            data-testid="faq-search-input"
+            placeholder="궁금한 내용을 검색하세요"
+          />
         </div>
         <div class="faq-filter-row">
           <span>전체</span>
@@ -187,10 +221,14 @@
           <span>자소서</span>
           <span>확장 프로그램</span>
         </div>
-        <article v-for="item in faqItems" :key="item.q" class="faq-row">
+        <article v-for="item in filteredFaqItems" :key="item.q" class="faq-row">
           <strong>Q {{ item.q }}</strong>
           <p>A {{ item.a }}</p>
         </article>
+        <div v-if="filteredFaqItems.length === 0" class="mypage-empty-state" role="status">
+          <strong>검색 결과가 없습니다.</strong>
+          <p>다른 키워드로 검색하거나 1:1 문의를 접수해 주세요.</p>
+        </div>
       </section>
 
       <section v-else-if="activeSection === 'inquiry'" class="mypage-panel" aria-label="1:1 문의">
@@ -203,7 +241,7 @@
         <form class="support-form" @submit.prevent="submitInquiry">
           <label>
             문의 유형
-            <select v-model="inquiryForm.type">
+            <select v-model="inquiryForm.type" name="inquiryCategory" autocomplete="off">
               <option value="ACCOUNT">계정</option>
               <option value="ERROR">오류</option>
               <option value="SUGGESTION">기능 제안</option>
@@ -212,11 +250,11 @@
           </label>
           <label>
             제목
-            <input v-model="inquiryForm.title" required />
+            <input v-model="inquiryForm.title" name="inquiryTitle" autocomplete="off" placeholder="문의 제목을 입력하세요…" required />
           </label>
           <label>
             내용
-            <textarea v-model="inquiryForm.body" required />
+            <textarea v-model="inquiryForm.body" name="inquiryBody" autocomplete="off" placeholder="문제가 발생한 화면, 기대한 동작, 실제 결과를 적어 주세요…" required />
           </label>
           <button class="primary-button" type="submit" :disabled="supportSubmitting">
             {{ supportSubmitting ? '접수 중' : '문의 접수' }}
@@ -225,10 +263,14 @@
         <p v-if="supportStatusMessage" class="form-status" role="status">{{ supportStatusMessage }}</p>
         <div class="support-history">
           <strong>내 문의 내역</strong>
-          <span v-if="supportRequests.length === 0">아직 접수된 문의가 없습니다.</span>
-          <span v-for="request in supportRequests" :key="request.id ?? request.title">
-            {{ request.title }} · {{ formatSupportStatus(request.status) }}
-          </span>
+          <span v-if="supportRequests.length === 0" class="support-empty">아직 접수된 문의가 없습니다.</span>
+          <article v-for="request in supportRequests" :key="request.id ?? request.title" class="support-history-row">
+            <div>
+              <strong>{{ request.title }}</strong>
+              <small>{{ formatSupportDate(request.createdAt ?? request.created_at) }}</small>
+            </div>
+            <span class="status-chip">{{ formatSupportStatus(request.status) }}</span>
+          </article>
         </div>
       </section>
 
@@ -241,20 +283,20 @@
           <small>영업일 기준 3일 내 회신</small>
         </div>
         <form class="support-form" @submit.prevent="submitPartnership">
-          <label>회사 / 단체명 <input v-model="partnershipForm.company" required /></label>
-          <label>담당자명 <input v-model="partnershipForm.contactName" required /></label>
-          <label>이메일 <input v-model="partnershipForm.email" type="email" required /></label>
-          <label>연락처 <input v-model="partnershipForm.phone" required /></label>
+          <label>회사 / 단체명 <input v-model="partnershipForm.company" name="companyName" autocomplete="organization" placeholder="회사 또는 단체명…" required /></label>
+          <label>담당자명 <input v-model="partnershipForm.contactName" name="contactName" autocomplete="name" placeholder="담당자 이름…" required /></label>
+          <label>이메일 <input v-model="partnershipForm.email" name="contactEmail" type="email" autocomplete="email" spellcheck="false" placeholder="partner@example.com" required /></label>
+          <label>연락처 <input v-model="partnershipForm.phone" name="contactPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="010-0000-0000" required /></label>
           <label>
             제휴 유형
-            <select v-model="partnershipForm.type">
+            <select v-model="partnershipForm.type" name="partnershipType" autocomplete="off">
               <option value="CONTENT">콘텐츠 제휴</option>
               <option value="RECRUIT">채용 연계</option>
               <option value="TECH">기술 제휴</option>
               <option value="ETC">기타</option>
             </select>
           </label>
-          <label>제안 내용 <textarea v-model="partnershipForm.body" required /></label>
+          <label>제안 내용 <textarea v-model="partnershipForm.body" name="partnershipBody" autocomplete="off" placeholder="제휴 목적, 대상 사용자, 기대 효과를 적어 주세요…" required /></label>
           <button class="primary-button" type="submit" :disabled="supportSubmitting">
             {{ supportSubmitting ? '전송 중' : '제휴 문의 보내기' }}
           </button>
@@ -299,6 +341,7 @@ import { authApi } from '@/features/auth/api/authApi';
 import { supportApi } from '@/features/support/api/supportApi';
 import { clearAuthSession, getCurrentUser, getRefreshToken, saveCurrentUser } from '@/features/auth/session/authSession';
 import { useProfileStore } from '@/stores/profileStore';
+import { showToast } from '@/shared/useToast';
 
 const route = useRoute();
 const router = useRouter();
@@ -311,6 +354,7 @@ const preferenceStatusMessage = ref('');
 const supportStatusMessage = ref('');
 const supportSubmitting = ref(false);
 const supportRequests = ref([]);
+const faqSearch = ref('');
 
 const roleOptions = ['프론트엔드', '백엔드', '데이터 엔지니어', 'AI/ML', '모바일', 'DevOps', 'PM', '디자인', 'QA', '기타'];
 const companyTypeOptions = ['대기업', '공공기관', '중견기업', '중소기업', '스타트업', '기타'];
@@ -371,6 +415,11 @@ const activeSection = computed(() => route.meta.mypageSection ?? 'account');
 const pageTitle = computed(() => pageCopy[activeSection.value]?.title ?? pageCopy.account.title);
 const pageDescription = computed(() => pageCopy[activeSection.value]?.description ?? pageCopy.account.description);
 const profileInitial = computed(() => (nickname.value || currentUser.value?.email || 'E').trim().charAt(0).toUpperCase());
+const filteredFaqItems = computed(() => {
+  const query = faqSearch.value.trim().toLowerCase();
+  if (!query) return faqItems;
+  return faqItems.filter((item) => `${item.q} ${item.a}`.toLowerCase().includes(query));
+});
 
 const faqItems = [
   { q: 'Notion 이메일이 로그인 이메일과 달라도 되나요?', a: '네. 로그인 계정과 Notion 연동 계정은 분리해서 관리합니다.' },
@@ -409,9 +458,11 @@ async function saveProfile() {
     currentUser.value = updatedUser;
     nickname.value = updatedUser.nickname;
     saveCurrentUser(updatedUser);
-    statusMessage.value = '저장되었습니다.';
+    statusMessage.value = '프로필 이름이 저장되었습니다.';
+    showToast('프로필 이름이 저장되었습니다.');
   } catch {
-    statusMessage.value = '저장하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+    statusMessage.value = '프로필 이름을 저장하지 못했습니다.';
+    showToast('프로필 이름을 저장하지 못했습니다.', { tone: 'red' });
   } finally {
     saving.value = false;
   }
@@ -429,9 +480,11 @@ async function savePreferences() {
   if (profileStore.status === 'ready' && profileStore.profile) {
     syncProfileForm();
     preferenceStatusMessage.value = '온보딩 정보가 저장되었습니다.';
+    showToast('온보딩 정보가 저장되었습니다.');
     return;
   }
   preferenceStatusMessage.value = profileStore.errorMessage || '온보딩 정보를 저장하지 못했습니다.';
+  showToast(preferenceStatusMessage.value, { tone: 'red' });
 }
 
 function syncProfileForm() {
@@ -441,12 +494,12 @@ function syncProfileForm() {
   profileForm.companyTypes = selectedOrDefault(profile.companyTypes, companyTypeOptions);
   profileForm.industries = selectedOrDefault(profile.industries, industryOptions);
   profileForm.regions = selectedOrDefault(profile.regions, regionOptions);
-  profileForm.skills = [...profile.skills];
-  profileForm.ssafy = profile.ssafy;
+  profileForm.skills = [...(profile.skills ?? [])];
+  profileForm.ssafy = profile.ssafy ?? false;
 }
 
 function selectedOrDefault(values, options) {
-  return values.length > 0 ? [...values] : [options[0]];
+  return Array.isArray(values) && values.length > 0 ? [...values] : [options[0]];
 }
 
 function toggleListValue(values, value) {
@@ -499,7 +552,9 @@ async function handleWithdraw() {
 
 function cancelPreferences() {
   syncProfileForm();
-  preferenceStatusMessage.value = '입력 내용이 초기화되었습니다.';
+  skillInput.value = '';
+  preferenceStatusMessage.value = '저장된 온보딩 정보로 되돌렸습니다.';
+  showToast('저장된 온보딩 정보로 되돌렸습니다.');
 }
 
 async function loadSupportRequests() {
@@ -524,8 +579,10 @@ async function submitInquiry() {
     inquiryForm.title = '';
     inquiryForm.body = '';
     supportStatusMessage.value = '1:1 문의가 접수되었습니다.';
+    showToast('1:1 문의가 접수되었습니다.');
   } catch {
     supportStatusMessage.value = '문의 접수에 실패했습니다. 잠시 후 다시 시도해 주세요.';
+    showToast('문의 접수에 실패했습니다.', { tone: 'red' });
   } finally {
     supportSubmitting.value = false;
   }
@@ -551,8 +608,10 @@ async function submitPartnership() {
     partnershipForm.phone = '';
     partnershipForm.body = '';
     supportStatusMessage.value = '제휴 문의가 접수되었습니다.';
+    showToast('제휴 문의가 접수되었습니다.');
   } catch {
     supportStatusMessage.value = '제휴 문의 전송에 실패했습니다. 잠시 후 다시 시도해 주세요.';
+    showToast('제휴 문의 전송에 실패했습니다.', { tone: 'red' });
   } finally {
     supportSubmitting.value = false;
   }
@@ -562,5 +621,12 @@ function formatSupportStatus(status) {
   if (status === 'RECEIVED') return '접수';
   if (status === 'ANSWERED') return '답변 완료';
   return status || '확인 중';
+}
+
+function formatSupportDate(value) {
+  if (!value) return '최근 접수';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '최근 접수';
+  return new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium' }).format(date);
 }
 </script>

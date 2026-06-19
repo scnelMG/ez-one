@@ -36,7 +36,14 @@ const makeRouter = () => createRouter({
         { path: '/', component: { template: '<div>main</div>' } },
         { path: '/basket', component: { template: '<div>basket</div>' } },
         { path: '/mypage', component: { template: '<div>mypage</div>' } },
-        { path: '/document-profile', component: { template: '<div>document profile</div>' } }
+        { path: '/document-profile', component: { template: '<div>document profile</div>' } },
+        { path: '/study', component: { template: '<div>study</div>' } },
+        { path: '/history', component: { template: '<div>history</div>' } },
+        { path: '/mypage/onboarding', component: { template: '<div>onboarding</div>' } },
+        { path: '/mypage/qna', component: { template: '<div>qna</div>' } },
+        { path: '/mypage/inquiry', component: { template: '<div>inquiry</div>' } },
+        { path: '/mypage/partnership', component: { template: '<div>partnership</div>' } },
+        { path: '/mypage/terms', component: { template: '<div>terms</div>' } }
     ]
 });
 
@@ -83,15 +90,19 @@ describe('NotionSettingsPage', () => {
         expect(mocks.listSyncLogs).toHaveBeenCalled();
         expect(wrapper.find('[data-testid="mypage-left-board"]').exists()).toBe(false);
         expect(wrapper.text()).toContain('마이페이지 · 노션 연동 관리');
+        expect(wrapper.text()).toContain('Notion 연동 상태');
+        expect(wrapper.text()).toContain('공고 자동 동기화 꺼짐');
         expect(wrapper.text()).toContain('로그인 이메일과 노션 이메일이 서로 달라도 연동돼요.');
         expect(wrapper.text()).toContain('hong.gildong@gmail.com');
         expect(wrapper.text()).toContain('gildong.work@gmail.com');
         expect(wrapper.text()).toContain('자소서 · 도화지');
+        expect(wrapper.text()).toContain('준비 중');
         expect(wrapper.text()).toContain('Synced');
 
         await wrapper.get('[data-testid="toggle-job-only-sync"]').trigger('click');
         await flushPromises();
         expect(mocks.updateSyncSettings).toHaveBeenCalledWith(true);
+        expect(wrapper.text()).toContain('공고 자동 동기화가 켜졌습니다.');
     });
 
     it('NOTION-001: connects a disconnected Notion account from the settings page', async () => {
@@ -109,6 +120,24 @@ describe('NotionSettingsPage', () => {
         await flushPromises();
         expect(mocks.connect).toHaveBeenCalled();
         expect(wrapper.text()).toContain('gildong.work@gmail.com');
+    });
+
+    it('NOTION-001: renders an actionable empty sync log state', async () => {
+        mocks.listSyncLogs.mockResolvedValue([]);
+        const wrapper = await mountPage();
+
+        expect(wrapper.text()).toContain('아직 동기화된 공고가 없습니다.');
+        expect(wrapper.text()).toContain('장바구니에 공고를 저장하면 JOB_ONLY 범위로 기록됩니다.');
+    });
+
+    it('NOTION-001: shows an inline error when sync toggle fails', async () => {
+        mocks.updateSyncSettings.mockRejectedValue(new Error('network'));
+        const wrapper = await mountPage();
+
+        await wrapper.get('[data-testid="toggle-job-only-sync"]').trigger('click');
+        await flushPromises();
+
+        expect(wrapper.text()).toContain('Notion 동기화 설정을 저장하지 못했습니다.');
     });
 });
 

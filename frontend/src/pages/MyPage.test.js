@@ -53,6 +53,8 @@ const makeRouter = () => createRouter({
         { path: '/login', component: { template: '<div>login</div>' } },
         { path: '/basket', component: { template: '<div>basket</div>' } },
         { path: '/document-profile', component: { template: '<div>document profile</div>' } },
+        { path: '/study', component: { template: '<div>study</div>' } },
+        { path: '/recommendations/mattermost', component: { template: '<div>mattermost</div>' } },
         { path: '/history', component: { template: '<div>history</div>' } },
         { path: '/mypage/notion', component: { template: '<div>notion</div>' } }
     ]
@@ -125,6 +127,18 @@ describe('MyPage', () => {
 
         expect(mocks.updateCurrentUser).toHaveBeenCalledWith({ nickname: '홍길동' });
         expect(JSON.parse(localStorage.getItem('ezone.currentUser') ?? '{}').nickname).toBe('홍길동');
+        expect(wrapper.text()).toContain('프로필 이름이 저장되었습니다.');
+    });
+
+    it('MY-ACCOUNT: shows an inline error when nickname save fails', async () => {
+        mocks.updateCurrentUser.mockRejectedValue(new Error('network'));
+        const wrapper = await mountPage('/mypage');
+
+        await wrapper.get('[data-testid="nickname-input"]').setValue('홍길동');
+        await wrapper.get('[data-testid="save-account-profile"]').trigger('click');
+        await flushPromises();
+
+        expect(wrapper.text()).toContain('프로필 이름을 저장하지 못했습니다.');
     });
 
     it('MY-ACCOUNT: withdraws through /api/me-backed auth api and clears the session', async () => {
@@ -173,6 +187,36 @@ describe('MyPage', () => {
             skills: ['Python'],
             ssafy: false
         });
+        expect(wrapper.text()).toContain('온보딩 정보가 저장되었습니다.');
+    });
+
+    it('MY-ONBOARDING: cancels edits and restores the saved profile values', async () => {
+        const wrapper = await mountPage('/mypage/onboarding');
+
+        await wrapper.get('[data-testid="profile-role-option-프론트엔드"]').trigger('click');
+        await wrapper.get('[data-testid="profile-role-option-AI/ML"]').trigger('click');
+        await wrapper.get('[data-testid="profile-skill-input"]').setValue('Python');
+        await wrapper.get('[data-testid="profile-skill-input"]').trigger('keyup.enter');
+        expect(wrapper.text()).toContain('Python');
+
+        await wrapper.get('[data-testid="cancel-onboarding-profile"]').trigger('click');
+        await flushPromises();
+
+        expect(wrapper.get('[data-testid="profile-role-option-프론트엔드"]').classes()).toContain('active');
+        expect(wrapper.get('[data-testid="profile-role-option-AI/ML"]').classes()).not.toContain('active');
+        expect(wrapper.text()).not.toContain('Python');
+        expect(wrapper.text()).toContain('저장된 온보딩 정보로 되돌렸습니다.');
+    });
+
+    it('MY-QNA: filters FAQ by search term and renders an empty state', async () => {
+        const wrapper = await mountPage('/mypage/qna');
+
+        await wrapper.get('[data-testid="faq-search-input"]').setValue('Notion');
+        expect(wrapper.text()).toContain('Notion 이메일이 로그인 이메일과 달라도 되나요?');
+        expect(wrapper.text()).not.toContain('자소서는 어떻게 버전 관리하나요?');
+
+        await wrapper.get('[data-testid="faq-search-input"]').setValue('없는 질문');
+        expect(wrapper.text()).toContain('검색 결과가 없습니다.');
     });
 
     it('MY-SUPPORT: submits inquiry to the support API and renders persisted history', async () => {
