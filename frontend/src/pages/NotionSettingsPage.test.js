@@ -42,7 +42,6 @@ const makeRouter = () => createRouter({
         { path: '/mypage/onboarding', component: { template: '<div>onboarding</div>' } },
         { path: '/mypage/qna', component: { template: '<div>qna</div>' } },
         { path: '/mypage/inquiry', component: { template: '<div>inquiry</div>' } },
-        { path: '/mypage/partnership', component: { template: '<div>partnership</div>' } },
         { path: '/mypage/terms', component: { template: '<div>terms</div>' } }
     ]
 });

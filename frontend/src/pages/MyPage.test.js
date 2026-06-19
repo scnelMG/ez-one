@@ -41,7 +41,6 @@ const myRoutes = [
     { path: '/mypage/onboarding', name: 'mypage-onboarding', component: MyPage, meta: { mypageSection: 'onboarding' } },
     { path: '/mypage/qna', name: 'mypage-qna', component: MyPage, meta: { mypageSection: 'qna' } },
     { path: '/mypage/inquiry', name: 'mypage-inquiry', component: MyPage, meta: { mypageSection: 'inquiry' } },
-    { path: '/mypage/partnership', name: 'mypage-partnership', component: MyPage, meta: { mypageSection: 'partnership' } },
     { path: '/mypage/terms', name: 'mypage-terms', component: MyPage, meta: { mypageSection: 'terms' } }
 ];
 
@@ -116,7 +115,8 @@ describe('MyPage', () => {
         });
         const wrapper = await mountPage('/mypage');
 
-        expect(wrapper.text()).toContain('마이페이지 · 내 계정');
+        expect(wrapper.get('.page-header h1').text()).toBe('내 계정');
+        expect(wrapper.text()).not.toContain('마이페이지 ·');
         expect(wrapper.find('[data-testid="mypage-left-board"]').exists()).toBe(false);
         expect(wrapper.text()).toContain('Google 계정으로 로그인 중');
         expect(wrapper.text()).toContain('Notion 연동은 계정과 분리해 관리됩니다.');
@@ -156,7 +156,8 @@ describe('MyPage', () => {
     it('MY-ONBOARDING: edits onboarding preferences as chips', async () => {
         const wrapper = await mountPage('/mypage/onboarding');
 
-        expect(wrapper.text()).toContain('마이페이지 · 온보딩 정보');
+        expect(wrapper.get('.page-header h1').text()).toBe('온보딩 정보');
+        expect(wrapper.text()).not.toContain('마이페이지 · 온보딩 정보');
         expect(wrapper.text()).toContain('프론트엔드');
         expect(wrapper.text()).toContain('지원 준비 기본 정보');
 
@@ -210,12 +211,20 @@ describe('MyPage', () => {
 
     it('MY-QNA: filters FAQ by search term and renders an empty state', async () => {
         const wrapper = await mountPage('/mypage/qna');
+        const searchInput = wrapper.get('[data-testid="faq-search-input"]');
 
-        await wrapper.get('[data-testid="faq-search-input"]').setValue('Notion');
+        expect(wrapper.get('.page-header h1').text()).toBe('자주 묻는 질문');
+        expect(searchInput.attributes('type')).toBe('search');
+        expect(searchInput.attributes('name')).toBe('faqSearch');
+        expect(searchInput.attributes('aria-label')).toBe('FAQ 검색');
+        expect(wrapper.findAll('[data-testid^="faq-filter-"]').every((filter) => filter.element.tagName === 'BUTTON')).toBe(true);
+        expect(wrapper.findAll('.faq-row').length).toBeGreaterThanOrEqual(12);
+
+        await searchInput.setValue('Notion');
         expect(wrapper.text()).toContain('Notion 이메일이 로그인 이메일과 달라도 되나요?');
         expect(wrapper.text()).not.toContain('자소서는 어떻게 버전 관리하나요?');
 
-        await wrapper.get('[data-testid="faq-search-input"]').setValue('없는 질문');
+        await searchInput.setValue('없는 질문');
         expect(wrapper.text()).toContain('검색 결과가 없습니다.');
     });
 
@@ -239,36 +248,27 @@ describe('MyPage', () => {
         expect(wrapper.text()).toContain('1:1 문의가 접수되었습니다.');
     });
 
-    it('MY-SUPPORT: submits partnership to the support API instead of a local alert', async () => {
-        const wrapper = await mountPage('/mypage/partnership');
-        const inputs = wrapper.findAll('input');
+    it('SUPPORT-001: does not expose the retired partnership support surface', async () => {
+        const wrapper = await mountPage('/mypage/inquiry');
 
-        await inputs[0].setValue('EZ Partner');
-        await inputs[1].setValue('김담당');
-        await inputs[2].setValue('partner@example.com');
-        await inputs[3].setValue('010-0000-0000');
-        await wrapper.find('textarea').setValue('채용 콘텐츠 제휴를 제안합니다.');
-        await wrapper.find('form.support-form').trigger('submit.prevent');
-        await flushPromises();
-
-        expect(mocks.createRequest).toHaveBeenCalledWith({
-            requestType: 'PARTNERSHIP',
-            category: 'CONTENT',
-            title: 'EZ Partner 제휴 문의',
-            body: '채용 콘텐츠 제휴를 제안합니다.',
-            companyName: 'EZ Partner',
-            contactName: '김담당',
-            contactEmail: 'partner@example.com',
-            contactPhone: '010-0000-0000'
-        });
-        expect(wrapper.text()).toContain('제휴 문의가 접수되었습니다.');
+        expect(myRoutes.some((route) => route.path === '/mypage/partnership')).toBe(false);
+        expect(wrapper.text()).not.toContain('제휴 문의');
+        expect(wrapper.find('a[href="/mypage/partnership"]').exists()).toBe(false);
     });
 
     it('MY-SUPPORT: renders QnA and terms pages as separate pages', async () => {
         expect((await mountPage('/mypage/qna')).text()).toContain('공고별로 첨부 자료는 어디서 보나요?');
         const terms = await mountPage('/mypage/terms');
-        expect(terms.text()).toContain('서비스 이용약관');
-        expect(terms.text()).toContain('상표 및 로고 표시');
+        expect(terms.get('.page-header h1').text()).toBe('이용약관');
+        expect(terms.text()).toContain('제1조 목적');
+        expect(terms.text()).toContain('제2조 정의');
+        expect(terms.text()).toContain('계정 및 로그인');
+        expect(terms.text()).toContain('공고와 기업 정보 표시');
+        expect(terms.text()).toContain('외부 연동');
+        expect(terms.text()).toContain('문의 처리');
+        expect(terms.text()).toContain('서비스 변경 및 중단');
+        expect(terms.text()).toContain('책임 제한');
+        expect(terms.find('#privacy').exists()).toBe(true);
     });
 });
 
