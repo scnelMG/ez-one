@@ -74,13 +74,23 @@ Result:
 
 Live smoke tests are opt-in and are not part of default CI because they call OpenDART/GMS and consume GMS credit.
 
-Command:
+Operational default smoke command:
+
+```powershell
+$env:DART_LIVE_SMOKE_ENABLED='true'
+$env:DART_AI_ANALYSIS_MODEL='gpt-4.1'
+.\mvnw.cmd "-Dtest=DartGmsLiveSmokeEvaluationTest" test
+```
+
+High-quality candidate reproduction command:
 
 ```powershell
 $env:DART_LIVE_SMOKE_ENABLED='true'
 $env:DART_AI_ANALYSIS_MODEL='gpt-5.4-mini'
 .\mvnw.cmd "-Dtest=DartGmsLiveSmokeEvaluationTest" test
 ```
+
+Use the `gpt-5.4-mini` command only when intentionally rechecking the higher-cost candidate. Routine smoke checks should use `gpt-4.1` or omit `DART_AI_ANALYSIS_MODEL` so the backend default applies.
 
 Result date: 2026-06-19 KST
 
