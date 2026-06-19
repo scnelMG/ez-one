@@ -39,10 +39,10 @@ class LocalConfigurationContractTest {
     }
 
     @Test
-    void dartAiAnalysisModelDefaultsToLiveSmokeValidatedCostEfficientModel() throws IOException {
+    void dartAiAnalysisModelDefaultsToCostControlledStableModel() throws IOException {
         String applicationYaml = Files.readString(Path.of("src/main/resources/application.yml"), StandardCharsets.UTF_8);
 
         assertThat(applicationYaml)
-            .contains("analysis-model: ${DART_AI_ANALYSIS_MODEL:gpt-5.4-mini}");
+            .contains("analysis-model: ${DART_AI_ANALYSIS_MODEL:gpt-4.1}");
     }
 }
