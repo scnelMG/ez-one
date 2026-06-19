@@ -43,6 +43,28 @@ class DocumentProfilePersistenceServiceTest {
     }
 
     @Test
+    void savedMilitarySectionKeepsStructuredFields() {
+        InMemoryProfileService service = new InMemoryProfileService(userAccountMapper, objectMapper, mapper);
+        Map<String, Object> militaryRecord = new LinkedHashMap<>();
+        militaryRecord.put("status", "군필");
+        militaryRecord.put("branch", "육군");
+        militaryRecord.put("rank", "병장");
+        militaryRecord.put("dischargeType", "만기제대");
+        militaryRecord.put("hasDisability", false);
+        militaryRecord.put("isVeteran", false);
+
+        service.upsertSection(7L, "military", new UpsertDocumentSectionRequest(Map.of(
+            "military", List.of(militaryRecord)
+        )));
+
+        DocumentProfileResponse response = service.getDocumentProfile(7L);
+
+        assertThat(response.sections().get("military"))
+            .isEqualTo(Map.of("military", List.of(militaryRecord)));
+        assertThat(response.lastSavedAt()).isNotNull();
+    }
+
+    @Test
     void documentProfileSaveFailsWhenDatabaseMapperIsMissing() {
         InMemoryProfileService service = new InMemoryProfileService(
             userAccountMapper,

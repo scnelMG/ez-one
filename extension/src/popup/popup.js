@@ -2,6 +2,7 @@ import { createExtensionJobApi } from '../shared/api/extensionJobApi';
 import { createExtensionDocumentProfileApi } from '../shared/api/extensionDocumentProfileApi';
 import {
     ACCESS_TOKEN_KEY,
+    PENDING_EXTENSION_CONTINUATION_KEY,
     REFRESH_TOKEN_KEY,
     buildWebLoginUrl,
     clearStoredSession,
@@ -14,12 +15,16 @@ const apiBaseUrl = import.meta.env.VITE_EXTENSION_API_BASE_URL ?? 'http://localh
 const webAppUrl = import.meta.env.VITE_EXTENSION_WEB_APP_URL ?? 'http://localhost:5173';
 const AUTH_EXPIRED_MESSAGE = '\uB85C\uADF8\uC778\uC774 \uB9CC\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4';
 const UNSUPPORTED_JOB_PAGE_MESSAGE = '채용공고 목록이나 캘린더에서는 저장할 공고를 정확히 찾을 수 없어요.';
-const JOB_EXTRACTOR_VERSION = '2026-06-17-essay-limit-unit-v12';
+const JOB_EXTRACTOR_VERSION = '2026-06-19-jasoseol-selected-root-v13';
 const POSTING_WATCH_INTERVAL_MS = 1200;
 const LOGIN_SESSION_POLL_INTERVAL_MS = 800;
 const LOGIN_SESSION_POLL_TIMEOUT_MS = 120000;
 const PANEL_RESIZE_MESSAGE = 'EZONE_PANEL_RESIZE';
 const PANEL_RESIZE_EPSILON_PX = 2;
+const APPLICATION_FORM_CHANGED_MESSAGE = 'EZONE_APPLICATION_FORM_CHANGED';
+const DOCUMENT_AUTOFILL_REFRESH_DEBOUNCE_MS = 450;
+const DOCUMENT_AUTOFILL_APPLY_SUPPRESS_MS = 1400;
+const LOGIN_CONTINUATIONS = new Set(['jobPreview', 'documentAutoFill']);
 const statusPanel = requireElement('status-panel');
 const loginPanel = requireElement('login-panel');
 const featurePanel = requireElement('feature-panel');
@@ -42,18 +47,26 @@ const roleOptions = requireElement('role-options');
 const roleCount = requireElement('role-count');
 const basketLink = requireElement('basket-link');
 const savedJobList = requireElement('saved-job-list');
+const documentResultTitle = requireElement('document-result-title');
 const autofillSummary = requireElement('autofill-summary');
 const autofillFilledCount = requireElement('autofill-filled-count');
+const autofillFilledLabel = requireElement('autofill-filled-label');
 const autofillReviewCount = requireElement('autofill-review-count');
 const autofillCopyCount = requireElement('autofill-copy-count');
+const autofillFilledHeading = requireElement('autofill-filled-heading');
+const autofillFilledCaption = requireElement('autofill-filled-caption');
 const autofillFilledList = requireElement('autofill-filled-list');
 const autofillFailedList = requireElement('autofill-failed-list');
 const autofillCopyList = requireElement('autofill-copy-list');
+const autofillApplyButton = requireElement('autofill-apply-button');
+const autofillRescanButton = requireElement('autofill-rescan-button');
 let currentPosting = null;
+let pendingDocumentAutoFillProfile = null;
 let activeEssayRole = null;
 let essayQuestionRequestId = 0;
 let waitingForWebLogin = false;
 let hasExtensionSession = false;
+let pendingLoginContinuation = null;
 let isReadingPreview = false;
 let isSavingJob = false;
 let lastObservedPostingUrl = null;
@@ -62,6 +75,10 @@ let loginSessionPollTimer = null;
 let loginSessionPollStartedAt = 0;
 let panelResizeFrame = null;
 let lastReportedPanelHeight = 0;
+let documentAutoFillRefreshTimer = null;
+let isRefreshingDocumentAutoFill = false;
+let ignoreDocumentAutoFillChangesUntil = 0;
+let lastDocumentAutoFillSignature = null;
 const contentScriptLoadPromises = new Map();
 
 const jobApi = createExtensionJobApi({
@@ -82,8 +99,10 @@ const documentProfileApi = createExtensionDocumentProfileApi({
 setStaticLinks();
 setupPanelAutoResize();
 chrome.storage.onChanged?.addListener(handleSessionStorageChanged);
+chrome.runtime.onMessage?.addListener(handleRuntimeMessage);
 loginButton.addEventListener('click', async () => {
     const tab = await getActiveTab();
+    await rememberPendingLoginContinuation(pendingLoginContinuation ?? inferVisibleLoginContinuation());
     const loginUrl = buildWebLoginUrl({
         webAppUrl,
         currentUrl: tab.url ?? '',
@@ -98,7 +117,14 @@ jobSaveModeButton.addEventListener('click', () => {
     void loadPreview({ showUnsupportedMessage: true });
 });
 documentInputModeButton.addEventListener('click', () => {
-    void runDocumentAutoFill();
+    void previewDocumentAutoFill();
+});
+autofillApplyButton.addEventListener('click', () => {
+    void applyDocumentAutoFill();
+});
+autofillRescanButton.addEventListener('click', () => {
+    pendingDocumentAutoFillProfile = null;
+    void previewDocumentAutoFill();
 });
 reloadPreviewButton.addEventListener('click', () => {
     void loadPreview({ force: true, showUnsupportedMessage: true });
@@ -135,7 +161,7 @@ saveButton.addEventListener('click', async () => {
         showPanel(resultPanel);
     }
     catch (error) {
-        if (await handleAuthExpired(error)) {
+        if (await handleAuthExpired(error, 'jobPreview')) {
             return;
         }
         setStatus(error instanceof Error ? error.message : '저장에 실패했습니다.', true);
@@ -158,7 +184,7 @@ async function init() {
         return;
     }
     hasExtensionSession = true;
-    await loadPreview({ fallbackPanel: featurePanel });
+    await resumePendingExtensionAction();
 }
 
 async function handleSessionStorageChanged(changes, areaName) {
@@ -214,7 +240,52 @@ async function resumeAfterWebLogin() {
     stopLoginSessionPolling();
     waitingForWebLogin = false;
     hasExtensionSession = true;
-    await loadPreview({ force: true, fallbackPanel: featurePanel });
+    await resumePendingExtensionAction();
+}
+
+async function resumePendingExtensionAction() {
+    const continuation = pendingLoginContinuation ?? await readPendingLoginContinuation();
+    await rememberPendingLoginContinuation(null);
+    if (continuation === 'documentAutoFill') {
+        await previewDocumentAutoFill();
+        return;
+    }
+    if (continuation === 'jobPreview') {
+        await loadPreview({ force: true, showUnsupportedMessage: true });
+        return;
+    }
+    showFeatureSelection();
+}
+
+function inferVisibleLoginContinuation() {
+    if (!documentResultPanel.hidden) {
+        return 'documentAutoFill';
+    }
+    if (!previewPanel.hidden || !resultPanel.hidden) {
+        return 'jobPreview';
+    }
+    return null;
+}
+
+async function rememberPendingLoginContinuation(continuation) {
+    const normalizedContinuation = normalizeLoginContinuation(continuation);
+    pendingLoginContinuation = normalizedContinuation;
+    if (!normalizedContinuation) {
+        await chrome.storage.local.remove([PENDING_EXTENSION_CONTINUATION_KEY]);
+        return;
+    }
+    await chrome.storage.local.set({
+        [PENDING_EXTENSION_CONTINUATION_KEY]: normalizedContinuation
+    });
+}
+
+async function readPendingLoginContinuation() {
+    const values = await chrome.storage.local.get([PENDING_EXTENSION_CONTINUATION_KEY]);
+    return normalizeLoginContinuation(values[PENDING_EXTENSION_CONTINUATION_KEY]);
+}
+
+function normalizeLoginContinuation(continuation) {
+    return LOGIN_CONTINUATIONS.has(continuation) ? continuation : null;
 }
 
 async function loadPreview(options = {}) {
@@ -251,7 +322,7 @@ async function loadPreview(options = {}) {
         void loadEssayQuestionsForSelectedRole();
     }
     catch (error) {
-        if (await handleAuthExpired(error)) {
+        if (await handleAuthExpired(error, 'jobPreview')) {
             return;
         }
         setStatus(error instanceof Error ? error.message : '공고 정보를 추출하지 못했습니다.', true);
@@ -271,7 +342,7 @@ function startPostingChangeWatcher() {
 }
 
 async function refreshPreviewWhenPostingChanges() {
-    if (!hasExtensionSession || waitingForWebLogin || isReadingPreview || isSavingJob || !loginPanel.hidden || !documentResultPanel.hidden) {
+    if (!hasExtensionSession || waitingForWebLogin || isReadingPreview || isSavingJob || !loginPanel.hidden || !featurePanel.hidden || !documentResultPanel.hidden) {
         return;
     }
     try {
@@ -345,28 +416,121 @@ async function extractEssayQuestionsForRole(tabId, role) {
     return result?.result ?? null;
 }
 
-async function runDocumentAutoFill() {
+async function previewDocumentAutoFill() {
     try {
-        setStatus('현재 페이지의 입력칸을 감지하고 있습니다.');
+        setStatus('현재 페이지의 입력칸을 확인하고 있습니다.');
         const tab = await getActiveTab();
         if (!tab.id) {
             setStatus('현재 탭을 찾지 못했습니다.', true);
             return;
         }
         const profile = await documentProfileApi.getDocumentProfile();
+        pendingDocumentAutoFillProfile = profile;
         await ensureContentScriptLoaded(tab.id, 'assets/applicationAutoFill.js', () => Boolean(window.ezOneAutoFillApplicationLoaded));
         const result = await chrome.tabs.sendMessage(tab.id, {
-            type: 'EZONE_AUTOFILL_APPLICATION',
+            type: 'EZONE_PREVIEW_APPLICATION_AUTOFILL',
             profile
         });
         renderAutoFillResult(result);
         showPanel(documentResultPanel);
     }
     catch (error) {
-        if (await handleAuthExpired(error)) {
+        if (await handleAuthExpired(error, 'documentAutoFill')) {
             return;
         }
         setStatus(error instanceof Error ? error.message : '서류 정보 자동 입력에 실패했습니다.', true);
+    }
+}
+
+async function applyDocumentAutoFill() {
+    try {
+        setStatus('확인한 서류 정보를 입력하고 있습니다.');
+        autofillApplyButton.disabled = true;
+        autofillApplyButton.textContent = '입력 중';
+        const tab = await getActiveTab();
+        if (!tab.id) {
+            setStatus('현재 탭을 찾지 못했습니다.', true);
+            return;
+        }
+        const profile = pendingDocumentAutoFillProfile ?? await documentProfileApi.getDocumentProfile();
+        await ensureContentScriptLoaded(tab.id, 'assets/applicationAutoFill.js', () => Boolean(window.ezOneAutoFillApplicationLoaded));
+        const result = await chrome.tabs.sendMessage(tab.id, {
+            type: 'EZONE_APPLY_APPLICATION_AUTOFILL',
+            profile
+        });
+        ignoreDocumentAutoFillChangesUntil = Date.now() + DOCUMENT_AUTOFILL_APPLY_SUPPRESS_MS;
+        pendingDocumentAutoFillProfile = null;
+        renderAutoFillResult(result);
+        showPanel(documentResultPanel);
+    }
+    catch (error) {
+        if (await handleAuthExpired(error, 'documentAutoFill')) {
+            return;
+        }
+        setStatus(error instanceof Error ? error.message : '서류 정보 자동 입력에 실패했습니다.', true);
+    }
+    finally {
+        autofillApplyButton.disabled = false;
+        autofillApplyButton.textContent = '확인 후 자동 입력';
+    }
+}
+
+function handleRuntimeMessage(message, sender) {
+    if (message?.type !== APPLICATION_FORM_CHANGED_MESSAGE) {
+        return false;
+    }
+    if (documentResultPanel.hidden || Date.now() < ignoreDocumentAutoFillChangesUntil) {
+        return false;
+    }
+    scheduleDocumentAutoFillRefresh({
+        sourceTabId: sender?.tab?.id,
+        signature: message.signature
+    });
+    return false;
+}
+
+function scheduleDocumentAutoFillRefresh({ sourceTabId, signature } = {}) {
+    if (signature && signature === lastDocumentAutoFillSignature) {
+        return;
+    }
+    if (documentAutoFillRefreshTimer !== null) {
+        clearTimeout(documentAutoFillRefreshTimer);
+    }
+    documentAutoFillRefreshTimer = setTimeout(() => {
+        documentAutoFillRefreshTimer = null;
+        void refreshDocumentAutoFillPreview({ sourceTabId, signature });
+    }, DOCUMENT_AUTOFILL_REFRESH_DEBOUNCE_MS);
+}
+
+async function refreshDocumentAutoFillPreview({ sourceTabId, signature } = {}) {
+    if (isRefreshingDocumentAutoFill) {
+        return;
+    }
+    try {
+        isRefreshingDocumentAutoFill = true;
+        const tab = await getActiveTab();
+        if (!tab.id || (sourceTabId && tab.id !== sourceTabId)) {
+            return;
+        }
+        const profile = pendingDocumentAutoFillProfile ?? await documentProfileApi.getDocumentProfile();
+        pendingDocumentAutoFillProfile = profile;
+        await ensureContentScriptLoaded(tab.id, 'assets/applicationAutoFill.js', () => Boolean(window.ezOneAutoFillApplicationLoaded));
+        const result = await chrome.tabs.sendMessage(tab.id, {
+            type: 'EZONE_PREVIEW_APPLICATION_AUTOFILL',
+            profile
+        });
+        lastDocumentAutoFillSignature = signature ?? null;
+        renderAutoFillResult(result);
+        showPanel(documentResultPanel);
+    }
+    catch (error) {
+        if (await handleAuthExpired(error, 'documentAutoFill')) {
+            return;
+        }
+        console.warn('EZ-ONE document autofill refresh failed', error);
+    }
+    finally {
+        isRefreshingDocumentAutoFill = false;
     }
 }
 
@@ -748,33 +912,144 @@ function renderSavedJobs(savedJobs, posting) {
 }
 
 function renderAutoFillResult(result) {
+    const isPreview = result?.mode === 'preview';
+    const planned = Array.isArray(result?.planned) ? result.planned : [];
     const filled = Array.isArray(result?.filled) ? result.filled : [];
     const failed = Array.isArray(result?.failed) ? result.failed : [];
     const copyCandidates = Array.isArray(result?.copyCandidates) ? result.copyCandidates : [];
-    autofillFilledCount.textContent = String(filled.length);
+    const primaryItems = uniqueAutoFillItems(isPreview ? planned : filled);
+    const primaryFieldKeys = new Set(primaryItems.map((item) => item?.fieldKey).filter(Boolean));
+    const visibleCopyCandidates = copyCandidates.filter((item) => !primaryFieldKeys.has(item?.key));
+    documentResultTitle.textContent = isPreview ? '입력 전 확인' : '입력이 끝났습니다';
+    autofillFilledLabel.textContent = isPreview ? '입력 예정' : '입력됨';
+    autofillFilledHeading.textContent = isPreview ? '입력 예정' : '자동 입력됨';
+    autofillFilledCaption.textContent = '';
+    autofillFilledCaption.hidden = true;
+    autofillApplyButton.hidden = !isPreview;
+    if (autofillApplyButton.parentElement) {
+        autofillApplyButton.parentElement.hidden = false;
+    }
+    autofillApplyButton.disabled = isPreview && primaryItems.length === 0;
+    autofillFilledCount.textContent = String(primaryItems.length);
     autofillReviewCount.textContent = String(failed.length);
-    autofillCopyCount.textContent = String(copyCandidates.length);
-    autofillSummary.textContent = `${filled.length}개 항목을 자동 입력했습니다. ${failed.length}개 항목은 제출 전에 직접 확인하세요.`;
-    renderResultList(autofillFilledList, filled, (item) => ({
-        title: item.label ?? item.fieldKey,
-        body: item.value
-    }), '자동 입력된 항목이 없습니다.');
+    autofillCopyCount.textContent = String(visibleCopyCandidates.length);
+    autofillSummary.textContent = isPreview
+        ? `${primaryItems.length}개 항목을 찾았습니다.`
+        : `${primaryItems.length}개 항목을 입력했습니다. 확인 필요 ${failed.length}개.`;
+    renderResultList(autofillFilledList, primaryItems, (item) => getPrimaryAutoFillDisplay(item, isPreview), isPreview ? '입력 예정 항목이 없습니다.' : '자동 입력된 항목이 없습니다.');
     renderResultList(autofillFailedList, failed, (item) => ({
         title: item.label ?? '알 수 없는 입력칸',
-        body: getAutofillFailureMessage(item.reason)
+        ...getAutofillFailureDisplay(item)
     }), '실패 항목이 없습니다.');
-    renderResultList(autofillCopyList, copyCandidates.slice(0, 8), (item) => ({
+    renderResultList(autofillCopyList, visibleCopyCandidates.slice(0, 12), (item) => ({
         title: item.label,
-        body: item.value
-    }), '복사 가능한 후보가 없습니다.');
+        body: item.value,
+        actionLabel: '\uBCF5\uC0AC',
+        actionDoneLabel: '\uBCF5\uC0AC\uB428',
+        actionValue: item.value,
+        actionAriaLabel: `${item.label ?? '\uAC12'} \uBCF5\uC0AC`
+    }), '복사할 후보가 없습니다.');
 }
 
-function getAutofillFailureMessage(reason) {
+function uniqueAutoFillItems(items) {
+    const seen = new Set();
+    const unique = [];
+    for (const item of items) {
+        const key = [
+            item?.fieldKey ?? '',
+            normalizeInput(String(item?.value ?? '')),
+            item?.sectionOpenControl ? 'section' : 'field'
+        ].join('|');
+        if (seen.has(key)) {
+            continue;
+        }
+        seen.add(key);
+        unique.push(item);
+    }
+    return unique;
+}
+
+function getPrimaryAutoFillDisplay(item, isPreview) {
+    if (isSectionOpenItem(item)) {
+        return {
+            title: item.label ?? '\uC785\uB825\uCE78 \uC5F4\uAE30',
+            badge: isPreview ? '\uBA3C\uC800 \uC2E4\uD589' : '\uC5F4\uAE30 \uC644\uB8CC',
+            body: isPreview
+                ? '\uC811\uD78C \uC9C0\uC6D0\uC11C \uC601\uC5ED\uC744 \uC5F4\uC5B4\uC57C \uC774\uC5B4\uC11C \uC785\uB825\uD560 \uC218 \uC788\uC5B4\uC694.'
+                : '\uC811\uD78C \uC9C0\uC6D0\uC11C \uC601\uC5ED\uC744 \uC5F4\uC5C8\uC2B5\uB2C8\uB2E4.',
+            note: isPreview
+                ? '\uC790\uB3D9 \uC785\uB825 \uBC84\uD2BC\uC744 \uB204\uB974\uBA74 \uC774 \uC791\uC5C5\uC774 \uBA3C\uC800 \uC2E4\uD589\uB429\uB2C8\uB2E4.'
+                : '\uC0C8\uB85C \uC5F4\uB9B0 \uC785\uB825\uCE78\uC740 \uB2E4\uC2DC \uC778\uC2DD\uD558\uBA74 \uCD94\uAC00\uB85C \uD655\uC778\uB429\uB2C8\uB2E4.',
+            variant: 'section-open'
+        };
+    }
+    return {
+        title: item.label ?? item.fieldKey,
+        body: item.value
+    };
+}
+
+function isSectionOpenItem(item) {
+    return Boolean(item?.sectionOpenControl) || String(item?.fieldKey ?? '').endsWith('.open');
+}
+
+function getAutofillFailureDisplay(item) {
+    const reason = item?.reason;
+    const fieldKey = item?.fieldKey ?? '';
+    const value = normalizeInput(String(item?.value ?? ''));
+    if (reason === 'disabled_control' && fieldKey.includes('address')) {
+        return {
+            variant: 'action-needed',
+            badge: '\uC8FC\uC18C \uAC80\uC0C9 \uD544\uC694',
+            body: value
+                ? '\uC8FC\uC18C \uAC80\uC0C9 \uD6C4 \uBCF5\uC0AC \uD6C4\uBCF4\uC5D0\uC11C \uBD99\uC5EC\uB123\uC5B4 \uC8FC\uC138\uC694.'
+                : '\uC9C0\uC6D0\uC11C\uC5D0\uC11C \uC9C1\uC811 \uD655\uC778\uD574 \uC8FC\uC138\uC694.'
+        };
+    }
+    if (reason === 'tailored_activity_required') {
+        return {
+            variant: 'action-needed',
+            badge: '직무 맞춤 필요',
+            body: '아래 복사 후보에서 활동을 골라 지원 직무에 맞게 붙여넣어 주세요.'
+        };
+    }
+    return {
+        body: getAutofillFailureMessage(item)
+    };
+}
+
+function getAutofillFailureMessage(itemOrReason) {
+    const reason = typeof itemOrReason === 'string' ? itemOrReason : itemOrReason?.reason;
+    const fieldKey = typeof itemOrReason === 'string' ? '' : itemOrReason?.fieldKey ?? '';
+    const value = typeof itemOrReason === 'string' ? '' : normalizeInput(String(itemOrReason?.value ?? ''));
     if (reason === 'essay_or_long_text') {
         return '자기소개서 또는 장문 입력칸은 자동 입력하지 않았습니다. 직접 검토해 주세요.';
     }
     if (reason === 'select_option_not_found') {
         return '선택 가능한 옵션과 내 서류 정보가 맞지 않습니다. 직접 선택해 주세요.';
+    }
+    if (reason === 'control_not_ready') {
+        return '\uC785\uB825\uCE78\uC774 \uC544\uC9C1 \uC5F4\uB9AC\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4. \uD56D\uBAA9\uC744 \uC5F0 \uB4A4 \uB2E4\uC2DC \uC778\uC2DD\uC744 \uB20C\uB7EC\uC8FC\uC138\uC694.';
+    }
+    if (reason === 'apply_failed') {
+        return '\uC790\uB3D9 \uC785\uB825 \uC911 \uBB38\uC81C\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4. \uB2E4\uC2DC \uC778\uC2DD \uD6C4 \uC7AC\uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.';
+    }
+    if (reason === 'missing_profile_value') {
+        return '\uC11C\uB958 \uC785\uB825 \uC815\uBCF4\uC5D0 \uAC12\uC744 \uCD94\uAC00\uD574 \uC8FC\uC138\uC694.';
+    }
+    if (reason === 'unsupported_profile_field') {
+        return '\uC9C0\uC6D0\uC11C\uC5D0\uC11C \uC9C1\uC811 \uC785\uB825\uD574 \uC8FC\uC138\uC694.';
+    }
+    if (reason === 'tailored_activity_required') {
+        return '활동은 지원 직무에 맞게 선택해 붙여넣어 주세요.';
+    }
+    if (reason === 'disabled_control') {
+        if (fieldKey.includes('address')) {
+            return value
+                ? '주소 검색 후 복사 후보에서 붙여넣어 주세요.'
+                : '지원서에서 직접 확인해 주세요.';
+        }
+        return '지원서에서 직접 확인해 주세요.';
     }
     return '매칭되는 서류 정보를 찾지 못했습니다. 복사 후보에서 붙여넣어 주세요.';
 }
@@ -782,6 +1057,7 @@ function getAutofillFailureMessage(reason) {
 function renderResultList(list, items, mapper, emptyText) {
     if (items.length === 0) {
         const item = document.createElement('li');
+        item.className = 'is-empty';
         item.textContent = emptyText;
         list.replaceChildren(item);
         return;
@@ -789,13 +1065,92 @@ function renderResultList(list, items, mapper, emptyText) {
     list.replaceChildren(...items.map((source) => {
         const mapped = mapper(source);
         const item = document.createElement('li');
+        if (mapped.variant) {
+            item.classList.add(`is-${mapped.variant}`);
+        }
+        const heading = document.createElement('div');
         const title = document.createElement('strong');
+        heading.className = 'autofill-result-heading';
         const body = document.createElement('span');
         title.textContent = mapped.title ?? '';
+        heading.append(title);
+        if (mapped.badge) {
+            const badge = document.createElement('em');
+            badge.className = 'autofill-result-badge';
+            badge.textContent = mapped.badge;
+            heading.append(badge);
+        }
+        if (mapped.actionValue) {
+            const action = document.createElement('button');
+            action.className = 'autofill-result-copy-button';
+            action.type = 'button';
+            action.textContent = mapped.actionLabel ?? '\uBCF5\uC0AC';
+            action.setAttribute('aria-label', mapped.actionAriaLabel ?? action.textContent);
+            action.addEventListener('click', async () => {
+                const copied = await copyTextToClipboard(mapped.actionValue);
+                if (!copied) {
+                    action.textContent = '\uC2E4\uD328';
+                    return;
+                }
+                action.textContent = mapped.actionDoneLabel ?? '\uBCF5\uC0AC\uB428';
+                action.disabled = true;
+                setTimeout(() => {
+                    action.textContent = mapped.actionLabel ?? '\uBCF5\uC0AC';
+                    action.disabled = false;
+                }, 1200);
+            });
+            heading.append(action);
+        }
         body.textContent = mapped.body ?? '';
-        item.append(title, body);
+        item.append(heading, body);
+        if (mapped.value) {
+            const valueRow = document.createElement('span');
+            const valueLabel = document.createElement('small');
+            const valueText = document.createElement('code');
+            valueRow.className = 'autofill-result-value';
+            valueLabel.textContent = mapped.valueLabel ?? '값';
+            valueText.textContent = mapped.value;
+            valueRow.append(valueLabel, valueText);
+            item.append(valueRow);
+        }
+        if (mapped.note) {
+            const note = document.createElement('span');
+            note.className = 'autofill-result-note';
+            note.textContent = mapped.note;
+            item.append(note);
+        }
         return item;
     }));
+}
+
+async function copyTextToClipboard(value) {
+    const text = normalizeInput(String(value ?? ''));
+    if (!text) {
+        return false;
+    }
+    try {
+        await navigator.clipboard.writeText(text);
+        return true;
+    }
+    catch {
+        return copyTextWithFallback(text);
+    }
+}
+
+function copyTextWithFallback(text) {
+    const input = document.createElement('textarea');
+    input.value = text;
+    input.setAttribute('readonly', '');
+    input.style.position = 'fixed';
+    input.style.opacity = '0';
+    document.body.append(input);
+    input.select();
+    try {
+        return document.execCommand('copy');
+    }
+    finally {
+        input.remove();
+    }
 }
 
 async function getActiveTab() {
@@ -826,12 +1181,13 @@ async function clearExtensionSession() {
     await clearStoredSession(chrome.storage.local);
 }
 
-async function handleAuthExpired(error) {
+async function handleAuthExpired(error, continuation = null) {
     if (!isAuthExpiredError(error)) {
         return false;
     }
     await clearExtensionSession();
     hasExtensionSession = false;
+    await rememberPendingLoginContinuation(continuation);
     showPanel(loginPanel);
     return true;
 }
@@ -846,6 +1202,10 @@ function showPanel(panel) {
     }
     lastReportedPanelHeight = 0;
     schedulePanelResize();
+}
+
+function showFeatureSelection() {
+    showPanel(featurePanel);
 }
 
 function setStatus(message, isError = false) {
@@ -875,7 +1235,7 @@ function normalizeStatusMessage(message, isError = false) {
 }
 
 function setStaticLinks() {
-    for (const id of ['home-link', 'web-link', 'result-web-link']) {
+    for (const id of ['home-link', 'web-link', 'feature-web-link']) {
         const link = requireElement(id);
         link.href = webAppUrl;
     }
@@ -934,7 +1294,7 @@ function reportPanelHeight() {
     const bodyPadding = parsePixelValue(bodyStyle.paddingTop) + parsePixelValue(bodyStyle.paddingBottom);
     const shellGap = parsePixelValue(shellStyle.rowGap || shellStyle.gap);
     const headerHeight = header?.scrollHeight ?? header?.getBoundingClientRect().height ?? 0;
-    const panelHeight = activePanel.scrollHeight;
+    const panelHeight = measureIntrinsicPanelHeight(activePanel);
     const height = Math.ceil(bodyPadding + headerHeight + shellGap + panelHeight + 2);
     if (Math.abs(height - lastReportedPanelHeight) < PANEL_RESIZE_EPSILON_PX) {
         return;
@@ -944,6 +1304,28 @@ function reportPanelHeight() {
         type: PANEL_RESIZE_MESSAGE,
         height
     }, '*');
+}
+
+function measureIntrinsicPanelHeight(panel) {
+    const panelRect = panel.getBoundingClientRect();
+    const panelStyle = getComputedStyle(panel);
+    const paddingTop = parsePixelValue(panelStyle.paddingTop);
+    const paddingBottom = parsePixelValue(panelStyle.paddingBottom);
+    const borderTop = parsePixelValue(panelStyle.borderTopWidth);
+    const borderBottom = parsePixelValue(panelStyle.borderBottomWidth);
+    const visibleChildren = Array.from(panel.children).filter((child) => {
+        return getComputedStyle(child).display !== 'none';
+    });
+    if (visibleChildren.length === 0) {
+        return Math.ceil(borderTop + paddingTop + paddingBottom + borderBottom);
+    }
+    const contentBottom = visibleChildren.reduce((bottom, child) => {
+        const childStyle = getComputedStyle(child);
+        const childRect = child.getBoundingClientRect();
+        const childBottom = childRect.bottom - panelRect.top + panel.scrollTop + parsePixelValue(childStyle.marginBottom);
+        return Math.max(bottom, childBottom);
+    }, borderTop + paddingTop);
+    return Math.ceil(contentBottom + paddingBottom + borderBottom);
 }
 
 function parsePixelValue(value) {

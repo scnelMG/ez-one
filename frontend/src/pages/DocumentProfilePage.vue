@@ -9,17 +9,6 @@
             마지막 저장: {{ formattedLastSavedAt }}
           </p>
         </div>
-        <div class="document-save-controls">
-          <button
-            class="primary-button"
-            type="button"
-            :disabled="documentProfileStore.status === 'saving'"
-            data-testid="save-document-profile"
-            @click="saveActiveSection"
-          >
-            {{ saveButtonLabel }}
-          </button>
-        </div>
       </header>
 
       <StatePanel
@@ -39,13 +28,13 @@
             :class="{ active: section.id === activeSection }"
             :data-testid="`section-${section.id}`"
             type="button"
-            @click="activeSection = section.id"
+            @click="selectSection(section.id)"
           >
             {{ section.label }}
           </button>
         </aside>
 
-        <main class="document-form-panel document-form-panel-focused">
+        <main ref="documentFormPanelRef" class="document-form-panel document-form-panel-focused">
           <SkeletonLoader v-if="documentProfileStore.status === 'loading'" :lines="10" label="서류 프로필 정보를 불러오는 중" />
 
           <template v-else>
@@ -59,7 +48,70 @@
               <div class="profile-subsection-heading">
                 <h3>기본 인적사항</h3>
               </div>
+              <div class="profile-photo-field">
+                <div class="profile-photo-preview" aria-hidden="true">
+                  <img
+                    v-if="basicInfoForm.profilePhoto?.dataUrl"
+                    :src="basicInfoForm.profilePhoto.dataUrl"
+                    alt=""
+                    data-testid="basic-info-profile-photo-preview"
+                  />
+                  <span v-else>4:5</span>
+                </div>
+                <div class="profile-photo-meta">
+                  <strong>지원서 사진</strong>
+                  <span data-testid="basic-info-profile-photo-name">
+                    {{ basicInfoForm.profilePhoto?.name || '등록된 사진 없음' }}
+                  </span>
+                </div>
+                <div class="profile-photo-actions">
+                  <label class="secondary-button compact-button" for="basic-info-profile-photo-input">
+                    사진 등록
+                  </label>
+                  <input
+                    id="basic-info-profile-photo-input"
+                    class="profile-photo-native-input"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    data-testid="basic-info-profile-photo-input"
+                    @change="updateProfilePhoto"
+                  />
+                  <button
+                    v-if="basicInfoForm.profilePhoto"
+                    class="ghost-button compact"
+                    type="button"
+                    data-testid="basic-info-profile-photo-remove"
+                    @click="removeProfilePhoto"
+                  >
+                    삭제
+                  </button>
+                </div>
+              </div>
               <div class="profile-field-grid columns-3">
+                <label>
+                  신입/경력
+                  <select
+                    v-model="basicInfoForm.applicationCareerType"
+                    data-testid="basic-info-application-career-type"
+                    @change="updateChoiceField(basicInfoForm, 'applicationCareerType', $event)"
+                  >
+                    <option v-for="option in selectOptions.applicationCareerType" :key="option.value" :value="option.value">
+                      {{ option.label }}
+                    </option>
+                  </select>
+                </label>
+                <label>
+                  지원경로
+                  <select
+                    v-model="basicInfoForm.applicationSource"
+                    data-testid="basic-info-application-source"
+                    @change="updateChoiceField(basicInfoForm, 'applicationSource', $event)"
+                  >
+                    <option v-for="option in selectOptions.applicationSource" :key="option.value" :value="option.value">
+                      {{ option.label }}
+                    </option>
+                  </select>
+                </label>
                 <label>
                   한글 이름
                   <input v-model="basicInfoForm.nameKo" placeholder="홍길동" data-testid="basic-info-name" />
@@ -82,7 +134,11 @@
                 </label>
                 <label>
                   성별
-                  <select v-model="basicInfoForm.gender" data-testid="basic-info-gender">
+                  <select
+                    v-model="basicInfoForm.gender"
+                    data-testid="basic-info-gender"
+                    @change="updateChoiceField(basicInfoForm, 'gender', $event)"
+                  >
                     <option v-for="option in selectOptions.gender" :key="option.value" :value="option.value">
                       {{ option.label }}
                     </option>
@@ -90,15 +146,42 @@
                 </label>
                 <label>
                   생년월일
-                  <input
-                    :value="basicInfoForm.birthdate"
-                    type="text"
-                    inputmode="numeric"
-                    maxlength="10"
-                    placeholder="YYYY-MM-DD"
-                    data-testid="basic-info-birthdate"
-                    @input="updateDateField(basicInfoForm, 'birthdate', $event)"
-                  />
+                  <span class="profile-date-input">
+                    <input
+                      :value="basicInfoForm.birthdate"
+                      type="text"
+                      inputmode="numeric"
+                      maxlength="10"
+                      placeholder="YYYY-MM-DD"
+                      autocomplete="off"
+                      data-testid="basic-info-birthdate"
+                      @input="updateDateField(basicInfoForm, 'birthdate', $event)"
+                      @paste="pasteDateField(basicInfoForm, 'birthdate', $event)"
+                      @blur="blurDateField(basicInfoForm, 'birthdate', $event)"
+                    />
+                    <button
+                      class="profile-date-picker-button"
+                      type="button"
+                      aria-label="달력 열기"
+                      @click="openDatePicker"
+                    >
+                      <svg viewBox="0 0 20 20" focusable="false" aria-hidden="true">
+                        <path d="M6 2v3" />
+                        <path d="M14 2v3" />
+                        <path d="M3.5 8h13" />
+                        <path d="M5 4h10a1.5 1.5 0 0 1 1.5 1.5V15A1.5 1.5 0 0 1 15 16.5H5A1.5 1.5 0 0 1 3.5 15V5.5A1.5 1.5 0 0 1 5 4Z" />
+                      </svg>
+                    </button>
+                    <input
+                      class="profile-date-native"
+                      :value="datePickerValue(basicInfoForm.birthdate)"
+                      type="date"
+                      tabindex="-1"
+                      aria-hidden="true"
+                      data-testid="basic-info-birthdate-picker"
+                      @input="pickDateField(basicInfoForm, 'birthdate', $event)"
+                    />
+                  </span>
                 </label>
                 <label class="full">
                   주소
@@ -122,8 +205,34 @@
                 class="profile-group-card"
                 :class="{ 'application-choice-card': group.layout === 'applicationChoice' }"
               >
-                <div class="profile-subsection-heading">
+                <div
+                  class="profile-subsection-heading"
+                  :class="{ 'application-choice-heading': applicationChoiceField(group) }"
+                >
                   <h3>{{ group.title }}</h3>
+                  <div v-if="applicationChoiceField(group)" class="application-choice-status">
+                    <div
+                      class="application-radio-group application-radio-group-compact"
+                      :aria-label="applicationChoiceField(group).label"
+                      :data-testid="`${group.key}-${applicationChoiceField(group).key}-radio-group`"
+                    >
+                      <label
+                        v-for="option in applicationChoiceField(group).options"
+                        :key="String(option.value)"
+                        class="application-radio-option"
+                      >
+                        <input
+                          v-model="activeSectionForm[group.key][applicationChoiceField(group).key]"
+                          type="radio"
+                          :name="`${group.key}-${applicationChoiceField(group).key}`"
+                          :value="option.value"
+                          :data-testid="`${group.key}-${applicationChoiceField(group).key}-${String(option.value)}`"
+                          @change="updateChoiceField(activeSectionForm[group.key], applicationChoiceField(group).key, $event)"
+                        />
+                        <span>{{ option.label }}</span>
+                      </label>
+                    </div>
+                  </div>
                 </div>
 
                 <template v-if="group.repeatable">
@@ -134,17 +243,53 @@
                   >
                     <div class="profile-entry-card-head">
                       <h4>{{ group.itemLabel }} {{ index + 1 }}</h4>
-                      <button
-                        class="danger-button"
-                        type="button"
-                        :data-testid="`delete-${group.key}-${index}`"
-                        @click="deleteGroupItem(group.key, index)"
-                      >
-                        삭제
-                      </button>
+                      <div class="profile-entry-card-actions">
+                        <template v-if="isDeletePending(group.key, index)">
+                          <span class="inline-delete-prompt" aria-live="polite">삭제할까요?</span>
+                          <button
+                            class="ghost-button compact"
+                            type="button"
+                            :data-testid="`cancel-delete-${group.key}-${index}`"
+                            @click="cancelDeleteGroupItem(group.key, index)"
+                          >
+                            취소
+                          </button>
+                          <button
+                            class="danger-button compact"
+                            type="button"
+                            :data-testid="`confirm-delete-${group.key}-${index}`"
+                            @click="confirmDeleteGroupItem(group.key, index)"
+                          >
+                            삭제
+                          </button>
+                        </template>
+                        <template v-else>
+                          <label
+                            v-for="field in entryHeaderFields(group)"
+                            :key="field.key"
+                            class="entry-header-checkbox"
+                          >
+                            <input
+                              v-model="item[field.key]"
+                              type="checkbox"
+                              :data-testid="`${group.key}-${index}-${field.key}`"
+                              @change="updateChoiceField(item, field.key, $event)"
+                            />
+                            <span>{{ field.checkboxLabel }}</span>
+                          </label>
+                          <button
+                            class="danger-button"
+                            type="button"
+                            :data-testid="`delete-${group.key}-${index}`"
+                            @click="requestDeleteGroupItem(group.key, index)"
+                          >
+                            삭제
+                          </button>
+                        </template>
+                      </div>
                     </div>
                     <div class="profile-field-grid" :class="`columns-${group.columns ?? 3}`">
-                      <template v-for="field in group.fields" :key="field.key">
+                      <template v-for="field in visibleGroupFields(group)" :key="field.key">
                         <div v-if="field.type === 'checkbox'" class="checkbox-field-wrapper" :class="{ wide: field.wide, full: field.full }">
                           <span class="checkbox-top-label">&nbsp;</span>
                           <label class="checkbox-field">
@@ -152,6 +297,7 @@
                               v-model="item[field.key]"
                               type="checkbox"
                               :data-testid="`${group.key}-${index}-${field.key}`"
+                              @change="updateChoiceField(item, field.key, $event)"
                             />
                             <span>{{ field.checkboxLabel }}</span>
                           </label>
@@ -166,6 +312,7 @@
                                 :name="`${group.key}-${index}-${field.key}`"
                                 :value="option.value"
                                 :data-testid="`${group.key}-${index}-${field.key}-${String(option.value)}`"
+                                @change="updateChoiceField(item, field.key, $event)"
                               />
                               <span>{{ option.label }}</span>
                             </label>
@@ -183,21 +330,48 @@
                             v-else-if="field.type === 'select'"
                             v-model="item[field.key]"
                             :data-testid="`${group.key}-${index}-${field.key}`"
+                            @change="updateChoiceField(item, field.key, $event)"
                           >
                             <option v-for="option in field.options" :key="option.value" :value="option.value">
                               {{ option.label }}
                             </option>
                           </select>
-                          <input
-                            v-else-if="field.type === 'date'"
-                            :value="item[field.key]"
-                            type="text"
-                            inputmode="numeric"
-                            maxlength="10"
-                            :placeholder="field.placeholder"
-                            :data-testid="`${group.key}-${index}-${field.key}`"
-                            @input="updateDateField(item, field.key, $event)"
-                          />
+                          <span v-else-if="field.type === 'date'" class="profile-date-input">
+                            <input
+                              :value="item[field.key]"
+                              type="text"
+                              inputmode="numeric"
+                              maxlength="10"
+                              :placeholder="field.placeholder"
+                              autocomplete="off"
+                              :data-testid="`${group.key}-${index}-${field.key}`"
+                              @input="updateDateField(item, field.key, $event)"
+                              @paste="pasteDateField(item, field.key, $event)"
+                              @blur="blurDateField(item, field.key, $event)"
+                            />
+                            <button
+                              class="profile-date-picker-button"
+                              type="button"
+                              aria-label="달력 열기"
+                              @click="openDatePicker"
+                            >
+                              <svg viewBox="0 0 20 20" focusable="false" aria-hidden="true">
+                                <path d="M6 2v3" />
+                                <path d="M14 2v3" />
+                                <path d="M3.5 8h13" />
+                                <path d="M5 4h10a1.5 1.5 0 0 1 1.5 1.5V15A1.5 1.5 0 0 1 15 16.5H5A1.5 1.5 0 0 1 3.5 15V5.5A1.5 1.5 0 0 1 5 4Z" />
+                              </svg>
+                            </button>
+                            <input
+                              class="profile-date-native"
+                              :value="datePickerValue(item[field.key])"
+                              type="date"
+                              tabindex="-1"
+                              aria-hidden="true"
+                              :data-testid="`${group.key}-${index}-${field.key}-picker`"
+                              @input="pickDateField(item, field.key, $event)"
+                            />
+                          </span>
                           <input
                             v-else
                             v-model="item[field.key]"
@@ -220,7 +394,7 @@
                 </template>
 
                 <div v-else class="profile-field-grid" :class="`columns-${group.columns ?? 3}`">
-                  <template v-for="field in group.fields" :key="field.key">
+                  <template v-for="field in visibleGroupFields(group)" :key="field.key">
                     <div v-if="field.type === 'checkbox'" class="checkbox-field-wrapper" :class="{ wide: field.wide, full: field.full }">
                       <span class="checkbox-top-label">&nbsp;</span>
                       <label class="checkbox-field">
@@ -228,6 +402,7 @@
                           v-model="activeSectionForm[group.key][field.key]"
                           type="checkbox"
                           :data-testid="`${group.key}-${field.key}`"
+                          @change="updateChoiceField(activeSectionForm[group.key], field.key, $event)"
                         />
                         <span>{{ field.checkboxLabel }}</span>
                       </label>
@@ -236,13 +411,14 @@
                       <span class="radio-field-label">{{ field.label }}</span>
                       <div class="application-radio-group" :data-testid="`${group.key}-${field.key}-radio-group`">
                         <label v-for="option in field.options" :key="String(option.value)" class="application-radio-option">
-                          <input
-                            v-model="activeSectionForm[group.key][field.key]"
-                            type="radio"
-                            :name="`${group.key}-${field.key}`"
-                            :value="option.value"
-                            :data-testid="`${group.key}-${field.key}-${String(option.value)}`"
-                          />
+                              <input
+                                v-model="activeSectionForm[group.key][field.key]"
+                                type="radio"
+                                :name="`${group.key}-${field.key}`"
+                                :value="option.value"
+                                :data-testid="`${group.key}-${field.key}-${String(option.value)}`"
+                                @change="updateChoiceField(activeSectionForm[group.key], field.key, $event)"
+                              />
                           <span>{{ option.label }}</span>
                         </label>
                       </div>
@@ -259,21 +435,48 @@
                         v-else-if="field.type === 'select'"
                         v-model="activeSectionForm[group.key][field.key]"
                         :data-testid="`${group.key}-${field.key}`"
+                        @change="updateChoiceField(activeSectionForm[group.key], field.key, $event)"
                       >
                         <option v-for="option in field.options" :key="option.value" :value="option.value">
                           {{ option.label }}
                         </option>
                       </select>
-                      <input
-                        v-else-if="field.type === 'date'"
-                        :value="activeSectionForm[group.key][field.key]"
-                        type="text"
-                        inputmode="numeric"
-                        maxlength="10"
-                        :placeholder="field.placeholder"
-                        :data-testid="`${group.key}-${field.key}`"
-                        @input="updateDateField(activeSectionForm[group.key], field.key, $event)"
-                      />
+                      <span v-else-if="field.type === 'date'" class="profile-date-input">
+                        <input
+                          :value="activeSectionForm[group.key][field.key]"
+                          type="text"
+                          inputmode="numeric"
+                          maxlength="10"
+                          :placeholder="field.placeholder"
+                          autocomplete="off"
+                          :data-testid="`${group.key}-${field.key}`"
+                          @input="updateDateField(activeSectionForm[group.key], field.key, $event)"
+                          @paste="pasteDateField(activeSectionForm[group.key], field.key, $event)"
+                          @blur="blurDateField(activeSectionForm[group.key], field.key, $event)"
+                        />
+                        <button
+                          class="profile-date-picker-button"
+                          type="button"
+                          aria-label="달력 열기"
+                          @click="openDatePicker"
+                        >
+                          <svg viewBox="0 0 20 20" focusable="false" aria-hidden="true">
+                            <path d="M6 2v3" />
+                            <path d="M14 2v3" />
+                            <path d="M3.5 8h13" />
+                            <path d="M5 4h10a1.5 1.5 0 0 1 1.5 1.5V15A1.5 1.5 0 0 1 15 16.5H5A1.5 1.5 0 0 1 3.5 15V5.5A1.5 1.5 0 0 1 5 4Z" />
+                          </svg>
+                        </button>
+                        <input
+                          class="profile-date-native"
+                          :value="datePickerValue(activeSectionForm[group.key][field.key])"
+                          type="date"
+                          tabindex="-1"
+                          aria-hidden="true"
+                          :data-testid="`${group.key}-${field.key}-picker`"
+                          @input="pickDateField(activeSectionForm[group.key], field.key, $event)"
+                        />
+                      </span>
                       <input
                         v-else
                         v-model="activeSectionForm[group.key][field.key]"
@@ -288,63 +491,67 @@
             </section>
 
           </template>
+          <div class="document-save-actions">
+            <p
+              v-if="manualSaveMessage"
+              class="document-save-feedback"
+              :class="manualSaveFeedback"
+              data-testid="document-save-feedback"
+              aria-live="polite"
+            >
+              <span
+                class="document-save-feedback-icon"
+                data-testid="document-save-feedback-icon"
+                aria-hidden="true"
+              >
+                <svg v-if="manualSaveFeedback === 'saved'" viewBox="0 0 16 16" focusable="false">
+                  <path d="M13.5 4.5 6.7 11.3 3 7.6" />
+                </svg>
+                <svg v-else viewBox="0 0 16 16" focusable="false">
+                  <path d="M8 4.25v4.5" />
+                  <path d="M8 11.75h.01" />
+                </svg>
+              </span>
+              <span>{{ manualSaveMessage }}</span>
+            </p>
+            <button
+              class="primary-button"
+              type="button"
+              :disabled="documentProfileStore.status === 'saving'"
+              data-testid="save-document-profile"
+              @click="saveActiveSection({ manual: true })"
+            >
+              {{ saveButtonLabel }}
+            </button>
+          </div>
         </main>
       </div>
     </section>
-    <ConfirmDialog
-      :show="confirmState.show"
-      :title="confirmState.title"
-      :message="confirmState.message"
-      confirm-text="삭제"
-      cancel-text="취소"
-      tone="danger"
-      @confirm="handleConfirm"
-      @cancel="handleCancel"
-    />
   </AppLayout>
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useDocumentProfileStore } from '@/stores/documentProfileStore';
 import AppLayout from '@/shared/AppLayout.vue';
 import StatePanel from '@/shared/StatePanel.vue';
 import SkeletonLoader from '@/shared/SkeletonLoader.vue';
 import { showToast } from '@/shared/useToast';
-import ConfirmDialog from '@/shared/ConfirmDialog.vue';
 
+const MAX_PROFILE_PHOTO_BYTES = 2 * 1024 * 1024;
+const AUTO_SAVE_DELAY_MS = 600;
+const DEFAULT_SECTION_ID = 'basicInfo';
+const validSectionIds = new Set(['basicInfo', 'military', 'education', 'career', 'projects', 'certificates', 'other']);
 const documentProfileStore = useDocumentProfileStore();
-const activeSection = ref('basicInfo');
+const route = useRoute();
+const router = useRouter();
+const activeSection = ref(normalizeSectionId(route.query.section));
 const autoSaveStatus = ref('idle');
-
-const confirmState = reactive({
-  show: false,
-  title: '항목 삭제',
-  message: '',
-  resolve: null
-});
-
-function confirmDelete(message, title = '항목 삭제') {
-  if (typeof window !== 'undefined' && (window.__vitest_worker__ || window.vitest || (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test'))) {
-    return Promise.resolve(true);
-  }
-  confirmState.message = message;
-  confirmState.title = title;
-  confirmState.show = true;
-  return new Promise((resolve) => {
-    confirmState.resolve = resolve;
-  });
-}
-
-function handleConfirm() {
-  confirmState.show = false;
-  if (confirmState.resolve) confirmState.resolve(true);
-}
-
-function handleCancel() {
-  confirmState.show = false;
-  if (confirmState.resolve) confirmState.resolve(false);
-}
+const manualSaveFeedback = ref('idle');
+const lastSaveErrorMessage = ref('');
+const pendingDelete = ref(null);
+const documentFormPanelRef = ref(null);
 const basicInfoForm = reactive({
   nameKo: '',
   nameEn: '',
@@ -354,11 +561,18 @@ const basicInfoForm = reactive({
   gender: '',
   birthdate: '',
   address: '',
-  addressDetail: ''
+  addressDetail: '',
+  applicationCareerType: '',
+  applicationSource: '',
+  profilePhoto: null
 });
 const activeSectionForm = reactive({});
 let autoSaveTimer = null;
+let manualSaveFeedbackTimer = null;
 let suppressFormWatch = true;
+let basicInfoDirty = false;
+let activeSectionDirty = false;
+let lastSyncedActiveSection = '';
 
 const sections = [
   { id: 'basicInfo', label: '기본 정보', title: '기본 정보' },
@@ -367,14 +581,36 @@ const sections = [
   { id: 'career', label: '경력', title: '경력' },
   { id: 'projects', label: '프로젝트', title: '프로젝트' },
   { id: 'certificates', label: '자격증 / 어학', title: '자격증 / 어학' },
-  { id: 'other', label: '수상/교육/활동/해외경험', title: '수상/교육/활동/해외경험' }
+  { id: 'other', label: '수상 / 교육 / 대외활동', title: '수상 / 교육 / 대외활동' }
 ];
 
-const saveButtonLabel = computed(() => (documentProfileStore.status === 'saving' ? '저장 중' : '저장'));
+const saveButtonLabel = computed(() => {
+  if (documentProfileStore.status === 'saving') return '저장 중';
+  if (manualSaveFeedback.value === 'saved') return '저장됨';
+  if (manualSaveFeedback.value === 'failed') return '다시 저장';
+  return '저장';
+});
+const manualSaveMessage = computed(() => {
+  if (manualSaveFeedback.value === 'saved') return '저장됐습니다';
+  if (manualSaveFeedback.value === 'failed') {
+    return lastSaveErrorMessage.value
+      ? `저장에 실패했습니다. ${lastSaveErrorMessage.value}`
+      : '저장에 실패했습니다';
+  }
+  return '';
+});
 const activeSectionConfig = computed(() => sections.find((section) => section.id === activeSection.value) ?? sections[0]);
 const activeSectionTitle = computed(() => activeSectionConfig.value.title);
 const activeSectionSchema = computed(() => sectionSchemas[activeSection.value]);
 const formattedLastSavedAt = computed(() => formatSavedAt(documentProfileStore.profile?.lastSavedAt));
+
+watch(() => route.query.section, (section) => {
+  const nextSection = normalizeSectionId(section);
+  if (nextSection === activeSection.value) return;
+  activeSectionDirty = false;
+  lastSyncedActiveSection = '';
+  activeSection.value = nextSection;
+});
 
 const selectOptions = {
   empty: [{ label: '선택', value: '' }],
@@ -384,6 +620,53 @@ const selectOptions = {
     { label: '남성', value: 'MALE' },
     { label: '여성', value: 'FEMALE' },
     { label: '기타', value: 'OTHER' }
+  ],
+  applicationCareerType: [
+    { label: '선택', value: '' },
+    { label: '신입', value: '신입' },
+    { label: '경력', value: '경력' },
+    { label: '신입/경력', value: '신입/경력' },
+    { label: '인턴', value: '인턴' }
+  ],
+  applicationSource: [
+    { label: '선택', value: '' },
+    { label: '채용 사이트', value: '채용 사이트' },
+    { label: '회사 홈페이지', value: '회사 홈페이지' },
+    { label: '취업 포털', value: '취업 포털' },
+    { label: '학교/센터 추천', value: '학교/센터 추천' },
+    { label: '지인 추천', value: '지인 추천' },
+    { label: '기타', value: '기타' }
+  ],
+  servicePeriod: [
+    { label: '선택', value: '' },
+    { label: '18 개월', value: '18 개월' },
+    { label: '21 개월', value: '21 개월' },
+    { label: '24 개월', value: '24 개월' },
+    { label: '기타', value: '기타' }
+  ],
+  schoolTrack: [
+    { label: '선택', value: '' },
+    { label: '인문계', value: '인문계' },
+    { label: '자연계', value: '자연계' },
+    { label: '예체능계', value: '예체능계' },
+    { label: '전문계', value: '전문계' },
+    { label: '기타', value: '기타' }
+  ],
+  campusType: [
+    { label: '선택', value: '' },
+    { label: '본교', value: '본교' },
+    { label: '분교', value: '분교' }
+  ],
+  majorCategory: [
+    { label: '선택', value: '' },
+    { label: '인문계열', value: '인문계열' },
+    { label: '사회계열', value: '사회계열' },
+    { label: '상경계열', value: '상경계열' },
+    { label: '공학계열', value: '공학계열' },
+    { label: '자연계열', value: '자연계열' },
+    { label: '의약계열', value: '의약계열' },
+    { label: '예체능계열', value: '예체능계열' },
+    { label: '기타', value: '기타' }
   ],
   militaryStatus: [
     { label: '선택', value: '' },
@@ -536,10 +819,12 @@ const selectOptions = {
   ],
   activityType: [
     { label: '선택하세요', value: '' },
-    { label: '교내', value: '교내' },
-    { label: '대외', value: '대외' },
+    { label: '동아리', value: '동아리' },
+    { label: '학생회', value: '학생회' },
+    { label: '서포터즈', value: '서포터즈' },
     { label: '봉사', value: '봉사' },
-    { label: '프로젝트', value: '프로젝트' },
+    { label: '공모전', value: '공모전' },
+    { label: '대외활동', value: '대외활동' },
     { label: '기타', value: '기타' }
   ],
   overseasPurpose: [
@@ -768,16 +1053,20 @@ const sectionSchemas = {
       },
       {
         key: 'activities',
-        title: '학내외 활동',
-        itemLabel: '학내외 활동',
-        addLabel: '학내외 활동 추가',
+        title: '대외활동',
+        itemLabel: '대외활동',
+        addLabel: '대외활동 추가',
         repeatable: true,
         columns: 3,
         fields: [
           selectField('activityType', '활동구분', selectOptions.activityType),
           textField('activityName', '활동명', '활동명을 입력하세요.'),
+          textField('organization', '기관/단체', '기관 또는 단체명을 입력하세요.'),
           textField('role', '직위 또는 역할', '직위 또는 역할을 입력하세요.'),
-          textField('description', '활동 내용', '활동 내용을 상세히 입력하세요.', false, true)
+          dateField('startDate', '시작일'),
+          dateField('endDate', '종료일'),
+          textField('description', '주요 활동', '맡은 일과 활동 내용을 입력하세요.', false, true),
+          textField('outcome', '성과', '성과나 배운 점을 입력하세요.', false, true)
         ]
       },
       {
@@ -799,7 +1088,10 @@ const sectionSchemas = {
   }
 };
 
+extendDocumentProfileSchemasForApplicationAutofill();
+
 watch(() => documentProfileStore.basicInfo, (basicInfo) => {
+  if (activeSection.value === 'basicInfo' && basicInfoDirty) return;
   suppressFormWatch = true;
   Object.assign(basicInfoForm, basicInfo);
   queueMicrotask(() => {
@@ -810,7 +1102,11 @@ watch(() => documentProfileStore.basicInfo, (basicInfo) => {
 watch([
   activeSection,
   () => documentProfileStore.profile?.sections
-], () => {
+], ([section], [previousSection] = []) => {
+  const isSameSection = section === previousSection;
+  if (isSameSection && activeSection.value !== 'basicInfo' && activeSectionDirty) return;
+  const isSameSectionRefresh = section === previousSection && activeSection.value !== 'basicInfo';
+  if (isSameSectionRefresh && lastSyncedActiveSection === section) return;
   suppressFormWatch = true;
   syncActiveSectionForm();
   queueMicrotask(() => {
@@ -819,22 +1115,69 @@ watch([
 }, { immediate: true });
 
 watch(basicInfoForm, () => {
+  if (suppressFormWatch) return;
   if (activeSection.value !== 'basicInfo') return;
+  basicInfoDirty = true;
   scheduleAutoSave();
 }, { deep: true });
 
 watch(activeSectionForm, () => {
+  if (suppressFormWatch) return;
   if (!activeSectionSchema.value) return;
+  activeSectionDirty = true;
   scheduleAutoSave();
 }, { deep: true });
+
+watch(() => activeSectionForm.military?.status, () => {
+  if (suppressFormWatch || activeSection.value !== 'military') return;
+  clearIrrelevantMilitaryServiceDetails(activeSectionForm.military);
+});
 
 onMounted(() => {
   void documentProfileStore.loadDocumentProfile();
 });
-onBeforeUnmount(clearAutoSaveTimer);
-
-async function saveActiveSection() {
+onBeforeUnmount(() => {
   clearAutoSaveTimer();
+  clearManualSaveFeedback();
+});
+
+async function selectSection(sectionId) {
+  const nextSection = normalizeSectionId(sectionId);
+  activeSectionDirty = false;
+  lastSyncedActiveSection = '';
+  activeSection.value = nextSection;
+  void updateSectionRoute(nextSection);
+  await nextTick();
+  if (typeof documentFormPanelRef.value?.scrollIntoView !== 'function') return;
+  documentFormPanelRef.value.scrollIntoView({
+    block: 'start',
+    behavior: 'smooth'
+  });
+}
+
+async function updateSectionRoute(sectionId) {
+  const nextQuery = { ...route.query };
+  if (sectionId === DEFAULT_SECTION_ID) {
+    delete nextQuery.section;
+  } else {
+    nextQuery.section = sectionId;
+  }
+  await router.replace({ query: nextQuery });
+}
+
+async function saveActiveSection(options = {}) {
+  const showManualFeedback = options.manual === true;
+  clearAutoSaveTimer();
+  clearManualSaveFeedback();
+  await nextTick();
+  suppressFormWatch = true;
+  try {
+    syncActiveSectionFormFromDom();
+    await nextTick();
+  } finally {
+    suppressFormWatch = false;
+  }
+  const wasActiveSectionDirty = activeSectionDirty;
   autoSaveStatus.value = 'saving';
   try {
     if (activeSection.value === 'basicInfo') {
@@ -842,34 +1185,85 @@ async function saveActiveSection() {
     } else if (activeSectionSchema.value) {
       let payload = cloneValue(activeSectionForm);
       if (activeSection.value === 'military') {
-        const flatObj = {
-          ...(payload.military ?? {}),
-          ...(payload.disability ?? {}),
-          ...(payload.veteran ?? {})
-        };
-        payload = { military: [flatObj] };
+        payload = createMilitarySavePayload(payload);
       }
       await documentProfileStore.saveReusableSection(activeSection.value, payload);
     }
     if (documentProfileStore.status === 'error') {
       autoSaveStatus.value = 'failed';
+      lastSaveErrorMessage.value = documentProfileStore.errorMessage || '';
+      if (showManualFeedback) {
+        setManualSaveFeedback('failed');
+      }
       showToast(documentProfileStore.errorMessage || '저장에 실패했습니다.', { tone: 'red' });
     } else {
+      if (activeSection.value === 'basicInfo') {
+        basicInfoDirty = false;
+      } else {
+        activeSectionDirty = wasActiveSectionDirty;
+      }
       autoSaveStatus.value = 'saved';
+      lastSaveErrorMessage.value = '';
+      if (showManualFeedback) {
+        setManualSaveFeedback('saved');
+      }
     }
   } catch (err) {
     autoSaveStatus.value = 'failed';
+    lastSaveErrorMessage.value = '네트워크 연결을 확인해 주세요.';
+    if (showManualFeedback) {
+      setManualSaveFeedback('failed');
+    }
     showToast('저장 중 네트워크 오류가 발생했습니다.', { tone: 'red' });
   }
+}
+
+async function updateProfilePhoto(event) {
+  const [file] = Array.from(event.target.files ?? []);
+  event.target.value = '';
+  if (!file) return;
+  if (!file.type.startsWith('image/')) {
+    showToast('이미지 파일만 등록할 수 있습니다.', { tone: 'red' });
+    return;
+  }
+  if (file.size > MAX_PROFILE_PHOTO_BYTES) {
+    showToast('사진은 2MB 이하로 등록해 주세요.', { tone: 'red' });
+    return;
+  }
+  try {
+    const dataUrl = await readFileAsDataUrl(file);
+    basicInfoForm.profilePhoto = {
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      dataUrl
+    };
+  } catch {
+    showToast('사진을 읽지 못했습니다. 다른 파일로 다시 시도해 주세요.', { tone: 'red' });
+  }
+}
+
+function removeProfilePhoto() {
+  basicInfoForm.profilePhoto = null;
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ''));
+    reader.onerror = () => reject(reader.error ?? new Error('File read failed'));
+    reader.readAsDataURL(file);
+  });
 }
 
 function scheduleAutoSave() {
   if (suppressFormWatch) return;
   clearAutoSaveTimer();
+  clearManualSaveFeedback();
   autoSaveStatus.value = 'waiting';
   autoSaveTimer = setTimeout(() => {
-    void saveActiveSection();
-  }, 2000);
+    void saveActiveSection({ manual: false });
+  }, AUTO_SAVE_DELAY_MS);
 }
 
 function clearAutoSaveTimer() {
@@ -881,7 +1275,30 @@ function clearAutoSaveTimer() {
 function syncActiveSectionForm() {
   if (!activeSectionSchema.value) return;
   replaceReactive(activeSectionForm, sectionPayload(activeSection.value));
+  activeSectionDirty = false;
+  if (documentProfileStore.profile?.sections) {
+    lastSyncedActiveSection = activeSection.value;
+  }
+  pendingDelete.value = null;
   autoSaveStatus.value = 'idle';
+  clearManualSaveFeedback();
+}
+
+function setManualSaveFeedback(status) {
+  clearManualSaveFeedback();
+  manualSaveFeedback.value = status;
+  manualSaveFeedbackTimer = setTimeout(() => {
+    manualSaveFeedback.value = 'idle';
+    manualSaveFeedbackTimer = null;
+  }, 2400);
+}
+
+function clearManualSaveFeedback() {
+  if (manualSaveFeedbackTimer) {
+    clearTimeout(manualSaveFeedbackTimer);
+    manualSaveFeedbackTimer = null;
+  }
+  manualSaveFeedback.value = 'idle';
 }
 
 function sectionPayload(sectionType) {
@@ -889,75 +1306,362 @@ function sectionPayload(sectionType) {
   return mergeSectionDefaults(activeSectionSchema.value, savedPayload);
 }
 
+function normalizeSectionId(value) {
+  const sectionId = Array.isArray(value) ? value[0] : value;
+  return validSectionIds.has(sectionId) ? sectionId : DEFAULT_SECTION_ID;
+}
+
+function createMilitarySavePayload(payload) {
+  const military = payload.military ?? {};
+  const disability = payload.disability ?? {};
+  const veteran = payload.veteran ?? {};
+  const flatRecord = {
+    status: cleanRecordText(military.status),
+    branch: cleanRecordText(military.branch),
+    rank: cleanRecordText(military.rank),
+    specialty: cleanRecordText(military.specialty),
+    enlistmentDate: cleanRecordText(military.enlistmentDate),
+    dischargeDate: cleanRecordText(military.dischargeDate),
+    servicePeriod: cleanRecordText(military.servicePeriod),
+    dischargeType: cleanRecordText(military.dischargeType),
+    exemptionReason: cleanRecordText(military.exemptionReason),
+    hasDisability: booleanRecordValue(disability.hasDisability),
+    disabilityLevel: cleanRecordText(disability.disabilityLevel),
+    disabilityRegistrationNumber: cleanRecordText(disability.disabilityRegistrationNumber),
+    disabilityType: cleanRecordText(disability.disabilityType),
+    disabilityDescription: cleanRecordText(disability.disabilityDescription),
+    isVeteran: booleanRecordValue(veteran.isVeteran),
+    veteranRelation: cleanRecordText(veteran.veteranRelation),
+    veteranNumber: cleanRecordText(veteran.veteranNumber),
+    veteranRate: cleanRecordText(veteran.veteranRate)
+  };
+
+  clearIrrelevantMilitaryServiceDetails(flatRecord);
+
+  return { military: [flatRecord] };
+}
+
+function booleanRecordValue(value) {
+  return value === true || value === 'true';
+}
+
+function isMilitaryServiceDetailRelevant(status) {
+  return ['군필', '복무중'].includes(cleanRecordText(status));
+}
+
+function clearIrrelevantMilitaryServiceDetails(record) {
+  if (!record || isMilitaryServiceDetailRelevant(record.status)) return;
+  record.branch = '';
+  record.rank = '';
+  record.specialty = '';
+  record.enlistmentDate = '';
+  record.dischargeDate = '';
+  record.servicePeriod = '';
+  record.dischargeType = '';
+  if (record.status !== '면제') {
+    record.exemptionReason = '';
+  }
+}
+
 function legacySectionPayload(sectionType) {
   const sectionsPayload = documentProfileStore.profile?.sections ?? {};
+  if (sectionType === 'military') {
+    return normalizeMilitaryPayload(sectionsPayload.military);
+  }
   const savedPayload = sectionsPayload[sectionType];
   if (savedPayload && typeof savedPayload === 'object' && !Array.isArray(savedPayload)) {
     return savedPayload;
   }
   if (sectionType === 'education') {
-    return { universities: Array.isArray(sectionsPayload.education) ? sectionsPayload.education : [] };
+    return Array.isArray(sectionsPayload.education) ? { universities: sectionsPayload.education } : savedPayload;
   }
   if (sectionType === 'career') {
-    return {
-      careers: Array.isArray(sectionsPayload.career) ? sectionsPayload.career : [],
-      internships: Array.isArray(sectionsPayload.internships) ? sectionsPayload.internships : []
-    };
+    return legacyArraysPayload(sectionsPayload, {
+      career: 'careers',
+      internships: 'internships'
+    }) ?? savedPayload;
   }
   if (sectionType === 'projects') {
-    return { projects: Array.isArray(sectionsPayload.projects) ? sectionsPayload.projects : [] };
+    return Array.isArray(sectionsPayload.projects) ? { projects: sectionsPayload.projects } : savedPayload;
   }
   if (sectionType === 'certificates') {
-    return { certificates: Array.isArray(sectionsPayload.certificates) ? sectionsPayload.certificates : [] };
-  }
-  if (sectionType === 'military') {
-    const firstMilitary = Array.isArray(sectionsPayload.military) ? sectionsPayload.military[0] : (sectionsPayload.military ?? {});
-    return {
-      military: firstMilitary,
-      disability: firstMilitary,
-      veteran: firstMilitary
-    };
+    return Array.isArray(sectionsPayload.certificates) ? { certificates: sectionsPayload.certificates } : savedPayload;
   }
   if (sectionType === 'other') {
-    return {
-      awards: Array.isArray(sectionsPayload.awards) ? sectionsPayload.awards : [],
-      trainings: Array.isArray(sectionsPayload.trainings) ? sectionsPayload.trainings : [],
-      activities: Array.isArray(sectionsPayload.activities) ? sectionsPayload.activities : [],
-      overseas: Array.isArray(sectionsPayload.overseas) ? sectionsPayload.overseas : []
-    };
+    return legacyArraysPayload(sectionsPayload, {
+      awards: 'awards',
+      trainings: 'trainings',
+      activities: 'activities',
+      overseas: 'overseas'
+    }) ?? savedPayload;
   }
   return savedPayload;
+}
+
+function legacyArraysPayload(source, keyMap) {
+  const payload = {};
+  Object.entries(keyMap).forEach(([sourceKey, targetKey]) => {
+    if (Array.isArray(source[sourceKey])) {
+      payload[targetKey] = source[sourceKey];
+    }
+  });
+  return Object.keys(payload).length > 0 ? payload : null;
+}
+
+function normalizeMilitaryPayload(savedPayload) {
+  const savedRecord = plainRecord(savedPayload);
+  const nestedMilitary = savedRecord.military;
+  const flatMilitary = Array.isArray(savedPayload)
+    ? savedPayload[0]
+    : Array.isArray(nestedMilitary)
+      ? nestedMilitary[0]
+      : (nestedMilitary ?? savedPayload);
+  const disability = savedRecord.disability ?? flatMilitary;
+  const veteran = savedRecord.veteran ?? flatMilitary;
+  const military = normalizeMilitaryRecord(flatMilitary);
+  return {
+    military,
+    disability: { ...plainRecord(disability) },
+    veteran: { ...plainRecord(veteran) }
+  };
+}
+
+function normalizeMilitaryRecord(record) {
+  const normalizedRecord = { ...plainRecord(record) };
+  const title = cleanRecordText(normalizedRecord.title);
+  const summaryParts = splitSummaryText(normalizedRecord.summary);
+  delete normalizedRecord.title;
+  delete normalizedRecord.summary;
+  if (!cleanRecordText(normalizedRecord.status) && optionHasValue(selectOptions.militaryStatus, title)) {
+    normalizedRecord.status = title;
+  }
+  if (!cleanRecordText(normalizedRecord.branch)) {
+    normalizedRecord.branch = summaryParts.find((part) => optionHasValue(selectOptions.militaryBranch, part)) ?? '';
+  }
+  if (!cleanRecordText(normalizedRecord.rank)) {
+    normalizedRecord.rank = summaryParts.find((part) => optionHasValue(selectOptions.militaryRank, part)) ?? '';
+  }
+  if (!cleanRecordText(normalizedRecord.dischargeType)) {
+    normalizedRecord.dischargeType = summaryParts.find((part) => optionHasValue(selectOptions.dischargeType, part)) ?? '';
+  }
+  return normalizedRecord;
+}
+
+function splitSummaryText(value) {
+  return cleanRecordText(value)
+    .split(/[\/,|·・]/)
+    .map(cleanRecordText)
+    .filter(Boolean);
+}
+
+function optionHasValue(options, value) {
+  const normalizedValue = cleanRecordText(value);
+  return Boolean(normalizedValue) && options.some((option) => option.value === normalizedValue);
+}
+
+function cleanRecordText(value) {
+  return String(value ?? '').trim();
+}
+
+function plainRecord(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
 function addGroupItem(groupKey) {
   const group = activeSectionSchema.value?.groups.find((item) => item.key === groupKey);
   if (!group) return;
+  pendingDelete.value = null;
   if (!Array.isArray(activeSectionForm[groupKey])) {
     activeSectionForm[groupKey] = [];
   }
   activeSectionForm[groupKey].push(emptyGroupItem(group));
 }
 
-async function deleteGroupItem(groupKey, index) {
+function requestDeleteGroupItem(groupKey, index) {
   if (!Array.isArray(activeSectionForm[groupKey])) return;
-  const confirmed = await confirmDelete('해당 항목을 정말로 삭제하시겠습니까?');
-  if (!confirmed) {
-    return;
+  pendingDelete.value = { groupKey, index };
+}
+
+function isDeletePending(groupKey, index) {
+  return pendingDelete.value?.groupKey === groupKey && pendingDelete.value?.index === index;
+}
+
+function cancelDeleteGroupItem(groupKey, index) {
+  if (isDeletePending(groupKey, index)) {
+    pendingDelete.value = null;
   }
+}
+
+function confirmDeleteGroupItem(groupKey, index) {
+  if (!Array.isArray(activeSectionForm[groupKey])) return;
   activeSectionForm[groupKey].splice(index, 1);
+  pendingDelete.value = null;
+}
+
+function updateChoiceField(target, key, event) {
+  if (!target) return;
+  const element = event.target;
+  target[key] = domFieldValue(element, target[key]);
+}
+
+function syncActiveSectionFormFromDom() {
+  if (!activeSectionSchema.value || !documentFormPanelRef.value) return;
+  activeSectionSchema.value.groups.forEach((group) => {
+    if (group.repeatable) {
+      syncRepeatableGroupFromDom(group);
+      return;
+    }
+    syncGroupRecordFromDom(group, activeSectionForm[group.key], `${group.key}`);
+  });
+}
+
+function syncRepeatableGroupFromDom(group) {
+  const records = activeSectionForm[group.key];
+  if (!Array.isArray(records)) return;
+  records.forEach((record, index) => {
+    syncGroupRecordFromDom(group, record, `${group.key}-${index}`);
+  });
+}
+
+function syncGroupRecordFromDom(group, record, testIdPrefix) {
+  if (!record) return;
+  group.fields.forEach((field) => {
+    const fieldValue = readFieldValueFromDom(field, testIdPrefix, record[field.key]);
+    if (fieldValue !== undefined) {
+      record[field.key] = fieldValue;
+    }
+  });
+}
+
+function readFieldValueFromDom(field, testIdPrefix, fallbackValue) {
+  if (field.type === 'radio') {
+    const checkedRadio = documentFormPanelRef.value.querySelector(
+      `input[type="radio"][name="${escapeAttributeValue(testIdPrefix)}-${escapeAttributeValue(field.key)}"]:checked`
+    );
+    return checkedRadio ? domFieldValue(checkedRadio, fallbackValue, field) : fallbackValue;
+  }
+  const element = documentFormPanelRef.value.querySelector(testIdSelector(`${testIdPrefix}-${field.key}`));
+  if (!element) return undefined;
+  return domFieldValue(element, fallbackValue, field);
+}
+
+function domFieldValue(element, fallbackValue, field = null) {
+  if (element.type === 'checkbox') return element.checked;
+  if (field?.options?.some((option) => typeof option.value === 'boolean')) {
+    return element.value === 'true';
+  }
+  if (typeof fallbackValue === 'boolean') return element.value === 'true';
+  return element.value;
+}
+
+function testIdSelector(value) {
+  return `[data-testid="${escapeAttributeValue(value)}"]`;
+}
+
+function escapeAttributeValue(value) {
+  return String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
 function updateDateField(target, key, event) {
-  const formattedValue = formatDateInput(event.target.value);
+  const formattedValue = formatDateTypingInput(event.target.value);
   target[key] = formattedValue;
   event.target.value = formattedValue;
 }
 
-function formatDateInput(value) {
+function blurDateField(target, key, event) {
+  const formattedValue = normalizeDateInput(event.target.value);
+  target[key] = formattedValue;
+  event.target.value = formattedValue;
+}
+
+function pasteDateField(target, key, event) {
+  const pastedValue = event.clipboardData?.getData('text') ?? '';
+  const formattedValue = normalizeDateInput(pastedValue);
+  if (!formattedValue) return;
+  event.preventDefault();
+  target[key] = formattedValue;
+  event.target.value = formattedValue;
+  event.target.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function pickDateField(target, key, event) {
+  const formattedValue = normalizeDateInput(event.target.value);
+  target[key] = formattedValue;
+}
+
+function datePickerValue(value) {
+  return normalizeDateInput(value);
+}
+
+function openDatePicker(event) {
+  const nativeDateInput = event.currentTarget
+    ?.closest('.profile-date-input')
+    ?.querySelector('.profile-date-native');
+  if (!nativeDateInput) return;
+  if (typeof nativeDateInput.showPicker === 'function') {
+    nativeDateInput.showPicker();
+    return;
+  }
+  nativeDateInput.focus();
+  nativeDateInput.click();
+}
+
+function formatDateTypingInput(value) {
+  const validDate = normalizeDateInput(value);
+  if (validDate) return validDate;
   const digits = String(value ?? '').replace(/\D/g, '').slice(0, 8);
   if (digits.length <= 4) return digits;
   if (digits.length <= 6) return `${digits.slice(0, 4)}-${digits.slice(4)}`;
   return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
+}
+
+function normalizeDateInput(value) {
+  const text = String(value ?? '').trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+    return toDateValue(text.slice(0, 4), text.slice(5, 7), text.slice(8, 10));
+  }
+  const separatedDate = text.match(/^(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);
+  if (separatedDate) {
+    return toDateValue(separatedDate[1], separatedDate[2], separatedDate[3]);
+  }
+  const digits = String(value ?? '').replace(/\D/g, '').slice(0, 8);
+  if (digits.length !== 8) return '';
+  return toDateValue(digits.slice(0, 4), digits.slice(4, 6), digits.slice(6));
+}
+
+function toDateValue(year, month, day) {
+  const normalizedYear = String(year).padStart(4, '0');
+  const normalizedMonth = String(month).padStart(2, '0');
+  const normalizedDay = String(day).padStart(2, '0');
+  const parsed = new Date(`${normalizedYear}-${normalizedMonth}-${normalizedDay}T00:00:00Z`);
+  if (
+    Number.isNaN(parsed.getTime()) ||
+    parsed.getUTCFullYear() !== Number(normalizedYear) ||
+    parsed.getUTCMonth() + 1 !== Number(normalizedMonth) ||
+    parsed.getUTCDate() !== Number(normalizedDay)
+  ) {
+    return '';
+  }
+  return `${normalizedYear}-${normalizedMonth}-${normalizedDay}`;
+}
+
+function extendDocumentProfileSchemasForApplicationAutofill() {
+  insertFieldAfter(sectionSchemas.military?.groups?.[0]?.fields, 'dischargeDate', selectField('servicePeriod', '복무기간', selectOptions.servicePeriod));
+  insertFieldAfter(sectionSchemas.military?.groups?.[1]?.fields, 'disabilityLevel', textField('disabilityRegistrationNumber', '장애등록번호', '장애등록번호'));
+  insertFieldAfter(sectionSchemas.military?.groups?.[1]?.fields, 'disabilityRegistrationNumber', textField('disabilityType', '장애 유형', '예: 지체, 시각, 청각'));
+  insertFieldAfter(sectionSchemas.education?.groups?.[0]?.fields, 'schoolType', selectField('track', '계열', selectOptions.schoolTrack));
+
+  for (const group of [sectionSchemas.education?.groups?.[1], sectionSchemas.education?.groups?.[2]]) {
+    insertFieldAfter(group?.fields, 'schoolName', textField('location', '학교 소재지', '예: 부산'));
+    insertFieldAfter(group?.fields, 'location', selectField('campusType', '본교/분교', selectOptions.campusType));
+    insertFieldAfter(group?.fields, 'major', selectField('majorCategory', '학과계열', selectOptions.majorCategory));
+  }
+}
+
+function insertFieldAfter(fields, afterKey, field) {
+  if (!Array.isArray(fields) || !field?.key || fields.some((item) => item.key === field.key)) return;
+  const index = fields.findIndex((item) => item.key === afterKey);
+  fields.splice(index >= 0 ? index + 1 : fields.length, 0, field);
 }
 
 function textField(key, label, placeholder = '', wide = false, full = false) {
@@ -980,8 +1684,8 @@ function radioField(key, label, options, wide = false) {
   return { key, label, options, wide, type: 'radio' };
 }
 
-function checkboxField(key, checkboxLabel, wide = true) {
-  return { key, label: '', checkboxLabel, type: 'checkbox', wide };
+function checkboxField(key, checkboxLabel, wide = true, headerPlacement = '') {
+  return { key, label: '', checkboxLabel, type: 'checkbox', wide, headerPlacement };
 }
 
 function educationDegreeFields(degreeOptions) {
@@ -993,12 +1697,13 @@ function educationDegreeFields(degreeOptions) {
     dateField('entranceDate', '입학일'),
     dateField('graduationDate', '졸업일'),
     selectField('graduationStatus', '졸업구분', selectOptions.graduation),
-    checkboxField('isTransfer', '편입 여부', false),
+    checkboxField('isTransfer', '편입 여부', false, 'entryHeader'),
     textField('grade', '* 성적 평점', '평점'),
     selectField('gradeScale', '만점', selectOptions.gradeScale),
+    textField('completedCredits', '이수학점', '예: 130'),
     textField('majorGrade', '전공 평점', '평점'),
     selectField('majorGradeScale', '전공 만점', selectOptions.gradeScale),
-    textField('gradeRank', '학점 석차/상위 퍼센트', '예: 상위 10%')
+    textField('gradeRank', '학점 백분율', '예: 상위 10%')
   ];
 }
 
@@ -1006,8 +1711,9 @@ function mergeSectionDefaults(schema, savedPayload) {
   const payload = savedPayload && typeof savedPayload === 'object' && !Array.isArray(savedPayload) ? savedPayload : {};
   return schema.groups.reduce((section, group) => {
     if (group.repeatable) {
+      const hasSavedGroup = Object.prototype.hasOwnProperty.call(payload, group.key);
       const savedItems = Array.isArray(payload[group.key]) ? payload[group.key] : [];
-      section[group.key] = savedItems.length > 0
+      section[group.key] = hasSavedGroup
         ? savedItems.map((item) => ({ ...emptyGroupItem(group), ...item }))
         : [emptyGroupItem(group)];
       return section;
@@ -1022,6 +1728,25 @@ function emptyGroupItem(group) {
     item[field.key] = field.type === 'checkbox' ? false : '';
     return item;
   }, {});
+}
+
+function applicationChoiceField(group) {
+  if (group.layout !== 'applicationChoice') return null;
+  return group.fields.find((field) => field.type === 'radio') ?? null;
+}
+
+function visibleGroupFields(group) {
+  const hiddenFieldKeys = new Set([
+    applicationChoiceField(group)?.key,
+    ...entryHeaderFields(group).map((field) => field.key)
+  ].filter(Boolean));
+  if (hiddenFieldKeys.size === 0) return group.fields;
+  return group.fields.filter((field) => !hiddenFieldKeys.has(field.key));
+}
+
+function entryHeaderFields(group) {
+  if (!group.repeatable) return [];
+  return group.fields.filter((field) => field.headerPlacement === 'entryHeader');
 }
 
 function replaceReactive(target, source) {

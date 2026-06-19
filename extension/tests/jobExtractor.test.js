@@ -1558,6 +1558,58 @@ describe('extractJobPosting', () => {
             ]
         });
     });
+    it('extracts the selected recruit detail when Jasoseol uses an on-hire deadline and stale page data exists', () => {
+        const doc = document.implementation.createHTMLDocument('jasoseol-recruit-on-hire-deadline');
+        doc.body.innerHTML = `
+      <main>
+        <h1>채용공고</h1>
+        <script id="__NEXT_DATA__" type="application/json">
+          {
+            "props": {
+              "pageProps": {
+                "initialEmploymentCompany": {
+                  "name": "면사랑",
+                  "end_time": "2026-05-31T23:59:00.000+09:00",
+                  "employments": [
+                    { "field": "경영기획/지원", "careerType": "신입" },
+                    { "field": "디지털", "careerType": "신입" },
+                    { "field": "IB", "careerType": "신입" }
+                  ]
+                }
+              }
+            }
+          }
+        </script>
+        <section>
+          <article>
+            <img alt="NHN Cloud 기업 아이콘" />
+            <strong>NHN Cloud</strong>
+            <h2>AX컨설팅(정규직 전환형 인턴)</h2>
+            <p>이 공고는 채용 시 마감되는 공고입니다. 지원을 서두르세요.</p>
+            <section aria-label="모집 직무">
+              <table>
+                <tbody>
+                  <tr>
+                    <td>인턴</td>
+                    <td>AX컨설팅(정규직 전환형 인턴)</td>
+                    <td>8명 작성</td>
+                    <td><button>자기소개서 쓰기</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+          </article>
+        </section>
+      </main>
+    `;
+
+        expect(extractJobPosting(doc, 'https://jasoseol.com/recruit?ec=104659')).toMatchObject({
+            companyName: 'NHN Cloud',
+            positionTitle: 'AX컨설팅(정규직 전환형 인턴)',
+            deadlineLabel: '채용 시 마감',
+            roleOptions: ['인턴 · AX컨설팅(정규직 전환형 인턴)']
+        });
+    });
     it('marks unsupported pages without silently inventing required fields', () => {
         const doc = document.implementation.createHTMLDocument('unsupported');
         doc.body.innerHTML = '<h1>일반 페이지</h1>';

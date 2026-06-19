@@ -53,7 +53,9 @@ const makeRouter = () => createRouter({
         { path: '/history', component: { template: '<div>history</div>' } },
         { path: '/document-profile', component: { template: '<div>document profile</div>' } },
         { path: '/mypage/notion', component: { template: '<div>notion</div>' } },
-        { path: '/mypage/terms', component: { template: '<div>terms</div>' } }
+        { path: '/mypage/terms', component: { template: '<div>terms</div>' } },
+        { path: '/mypage/inquiry', component: { template: '<div>inquiry</div>' } },
+        { path: '/mypage/partnership', component: { template: '<div>partnership</div>' } }
     ]
 });
 

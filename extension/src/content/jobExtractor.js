@@ -7,7 +7,7 @@ const KOREAN_ESSAY_QUESTION_VIEW = '\uC790\uC18C\uC11C \uBB38\uD56D \uBCF4\uAE30
 const KOREAN_ESSAY_QUESTION_LABEL = '\uC790\uC18C\uC11C \uBB38\uD56D';
 const KOREAN_ESSAY_LATER_ADD = '\uB098\uC911\uC5D0 \uC4F8 \uC790\uAE30\uC18C\uAC1C\uC11C\uB85C \uCD94\uAC00';
 const KOREAN_COMPANY_ICON = '\uAE30\uC5C5 \uC544\uC774\uCF58';
-const JOB_EXTRACTOR_VERSION = '2026-06-17-essay-limit-unit-v12';
+const JOB_EXTRACTOR_VERSION = '2026-06-19-jasoseol-selected-root-v13';
 
 export function extractJobPosting(documentRef = document, sourceUrl = documentRef.location.href) {
     if (isPlainJasoseolRecruitListUrl(sourceUrl)) {
@@ -228,10 +228,10 @@ async function waitForEssayQuestions(documentRef, initialDelayMs, timeoutMs) {
 function extractDeadlineLabel(documentRef, jasoseolData) {
     const datetime = documentRef.querySelector('time')?.getAttribute('datetime');
     return normalizeDeadlineLabel(cleanText(documentRef.querySelector('[data-ezone-deadline]')?.textContent)) ||
-        normalizeDeadlineLabel(jasoseolData.deadlineLabel) ||
         normalizeDeadlineLabel(cleanText(documentRef.querySelector('time')?.textContent)) ||
         normalizeDeadlineLabel(datetime) ||
         extractDeadlineText(documentRef) ||
+        normalizeDeadlineLabel(jasoseolData.deadlineLabel) ||
         null;
 }
 
@@ -242,10 +242,13 @@ function extractRoleOptions(documentRef, jasoseolData) {
     if (explicitRoles.length > 0) {
         return unique(explicitRoles);
     }
+    const tableRoles = extractModalTableRoles(documentRef);
+    if (tableRoles.length > 0 && (jasoseolData.roleOptions.length === 0 || tableRoles.length < jasoseolData.roleOptions.length)) {
+        return tableRoles;
+    }
     if (jasoseolData.roleOptions.length > 0) {
         return jasoseolData.roleOptions;
     }
-    const tableRoles = extractModalTableRoles(documentRef);
     if (tableRoles.length > 0) {
         return tableRoles;
     }
@@ -571,6 +574,10 @@ function extractCompanyNearTitle(documentRef) {
 }
 
 function extractDeadlineText(documentRef) {
+    const rootText = cleanText(documentRef.textContent) ?? '';
+    if (hasOnHireDeadlineText(rootText)) {
+        return '채용 시 마감';
+    }
     return Array.from(documentRef.querySelectorAll('time, p, span, div'))
         .map((item) => cleanText(item.textContent))
         .map((text) => text ? extractDeadlineEnd(text) : null)
@@ -579,7 +586,11 @@ function extractDeadlineText(documentRef) {
 }
 
 function hasDeadlineText(text) {
-    return Boolean(extractDeadlineEnd(text)) || /(\d{4}-\d{2}-\d{2}).*~/.test(text);
+    return Boolean(extractDeadlineEnd(text)) || /(\d{4}-\d{2}-\d{2}).*~/.test(text) || hasOnHireDeadlineText(text);
+}
+
+function hasOnHireDeadlineText(text) {
+    return /채용\s*시\s*마감/.test(cleanText(text) ?? '');
 }
 
 function extractDeadlineEnd(text) {

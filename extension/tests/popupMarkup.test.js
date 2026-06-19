@@ -18,6 +18,9 @@ describe('extension popup markup', () => {
         expect(featurePanel).toContain('서류 정보 입력하기');
         expect(featurePanel).toContain('id="job-save-mode-button"');
         expect(featurePanel).toContain('id="document-input-mode-button"');
+        expect(featurePanel).toContain('id="feature-web-link"');
+        expect(featurePanel).toContain('EZ-ONE 웹으로 이동');
+        expect(featurePanel).toContain('class="secondary-button feature-web-link"');
         expect(featurePanel).toContain('class="mode-icon"');
         expect(featurePanel).not.toContain('채용공고');
         expect(featurePanel).not.toContain('서류입력');
@@ -57,15 +60,31 @@ describe('extension popup markup', () => {
         expect(markup).not.toMatch(/>[^<]*\/(?:h1|h2|strong|button)>/);
     });
 
+    it('keeps the saved-job result action focused on opening the basket', () => {
+        const resultPanel = markup.match(/<section id="result-panel"[\s\S]*?<\/section>/)?.[0] ?? '';
+
+        expect(resultPanel).toContain('id="basket-link"');
+        expect(resultPanel).not.toContain('id="result-web-link"');
+        expect(resultPanel).not.toContain('id="feature-web-link"');
+        expect(resultPanel).not.toContain('EZ-ONE 웹으로 이동');
+    });
+
     it('EXT-022/EXT-023: renders document autofill result lists', () => {
         expect(markup).toContain('id="document-result-panel"');
+        expect(markup).toContain('id="document-result-title"');
         expect(markup).toContain('class="autofill-summary-grid"');
         expect(markup).toContain('id="autofill-filled-count"');
+        expect(markup).toContain('id="autofill-filled-label"');
         expect(markup).toContain('id="autofill-review-count"');
         expect(markup).toContain('id="autofill-copy-count"');
+        expect(markup).toContain('id="autofill-filled-heading"');
+        expect(markup).toContain('id="autofill-filled-caption"');
         expect(markup).toContain('id="autofill-filled-list"');
         expect(markup).toContain('id="autofill-failed-list"');
         expect(markup).toContain('id="autofill-copy-list"');
+        expect(markup).toContain('id="autofill-apply-button"');
+        expect(markup).toContain('id="autofill-rescan-button"');
+        expect(markup).toContain('다시 인식');
         expect(markup).toContain('data-tone="success"');
         expect(markup).toContain('data-tone="warning"');
         expect(markup).toContain('data-tone="neutral"');

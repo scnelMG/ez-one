@@ -173,3 +173,9 @@ Requirement: `REF-003`, `JOB-018`, `REF-008`, `AI-004`, `AI-006`.
 - `TC-DART-REFERENCE-001`: `DartAnalysisServiceTest` verifies completed analysis is saved as `reference_type = DART`, and another user cannot save it.
 - `TC-DART-FRONTEND-001`: `workspaceApi.test.js` verifies DART disclosure, analysis, analysis read, and save-reference endpoint paths.
 - `TC-DART-FRONTEND-002`: `WorkspacePage.test.js` verifies the DART board loads disclosures, renders AI evidence cards, saves only after user action, and does not auto-insert AI text into the essay draft.
+
+## 2026-06-19 Document Profile Photo Auto-Fill Tests
+
+- `TC-PROFILE-PHOTO-001`: `DocumentProfilePage.test.js` verifies that the basic-info section can read an image file, show the file name/preview, save `profilePhoto`, and remove it before saving.
+- `TC-EXT-DOC-PHOTO-001`: `applicationAutoFill.test.js` verifies that the extension attaches a saved resume photo to generic image file inputs, including hidden file inputs used by custom upload buttons.
+- `TC-EXT-DOC-PHOTO-002`: `applicationAutoFill.test.js` verifies that non-image file inputs and ambiguous multiple image uploads are not filled automatically.

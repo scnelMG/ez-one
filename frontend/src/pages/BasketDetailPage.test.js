@@ -16,12 +16,20 @@ vi.mock('@/features/basket/api/basketApi', () => ({
 const makeRouter = () => createRouter({
     history: createMemoryHistory(),
     routes: [
+        { path: '/', component: { template: '<div>main</div>' } },
         { path: '/basket/:basketJobId', component: BasketDetailPage },
         { path: '/basket', component: { template: '<div>basket</div>' } },
         { path: '/main', component: { template: '<div>main</div>' } },
         { path: '/mypage', component: { template: '<div>my page</div>' } },
         { path: '/workspaces/:workspaceId', component: { template: '<div>workspace</div>' } },
-        { path: '/document-profile', component: { template: '<div>document profile</div>' } }
+        { path: '/document-profile', component: { template: '<div>document profile</div>' } },
+        { path: '/study', component: { template: '<div>study</div>' } },
+        { path: '/history', component: { template: '<div>history</div>' } },
+        { path: '/mypage/notion', component: { template: '<div>notion</div>' } },
+        { path: '/mypage/onboarding', component: { template: '<div>onboarding</div>' } },
+        { path: '/mypage/terms', component: { template: '<div>terms</div>' } },
+        { path: '/mypage/inquiry', component: { template: '<div>inquiry</div>' } },
+        { path: '/mypage/partnership', component: { template: '<div>partnership</div>' } }
     ]
 });
 describe('BasketDetailPage', () => {

@@ -120,3 +120,13 @@ Requirement: `REF-003`, `JOB-018`, `REF-008`, `AI-004`, `AI-006`.
 Prompt rules: use only report-provided facts, include source section and receipt number for core claims, prioritize essay evidence over generic company introduction, and exclude investment advice, stock outlooks, hiring probability, and unsupported claims. The AI result never auto-edits essay drafts.
 
 Evaluation details and regression history are recorded in `docs/34_dart-ai-evaluation.md`.
+
+## 2026-06-19 Document Profile Photo Auto-Fill Addendum
+
+Requirement: `PROFILE-026`, `EXT-013`.
+
+- The standard `basicInfo` document profile payload may include `profilePhoto` as `{ name, type, size, dataUrl }`.
+- The web document-profile editor accepts image files for the resume/profile photo field, stores the selected image as a data URL in the `basicInfo` section payload, and allows the user to remove it before saving.
+- The Chrome extension treats saved photo data as untrusted profile data. It creates a browser `File` only when the saved value is an image data URL and attaches it only to image file inputs.
+- Auto-fill remains generic across application sites: it prefers file inputs whose label/nearby text mentions photo/profile/avatar, and only falls back to a single image input when there is no ambiguity.
+- If a target site opens a cropper, confirmation modal, or server-side upload validation after file selection, the extension may attach the file but the user must still complete that site-specific step manually.

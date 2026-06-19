@@ -25,7 +25,11 @@ vi.mock('@/features/auth/oauth/googleOAuth', () => ({
 }));
 const makeRouter = () => createRouter({
     history: createMemoryHistory(),
-    routes: [{ path: '/login', component: LoginPage }]
+    routes: [
+        { path: '/', component: { template: '<div>main</div>' } },
+        { path: '/login', component: LoginPage },
+        { path: '/main', component: { template: '<div>main</div>' } }
+    ]
 });
 describe('LoginPage', () => {
     beforeEach(() => {
