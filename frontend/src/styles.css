@@ -953,6 +953,12 @@ textarea {
   padding: 0 8px;
 }
 
+.status-chip.green {
+  border-color: rgba(5, 150, 105, 0.28);
+  background: #ecfdf5;
+  color: var(--green);
+}
+
 .deadline-pill {
   border-color: #f0ce92;
   background: var(--warning-soft);
@@ -7218,7 +7224,7 @@ li {
   border: 1px solid var(--color-border);
   border-radius: 8px;
   background: #fff;
-  padding: 24px;
+  padding: clamp(18px, 2.4vw, 28px);
 }
 
 .account-profile-card,
@@ -7234,11 +7240,47 @@ li {
   padding: 18px;
 }
 
+.mypage-summary-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.mypage-summary-strip div {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-height: 112px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: #fbfcff;
+  padding: 16px;
+}
+
+.mypage-summary-strip span {
+  color: var(--color-primary-strong);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.mypage-summary-strip strong {
+  color: var(--color-ink);
+  font-size: 0.94rem;
+  font-weight: 900;
+}
+
+.mypage-summary-strip p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.82rem;
+}
+
 .account-profile-card {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 16px;
+  background: #fbfcff;
 }
 
 .profile-avatar-fallback.large {
@@ -7255,6 +7297,18 @@ li {
   gap: 8px;
   color: var(--color-muted);
   font-weight: 900;
+}
+
+.account-profile-fields {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.account-profile-fields p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.82rem;
 }
 
 .account-profile-card input,
@@ -7275,13 +7329,22 @@ li {
 }
 
 .icon-edit-button {
-  width: 42px;
-  height: 42px;
+  min-width: 64px;
+  min-height: 42px;
   border: 1px solid var(--color-border);
-  border-radius: 999px;
+  border-radius: 8px;
   background: #fff;
   color: var(--color-muted);
+  cursor: pointer;
   font-weight: 900;
+  padding: 0 12px;
+}
+
+.icon-edit-button:disabled,
+.primary-button:disabled,
+.ghost-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
 }
 
 .account-warning-card {
@@ -7353,7 +7416,8 @@ li {
 
 .support-form {
   display: grid;
-  gap: 14px;
+  gap: 16px;
+  max-width: 760px;
 }
 
 .support-form textarea {
@@ -7370,11 +7434,76 @@ li {
   padding: 16px;
 }
 
-.support-history span {
+.support-history > span {
   border-top: 1px solid var(--color-border);
   color: var(--color-muted);
   font-weight: 800;
   padding-top: 10px;
+}
+
+.support-empty {
+  display: block;
+}
+
+.support-history-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--color-border);
+  padding-top: 12px;
+}
+
+.support-history-row div {
+  display: grid;
+  gap: 3px;
+}
+
+.support-history-row strong {
+  color: var(--color-ink);
+}
+
+.support-history-row small {
+  color: var(--color-muted);
+  font-weight: 800;
+}
+
+.mypage-empty-state {
+  display: grid;
+  gap: 6px;
+  border: 1px dashed var(--color-border);
+  border-radius: 8px;
+  background: #fbfcff;
+  padding: 18px;
+}
+
+.mypage-empty-state strong {
+  color: var(--color-ink);
+}
+
+.mypage-empty-state p {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+@media (max-width: 700px) {
+  .account-profile-card {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .account-profile-card .primary-button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .support-form {
+    max-width: none;
+  }
+
+  .support-history-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 
 .terms-tabs {
@@ -7435,6 +7564,36 @@ li {
   gap: 14px;
 }
 
+.notion-log-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.notion-log-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: #fbfcff;
+  padding: 12px 14px;
+}
+
+.notion-log-row div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.notion-log-row p {
+  margin: 0;
+  color: var(--color-muted);
+}
+
 .sync-row {
   display: flex;
   align-items: center;
@@ -7444,6 +7603,12 @@ li {
   border-radius: 8px;
   background: #fbfcff;
   padding: 12px;
+}
+
+.toggle-switch:disabled,
+.toggle-switch.disabled {
+  opacity: 0.56;
+  cursor: not-allowed;
 }
 
 .sync-row small {
@@ -8556,6 +8721,10 @@ li {
 .toast-notification.green {
   border-color: rgba(15, 143, 111, 0.22);
 }
+
+.toast-notification.red {
+  border-color: rgba(220, 38, 38, 0.28);
+}
 .toast-dot {
   flex: 0 0 auto;
   width: 8px;
@@ -8565,6 +8734,10 @@ li {
 }
 .toast-notification.green .toast-dot {
   background: var(--green);
+}
+
+.toast-notification.red .toast-dot {
+  background: #dc2626;
 }
 .toast-notification p {
   margin: 0;
