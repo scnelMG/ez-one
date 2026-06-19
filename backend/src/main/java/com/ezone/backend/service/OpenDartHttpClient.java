@@ -9,10 +9,13 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import javax.xml.XMLConstants;
@@ -30,7 +33,19 @@ import org.xml.sax.InputSource;
 public class OpenDartHttpClient implements OpenDartClient {
 
     private static final String BASE_URL = "https://opendart.fss.or.kr/api";
-    private static final int DOCUMENT_TEXT_LIMIT = 60000;
+    private static final int DOCUMENT_TEXT_LIMIT = 24000;
+    private static final int KEYWORD_WINDOW_SIZE = 5000;
+    private static final List<String> JOB_APPLICATION_SIGNAL_KEYWORDS = List.of(
+        "사업의 내용",
+        "주요 제품",
+        "서비스",
+        "연구개발",
+        "투자",
+        "위험",
+        "재무",
+        "영업",
+        "신사업"
+    );
 
     private final RestTemplate restTemplate;
     private final String apiKey;
@@ -114,9 +129,12 @@ public class OpenDartHttpClient implements OpenDartClient {
             return exact.corpCode();
         }
         return corpCodes.values().stream()
-            .filter(row -> normalizeCompanyName(row.corpName()).contains(normalized))
+            .filter(row -> {
+                String dartName = normalizeCompanyName(row.corpName());
+                return dartName.contains(normalized) || normalized.contains(dartName);
+            })
+            .max(Comparator.comparingInt(row -> normalizeCompanyName(row.corpName()).length()))
             .map(CorpCode::corpCode)
-            .findFirst()
             .orElse("");
     }
 
@@ -175,7 +193,29 @@ public class OpenDartHttpClient implements OpenDartClient {
             .replace("&nbsp;", " ")
             .replaceAll("\\s+", " ")
             .trim();
-        return text.length() > DOCUMENT_TEXT_LIMIT ? text.substring(0, DOCUMENT_TEXT_LIMIT) : text;
+        return focusDocumentText(text);
+    }
+
+    private String focusDocumentText(String text) {
+        if (text.length() <= DOCUMENT_TEXT_LIMIT) {
+            return text;
+        }
+        Set<String> windows = new LinkedHashSet<>();
+        windows.add(text.substring(0, Math.min(3000, text.length())));
+        for (String keyword : JOB_APPLICATION_SIGNAL_KEYWORDS) {
+            int index = text.indexOf(keyword);
+            if (index < 0) {
+                continue;
+            }
+            int start = Math.max(0, index - 1200);
+            int end = Math.min(text.length(), index + KEYWORD_WINDOW_SIZE);
+            windows.add(text.substring(start, end));
+        }
+        String focused = String.join(" ... ", windows).replaceAll("\\s+", " ").trim();
+        if (!StringUtils.hasText(focused)) {
+            focused = text;
+        }
+        return focused.length() > DOCUMENT_TEXT_LIMIT ? focused.substring(0, DOCUMENT_TEXT_LIMIT) : focused;
     }
 
     private String extractFirstZipEntry(byte[] zipped) {

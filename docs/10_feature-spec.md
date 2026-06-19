@@ -113,7 +113,7 @@ Requirement: `REF-003`, `JOB-018`, `REF-008`, `AI-004`, `AI-006`.
 | Feature | Input | Processing | Output | Failure handling |
 | --- | --- | --- | --- | --- |
 | DART disclosure lookup | workspaceId, workspace company | Verify ownership, resolve OpenDART corp code, fetch recent periodic disclosures | recommended report list | Missing key, empty match, or provider failure returns non-blocking empty/unavailable state |
-| DART AI analysis | selected `rceptNo`, report name, company/job/question context | Check GMS key/credit status, fetch/prepare report text, call GMS OpenAI-compatible `/responses` with structured JSON prompt | evidence cards, appeal points, suggested sentences, cautions, missing info | GMS unavailable blocks analysis only; workspace and manual memo remain usable |
+| DART AI analysis | selected `rceptNo`, report name, company/job/question context | Check GMS key/credit status, fetch/focus report text around business/R&D/risk/finance signals, call GMS OpenAI-compatible `/responses` with structured JSON prompt | evidence cards, appeal points, suggested sentences, cautions, missing info | GMS unavailable blocks analysis only; workspace and manual memo remain usable |
 | DART AI evaluation | structured AI result, selected `rceptNo` | Run deterministic quality gate for source grounding, policy safety, output normalization, and usefulness scoring | improved analysis result or failed analysis | Ungrounded or prohibited output is removed; no valid evidence means `FAILED` |
 | Save DART reference | completed analysisId | Verify same user/workspace, format reviewed result, save via existing reference material flow | `DART` reference material | Failed/foreign analysis cannot be saved |
 

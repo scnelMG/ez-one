@@ -80,7 +80,7 @@ gms:
 dart:
   ai:
     fast-model: ${DART_AI_FAST_MODEL:gpt-4.1-mini}
-    analysis-model: ${DART_AI_ANALYSIS_MODEL:gpt-4.1}
+    analysis-model: ${DART_AI_ANALYSIS_MODEL:gpt-5.4-mini}
     compare-model: ${DART_AI_COMPARE_MODEL:gemini-2.5-flash}
 
 auth:
