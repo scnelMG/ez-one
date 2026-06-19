@@ -85,7 +85,10 @@ describe('WorkspacePage', () => {
                 representative: '최수연',
                 homepage: 'https://www.navercorp.com',
                 business: '기업집단: 네이버',
-                address: '경기도 성남시 분당구 정자동'
+                address: '경기도 성남시 분당구 정자동',
+                sourceStatus: 'OFFICIAL',
+                sourceNames: ['금융위원회 기업기본정보', 'OpenDART 기업개황'],
+                lastUpdatedAt: '2026-06-20T09:00:00'
             },
             questions: [
                 {
@@ -256,6 +259,8 @@ describe('WorkspacePage', () => {
         expect(wrapper.text()).toContain('Backend Engineer');
         expect(wrapper.get('.workspace-info-panel').text()).toContain('지원정보');
         expect(wrapper.get('.workspace-info-panel').text()).toContain('기업정보');
+        expect(wrapper.get('.workspace-info-panel').text()).toContain('공식 확인됨');
+        expect(wrapper.get('.workspace-info-panel').text()).toContain('금융위원회 기업기본정보');
         expect(wrapper.get('.workspace-info-panel').text()).toContain('산업/분야');
         expect(wrapper.get('.workspace-info-panel').text()).toContain('대기업집단');
         expect(wrapper.get('.workspace-info-panel').text()).toContain('최수연');
@@ -277,7 +282,9 @@ describe('WorkspacePage', () => {
                 domain: 'unknown',
                 companyType: '미확인',
                 size: '미확인',
-                financialStatus: 'unverified'
+                financialStatus: 'unverified',
+                sourceStatus: 'UNVERIFIED',
+                sourceNames: []
             },
             questions: [],
             references: []
@@ -287,8 +294,36 @@ describe('WorkspacePage', () => {
 
         const companyPanel = wrapper.findAll('.workspace-info-section')[1];
         expect(companyPanel.text()).toContain('공식 API에서 확인된 기업 상세 정보가 아직 없습니다.');
+        expect(companyPanel.text()).toContain('미확인');
         expect(companyPanel.text()).not.toContain('기업유형');
         expect(companyPanel.text()).not.toContain('홈페이지');
+    });
+
+    it('DATA-004/WS-028: marks partially confirmed company profiles', async () => {
+        mocks.getWorkspace.mockResolvedValueOnce({
+            id: '102',
+            companyName: 'Partial Labs',
+            positionTitle: 'Data Analyst',
+            deadlineLabel: 'D-3',
+            statusLabel: '진행 중',
+            sourceUrl: 'https://www.jasoseol.com/',
+            companyDetails: {
+                domain: 'partial.example.com',
+                companyType: '스타트업',
+                homepage: 'https://partial.example.com',
+                sourceStatus: 'PARTIAL',
+                sourceNames: ['OpenDART 기업개황']
+            },
+            questions: [],
+            references: []
+        });
+
+        const wrapper = await mountWorkspace();
+
+        const companyPanel = wrapper.findAll('.workspace-info-section')[1];
+        expect(companyPanel.text()).toContain('일부 확인됨');
+        expect(companyPanel.text()).toContain('OpenDART 기업개황');
+        expect(companyPanel.text()).toContain('스타트업');
     });
 
     it('WS-011: keeps draft editing on auto-save and removes explicit header save actions', async () => {

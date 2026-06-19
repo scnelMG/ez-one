@@ -218,6 +218,91 @@ class MyBatisP1WorkspaceServiceTest {
     }
 
     @Test
+    void createBasketJobMergesFinancialCommissionAndOpenDartCompanyProfileFields() {
+        String sourceUrl = "https://jasoseol.com/recruit?rec=888";
+        String positionTitle = "서비스 백엔드 개발자";
+        when(mapper.findDuplicateBasketJob(1L, "네이버", sourceUrl, positionTitle)).thenReturn(Optional.empty());
+        when(realtimeCompanyEnrichmentService.enrich("네이버")).thenReturn(Optional.of(
+            new RealtimeCompanyEnrichment(
+                "navercorp.com",
+                "대기업",
+                "대기업",
+                "포털 및 기타 인터넷 정보매개 서비스업",
+                "유가증권시장",
+                "00266961",
+                "035420",
+                "2208162520",
+                "https://www.navercorp.com",
+                "1999-06-02",
+                "최수연",
+                4123,
+                "인터넷 검색 포털 운영",
+                "경기도 성남시 분당구 정자일로 95",
+                "FINANCIAL_COMMISSION_COMPANY_BASIC",
+                "금융위원회 기업기본정보",
+                "https://www.data.go.kr/data/15043184/openapi.do",
+                "공공데이터포털 금융위원회 기업기본정보 기준",
+                List.of(
+                    new RealtimeCompanyEnrichment.Source(
+                        "FINANCIAL_COMMISSION_COMPANY_BASIC",
+                        "금융위원회 기업기본정보",
+                        "https://www.data.go.kr/data/15043184/openapi.do",
+                        "공공데이터포털 금융위원회 기업기본정보 기준"
+                    ),
+                    new RealtimeCompanyEnrichment.Source(
+                        "OPENDART_COMPANY_OVERVIEW",
+                        "OpenDART 기업개황",
+                        "https://opendart.fss.or.kr/guide/detail.do?apiGrpCd=DS001&apiId=2019002",
+                        "OpenDART 기업개황 기준"
+                    )
+                )
+            )
+        ));
+        stubCreateBasketPersistence(10L, 20L, 30L, 40L);
+
+        service.createBasketJob(1L, new CreateBasketJobRequest(
+            null,
+            "네이버",
+            positionTitle,
+            "D-10",
+            sourceUrl,
+            "",
+            "MANUAL"
+        ));
+
+        verify(mapper).updateCompanyClassification(10L, "navercorp.com", "대기업", "대기업");
+        verify(mapper).upsertOfficialCompanyProfile(
+            10L,
+            "포털 및 기타 인터넷 정보매개 서비스업",
+            "https://www.navercorp.com",
+            "FINANCIAL_COMMISSION_COMPANY_BASIC",
+            "00266961",
+            "035420",
+            "2208162520",
+            "유가증권시장",
+            "1999-06-02",
+            "최수연",
+            4123,
+            "인터넷 검색 포털 운영",
+            "경기도 성남시 분당구 정자일로 95"
+        );
+        verify(mapper).recordCompanyProfileSource(
+            10L,
+            "FINANCIAL_COMMISSION_COMPANY_BASIC",
+            "금융위원회 기업기본정보",
+            "https://www.data.go.kr/data/15043184/openapi.do",
+            "공공데이터포털 금융위원회 기업기본정보 기준"
+        );
+        verify(mapper).recordCompanyProfileSource(
+            10L,
+            "OPENDART_COMPANY_OVERVIEW",
+            "OpenDART 기업개황",
+            "https://opendart.fss.or.kr/guide/detail.do?apiGrpCd=DS001&apiId=2019002",
+            "OpenDART 기업개황 기준"
+        );
+    }
+
+    @Test
     void listRecommendationJobsUsesSeededRecommendationRowsWithCompanyLogos() {
         JobRow line = recommendationRow(
             9001L,
