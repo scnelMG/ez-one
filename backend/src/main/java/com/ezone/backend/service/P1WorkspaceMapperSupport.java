@@ -44,6 +44,11 @@ public class P1WorkspaceMapperSupport {
                 null,
                 null,
                 null,
+                null,
+                null,
+                null,
+                null,
+                null,
                 null
             );
             mapper.recordCompanyProfileSource(

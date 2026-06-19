@@ -5606,6 +5606,28 @@ li {
   background: #111827;
 }
 
+.company-source-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 0;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: right;
+}
+
+.company-source-status {
+  color: #111827;
+}
+
+.company-source-names {
+  max-width: 260px;
+  overflow-wrap: anywhere;
+}
+
 .info-grid.compact {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

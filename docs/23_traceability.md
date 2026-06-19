@@ -91,3 +91,9 @@ Study still needs a formal requirement ID if it remains an active product surfac
 | `REF-008`, `AI-004`, `AI-006` | GMS-backed DART analysis produces structured evidence cards and appeal material for user review only. Saving requires an explicit user action and creates a `DART` reference material; essay drafts are not auto-mutated. | `DartAnalysisServiceTest`, `workspaceApi.test.js`, `WorkspacePage.test.js` |
 | Workspace ownership | DART disclosure, analysis, read, and save-reference endpoints run through workspace/user ownership checks before returning or saving data. | `DartAnalysisServiceTest` |
 | DART AI output quality | AI output is evaluated through structured JSON, prompt self-check, deterministic source/policy guardrails, score normalization, focused DART text preparation, and regression tests before it can become a completed analysis. Live smoke validation confirmed `gpt-5.4-mini` quality, but actual usage review selected `gpt-4.1` as the cost-controlled default. See `docs/34_dart-ai-evaluation.md`. | `DartAnalysisQualityEvaluatorTest`, `DartAnalysisServiceTest`, `OpenDartHttpClientTest`, `DartGmsLiveSmokeEvaluationTest`, `LocalConfigurationContractTest` |
+
+## 2026-06-20 Company Enrichment Traceability Update
+
+| Requirement | Implementation | Verification |
+| --- | --- | --- |
+| `DATA-002`, `DATA-004`, `JOB-016`, `WS-028` | Basket/recommendation/extension saves run a provider chain ordered as 금융위원회 기업기본정보, OpenDART 기업개황, then legacy registry/defaults. Provider failures remain non-blocking. Workspace company details include source status and source names. | `FinancialCommissionCompanyInfoProviderTest`, `OpenDartCompanyOverviewProviderTest`, `MyBatisP1WorkspaceServiceTest`, `WorkspacePage.test.js`, `workspaceApi.test.js` |

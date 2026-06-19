@@ -57,6 +57,9 @@
     <result property="companyHomepage" column="company_homepage"/>
     <result property="companyBusiness" column="company_business"/>
     <result property="companyAddress" column="company_address"/>
+    <result property="companySourceStatus" column="company_source_status"/>
+    <result property="companySourceNames" column="company_source_names"/>
+    <result property="companySourceUpdatedAt" column="company_source_updated_at"/>
   </resultMap>
 
   <resultMap id="questionRowMap" type="com.ezone.backend.domain.persistence.EssayQuestionRow">
@@ -122,11 +125,16 @@
   <insert id="upsertOfficialCompanyProfile">
     INSERT INTO company_profiles (
       company_id,
+      corp_code,
+      stock_code,
+      business_number,
       industry,
+      company_category,
       homepage_url,
       source_priority,
       founded_at,
       ceo_name,
+      employee_count,
       profile_summary,
       address,
       source_updated_at,
@@ -134,21 +142,31 @@
     )
     VALUES (
       #{companyId},
+      #{corpCode},
+      #{stockCode},
+      #{businessNumber},
       #{industry},
+      #{companyCategory},
       #{homepageUrl},
       #{sourcePriority},
       #{foundedAt},
       #{representative},
+      #{employeeCount},
       #{businessSummary},
       #{address},
       CURRENT_TIMESTAMP,
       CURRENT_TIMESTAMP
     )
     ON DUPLICATE KEY UPDATE
+      corp_code = COALESCE(NULLIF(VALUES(corp_code), ''), corp_code),
+      stock_code = COALESCE(NULLIF(VALUES(stock_code), ''), stock_code),
+      business_number = COALESCE(NULLIF(VALUES(business_number), ''), business_number),
       industry = VALUES(industry),
+      company_category = COALESCE(NULLIF(VALUES(company_category), ''), company_category),
       homepage_url = COALESCE(NULLIF(VALUES(homepage_url), ''), homepage_url),
       founded_at = COALESCE(VALUES(founded_at), founded_at),
       ceo_name = COALESCE(NULLIF(VALUES(ceo_name), ''), ceo_name),
+      employee_count = COALESCE(VALUES(employee_count), employee_count),
       profile_summary = COALESCE(NULLIF(VALUES(profile_summary), ''), profile_summary),
       address = COALESCE(NULLIF(VALUES(address), ''), address),
       source_priority = VALUES(source_priority),
@@ -542,12 +560,43 @@
            cp.capital_amount AS company_capital, cp.revenue_amount AS company_revenue,
            cp.ceo_name AS company_representative,
            COALESCE(cp.homepage_url, c.domain) AS company_homepage,
-           cp.profile_summary AS company_business, cp.address AS company_address
+           cp.profile_summary AS company_business, cp.address AS company_address,
+           CASE
+             WHEN COALESCE(cps.official_source_count, 0) = 0 THEN 'UNVERIFIED'
+             WHEN (
+               CASE WHEN cp.industry IS NULL OR cp.industry = '' THEN 0 ELSE 1 END +
+               CASE WHEN cp.company_category IS NULL OR cp.company_category = '' THEN 0 ELSE 1 END +
+               CASE WHEN cp.homepage_url IS NULL OR cp.homepage_url = '' THEN 0 ELSE 1 END +
+               CASE WHEN cp.founded_at IS NULL THEN 0 ELSE 1 END +
+               CASE WHEN cp.ceo_name IS NULL OR cp.ceo_name = '' THEN 0 ELSE 1 END +
+               CASE WHEN cp.employee_count IS NULL THEN 0 ELSE 1 END +
+               CASE WHEN cp.address IS NULL OR cp.address = '' THEN 0 ELSE 1 END +
+               CASE WHEN cp.profile_summary IS NULL OR cp.profile_summary = '' THEN 0 ELSE 1 END
+             ) >= 2 THEN 'OFFICIAL'
+             ELSE 'PARTIAL'
+           END AS company_source_status,
+           cps.source_names AS company_source_names,
+           DATE_FORMAT(cps.last_collected_at, '%Y-%m-%dT%H:%i:%s') AS company_source_updated_at
     FROM workspaces w
     JOIN basket_jobs bj ON bj.id = w.basket_job_id
     JOIN jobs j ON j.id = bj.job_id
     JOIN companies c ON c.id = j.company_id
     LEFT JOIN company_profiles cp ON cp.company_id = c.id
+    LEFT JOIN (
+      SELECT company_id,
+             GROUP_CONCAT(DISTINCT source_name ORDER BY source_name SEPARATOR ', ') AS source_names,
+             MAX(collected_at) AS last_collected_at,
+             SUM(CASE WHEN source_type IN (
+               'FINANCIAL_COMMISSION_COMPANY_BASIC',
+               'OPENDART_COMPANY_OVERVIEW',
+               'ALIO_PUBLIC_INSTITUTION',
+               'FTC_BUSINESS_GROUP',
+               'MME_CONFIRMATION',
+               'OFFICIAL_SITE'
+             ) THEN 1 ELSE 0 END) AS official_source_count
+      FROM company_profile_sources
+      GROUP BY company_id
+    ) cps ON cps.company_id = c.id
     WHERE w.user_id = #{userId}
       AND w.id = #{workspaceId}
       AND (

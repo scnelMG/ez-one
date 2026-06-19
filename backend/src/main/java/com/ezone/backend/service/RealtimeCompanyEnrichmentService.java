@@ -28,11 +28,12 @@ public class RealtimeCompanyEnrichmentService {
             return Optional.empty();
         }
 
+        RealtimeCompanyEnrichment merged = null;
         for (RealtimeCompanyEnrichmentProvider provider : providers) {
             try {
                 Optional<RealtimeCompanyEnrichment> enrichment = provider.enrich(companyName.trim());
                 if (enrichment.isPresent()) {
-                    return enrichment;
+                    merged = merged == null ? enrichment.get() : merged.mergeMissing(enrichment.get());
                 }
             } catch (RuntimeException exception) {
                 log.warn(
@@ -43,6 +44,6 @@ public class RealtimeCompanyEnrichmentService {
                 );
             }
         }
-        return Optional.empty();
+        return Optional.ofNullable(merged);
     }
 }

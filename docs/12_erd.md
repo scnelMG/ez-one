@@ -126,3 +126,10 @@ erDiagram
   - `FTC_BUSINESS_GROUP` for 공정거래위원회 기업집단포털.
   - `ALIO_PUBLIC_INSTITUTION` for ALIO 공공기관 경영정보 공개시스템.
 - Saved posting URLs remain in `company_info_sources` as `SAVED_JOB_URL/UNVERIFIED` and must not be used as official company-type evidence.
+
+## 2026-06-20 Financial Commission/OpenDART Company Snapshot Update
+
+- `company_profiles`의 기존 컬럼을 재사용해 금융위원회 기업기본정보와 OpenDART 기업개황에서 확인된 `corp_code`, `stock_code`, `business_number`, `industry`, `company_category`, `ceo_name`, `founded_at`, `employee_count`, `homepage_url`, `address`, `profile_summary`, `source_priority`를 저장한다.
+- 신규 migration 없이 `source_priority` 값으로 `FINANCIAL_COMMISSION_COMPANY_BASIC` 또는 `OPENDART_COMPANY_OVERVIEW`를 사용할 수 있다.
+- `company_profile_sources.source_type`은 `FINANCIAL_COMMISSION_COMPANY_BASIC`, `OPENDART_COMPANY_OVERVIEW`를 추가로 기록한다.
+- 저장 공고 URL은 계속 `company_info_sources`의 `SAVED_JOB_URL/UNVERIFIED` 컨텍스트로만 남기며, 채용 플랫폼 도메인은 기업 홈페이지 보강값으로 사용하지 않는다.

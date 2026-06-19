@@ -18,6 +18,9 @@ public record CompanyDetailsResponse(
     String representative,
     String homepage,
     String business,
-    String address
+    String address,
+    String sourceStatus,
+    String sourceNames,
+    String lastUpdatedAt
 ) {
 }

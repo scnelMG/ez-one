@@ -20,7 +20,10 @@ describe('workspaceApi', () => {
                         size: '1,000명 이상',
                         rating: 4.2,
                         startingSalary: 5000,
-                        financialStatus: 'stable'
+                        financialStatus: 'stable',
+                        sourceStatus: 'OFFICIAL',
+                        sourceNames: ['금융위원회 기업기본정보'],
+                        lastUpdatedAt: '2026-06-20T09:00:00'
                     },
                     questions: [],
                     references: []
@@ -52,7 +55,10 @@ describe('workspaceApi', () => {
             size: '1,000명 이상',
             rating: 4.2,
             startingSalary: 5000,
-            financialStatus: 'stable'
+            financialStatus: 'stable',
+            sourceStatus: 'OFFICIAL',
+            sourceNames: ['금융위원회 기업기본정보'],
+            lastUpdatedAt: '2026-06-20T09:00:00'
         });
         expect(defaults.sections.projects).toEqual([
             { title: 'EZ-ONE', summary: '지원 관리 서비스' }

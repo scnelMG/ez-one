@@ -54,6 +54,11 @@ class P1WorkspaceMapperSupportTest {
             null,
             null,
             null,
+            null,
+            null,
+            null,
+            null,
+            null,
             null
         );
         verify(mapper).recordCompanyProfileSource(

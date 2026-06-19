@@ -484,3 +484,10 @@ frontend/src/
 - The existing manual DART memo fields remain available when OpenDART or GMS is unavailable.
 - AI evidence cards are shown in the right push drawer only. They do not auto-fill or overwrite the essay draft editor.
 - Saved DART analysis results become normal reference material and can be reused through the existing reference side panel.
+
+## 2026-06-20 Workspace Company Snapshot Status
+
+- Requirement: `DATA-002`, `DATA-004`, `JOB-016`, `WS-028`.
+- 워크스페이스 기업정보 카드는 기존 기업정보 행 위에 `공식 확인됨`, `일부 확인됨`, `미확인` 상태와 확인 출처명을 표시한다.
+- 기업정보 행은 취준생용 최소 스냅샷(기업유형, 산업/분야, 사원수, 설립일, 대표자, 홈페이지, 주요정보, 주소)만 노출한다.
+- `미확인`, `unknown`, 빈 값, 자소설닷컴 같은 채용 플랫폼 도메인은 기업정보 행으로 표시하지 않는다.

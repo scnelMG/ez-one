@@ -237,6 +237,9 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         if (job.getCompanyId() == null) {
             return;
         }
+        if (applyRealtimeCompanyEnrichment(job)) {
+            return;
+        }
         if (enrichment.official() != null) {
             OfficialCompanyRegistry.OfficialCompany official = enrichment.official();
             mapper.upsertOfficialCompanyProfile(
@@ -244,6 +247,11 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
                 official.industry(),
                 official.homepageUrl(),
                 "OFFICIAL_CLASSIFICATION",
+                null,
+                null,
+                null,
+                null,
+                null,
                 null,
                 null,
                 null,
@@ -258,9 +266,6 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
             );
             return;
         }
-        if (applyRealtimeCompanyEnrichment(job)) {
-            return;
-        }
         mapper.upsertRuleBasedCompanyProfile(
             job.getCompanyId(),
             enrichment.defaults().industry(),
@@ -270,7 +275,9 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
 
     private boolean applyRealtimeCompanyEnrichment(JobRow job) {
         try {
-            Optional<RealtimeCompanyEnrichment> enrichment = realtimeCompanyEnrichmentService.enrich(job.getCompanyName());
+            Optional<RealtimeCompanyEnrichment> enrichment = Optional
+                .ofNullable(realtimeCompanyEnrichmentService.enrich(job.getCompanyName()))
+                .orElse(Optional.empty());
             if (enrichment.isEmpty()) {
                 return false;
             }
@@ -289,19 +296,24 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
                 job.getCompanyId(),
                 official.industry(),
                 official.homepageUrl(),
-                "REALTIME_OFFICIAL_API",
+                official.sourceType(),
+                official.corpCode(),
+                official.stockCode(),
+                official.businessNumber(),
+                official.companyCategory(),
                 official.foundedAt(),
                 official.representative(),
+                official.employeeCount(),
                 official.businessSummary(),
                 official.address()
             );
-            mapper.recordCompanyProfileSource(
+            official.sources().forEach(source -> mapper.recordCompanyProfileSource(
                 job.getCompanyId(),
-                official.sourceType(),
-                official.sourceName(),
-                official.sourceUrl(),
-                official.sourceNote()
-            );
+                source.sourceType(),
+                source.sourceName(),
+                source.sourceUrl(),
+                source.sourceNote()
+            ));
             return true;
         } catch (RuntimeException exception) {
             log.warn(
@@ -741,7 +753,10 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
                 row.getCompanyRepresentative(),
                 row.getCompanyHomepage(),
                 row.getCompanyBusiness(),
-                row.getCompanyAddress()
+                row.getCompanyAddress(),
+                row.getCompanySourceStatus(),
+                row.getCompanySourceNames(),
+                row.getCompanySourceUpdatedAt()
             ),
             mapper.listQuestions(row.getId()).stream().map(this::toQuestionResponse).toList(),
             mapper.listReferences(row.getId()).stream().map(this::toReferenceResponse).toList()
