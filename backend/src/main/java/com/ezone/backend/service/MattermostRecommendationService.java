@@ -28,6 +28,7 @@ public class MattermostRecommendationService {
     private final MattermostMapper mattermostMapper;
     private final P1WorkspaceMapperSupport workspaceSupport;
     private final P1WorkspaceService workspaceService;
+    @SuppressWarnings("unused")
     private final Optional<AiJobRecommendationClient> aiRecommendationClient;
 
     public MattermostRecommendationService(
@@ -44,10 +45,10 @@ public class MattermostRecommendationService {
 
     public List<DashboardJobResponse> listOpenRecommendations(Long userId) {
         LocalDate today = LocalDate.now();
-        return mattermostMapper.listRecommendationCandidates().stream()
+        return mattermostMapper.listRecommendationCandidates(userId).stream()
             .filter(row -> isOpenDeadline(row.getDeadlineLabel(), today))
-            .map(this::toRecommendationResponse)
-            .sorted(Comparator.comparing(DashboardJobResponse::recommendationScore, Comparator.reverseOrder())
+            .map(row -> toRecommendationResponse(row, today))
+            .sorted(Comparator.comparing(DashboardJobResponse::recommendationScore, Comparator.nullsLast(Comparator.reverseOrder()))
                 .thenComparing(response -> DeadlineLabelRanker.rank(response.deadlineLabel()))
                 .thenComparing(DashboardJobResponse::basketJobId))
             .toList();
@@ -73,15 +74,16 @@ public class MattermostRecommendationService {
         ));
     }
 
-    private DashboardJobResponse toRecommendationResponse(MattermostParsedJobPostRow row) {
-        RecommendationSignal signal = recommend(row);
+    private DashboardJobResponse toRecommendationResponse(MattermostParsedJobPostRow row, LocalDate today) {
+        String deadlineLabel = displayDeadlineLabel(row, today);
+        RecommendationSignal signal = recommendationSignal(row, deadlineLabel);
         CompanyRecommendationInfo companyInfo = companyInfo(row.getCompanyName(), row.getUrl());
         return new DashboardJobResponse(
             row.getId(),
             null,
             row.getCompanyName(),
             row.getTitle(),
-            row.getDeadlineLabel(),
+            deadlineLabel,
             companyInfo.logoUrl(),
             companyInfo.domain().orElse(null),
             companyInfo.companyType().orElse(null),
@@ -93,12 +95,16 @@ public class MattermostRecommendationService {
         );
     }
 
-    private RecommendationSignal recommend(MattermostParsedJobPostRow row) {
-        Optional<AiJobRecommendationClient.AiRecommendationSignal> aiSignal = aiRecommendationClient
-            .flatMap(client -> client.recommend(row));
-        if (aiSignal.isPresent()) {
-            AiJobRecommendationClient.AiRecommendationSignal signal = aiSignal.get();
-            return new RecommendationSignal(normalizeScore(signal.score()), safeReason(signal.reason()));
+    private RecommendationSignal recommendationSignal(MattermostParsedJobPostRow row, String deadlineLabel) {
+        String status = safe(row.getRecommendationStatus()).toUpperCase(Locale.ROOT);
+        if ("PENDING".equals(status)) {
+            return new RecommendationSignal(null, "AI 점수 계산 중");
+        }
+        if ("READY".equals(status) && row.getRecommendationScore() != null) {
+            return new RecommendationSignal(
+                normalizeScore(row.getRecommendationScore()),
+                safeReason(row.getRecommendationReason(), "저장된 AI 점수 기준 추천")
+            );
         }
 
         int score = 55;
@@ -108,7 +114,7 @@ public class MattermostRecommendationService {
             score += 20;
             reason = "직무 키워드가 SSAFY 지원자에게 적합";
         }
-        if (isSoon(row.getDeadlineLabel())) {
+        if (isSoon(deadlineLabel)) {
             score += 15;
             reason = "마감이 가까운 공고라 우선 추천";
         }
@@ -142,18 +148,18 @@ public class MattermostRecommendationService {
     }
 
     private boolean isOpenDeadline(String deadlineLabel, LocalDate today) {
-        String label = safe(deadlineLabel);
-        if (label.isBlank()) {
-            return true;
+        String label = displayDeadlineLabel(deadlineLabel, today);
+        if (label.equals("마감됨")) {
+            return false;
         }
-        if (label.contains("상시") || label.contains("수시") || label.contains("채용 시 마감") || label.contains("미정")) {
+        if (label.equals("마감일 미확인") || label.equals("상시 채용") || label.equals("수시 채용") || label.equals("채용 시 마감")) {
             return true;
         }
         Matcher dDayMatcher = D_DAY_PATTERN.matcher(label);
         if (dDayMatcher.matches()) {
             return Integer.parseInt(dDayMatcher.group(1)) >= 0;
         }
-        if (label.equals("오늘")) {
+        if (label.equals("오늘 마감")) {
             return true;
         }
         try {
@@ -171,6 +177,53 @@ public class MattermostRecommendationService {
             return !currentYearDeadline.isBefore(today);
         }
         return true;
+    }
+
+    private String displayDeadlineLabel(MattermostParsedJobPostRow row, LocalDate today) {
+        String normalized = safe(row.getNormalizedDeadlineLabel());
+        return normalized.isBlank() ? displayDeadlineLabel(row.getDeadlineLabel(), today) : normalized;
+    }
+
+    private String displayDeadlineLabel(String deadlineLabel, LocalDate today) {
+        String label = safe(deadlineLabel);
+        if (label.isBlank()) {
+            return "마감일 미확인";
+        }
+        if (label.contains("상시")) {
+            return "상시 채용";
+        }
+        if (label.contains("수시")) {
+            return "수시 채용";
+        }
+        if (label.contains("채용 시 마감")) {
+            return "채용 시 마감";
+        }
+        Matcher dDayMatcher = D_DAY_PATTERN.matcher(label);
+        if (dDayMatcher.matches()) {
+            int days = Integer.parseInt(dDayMatcher.group(1));
+            return days == 0 ? "오늘 마감" : "D-" + days;
+        }
+        if (label.equals("오늘")) {
+            return "오늘 마감";
+        }
+        try {
+            LocalDate date = LocalDate.parse(label, KOREAN_DATE_FORMAT);
+            return date.isBefore(today) ? "마감됨" : KOREAN_DATE_FORMAT.format(date);
+        } catch (DateTimeParseException ignored) {
+            // Try the next known Mattermost deadline format.
+        }
+        Matcher monthDayMatcher = MONTH_DAY_PATTERN.matcher(label);
+        if (monthDayMatcher.matches()) {
+            MonthDay deadline = MonthDay.of(
+                Integer.parseInt(monthDayMatcher.group(1)),
+                Integer.parseInt(monthDayMatcher.group(2))
+            );
+            LocalDate currentYearDeadline = deadline.atYear(today.getYear());
+            return currentYearDeadline.isBefore(today)
+                ? "마감됨"
+                : KOREAN_DATE_FORMAT.format(currentYearDeadline);
+        }
+        return "마감일 미확인";
     }
 
     private String logoUrl(String companyName, String sourceUrl) {
@@ -218,15 +271,15 @@ public class MattermostRecommendationService {
         return Math.max(0, Math.min(score, 100));
     }
 
-    private String safeReason(String reason) {
-        return safe(reason).isBlank() ? "GMS AI가 공고와 사용자 적합도를 기준으로 추천" : reason.trim();
+    private String safeReason(String reason, String fallback) {
+        return safe(reason).isBlank() ? fallback : reason.trim();
     }
 
     private String safe(String value) {
         return value == null ? "" : value.trim();
     }
 
-    private record RecommendationSignal(int score, String reason) {
+    private record RecommendationSignal(Integer score, String reason) {
     }
 
     private record CompanyRecommendationInfo(Optional<String> domain, Optional<String> companyType, String logoUrl) {

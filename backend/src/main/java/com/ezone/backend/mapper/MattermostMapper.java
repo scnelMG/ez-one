@@ -44,16 +44,21 @@ public interface MattermostMapper {
 
     @Insert("""
         INSERT INTO mm_parsed_job_posts (
-          mm_message_id, company_name, title, url, deadline_label, review_status, created_at, updated_at
+          mm_message_id, company_name, title, url, deadline_label, deadline_type, deadline_date,
+          normalized_deadline_label, review_status, created_at, updated_at
         )
         VALUES (
-          #{messageId}, #{companyName}, #{title}, #{url}, #{deadlineLabel}, #{reviewStatus},
+          #{messageId}, #{companyName}, #{title}, #{url}, #{deadlineLabel}, #{deadlineType}, #{deadlineDate},
+          #{normalizedDeadlineLabel}, #{reviewStatus},
           CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
         )
         ON DUPLICATE KEY UPDATE
           company_name = VALUES(company_name),
           title = VALUES(title),
           deadline_label = VALUES(deadline_label),
+          deadline_type = VALUES(deadline_type),
+          deadline_date = VALUES(deadline_date),
+          normalized_deadline_label = VALUES(normalized_deadline_label),
           updated_at = CURRENT_TIMESTAMP
         """)
     @Options(useGeneratedKeys = true, keyProperty = "id")
@@ -61,9 +66,13 @@ public interface MattermostMapper {
 
     @Select("""
         SELECT id, mm_message_id AS messageId, company_name AS companyName, title, url,
-               deadline_label AS deadlineLabel, review_status AS reviewStatus,
+               deadline_label AS deadlineLabel, deadline_type AS deadlineType,
+               DATE_FORMAT(deadline_date, '%Y-%m-%d') AS deadlineDate,
+               normalized_deadline_label AS normalizedDeadlineLabel,
+               review_status AS reviewStatus,
                reviewer_user_id AS reviewerUserId, promoted_job_id AS promotedJobId,
-               NULL AS postedAt, NULL AS receivedAt
+               NULL AS postedAt, NULL AS receivedAt,
+               NULL AS recommendationScore, NULL AS recommendationReason, NULL AS recommendationStatus
         FROM mm_parsed_job_posts
         WHERE id = #{id}
         LIMIT 1
@@ -72,9 +81,13 @@ public interface MattermostMapper {
 
     @Select("""
         SELECT id, mm_message_id AS messageId, company_name AS companyName, title, url,
-               deadline_label AS deadlineLabel, review_status AS reviewStatus,
+               deadline_label AS deadlineLabel, deadline_type AS deadlineType,
+               DATE_FORMAT(deadline_date, '%Y-%m-%d') AS deadlineDate,
+               normalized_deadline_label AS normalizedDeadlineLabel,
+               review_status AS reviewStatus,
                reviewer_user_id AS reviewerUserId, promoted_job_id AS promotedJobId,
-               NULL AS postedAt, NULL AS receivedAt
+               NULL AS postedAt, NULL AS receivedAt,
+               NULL AS recommendationScore, NULL AS recommendationReason, NULL AS recommendationStatus
         FROM mm_parsed_job_posts
         WHERE review_status = #{reviewStatus}
         ORDER BY id DESC
@@ -83,16 +96,25 @@ public interface MattermostMapper {
 
     @Select("""
         SELECT p.id, p.mm_message_id AS messageId, p.company_name AS companyName, p.title, p.url,
-               p.deadline_label AS deadlineLabel, p.review_status AS reviewStatus,
+               p.deadline_label AS deadlineLabel, p.deadline_type AS deadlineType,
+               DATE_FORMAT(p.deadline_date, '%Y-%m-%d') AS deadlineDate,
+               p.normalized_deadline_label AS normalizedDeadlineLabel,
+               p.review_status AS reviewStatus,
                p.reviewer_user_id AS reviewerUserId, p.promoted_job_id AS promotedJobId,
                DATE_FORMAT(m.posted_at, '%Y-%m-%dT%H:%i:%s') AS postedAt,
-               DATE_FORMAT(m.received_at, '%Y-%m-%dT%H:%i:%s') AS receivedAt
+               DATE_FORMAT(m.received_at, '%Y-%m-%dT%H:%i:%s') AS receivedAt,
+               s.score AS recommendationScore,
+               s.reason AS recommendationReason,
+               s.status AS recommendationStatus
         FROM mm_parsed_job_posts p
         JOIN mm_messages m ON m.id = p.mm_message_id
+        LEFT JOIN mm_recommendation_scores s
+          ON s.candidate_id = p.id
+         AND s.user_id = #{userId}
         WHERE p.review_status IN ('NEEDS_REVIEW', 'APPROVED')
         ORDER BY p.id DESC
         """)
-    List<MattermostParsedJobPostRow> listRecommendationCandidates();
+    List<MattermostParsedJobPostRow> listRecommendationCandidates(@Param("userId") Long userId);
 
     @Update("""
         UPDATE mm_parsed_job_posts

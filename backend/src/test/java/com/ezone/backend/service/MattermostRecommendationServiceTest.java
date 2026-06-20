@@ -2,6 +2,8 @@ package com.ezone.backend.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.groups.Tuple.tuple;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -30,12 +32,15 @@ class MattermostRecommendationServiceTest {
     );
 
     @Test
-    void listOpenRecommendationsExcludesExpiredJobsAndAddsAiRecommendationSignals() {
+    void listOpenRecommendationsExcludesExpiredJobsAndUsesStoredOrRuleSignalsWithoutAiCalls() {
         MattermostParsedJobPostRow expired = candidate(1L, "Expired", "Backend Developer", "2026.01.01");
         MattermostParsedJobPostRow open = candidate(2L, "Line", "AI Platform Engineer", "상시/수시/채용 시 마감 공고");
         MattermostParsedJobPostRow approved = candidate(3L, "Kakao", "서비스 개발자", "D-5");
         approved.setReviewStatus("APPROVED");
-        when(mattermostMapper.listRecommendationCandidates()).thenReturn(List.of(expired, open, approved));
+        approved.setRecommendationScore(92);
+        approved.setRecommendationReason("저장된 AI 점수 기준으로 직무 적합도가 높음");
+        approved.setRecommendationStatus("READY");
+        when(mattermostMapper.listRecommendationCandidates(1L)).thenReturn(List.of(expired, open, approved));
 
         List<DashboardJobResponse> recommendations = service.listOpenRecommendations(1L);
 
@@ -47,26 +52,26 @@ class MattermostRecommendationServiceTest {
             )
             .containsExactly(
                 tuple(3L, "Kakao", "D-5"),
-                tuple(2L, "Line", "상시/수시/채용 시 마감 공고")
+                tuple(2L, "Line", "상시 채용")
             );
-        assertThat(recommendations.get(0).recommendationScore()).isGreaterThanOrEqualTo(80);
-        assertThat(recommendations.get(0).recommendationReason()).contains("마감");
+        assertThat(recommendations.get(0).recommendationScore()).isEqualTo(92);
+        assertThat(recommendations.get(0).recommendationReason()).contains("저장된 AI 점수");
         assertThat(recommendations.get(1).recommendationReason()).contains("직무");
+        verify(aiClient, never()).recommend(any());
     }
 
     @Test
-    void listOpenRecommendationsUsesGmsAiRecommendationWhenAvailable() {
+    void listOpenRecommendationsShowsPendingScoreWithoutCallingGmsAi() {
         MattermostParsedJobPostRow open = candidate(2L, "Line", "AI Platform Engineer", "D-9");
-        when(mattermostMapper.listRecommendationCandidates()).thenReturn(List.of(open));
-        when(aiClient.recommend(open)).thenReturn(Optional.of(
-            new AiJobRecommendationClient.AiRecommendationSignal(94, "GMS가 지원자 기술스택과 직무 적합도가 높다고 판단")
-        ));
+        open.setRecommendationStatus("PENDING");
+        when(mattermostMapper.listRecommendationCandidates(1L)).thenReturn(List.of(open));
 
         List<DashboardJobResponse> recommendations = service.listOpenRecommendations(1L);
 
         assertThat(recommendations).hasSize(1);
-        assertThat(recommendations.get(0).recommendationScore()).isEqualTo(94);
-        assertThat(recommendations.get(0).recommendationReason()).isEqualTo("GMS가 지원자 기술스택과 직무 적합도가 높다고 판단");
+        assertThat(recommendations.get(0).recommendationScore()).isNull();
+        assertThat(recommendations.get(0).recommendationReason()).isEqualTo("AI 점수 계산 중");
+        verify(aiClient, never()).recommend(any());
     }
 
     @Test
@@ -75,7 +80,7 @@ class MattermostRecommendationServiceTest {
         open.setUrl("https://www.wanted.co.kr/wd/313220");
         open.setPostedAt("2026-04-16T15:26:00");
         open.setReceivedAt("2026-06-18T20:30:00");
-        when(mattermostMapper.listRecommendationCandidates()).thenReturn(List.of(open));
+        when(mattermostMapper.listRecommendationCandidates(1L)).thenReturn(List.of(open));
 
         List<DashboardJobResponse> recommendations = service.listOpenRecommendations(1L);
 
@@ -86,6 +91,20 @@ class MattermostRecommendationServiceTest {
         assertThat(recommendations.get(0).collectedAt()).isEqualTo("2026-06-18T20:30:00");
         assertThat(recommendations.get(0).companyLogoUrl())
             .isEqualTo("https://www.google.com/s2/favicons?domain=upstage.ai&sz=128");
+    }
+
+    @Test
+    void listOpenRecommendationsNormalizesDeadlineLabelsForDisplay() {
+        MattermostParsedJobPostRow today = candidate(5L, "Channel Corp", "Backend Engineer", "D-0");
+        MattermostParsedJobPostRow unknown = candidate(6L, "Unknown", "Frontend Engineer", "");
+        MattermostParsedJobPostRow dueDate = candidate(7L, "Toss", "Data Engineer", "12/31(화)");
+        when(mattermostMapper.listRecommendationCandidates(1L)).thenReturn(List.of(today, unknown, dueDate));
+
+        List<DashboardJobResponse> recommendations = service.listOpenRecommendations(1L);
+
+        assertThat(recommendations)
+            .extracting(DashboardJobResponse::deadlineLabel)
+            .contains("오늘 마감", "마감일 미확인", "2026.12.31");
     }
 
     @Test

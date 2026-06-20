@@ -121,6 +121,17 @@ Prompt rules: use only report-provided facts, include source section and receipt
 
 Evaluation details and regression history are recorded in `docs/34_dart-ai-evaluation.md`.
 
+## 2026-06-20 Mattermost Recommendation Listing
+
+Requirement: `MM-001`, `MM-006`, `MM-007`, `MM-008`, `MM-009`, `REC-003`, `REC-004`.
+
+| Feature | Input | Processing | Output | Failure handling |
+| --- | --- | --- | --- | --- |
+| Mattermost all-jobs list | authenticated SSAFY user | Read parsed open candidates and user-scoped stored scores; do not call AI synchronously | all Mattermost job cards with deadline, company metadata, score or calculating state | non-SSAFY users receive forbidden; missing score falls back to pending/rule state |
+| Stored scoring display | candidate, user score row | Use `READY` score/reason when present; show calculating for `PENDING`; otherwise deterministic fallback | `recommendationScore`, `recommendationReason` | failed/missing AI result does not hide or block the job |
+| Deadline normalization | raw `deadline_label` plus normalized columns | Prefer stored normalized label and filter expired candidates | 마감 전 feed, 마감 임박 segment, deadline sorting | unknown deadline remains visible as 마감일 미확인 |
+| Mattermost save | candidate id | Promote candidate if needed, then reuse basket/workspace save flow | `basketJobId`, `workspaceId` | missing AI score does not block save; duplicate handling stays in basket flow |
+
 ## 2026-06-20 Company Snapshot Enrichment
 
 Requirement: `DATA-002`, `DATA-004`, `JOB-016`, `WS-028`.

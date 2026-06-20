@@ -345,3 +345,12 @@
 - AI output must not automatically modify essay drafts. Users review the result first and explicitly save it as reference material.
 - Out of scope: investment advice, stock outlooks, hiring probability prediction, automatic essay rewriting, a separate AI server, new frontend framework, or new database engine.
 - OpenDART and GMS failures must not block existing workspace loading or manual DART memo writing.
+
+## 2026-06-20 Mattermost Recommendation Scope Update
+
+- Approved requirement IDs: `MM-001`, `MM-006`, `MM-007`, `MM-008`, `MM-009`, `REC-003`, and `REC-004`.
+- Mattermost recommendations are active for SSAFY users only. The global navigation exposes the route only when `user_profiles.is_ssafy = true`, and the backend still enforces the same authorization.
+- `GET /api/recommendations/jobs?source=mattermost` returns all parsed open Mattermost candidates, not only already promoted saved jobs.
+- The list API must not make a synchronous AI call. It returns a stored AI score when one exists, a pending state when scoring is not ready, or a deterministic rule fallback score.
+- Mattermost deadline text is normalized into durable deadline fields so the UI can show all jobs, AI 추천, and 마감 임박 views without reparsing raw channel text.
+- Saving a Mattermost recommendation continues to use the existing basket/workspace flow and must not be blocked by AI scoring state.

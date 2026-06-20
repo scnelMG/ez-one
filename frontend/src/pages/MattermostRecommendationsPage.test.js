@@ -26,6 +26,20 @@ const jobs = [
         recommendationReason: '마감이 가까운 공고라 우선 추천',
         postedAt: '2026-04-16T15:26:00',
         collectedAt: '2026-06-18T20:30:00'
+    },
+    {
+        id: '9102',
+        companyName: 'Channel Corp',
+        positionTitle: 'Frontend Engineer',
+        deadlineLabel: '상시 채용',
+        sourceUrl: 'https://www.wanted.co.kr/wd/324638',
+        companyLogoUrl: 'https://www.google.com/s2/favicons?domain=channel.io&sz=128',
+        companyDomain: 'channel.io',
+        companyType: '스타트업',
+        recommendationScore: null,
+        recommendationReason: 'AI 점수 계산 중',
+        postedAt: '2026-01-13T15:26:00',
+        collectedAt: '2026-06-18T20:31:00'
     }
 ];
 
@@ -48,7 +62,10 @@ describe('MattermostRecommendationsPage', () => {
         expect(recommendationApi.listMattermostJobs).toHaveBeenCalled();
         expect(wrapper.get('[data-testid="mm-recommendation-title"]').text()).toContain('Mattermost');
         expect(wrapper.text()).toContain('마감 전 공고');
-        expect(wrapper.text()).toContain('Webhook 수집 기준');
+        expect(wrapper.text()).toContain('전체 공고');
+        expect(wrapper.text()).toContain('AI 추천');
+        expect(wrapper.text()).toContain('마감 임박');
+        expect(wrapper.get('[data-testid="mm-sort-select"]').element.value).toBe('deadline');
         expect(wrapper.get('[data-testid="mm-recommendation-card-9101"]').text()).toContain('Line');
         expect(wrapper.get('[data-testid="mm-recommendation-card-9101"]').text()).toContain('Server Platform Engineer');
         expect(wrapper.get('[data-testid="mm-recommendation-card-9101"]').text()).toContain('line.me');
@@ -56,10 +73,31 @@ describe('MattermostRecommendationsPage', () => {
         expect(wrapper.get('[data-testid="mm-recommendation-card-9101"]').text()).toContain('90');
         expect(wrapper.get('[data-testid="mm-recommendation-card-9101"]').text()).toContain('마감이 가까운 공고라 우선 추천');
         expect(wrapper.get('[data-testid="mm-recommendation-card-9101"]').text()).toContain('게시');
+        expect(wrapper.get('[data-testid="mm-recommendation-card-9102"]').text()).toContain('Channel Corp');
+        expect(wrapper.get('[data-testid="mm-recommendation-card-9102"]').text()).toContain('상시 채용');
+        expect(wrapper.get('[data-testid="mm-recommendation-card-9102"]').text()).toContain('공식 사이트: channel.io');
+        expect(wrapper.get('[data-testid="mm-recommendation-card-9102"]').text()).toContain('계산 중');
         expect(wrapper.get('[data-testid="mm-recommendation-card-9101"]').text()).not.toContain('수집 6. 18.');
         expect(wrapper.get('[data-testid="mm-recommendation-card-9101"]').text()).not.toContain('승인 후보');
         expect(wrapper.get('[data-testid="mm-recommendation-source-9101"]').attributes('href')).toBe('https://careers.linecorp.com/jobs/102');
         expect(wrapper.get('[data-testid="mm-save-9101"]').text()).toBe('공고 장바구니 저장');
+    });
+
+    it('MM-009/REC-004: filters AI recommendations and urgent jobs without hiding the all-jobs default', async () => {
+        const wrapper = await mountPage();
+
+        expect(wrapper.findAll('[data-testid^="mm-recommendation-card-"]').map((card) => card.attributes('data-testid'))).toEqual([
+            'mm-recommendation-card-9101',
+            'mm-recommendation-card-9102'
+        ]);
+
+        await wrapper.get('[data-testid="mm-segment-ai"]').trigger('click');
+        expect(wrapper.find('[data-testid="mm-recommendation-card-9101"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="mm-recommendation-card-9102"]').exists()).toBe(false);
+
+        await wrapper.get('[data-testid="mm-segment-urgent"]').trigger('click');
+        expect(wrapper.find('[data-testid="mm-recommendation-card-9101"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="mm-recommendation-card-9102"]').exists()).toBe(false);
     });
 
     it('MM-001: saves a Mattermost recommendation into the basket and exposes the workspace link', async () => {

@@ -71,4 +71,13 @@ mm 채널에는 채용공고, 채용 관련 공지, 합격 후기, 일반 공지
 | `parse_status` | `IGNORED` |
 | `createdParsedJobPost` | `false` |
 
+## 2026-06-20 활성화된 추천 조회 범위
+
+- Requirement: `MM-001`, `MM-006`, `MM-007`, `MM-008`, `MM-009`, `REC-003`, `REC-004`.
+- Mattermost 수집/후보화는 SSAFY 사용자 추천 화면의 활성 데이터 소스로 사용한다. 단, 접근 권한은 계속 `user_profiles.is_ssafy = true`로 제한한다.
+- 추천 목록은 승인/저장된 공고만 보여주지 않고, 파싱된 마감 전 후보 전체를 우선 보여준다.
+- 목록 조회는 AI를 즉시 호출하지 않는다. 후보별 저장 점수가 있으면 사용하고, 없으면 `PENDING` 또는 `RULE_FALLBACK` 상태로 응답한다.
+- 마감 정보는 원문 `deadline_label`과 별도로 `deadline_type`, `deadline_date`, `normalized_deadline_label`에 저장한다.
+- UI는 전체 공고를 기본값으로 보여주며 `AI 추천`, `마감 임박` 세그먼트와 `마감 기한순`, `AI 추천 점수순`, `최근 게시순` 정렬을 제공한다.
+
 이 메시지는 `mm_messages`에는 저장하지만 `mm_parsed_job_posts` row를 만들지 않는다.

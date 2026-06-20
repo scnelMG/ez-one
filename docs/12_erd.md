@@ -129,6 +129,16 @@ erDiagram
 
 ## 2026-06-20 Financial Commission/OpenDART Company Snapshot Update
 
+## 2026-06-20 Mattermost Recommendation Scoring Update
+
+- Requirement: `MM-001`, `MM-006`, `MM-007`, `MM-008`, `MM-009`, `REC-003`, `REC-004`.
+- `mm_parsed_job_posts` now includes `deadline_label`, `deadline_type`, `deadline_date`, and `normalized_deadline_label`. The raw channel deadline remains available while normalized fields support stable filtering and sorting.
+- `mm_recommendation_scores` stores per-user candidate scoring with `user_id`, `candidate_id`, `score`, `role_score`, `skills_score`, `profile_score`, `deadline_score`, `source_score`, `recommended`, `reason`, `evidence_json`, `model_version`, and `status`.
+- Score status values are `PENDING`, `READY`, `FAILED`, and `RULE_FALLBACK`. The recommendation list can render immediately even when a durable AI score has not been produced yet.
+- A unique key on `(user_id, candidate_id)` keeps stored scores user-scoped and prevents duplicate recommendation score rows.
+
+## 2026-06-20 Financial Commission/OpenDART Company Snapshot Details
+
 - `company_profiles`의 기존 컬럼을 재사용해 금융위원회 기업기본정보와 OpenDART 기업개황에서 확인된 `corp_code`, `stock_code`, `business_number`, `industry`, `company_category`, `ceo_name`, `founded_at`, `employee_count`, `homepage_url`, `address`, `profile_summary`, `source_priority`를 저장한다.
 - 신규 migration 없이 `source_priority` 값으로 `FINANCIAL_COMMISSION_COMPANY_BASIC` 또는 `OPENDART_COMPANY_OVERVIEW`를 사용할 수 있다.
 - `company_profile_sources.source_type`은 `FINANCIAL_COMMISSION_COMPANY_BASIC`, `OPENDART_COMPANY_OVERVIEW`를 추가로 기록한다.
