@@ -41,28 +41,58 @@ public class NationalPensionApiClient {
         }
 
         try {
-            URI uri = UriComponentsBuilder.fromHttpUrl(API_URL)
-                    .queryParam("serviceKey", serviceKey)
-                    .queryParam("wkpl_nm", companyName)
-                    .queryParam("pageNo", 1)
-                    .queryParam("numOfRows", 10)
-                    .queryParam("resultType", "json")
-                    .build()
-                    .toUri();
+            String urlString = API_URL + "?serviceKey=" + java.net.URLEncoder.encode(serviceKey, "UTF-8") +
+                    "&wkplNm=" + java.net.URLEncoder.encode(companyName, "UTF-8") +
+                    "&pageNo=1&numOfRows=10";
+            URI uri = new URI(urlString);
 
             ResponseEntity<String> response = restTemplate.getForEntity(uri, String.class);
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                PensionApiResponse apiResponse = objectMapper.readValue(response.getBody(), PensionApiResponse.class);
-                if (apiResponse != null && apiResponse.getResponse() != null && apiResponse.getResponse().getBody() != null) {
-                    return apiResponse.getResponse().getBody().getItems();
-                }
-            } else {
-                log.error("Failed to fetch pension data for {}: {}", companyName, response.getStatusCode());
+                return parseXmlResponse(response.getBody());
             }
         } catch (Exception e) {
             log.error("Exception while fetching pension data for {}: {}", companyName, e.getMessage(), e);
         }
+
         return Collections.emptyList();
+    }
+
+    private List<CompanyPensionData> parseXmlResponse(String xml) {
+        log.info("XML Response: {}", xml);
+        List<CompanyPensionData> list = new java.util.ArrayList<>();
+        try {
+            javax.xml.parsers.DocumentBuilderFactory factory = javax.xml.parsers.DocumentBuilderFactory.newInstance();
+            javax.xml.parsers.DocumentBuilder builder = factory.newDocumentBuilder();
+            org.w3c.dom.Document doc = builder.parse(new org.xml.sax.InputSource(new java.io.StringReader(xml)));
+            org.w3c.dom.NodeList itemNodes = doc.getElementsByTagName("item");
+            for (int i = 0; i < itemNodes.getLength(); i++) {
+                org.w3c.dom.Element item = (org.w3c.dom.Element) itemNodes.item(i);
+                CompanyPensionData data = new CompanyPensionData();
+                data.setCompanyName(getTagValue("wkplNm", item));
+                data.setAddress(getTagValue("wkplRoadNmDtlAddr", item));
+
+                String employeeCountStr = getTagValue("crrmfJnCnt", item);
+                if (employeeCountStr != null && !employeeCountStr.isEmpty()) {
+                    try { data.setEmployeeCount(Integer.parseInt(employeeCountStr)); } catch(Exception ignored) {}
+                }
+                data.setJoinDate(getTagValue("jnScdDt", item));
+                list.add(data);
+            }
+        } catch (Exception e) {
+            log.error("XML parse error", e);
+        }
+        return list;
+    }
+
+    private String getTagValue(String tag, org.w3c.dom.Element element) {
+        org.w3c.dom.NodeList nodeList = element.getElementsByTagName(tag);
+        if (nodeList != null && nodeList.getLength() > 0) {
+            org.w3c.dom.Node node = nodeList.item(0);
+            if (node != null && node.getTextContent() != null) {
+                return node.getTextContent();
+            }
+        }
+        return null;
     }
 
     public static class PensionApiResponse {

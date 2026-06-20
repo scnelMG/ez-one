@@ -60,6 +60,7 @@
     <result property="companySourceStatus" column="company_source_status"/>
     <result property="companySourceNames" column="company_source_names"/>
     <result property="companySourceUpdatedAt" column="company_source_updated_at"/>
+    <result property="companyCategory" column="company_category"/>
   </resultMap>
 
   <resultMap id="questionRowMap" type="com.ezone.backend.domain.persistence.EssayQuestionRow">
@@ -561,6 +562,7 @@
            cp.ceo_name AS company_representative,
            COALESCE(cp.homepage_url, c.domain) AS company_homepage,
            cp.profile_summary AS company_business, cp.address AS company_address,
+           cp.company_category AS company_category,
            CASE
              WHEN COALESCE(cps.official_source_count, 0) = 0 THEN 'UNVERIFIED'
              WHEN (

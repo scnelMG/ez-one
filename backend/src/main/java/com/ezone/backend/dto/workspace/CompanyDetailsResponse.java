@@ -21,6 +21,7 @@ public record CompanyDetailsResponse(
     String address,
     String sourceStatus,
     String sourceNames,
-    String lastUpdatedAt
+    String lastUpdatedAt,
+    String companyCategory
 ) {
 }

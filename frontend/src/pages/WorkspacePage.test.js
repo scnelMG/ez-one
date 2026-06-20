@@ -186,7 +186,8 @@ describe('WorkspacePage', () => {
             rightVersionId: '502',
             leftBody: '초안 v1',
             rightBody: '초안 v2',
-            changed: true
+            changed: true,
+            aiSummary: 'AI가 변경점을 요약했습니다.'
         });
         mocks.updateQuestion.mockResolvedValue({
             id: '103',
@@ -261,10 +262,11 @@ describe('WorkspacePage', () => {
         expect(wrapper.get('.workspace-info-panel').text()).toContain('기업정보');
         expect(wrapper.get('.workspace-info-panel').text()).toContain('공식 확인됨');
         expect(wrapper.get('.workspace-info-panel').text()).toContain('금융위원회 기업기본정보');
-        expect(wrapper.get('.workspace-info-panel').text()).toContain('산업/분야');
-        expect(wrapper.get('.workspace-info-panel').text()).toContain('대기업집단');
-        expect(wrapper.get('.workspace-info-panel').text()).toContain('최수연');
+        expect(wrapper.get('.workspace-info-panel').text()).toContain('기업유형');
+        expect(wrapper.get('.workspace-info-panel').text()).toContain('대기업');
         expect(wrapper.get('.workspace-info-panel').text()).toContain('기업집단: 네이버');
+        expect(wrapper.get('.workspace-info-panel').text()).not.toContain('산업/분야');
+        expect(wrapper.get('.workspace-info-panel').text()).not.toContain('최수연');
         expect(wrapper.get('.workspace-info-panel').text()).not.toContain('사원수');
         expect(wrapper.get('[data-testid="workspace-bottom-tabs"]').text()).toContain('도화지');
         expect(wrapper.get('[data-testid="workspace-bottom-tabs"]').text()).toContain('자소서 버전관리');
@@ -523,10 +525,12 @@ describe('WorkspacePage', () => {
 
         await wrapper.get('[data-testid="compare-versions"]').trigger('click');
         await flushPromises();
-        expect(mocks.compareVersions).toHaveBeenCalledWith('102', '501', '502');
+        expect(mocks.compareVersions).toHaveBeenCalledWith('102', '501', '502', expect.any(String));
         expect(wrapper.text()).toContain('초안 v1');
         expect(wrapper.text()).toContain('초안 v2');
+        expect(wrapper.text()).toContain('AI가 변경점을 요약했습니다.');
 
+        await wrapper.findAll('button').find((button) => button.text().includes('새 버전 저장하기')).trigger('click');
         await wrapper.get('[data-testid="final-essay-title"]').setValue('최종본');
         await wrapper.get('[data-testid="final-essay-body"]').setValue('저장한 최종 자소서');
         await wrapper.get('[data-testid="save-final-essay"]').trigger('click');
@@ -555,9 +559,11 @@ describe('WorkspacePage', () => {
         const wrapper = await mountWorkspace();
 
         await wrapper.get('[data-testid="mode-versions"]').trigger('click');
+        await wrapper.findAll('button').find((button) => button.text().includes('새 버전 저장하기')).trigger('click');
         await wrapper.get('[data-testid="final-essay-title"]').setValue('네이버 최종본');
         await wrapper.get('[data-testid="final-essay-body"]').setValue('완성 자소서 본문');
         await wrapper.get('[data-testid="save-final-essay"]').trigger('click');
+        await flushPromises();
 
         expect(mocks.createVersion).toHaveBeenCalledWith('102', '103', '네이버 최종본', '완성 자소서 본문');
         expect(wrapper.text()).toContain('네이버 최종본');
@@ -576,7 +582,7 @@ describe('WorkspacePage', () => {
             prompt: '수정한 문항',
             maxLength: 700
         });
-        expect(JSON.parse(localStorage.getItem('ezone.recentWorkspaces'))).toEqual(['102']);
+        expect(JSON.parse(localStorage.getItem('ezone.recentWorkspaces'))[0].id).toBe('102');
     });
 
     it('WS-005/WS-006/WS-007: keeps three default canvas questions and adds local question tabs', async () => {
@@ -598,7 +604,7 @@ describe('WorkspacePage', () => {
         expect(wrapper.get('[data-testid="edit-question-prompt"]').element.value).toBe('문항4.');
         expect(mocks.createQuestion).not.toHaveBeenCalled();
         expect(mocks.deleteQuestion).not.toHaveBeenCalled();
-        expect(JSON.parse(localStorage.getItem('ezone.recentWorkspaces'))).toEqual(['102']);
+        expect(JSON.parse(localStorage.getItem('ezone.recentWorkspaces'))[0].id).toBe('102');
     });
 });
 

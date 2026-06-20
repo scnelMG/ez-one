@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 
 public record CreateEssayVersionRequest(
     @NotNull Long questionId,
-    @NotBlank String versionName
+    @NotBlank String versionName,
+    String body
 ) {
 }

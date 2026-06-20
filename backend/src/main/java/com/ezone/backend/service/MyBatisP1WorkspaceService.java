@@ -30,6 +30,7 @@ import com.ezone.backend.dto.workspace.UpdateDraftRequest;
 import com.ezone.backend.dto.workspace.WorkspaceDefaultsResponse;
 import com.ezone.backend.dto.workspace.WorkspaceResponse;
 import com.ezone.backend.mapper.ActivityMapper;
+import com.ezone.backend.infrastructure.api.OpenAiClient;
 import com.ezone.backend.mapper.P1WorkspaceMapper;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -55,15 +56,21 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
     private final P1WorkspaceMapper mapper;
     private final ActivityMapper activityMapper;
     private final RealtimeCompanyEnrichmentService realtimeCompanyEnrichmentService;
+    private final CompanyDataSyncService companyDataSyncService;
+    private final OpenAiClient openAiClient;
 
     public MyBatisP1WorkspaceService(
         P1WorkspaceMapper mapper,
         ActivityMapper activityMapper,
-        RealtimeCompanyEnrichmentService realtimeCompanyEnrichmentService
+        RealtimeCompanyEnrichmentService realtimeCompanyEnrichmentService,
+        CompanyDataSyncService companyDataSyncService,
+        OpenAiClient openAiClient
     ) {
         this.mapper = mapper;
         this.activityMapper = activityMapper;
         this.realtimeCompanyEnrichmentService = realtimeCompanyEnrichmentService;
+        this.companyDataSyncService = companyDataSyncService;
+        this.openAiClient = openAiClient;
     }
 
     @Override
@@ -162,6 +169,9 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
             recordUnverifiedCompanyInfoSource(job);
             mapper.insertJob(job);
         }
+
+        // Trigger real-time asynchronous company data sync from public APIs (National Pension / DART)
+        companyDataSyncService.syncCompanyDataAsync(job.getCompanyId(), request.companyName());
 
         BasketJobRow basketJob = new BasketJobRow();
         basketJob.setUserId(userId);
@@ -391,11 +401,11 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         if (status != ApplicationStatus.READY) {
             mapper.upsertApplicationHistoryFromBasketJob(userId, basketJobId);
         }
-        
+
         if (status == ApplicationStatus.IN_PROGRESS || status == ApplicationStatus.COMPLETED) {
             activityMapper.insertActivity(userId, requireBasketJob(userId, basketJobId).getWorkspaceId(), "STATUS_CHANGE", 2, java.time.LocalDateTime.now());
         }
-        
+
         return getBasketJob(userId, basketJobId);
     }
 
@@ -480,9 +490,9 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         mapper.updateDraft(draftId, request.body());
         mapper.markWorkspaceBasketJobInProgress(userId, workspaceId);
         question.setDraft(request.body());
-        
+
         activityMapper.insertActivity(userId, workspaceId, "DRAFT_UPDATE", 1, java.time.LocalDateTime.now());
-        
+
         return toQuestionResponse(question);
     }
 
@@ -496,7 +506,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         version.setWorkspaceId(workspaceId);
         version.setQuestionId(question.getId());
         version.setVersionName(request.versionName());
-        version.setBody(question.getDraft());
+        version.setBody(request.body() != null ? request.body() : question.getDraft());
         mapper.insertEssayVersion(version);
         return toVersionResponse(version);
     }
@@ -518,12 +528,26 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
             .orElseThrow(() -> new IllegalArgumentException("Version not found"));
         EssayVersionRow right = mapper.findVersion(userId, workspaceId, request.rightVersionId())
             .orElseThrow(() -> new IllegalArgumentException("Version not found"));
+        String leftBody = left.getBody() != null ? left.getBody() : "";
+        String rightBody = right.getBody() != null ? right.getBody() : "";
+        boolean changed = !leftBody.equals(rightBody);
+
+        String aiSummary = null;
+        if (changed) {
+            try {
+                aiSummary = openAiClient.generateComparisonSummary(leftBody, rightBody, request.customPrompt());
+            } catch (Exception e) {
+                aiSummary = "AI 요약을 생성하는 중 오류가 발생했습니다. (설정이나 네트워크 상태를 확인해주세요.)";
+            }
+        }
+
         return new CompareEssayVersionsResponse(
             left.getId(),
             right.getId(),
-            left.getBody(),
-            right.getBody(),
-            !Objects.equals(left.getBody(), right.getBody())
+            leftBody,
+            rightBody,
+            changed,
+            aiSummary
         );
     }
 
@@ -547,9 +571,9 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         reference.setUrl(request.url());
         mapper.insertReferenceMaterial(reference);
         mapper.markWorkspaceBasketJobInProgress(userId, workspaceId);
-        
+
         activityMapper.insertActivity(userId, workspaceId, "REFERENCE_ADD", 1, java.time.LocalDateTime.now());
-        
+
         return toReferenceResponse(reference);
     }
 
@@ -756,7 +780,8 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
                 row.getCompanyAddress(),
                 row.getCompanySourceStatus(),
                 row.getCompanySourceNames(),
-                row.getCompanySourceUpdatedAt()
+                row.getCompanySourceUpdatedAt(),
+                row.getCompanyCategory()
             ),
             mapper.listQuestions(row.getId()).stream().map(this::toQuestionResponse).toList(),
             mapper.listReferences(row.getId()).stream().map(this::toReferenceResponse).toList()

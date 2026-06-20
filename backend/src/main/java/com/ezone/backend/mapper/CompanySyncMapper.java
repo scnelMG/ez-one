@@ -13,6 +13,9 @@ public interface CompanySyncMapper {
     @Select("SELECT id FROM companies WHERE name = #{name} LIMIT 1")
     Long findCompanyIdByName(@Param("name") String name);
 
+    @Select("SELECT domain FROM companies WHERE id = #{companyId}")
+    String findDomainByCompanyId(@Param("companyId") Long companyId);
+
     @Insert("INSERT INTO companies (name) VALUES (#{name})")
     @Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
     void insertCompany(CompanyEntity company);
@@ -20,21 +23,33 @@ public interface CompanySyncMapper {
     @Select("SELECT id FROM company_profiles WHERE company_id = #{companyId} LIMIT 1")
     Long findCompanyProfileIdByCompanyId(@Param("companyId") Long companyId);
 
-    @Insert("INSERT INTO company_profiles (company_id, address, employee_count, source_priority) " +
-            "VALUES (#{companyId}, #{address}, #{employeeCount}, #{sourcePriority})")
+    @Select("SELECT CASE WHEN employee_count IS NOT NULL AND address IS NOT NULL THEN TRUE ELSE FALSE END FROM company_profiles WHERE company_id = #{companyId} LIMIT 1")
+    Boolean hasCompleteProfile(@Param("companyId") Long companyId);
+
+    @Insert("INSERT INTO company_profiles (company_id, address, employee_count, founded_at, homepage_url, company_category, source_priority) " +
+            "VALUES (#{companyId}, #{address}, #{employeeCount}, #{foundedAt}, #{homepageUrl}, #{companyCategory}, #{sourcePriority})")
     void insertCompanyProfile(
             @Param("companyId") Long companyId,
             @Param("address") String address,
             @Param("employeeCount") Integer employeeCount,
+            @Param("foundedAt") java.time.LocalDate foundedAt,
+            @Param("homepageUrl") String homepageUrl,
+            @Param("companyCategory") String companyCategory,
             @Param("sourcePriority") String sourcePriority);
 
     @Update("UPDATE company_profiles SET address = #{address}, employee_count = #{employeeCount}, " +
-            "source_updated_at = CURRENT_TIMESTAMP " +
+            "founded_at = COALESCE(#{foundedAt}, founded_at), homepage_url = #{homepageUrl}, company_category = #{companyCategory}, source_updated_at = CURRENT_TIMESTAMP " +
             "WHERE company_id = #{companyId}")
     void updateCompanyProfile(
             @Param("companyId") Long companyId,
             @Param("address") String address,
-            @Param("employeeCount") Integer employeeCount);
+            @Param("employeeCount") Integer employeeCount,
+            @Param("foundedAt") java.time.LocalDate foundedAt,
+            @Param("homepageUrl") String homepageUrl,
+            @Param("companyCategory") String companyCategory);
+
+    @Update("UPDATE companies SET domain = #{domain} WHERE id = #{companyId}")
+    void updateCompanyDomain(@Param("companyId") Long companyId, @Param("domain") String domain);
 
     @Select("SELECT id FROM company_profile_sources " +
             "WHERE company_id = #{companyId} AND source_type = #{sourceType} LIMIT 1")
@@ -51,6 +66,16 @@ public interface CompanySyncMapper {
     @Update("UPDATE company_profile_sources SET collected_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP " +
             "WHERE company_id = #{companyId} AND source_type = #{sourceType}")
     void touchProfileSource(@Param("companyId") Long companyId, @Param("sourceType") String sourceType);
+
+    @Update("UPDATE company_profiles SET source_updated_at = CURRENT_TIMESTAMP WHERE id = #{profileId}")
+    void touchProfileSourceUpdatedAt(@Param("profileId") Long profileId);
+
+    @Select("SELECT c.name FROM companies c " +
+            "LEFT JOIN company_profiles cp ON c.id = cp.company_id " +
+            "WHERE (cp.id IS NULL OR cp.employee_count IS NULL OR cp.address IS NULL) " +
+            "  AND (cp.source_updated_at IS NULL) " +
+            "ORDER BY CASE WHEN cp.stock_code IS NOT NULL THEN 0 ELSE 1 END, c.id DESC LIMIT #{limit}")
+    java.util.List<String> findCompaniesNeedingPensionSync(@Param("limit") int limit);
 
     public static class CompanyEntity {
         private Long id;

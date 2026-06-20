@@ -144,12 +144,16 @@ export function createWorkspaceApi(httpClient = defaultHttpClient) {
                 return mockVersionList(workspaceId).map((version) => ({ ...version }));
             }
         },
-        async compareVersions(workspaceId, leftVersionId, rightVersionId) {
+        async compareVersions(workspaceId, leftVersionId, rightVersionId, customPrompt) {
             try {
-                const response = await httpClient.post(`/api/workspaces/${workspaceId}/versions/compare`, {
+                const payload = {
                     leftVersionId: Number(leftVersionId),
                     rightVersionId: Number(rightVersionId)
-                });
+                };
+                if (customPrompt?.trim()) {
+                    payload.customPrompt = customPrompt.trim();
+                }
+                const response = await httpClient.post(`/api/workspaces/${workspaceId}/versions/compare`, payload);
                 return toVersionComparison(unwrapApiData(response.data));
             }
             catch {
@@ -157,14 +161,23 @@ export function createWorkspaceApi(httpClient = defaultHttpClient) {
                 const left = versions.find((version) => version.id === String(leftVersionId));
                 const right = versions.find((version) => version.id === String(rightVersionId));
                 if (!left || !right) {
-                    throw new Error('Version not found');
+                    return {
+                        leftVersionId: String(leftVersionId),
+                        rightVersionId: String(rightVersionId),
+                        leftBody: left ? left.body : '불러올 수 없음',
+                        rightBody: right ? right.body : '불러올 수 없음',
+                        changed: true,
+                        aiSummary: '백엔드 AI 요약 요청 실패. (로컬/네트워크 환경을 확인해주세요)'
+                    };
                 }
+                const changed = left.body !== right.body;
                 return {
                     leftVersionId: left.id,
                     rightVersionId: right.id,
                     leftBody: left.body,
                     rightBody: right.body,
-                    changed: left.body !== right.body
+                    changed: changed,
+                    aiSummary: changed ? `[테스트 요약] 변경된 내용은 다음과 같습니다.\n${customPrompt || ''}` : '변경된 내용이 없습니다.'
                 };
             }
         },
@@ -241,13 +254,14 @@ function toEssayVersion(version) {
         createdAt: version.createdAt
     };
 }
-function toVersionComparison(comparison) {
+function toVersionComparison(data) {
     return {
-        leftVersionId: String(comparison.leftVersionId),
-        rightVersionId: String(comparison.rightVersionId),
-        leftBody: comparison.leftBody,
-        rightBody: comparison.rightBody,
-        changed: comparison.changed
+        leftVersionId: String(data.leftVersionId),
+        rightVersionId: String(data.rightVersionId),
+        leftBody: data.leftBody ?? '',
+        rightBody: data.rightBody ?? '',
+        changed: data.changed ?? false,
+        aiSummary: data.aiSummary ?? (data.changed ? 'AI 요약을 불러오지 못했습니다.' : '두 버전의 내용이 동일합니다. 변경된 내용이 없습니다.')
     };
 }
 function toWorkspaceReference(reference) {

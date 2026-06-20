@@ -3,6 +3,8 @@ spring:
     import: optional:file:.env[.properties]
   application:
     name: ez-one-backend
+  profiles:
+    active: mysql
   servlet:
     multipart:
       max-file-size: 10MB

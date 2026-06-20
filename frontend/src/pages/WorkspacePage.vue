@@ -102,10 +102,9 @@
         </article>
       </section>
 
-      <section
-        class="workspace-push-layout"
-        :class="{ 'drawer-open': drawerOpen }"
-        :style="drawerStyle"
+      <div
+        class="workspace-layout-wrapper"
+        :class="{ 'drawer-open': !isMinimized }"
         data-testid="workspace-push-layout"
       >
         <main class="workspace-main-pane" :style="drawerStyle" data-testid="workspace-main-pane">
@@ -248,12 +247,29 @@
 
               <div class="version-workspace">
                 <div class="section-heading">
-                  <div>
-                    <h2 style="color: #8b5cf6;">{{ activeQuestionIndex + 1 }}번 문항 변경점 비교</h2>
+                  <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                    <h2 style="color: #8b5cf6; margin: 0;">{{ activeQuestionIndex + 1 }}번 문항 {{ isCreatingNewVersion ? '새 버전 저장' : '변경점 비교' }}</h2>
+                    <button
+                      v-if="!isCreatingNewVersion"
+                      class="primary-button"
+                      style="background: #8b5cf6; border-color: #8b5cf6;"
+                      type="button"
+                      @click="isCreatingNewVersion = true"
+                    >
+                      새 버전 저장하기
+                    </button>
+                    <button
+                      v-else
+                      class="ghost-button"
+                      type="button"
+                      @click="isCreatingNewVersion = false"
+                    >
+                      비교 화면으로 돌아가기
+                    </button>
                   </div>
                 </div>
 
-                <section class="final-essay-panel">
+                <section v-if="isCreatingNewVersion" class="final-essay-panel">
                   <div class="section-heading compact-heading">
                     <div>
                     </div>
@@ -281,7 +297,8 @@
                   </label>
                 </section>
 
-                <div class="version-control-panel">
+                <template v-else>
+                  <div class="version-control-panel">
                   <label>
                     이전 버전
                     <select v-model="selectedLeftVersionId" data-testid="left-version-select">
@@ -333,28 +350,16 @@
                     </article>
                   </div>
                   <div class="version-diff-table github-split-diff" data-testid="version-diff">
-                    <div class="diff-split-pane left-pane">
-                      <div
-                        v-for="(row, index) in versionDiffRows.leftRows"
-                        :key="`l-${index}`"
-                        class="diff-row diff-row-line"
-                        :class="`is-${row.type}`"
-                      >
+                    <template v-for="(row, index) in versionDiffRows.leftRows" :key="index">
+                      <div class="diff-row diff-row-line left-cell" :class="`is-${row.type}`">
                         <span class="diff-indicator">{{ row.type === 'remove' ? '-' : ' ' }}</span>
                         <pre>{{ row.content }}</pre>
                       </div>
-                    </div>
-                    <div class="diff-split-pane right-pane">
-                      <div
-                        v-for="(row, index) in versionDiffRows.rightRows"
-                        :key="`r-${index}`"
-                        class="diff-row diff-row-line"
-                        :class="`is-${row.type}`"
-                      >
-                        <span class="diff-indicator">{{ row.type === 'add' ? '+' : ' ' }}</span>
-                        <pre>{{ row.content }}</pre>
+                      <div class="diff-row diff-row-line right-cell" :class="`is-${versionDiffRows.rightRows[index].type}`">
+                        <span class="diff-indicator">{{ versionDiffRows.rightRows[index].type === 'add' ? '+' : ' ' }}</span>
+                        <pre>{{ versionDiffRows.rightRows[index].content }}</pre>
                       </div>
-                    </div>
+                    </template>
                   </div>
                   <div class="diff-legend">
                     <span class="legend-item remove"><span class="box"></span> 삭제됨</span>
@@ -368,150 +373,194 @@
                   <p>현재 초안을 버전으로 저장하면 이곳에서 이전 저장본과 변경점을 비교할 수 있습니다.</p>
                 </div>
 
-                <div class="version-list">
-                  <article v-for="version in currentQuestionVersions" :key="version.id" class="version-list-item">
-                    <header>
-                      <strong>{{ version.versionName }}</strong>
-                      <span>{{ version.createdAt ?? '저장됨' }}</span>
-                    </header>
-                    <p>{{ version.body }}</p>
-                  </article>
-                </div>
+                </template>
 
-                <div v-if="workspaceStore.versionComparison" class="version-summary">
-                  <span class="status-chip">비교 API 결과</span>
-                  <p>{{ workspaceStore.versionComparison.leftBody }}</p>
-                  <p>{{ workspaceStore.versionComparison.rightBody }}</p>
+                <div class="version-summary ai-summary" style="margin-top: 24px; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                  <div class="section-heading compact-heading" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="margin: 0; color: #4338ca; display: flex; align-items: center; gap: 8px; font-size: 1.1rem;">
+                      ✨ AI 변경점 요약
+                    </h3>
+                    <div style="display: flex; gap: 8px;">
+                      <button v-if="selectedLeftVersionId && selectedRightVersionId" class="ghost-button" @click="compareVersions" :disabled="workspaceStore.status === 'loading'" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: #e0e7ff; color: #4f46e5; border: none; cursor: pointer; font-weight: 600;">
+                        🔄 새로고침
+                      </button>
+                      <button class="primary-button small-button" @click="isEditingPrompt = !isEditingPrompt" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: #8b5cf6; border: none; cursor: pointer;">
+                        {{ isEditingPrompt ? '커스텀 닫기' : '프롬프트 커스텀하기' }}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div v-if="isEditingPrompt" class="ai-prompt-editor" style="margin-bottom: 16px; padding: 12px; background: #fff; border-radius: 6px; border: 1px solid #cbd5e1;">
+                    <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 6px;">AI 요약 기준 (프롬프트 커스텀)</label>
+                    <textarea v-model="customAiPrompt" style="width: 100%; min-height: 60px; padding: 10px; font-size: 0.9rem; border: 1px solid #e2e8f0; border-radius: 6px; resize: vertical;" placeholder="AI가 요약할 때 집중할 부분을 적어주세요."></textarea>
+                    <div style="text-align: right; margin-top: 8px;">
+                      <button class="primary-button small-button" @click="compareVersions(); isEditingPrompt = false;" :disabled="workspaceStore.status === 'loading'" style="background: #4f46e5;">
+                        저장 후 요약하기
+                      </button>
+                    </div>
+                  </div>
+
+                  <div v-if="workspaceStore.status === 'loading'" class="ai-summary-content" style="padding: 16px; color: #64748b; font-style: italic; text-align: center;">
+                    AI가 변경점을 분석하고 요약 중입니다... 잠시만 기다려주세요.
+                  </div>
+                  <div v-else-if="activeComparison?.aiSummary" class="ai-summary-content" style="white-space: pre-wrap; line-height: 1.6; color: #334155; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+                    {{ activeComparison.aiSummary }}
+                  </div>
+                  <div v-else class="ai-summary-content" style="padding: 16px; color: #64748b; text-align: center;">
+                    두 버전을 비교하시면 AI가 변경점을 요약해 드립니다.
+                  </div>
                 </div>
               </div>
             </section>
           </template>
         </main>
 
-        <div
-          v-if="drawerOpen"
-          class="workspace-panel-divider"
-          role="separator"
-          aria-label="보조 패널 너비 조절"
-          aria-orientation="vertical"
-          :aria-valuenow="drawerWidth"
-          aria-valuemin="380"
-          aria-valuemax="900"
-          data-testid="workspace-panel-divider"
-          @pointerdown="startDrawerResize"
-          @keydown.left.prevent="nudgeDrawerWidth(24)"
-          @keydown.right.prevent="nudgeDrawerWidth(-24)"
-          tabindex="0"
-        ></div>
+        <Teleport to="body">
+          <button
+            v-if="isMinimized"
+            class="bee-minimize-button"
+            :style="beeStyle"
+            @mousedown="startBeeDrag"
+            @click="onBeeClick"
+            title="참고자료 열기"
+          >
+            <img src="/bee-mascot.png" alt="참고자료 열기" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; pointer-events: none;" />
+          </button>
+        </Teleport>
 
         <aside
-          v-if="drawerOpen"
-          class="workspace-side-drawer"
+          v-show="!isMinimized"
+          class="floating-side-panel"
+          :style="floatingPanelStyle"
           data-testid="workspace-side-drawer"
+          data-panel-testid="workspace-floating-panel"
         >
-          <nav class="workspace-side-rail" aria-label="참고자료 게시판">
-            <button
-              v-for="board in boards"
-              :key="board.type"
-              type="button"
-              :class="{ active: activeBoard === board.type }"
-              :data-testid="`panel-trigger-${board.type}`"
-              @click="openBoard(board.type)"
-            >
-              {{ board.shortLabel }}
-            </button>
-          </nav>
+          <div
+            class="panel-resize-handle resize-left"
+            role="separator"
+            tabindex="0"
+            data-testid="workspace-panel-divider"
+            @mousedown.stop="startPanelResize('left', $event)"
+            @keydown.left.prevent="nudgeDrawerWidth(24)"
+            @keydown.right.prevent="nudgeDrawerWidth(-24)"
+          ></div>
+          <div class="panel-resize-handle resize-right" @mousedown.stop="startPanelResize('right', $event)"></div>
+          <div class="panel-resize-handle resize-top" @mousedown.stop="startPanelResize('top', $event)"></div>
+          <div class="panel-resize-handle resize-bottom" @mousedown.stop="startPanelResize('bottom', $event)"></div>
+          <div class="panel-resize-handle resize-top-left" @mousedown.stop="startPanelResize('top-left', $event)"></div>
+          <div class="panel-resize-handle resize-top-right" @mousedown.stop="startPanelResize('top-right', $event)"></div>
+          <div class="panel-resize-handle resize-bottom-left" @mousedown.stop="startPanelResize('bottom-left', $event)"></div>
+          <div class="panel-resize-handle resize-bottom-right" @mousedown.stop="startPanelResize('bottom-right', $event)"></div>
 
-          <div class="workspace-drawer-content">
-            <header class="drawer-header">
-              <div>
-                <p class="section-kicker">참고자료</p>
-                <h2>{{ activeBoardTitle }}</h2>
-              </div>
+          <div class="floating-drag-handle" @mousedown="startPanelDrag">
+            <span class="handle-title">참고자료 및 메모</span>
+            <button class="icon-button minimize-btn" @click.stop="isMinimized = true" aria-label="최소화">_</button>
+          </div>
+          <div class="floating-panel-body">
+            <nav class="workspace-side-rail" aria-label="참고자료 게시판">
               <button
-                class="drawer-expand-button"
+                v-for="board in boards"
+                :key="board.type"
                 type="button"
-                aria-label="게시판 전체 보기"
-                data-testid="board-full-view"
-                @click="openBoardFullView"
+                :class="{ active: activeBoard === board.type }"
+                :data-testid="`panel-trigger-${board.type}`"
+                @click="openBoard(board.type)"
               >
-                ↗
+                {{ board.shortLabel }}
               </button>
-            </header>
+            </nav>
 
-            <section v-if="showReferenceCreateButton" class="drawer-reference-list">
-              <button
-                v-for="reference in filteredReferences"
-                :key="reference.id"
-                class="reference-list-item"
-                type="button"
-                :data-testid="`open-reference-${reference.id}`"
-                @click="openReference(reference.id)"
-              >
-                <span>{{ referenceTypeLabel(reference.type) }}</span>
-                <strong>{{ reference.title }}</strong>
-              </button>
-            </section>
-
-            <component :is="activeBoardComponent" />
-
-            <section v-if="workspaceStore.activeReference && showReferenceCreateButton" class="reference-editor-panel">
-              <div class="section-heading compact-heading">
+            <div class="workspace-drawer-content">
+              <header class="drawer-header">
                 <div>
-                  <p class="section-kicker">{{ referenceTypeLabel(workspaceStore.activeReference.type) }}</p>
-                  <h3>{{ workspaceStore.activeReference.title }}</h3>
+                  <p class="section-kicker">참고자료</p>
+                  <h2>{{ activeBoardTitle }}</h2>
                 </div>
                 <button
-                  class="text-button danger"
+                  class="drawer-expand-button"
                   type="button"
-                  data-testid="delete-reference"
-                  @click="deleteReference"
+                  aria-label="게시판 전체 보기"
+                  data-testid="board-full-view"
+                  @click="openBoardFullView"
                 >
-                  삭제
+                  ↗
                 </button>
-              </div>
-              <form class="reference-edit-form" @submit.prevent="saveReference">
-                <label>
-                  유형
-                  <select v-model="referenceForm.referenceType" data-testid="reference-type">
-                    <option v-for="type in creatableReferenceTypes" :key="type" :value="type">
-                      {{ referenceTypeLabel(type) }}
-                    </option>
-                  </select>
-                </label>
-                <label>
-                  제목
-                  <input v-model="referenceForm.title" data-testid="reference-title" required />
-                </label>
-                <label>
-                  본문
-                  <textarea v-model="referenceForm.body" data-testid="reference-body" required />
-                </label>
-                <p class="reference-body-preview">{{ referenceForm.body }}</p>
-                <label>
-                  URL
-                  <input v-model="referenceForm.url" data-testid="reference-url" />
-                </label>
-                <button class="primary-button small-button" type="button" data-testid="save-reference" @click="saveReference">
-                  저장
-                </button>
-              </form>
-            </section>
+              </header>
 
-            <button
-              v-if="showReferenceCreateButton"
-              class="ghost-button drawer-create-button is-icon"
-              type="button"
-              data-testid="create-reference"
-              :aria-label="`${activeBoardTitle} 추가`"
-              title="새 메모 추가"
-              @click="createReference"
-            >
-              +
-            </button>
+              <section v-if="showReferenceCreateButton" class="drawer-reference-list">
+                <button
+                  v-for="reference in filteredReferences"
+                  :key="reference.id"
+                  class="reference-list-item"
+                  type="button"
+                  :data-testid="`open-reference-${reference.id}`"
+                  @click="openReference(reference.id)"
+                >
+                  <span>{{ referenceTypeLabel(reference.type) }}</span>
+                  <strong>{{ reference.title }}</strong>
+                </button>
+              </section>
+
+              <component :is="activeBoardComponent" />
+
+              <section v-if="workspaceStore.activeReference && showReferenceCreateButton" class="reference-editor-panel">
+                <div class="section-heading compact-heading">
+                  <div>
+                    <p class="section-kicker">{{ referenceTypeLabel(workspaceStore.activeReference.type) }}</p>
+                    <h3>{{ workspaceStore.activeReference.title }}</h3>
+                  </div>
+                  <button
+                    class="text-button danger"
+                    type="button"
+                    data-testid="delete-reference"
+                    @click="deleteReference"
+                  >
+                    삭제
+                  </button>
+                </div>
+                <form class="reference-edit-form" @submit.prevent="saveReference">
+                  <label>
+                    유형
+                    <select v-model="referenceForm.referenceType" data-testid="reference-type">
+                      <option v-for="type in creatableReferenceTypes" :key="type" :value="type">
+                        {{ referenceTypeLabel(type) }}
+                      </option>
+                    </select>
+                  </label>
+                  <label>
+                    제목
+                    <input v-model="referenceForm.title" data-testid="reference-title" required />
+                  </label>
+                  <label>
+                    본문
+                    <textarea v-model="referenceForm.body" data-testid="reference-body" required />
+                  </label>
+                  <p class="reference-body-preview">{{ referenceForm.body }}</p>
+                  <label>
+                    URL
+                    <input v-model="referenceForm.url" data-testid="reference-url" />
+                  </label>
+                  <button class="primary-button small-button" type="button" data-testid="save-reference" @click="saveReference">
+                    저장
+                  </button>
+                </form>
+              </section>
+
+              <button
+                v-if="showReferenceCreateButton"
+                class="ghost-button drawer-create-button is-icon"
+                type="button"
+                data-testid="create-reference"
+                :aria-label="`${activeBoardTitle} 추가`"
+                title="새 메모 추가"
+                @click="createReference"
+              >
+                +
+              </button>
+            </div>
           </div>
         </aside>
-      </section>
+      </div>
 
       <Teleport to="body">
         <div
@@ -589,11 +638,14 @@
 
 <script setup>
 import { computed, h, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
-import * as Diff from 'diff';
+import * as DiffPkg from 'diff';
+const diffLines = DiffPkg.diffLines || DiffPkg.default?.diffLines || DiffPkg;
 import { useRoute } from 'vue-router';
 import { rememberRecentWorkspace } from '@/features/basket/recentWorkspaces';
 import { workspaceApi } from '@/features/workspace/api/workspaceApi';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
+
+const isCreatingNewVersion = ref(false);
 import AppLayout from '@/shared/AppLayout.vue';
 import StatePanel from '@/shared/StatePanel.vue';
 
@@ -615,10 +667,157 @@ const finalEssayTitle = ref('');
 const finalEssayBody = ref('');
 let autoSaveTimer = null;
 let suppressNextDraftWatch = false;
-let resizeStartX = 0;
-let resizeStartWidth = 0;
-let resizeLayoutWidth = 0;
 let syncActiveMarkdownEditor = () => {};
+
+const isMinimized = ref(false);
+const isEditingPrompt = ref(false);
+const customAiPrompt = ref('자소서 변경 전후의 뉘앙스 차이, 분량의 적절성, 어색한 표현 개선 여부를 중심으로 어떤 점이 나아졌는지, 그리고 어떤 부분이 부족한지 3~5문장으로 요약해줘.');
+const floatingPanelStyle = reactive({ top: '132px', right: '32px', width: '440px', height: 'calc(100vh - 160px)', left: 'auto' });
+const beeStyle = reactive({ top: 'auto', left: 'auto', bottom: '40px', right: '40px' });
+
+let isDraggingPanel = false;
+let dragStartX = 0;
+let dragStartY = 0;
+let panelInitialTop = 0;
+let panelInitialLeft = 0;
+
+function startPanelDrag(e) {
+  if (e.target.closest('button')) return;
+  isDraggingPanel = true;
+  dragStartX = e.clientX;
+  dragStartY = e.clientY;
+  const panel = document.querySelector('.floating-side-panel');
+  if (panel) {
+    const rect = panel.getBoundingClientRect();
+    panelInitialTop = rect.top;
+    panelInitialLeft = rect.left;
+    floatingPanelStyle.top = `${rect.top}px`;
+    floatingPanelStyle.left = `${rect.left}px`;
+    floatingPanelStyle.right = 'auto';
+  }
+  document.addEventListener('mousemove', onPanelDrag);
+  document.addEventListener('mouseup', stopPanelDrag);
+}
+
+function onPanelDrag(e) {
+  if (!isDraggingPanel) return;
+  const dx = e.clientX - dragStartX;
+  const dy = e.clientY - dragStartY;
+  floatingPanelStyle.left = `${panelInitialLeft + dx}px`;
+  floatingPanelStyle.top = `${panelInitialTop + dy}px`;
+}
+
+function stopPanelDrag() {
+  isDraggingPanel = false;
+  document.removeEventListener('mousemove', onPanelDrag);
+  document.removeEventListener('mouseup', stopPanelDrag);
+}
+
+let isDraggingBee = false;
+let hasDraggedBee = false;
+let beeDragStartX = 0;
+let beeDragStartY = 0;
+let beeInitialTop = 0;
+let beeInitialLeft = 0;
+
+function startBeeDrag(e) {
+  isDraggingBee = true;
+  hasDraggedBee = false;
+  beeDragStartX = e.clientX;
+  beeDragStartY = e.clientY;
+  const bee = document.querySelector('.bee-minimize-button');
+  if (bee) {
+    const rect = bee.getBoundingClientRect();
+    beeInitialTop = rect.top;
+    beeInitialLeft = rect.left;
+    beeStyle.top = `${rect.top}px`;
+    beeStyle.left = `${rect.left}px`;
+    beeStyle.bottom = 'auto';
+    beeStyle.right = 'auto';
+  }
+  document.addEventListener('mousemove', onBeeDrag);
+  document.addEventListener('mouseup', stopBeeDrag);
+}
+
+function onBeeDrag(e) {
+  if (!isDraggingBee) return;
+  hasDraggedBee = true;
+  const dx = e.clientX - beeDragStartX;
+  const dy = e.clientY - beeDragStartY;
+  beeStyle.left = `${beeInitialLeft + dx}px`;
+  beeStyle.top = `${beeInitialTop + dy}px`;
+}
+
+function stopBeeDrag() {
+  isDraggingBee = false;
+  document.removeEventListener('mousemove', onBeeDrag);
+  document.removeEventListener('mouseup', stopBeeDrag);
+}
+
+function onBeeClick() {
+  if (!hasDraggedBee) {
+    isMinimized.value = false;
+  }
+}
+
+let isResizingPanel = false;
+let resizeDirection = '';
+let panelInitialWidth = 0;
+let panelInitialHeight = 0;
+
+function startPanelResize(direction, e) {
+  isResizingPanel = true;
+  resizeDirection = direction;
+  dragStartX = e.clientX;
+  dragStartY = e.clientY;
+  const panel = document.querySelector('.floating-side-panel');
+  if (panel) {
+    const rect = panel.getBoundingClientRect();
+    panelInitialWidth = rect.width;
+    panelInitialHeight = rect.height;
+    panelInitialTop = rect.top;
+    panelInitialLeft = rect.left;
+    floatingPanelStyle.left = `${rect.left}px`;
+    floatingPanelStyle.top = `${rect.top}px`;
+    floatingPanelStyle.right = 'auto';
+  }
+  document.addEventListener('mousemove', onPanelResize);
+  document.addEventListener('mouseup', stopPanelResize);
+}
+
+function onPanelResize(e) {
+  if (!isResizingPanel) return;
+  e.preventDefault();
+  const dx = e.clientX - dragStartX;
+  const dy = e.clientY - dragStartY;
+
+  if (resizeDirection.includes('right')) {
+    floatingPanelStyle.width = `${Math.max(380, panelInitialWidth + dx)}px`;
+  }
+  if (resizeDirection.includes('left')) {
+    const newWidth = Math.max(380, panelInitialWidth - dx);
+    if (newWidth > 380) {
+      floatingPanelStyle.width = `${newWidth}px`;
+      floatingPanelStyle.left = `${panelInitialLeft + dx}px`;
+    }
+  }
+  if (resizeDirection.includes('bottom')) {
+    floatingPanelStyle.height = `${Math.max(400, panelInitialHeight + dy)}px`;
+  }
+  if (resizeDirection.includes('top')) {
+    const newHeight = Math.max(400, panelInitialHeight - dy);
+    if (newHeight > 400) {
+      floatingPanelStyle.height = `${newHeight}px`;
+      floatingPanelStyle.top = `${panelInitialTop + dy}px`;
+    }
+  }
+}
+
+function stopPanelResize() {
+  isResizingPanel = false;
+  document.removeEventListener('mousemove', onPanelResize);
+  document.removeEventListener('mouseup', stopPanelResize);
+}
 
 const boards = [
   { type: 'JD', shortLabel: 'JD', title: 'JD 게시판' },
@@ -670,6 +869,8 @@ const boardsWithInlineCreate = new Set(['JD', 'NEWS', 'DART', 'TALENT_PROFILE', 
 const showReferenceCreateButton = computed(() => !boardsWithInlineCreate.has(activeBoard.value));
 const companyDetails = computed(() => workspaceStore.workspace?.companyDetails ?? {});
 const companyTypeLabel = computed(() => {
+  const category = normalizeCompanyValue(companyDetails.value.companyCategory);
+  if (category) return category;
   const type = normalizeCompanyValue(companyDetails.value.companyType);
   if (type && !['Y', 'N'].includes(type.toUpperCase())) return type;
   return displayValue(companyDetails.value.size);
@@ -706,11 +907,6 @@ const availableCompanyInfoRows = computed(() => [
     value: companyTypeLabel.value
   },
   {
-    key: 'industry',
-    label: '산업/분야',
-    value: normalizeCompanyValue(companyDetails.value.industry)
-  },
-  {
     key: 'employeeCount',
     label: '사원수',
     value: formatEmployeeCount(companyDetails.value.employeeCount)
@@ -719,11 +915,6 @@ const availableCompanyInfoRows = computed(() => [
     key: 'foundedAt',
     label: '설립일',
     value: normalizeCompanyValue(companyDetails.value.foundedAt)
-  },
-  {
-    key: 'representative',
-    label: '대표자',
-    value: normalizeCompanyValue(companyDetails.value.representative)
   },
   {
     key: 'homepage',
@@ -747,16 +938,34 @@ const availableCompanyInfoRows = computed(() => [
   .map((row) => ({ ...row, value: visibleCompanyInfoValue(row.value) }))
   .filter((row) => row.value));
 const workspaceStatusClass = computed(() => statusClassFromLabel(workspaceStore.workspace?.statusLabel));
+function versionSortKey(version) {
+  const numericId = Number(version.id);
+  if (Number.isFinite(numericId)) return numericId;
+  const timestamp = String(version.id).match(/(\d+)$/)?.[1];
+  return timestamp ? Number(timestamp) : 0;
+}
 const currentQuestionVersions = computed(() => {
   if (!currentQuestion.value) return [];
   return [
     ...localVersions.value,
     ...workspaceStore.versions
-  ].filter((version) => version.questionId === currentQuestion.value.id);
+  ]
+    .filter((version) => version.questionId === currentQuestion.value.id)
+    .sort((left, right) => versionSortKey(left) - versionSortKey(right));
 });
 const selectedLeftVersion = computed(() => currentQuestionVersions.value.find((version) => version.id === selectedLeftVersionId.value) ?? null);
 const selectedRightVersion = computed(() => currentQuestionVersions.value.find((version) => version.id === selectedRightVersionId.value) ?? null);
-const versionDiffRows = computed(() => buildLineDiff(selectedLeftVersion.value?.body ?? '', selectedRightVersion.value?.body ?? ''));
+const activeComparison = computed(() => {
+  const comparison = workspaceStore.versionComparison;
+  if (!comparison) return null;
+  if (String(comparison.leftVersionId) !== String(selectedLeftVersionId.value)) return null;
+  if (String(comparison.rightVersionId) !== String(selectedRightVersionId.value)) return null;
+  return comparison;
+});
+const versionDiffRows = computed(() => buildLineDiff(
+  activeComparison.value?.leftBody ?? selectedLeftVersion.value?.body ?? '',
+  activeComparison.value?.rightBody ?? selectedRightVersion.value?.body ?? ''
+));
 const canSaveFinalEssay = computed(() => Boolean(
   currentQuestion.value
   && finalEssayTitle.value.trim()
@@ -970,26 +1179,74 @@ async function deleteQuestion() {
 async function createVersion() {
   if (!currentQuestion.value || currentQuestion.value.localOnly) return;
   await saveDraft();
+  isCreatingNewVersion.value = true;
   await workspaceStore.createVersion(workspaceId.value, currentQuestion.value.id, `v${currentQuestionVersions.value.length + 1}`);
   rememberCurrentWorkspaceIfSaved();
 }
 
-function compareVersions() {
+async function compareVersions() {
   const left = selectedLeftVersion.value;
   const right = selectedRightVersion.value;
-  if (!left || !right) return;
-  void workspaceStore.compareVersions(workspaceId.value, left.id, right.id);
+  if (!left || !right || left.id === right.id) return null;
+  return workspaceStore.compareVersions(workspaceId.value, left.id, right.id, customAiPrompt.value);
 }
 
 function buildLineDiff(leftBody, rightBody) {
-  const diffs = Diff.diffLines(leftBody || '', rightBody || '');
+  const formatToSentenceLines = (text) => text ? text.replace(/([.?!])\s+/g, '$1\n') : '';
+
+  let diffs = [];
+  try {
+    diffs = diffLines(formatToSentenceLines(leftBody), formatToSentenceLines(rightBody));
+  } catch (error) {
+    console.error('Diff calculation failed:', error);
+    // Fallback if diff fails
+    return {
+      leftRows: [{ type: 'same', content: leftBody }],
+      rightRows: [{ type: 'same', content: rightBody }]
+    };
+  }
+
   const leftRows = [];
   const rightRows = [];
-  
-  diffs.forEach((part) => {
+
+  for (let i = 0; i < diffs.length; i++) {
+    const part = diffs[i];
+
+    if (part.removed && i + 1 < diffs.length && diffs[i+1].added) {
+      const addedPart = diffs[i+1];
+      const removedLines = part.value.split('\n');
+      if (removedLines[removedLines.length - 1] === '') removedLines.pop();
+      const addedLines = addedPart.value.split('\n');
+      if (addedLines[addedLines.length - 1] === '') addedLines.pop();
+
+      const maxLines = Math.max(removedLines.length, addedLines.length);
+      for (let j = 0; j < maxLines; j++) {
+        leftRows.push({ type: j < removedLines.length ? 'remove' : 'empty', content: j < removedLines.length ? removedLines[j] : '' });
+        rightRows.push({ type: j < addedLines.length ? 'add' : 'empty', content: j < addedLines.length ? addedLines[j] : '' });
+      }
+      i++;
+      continue;
+    }
+
+    if (part.added && i + 1 < diffs.length && diffs[i+1].removed) {
+      const removedPart = diffs[i+1];
+      const addedLines = part.value.split('\n');
+      if (addedLines[addedLines.length - 1] === '') addedLines.pop();
+      const removedLines = removedPart.value.split('\n');
+      if (removedLines[removedLines.length - 1] === '') removedLines.pop();
+
+      const maxLines = Math.max(removedLines.length, addedLines.length);
+      for (let j = 0; j < maxLines; j++) {
+        leftRows.push({ type: j < removedLines.length ? 'remove' : 'empty', content: j < removedLines.length ? removedLines[j] : '' });
+        rightRows.push({ type: j < addedLines.length ? 'add' : 'empty', content: j < addedLines.length ? addedLines[j] : '' });
+      }
+      i++;
+      continue;
+    }
+
     const lines = part.value.split('\n');
     if (lines[lines.length - 1] === '') lines.pop();
-    
+
     lines.forEach((line) => {
       if (part.added) {
         leftRows.push({ type: 'empty', content: '' });
@@ -1002,13 +1259,13 @@ function buildLineDiff(leftBody, rightBody) {
         rightRows.push({ type: 'same', content: line });
       }
     });
-  });
-  
+  }
+
   if (!leftRows.length) {
     leftRows.push({ type: 'same', content: '' });
     rightRows.push({ type: 'same', content: '' });
   }
-  
+
   return { leftRows, rightRows };
 }
 
@@ -1019,8 +1276,8 @@ function splitLines(body) {
 
 function openBoard(type) {
   activeBoard.value = type;
-  drawerOpen.value = true;
-  workspaceStore.clearActiveReference();
+  isMinimized.value = false;
+  workspaceStore.activeReference = null;
 }
 
 function openBoardFullView() {
@@ -1060,7 +1317,7 @@ function clampDrawerWidth(width, layoutWidth = null) {
 
 async function saveFinalEssay() {
   if (!canSaveFinalEssay.value) return;
-  const previousNewestVersion = currentQuestionVersions.value[0] ?? null;
+  const previousNewestVersion = currentQuestionVersions.value[currentQuestionVersions.value.length - 1] ?? null;
   if (currentQuestion.value.localOnly) {
     const version = {
       id: `local-version-${Date.now()}`,
@@ -1074,7 +1331,10 @@ async function saveFinalEssay() {
     selectedLeftVersionId.value = previousNewestVersion?.id ?? version.id;
     finalEssayTitle.value = '';
     finalEssayBody.value = '';
+    isCreatingNewVersion.value = false;
     rememberCurrentWorkspaceIfSaved();
+    await nextTick();
+    await compareVersions();
     return;
   }
   const version = await workspaceStore.createVersion(
@@ -1089,7 +1349,12 @@ async function saveFinalEssay() {
   }
   finalEssayTitle.value = '';
   finalEssayBody.value = '';
+  isCreatingNewVersion.value = false;
   rememberCurrentWorkspaceIfSaved();
+  if (version?.id && previousNewestVersion?.id) {
+    await nextTick();
+    await compareVersions();
+  }
 }
 
 async function createReference() {
@@ -1355,6 +1620,12 @@ function resetBoardDraft(draft, type = activeBoard.value) {
   }
   nextTick(() => syncActiveMarkdownEditor());
 }
+
+watch([selectedLeftVersionId, selectedRightVersionId], ([leftId, rightId]) => {
+  if (leftId && rightId && leftId !== rightId) {
+    compareVersions();
+  }
+});
 
 function saveBoardEntry(draft, type = activeBoard.value) {
   const label = referenceTypeLabel(type);

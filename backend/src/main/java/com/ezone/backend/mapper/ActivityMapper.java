@@ -51,8 +51,8 @@ public interface ActivityMapper {
     @Select("""
         SELECT 
             w.id as workspaceId,
-            j.company_name as companyName,
-            j.position_title as positionTitle,
+            c.name as companyName,
+            j.title as positionTitle,
             CASE
                 WHEN a.action_type = 'BASKET_ADD' THEN '공고 담기'
                 WHEN a.action_type = 'STATUS_CHANGE' THEN '상태 변경 중'
@@ -65,6 +65,7 @@ public interface ActivityMapper {
         JOIN workspaces w ON a.workspace_id = w.id
         JOIN basket_jobs bj ON w.basket_job_id = bj.id
         JOIN jobs j ON bj.job_id = j.id
+        JOIN companies c ON j.company_id = c.id
         WHERE a.user_id = #{userId} 
           AND bj.application_status != 'COMPLETED'
           AND bj.deleted_at IS NULL

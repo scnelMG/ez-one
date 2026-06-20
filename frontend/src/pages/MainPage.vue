@@ -27,16 +27,16 @@
         </RouterLink>
       </section>
 
-      <section v-if="dashboardStore.summary?.recentActivity" class="recent-task-widget" aria-label="최근 작업 이어서 하기">
+      <section v-if="displayRecentTask" class="recent-task-widget" aria-label="최근 작업 이어서 하기">
         <div class="recent-task-info">
           <div class="recent-task-pulse"></div>
           <div class="recent-task-text">
             <span>진행 중</span>
-            <strong>[{{ dashboardStore.summary.recentActivity.companyName }} {{ dashboardStore.summary.recentActivity.positionTitle }}] {{ dashboardStore.summary.recentActivity.actionName }}</strong>
-            <span class="recent-task-date" style="font-size: 0.85em; color: var(--text-tertiary); margin-top: 4px;">{{ dashboardStore.summary.recentActivity.updatedAt }}</span>
+            <strong>{{ displayRecentTask.companyName }} {{ displayRecentTask.positionTitle }} {{ displayRecentTask.actionName }}</strong>
+            <span class="recent-task-date" style="font-size: 0.85em; color: var(--text-tertiary); margin-top: 4px;">{{ displayRecentTask.updatedAt }}</span>
           </div>
         </div>
-        <RouterLink class="recent-task-action" :to="`/workspaces/${dashboardStore.summary.recentActivity.workspaceId}`">
+        <RouterLink class="recent-task-action" :to="`/workspaces/${displayRecentTask.workspaceId}`">
           이어서 하기
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="9 18 15 12 9 6"></polyline>
@@ -192,6 +192,44 @@
         />
       </section>
 
+      <section v-if="profileStore.profile?.ssafy" class="dashboard-panel main-recommendation-preview" aria-label="추천 공고 미리보기">
+        <div class="section-heading">
+          <div>
+            <h2>추천 공고</h2>
+          </div>
+          <RouterLink class="text-button" to="/recommendations">전체 보기</RouterLink>
+        </div>
+        <div class="main-recommendation-grid">
+          <article
+            v-for="item in recommendationPreviewItems"
+            :key="item.id"
+            class="main-recommendation-card"
+            data-testid="main-recommendation-preview-job"
+          >
+            <img
+              v-if="item.companyLogoUrl"
+              class="main-recommendation-logo"
+              data-testid="main-recommendation-logo"
+              :src="item.companyLogoUrl"
+              :alt="item.companyName + ' logo'"
+            />
+            <div>
+              <strong>{{ item.companyName }}</strong>
+              <p>{{ item.positionTitle }}</p>
+              <span>{{ item.deadlineLabel }}</span>
+              <span>{{ item.participantCount }}명 작성</span>
+            </div>
+            <button
+              class="primary-button"
+              type="button"
+              :data-testid="'main-save-recommendation-' + item.id"
+              @click="saveRecommendation(item.id)"
+            >
+              담기
+            </button>
+          </article>
+        </div>
+      </section>
       <HoneyPotGraph :activities="activities" />
 
     </section>
@@ -222,19 +260,25 @@ import {
   companyInitial,
   formatDDay,
   formatDateTime,
-  formatAbsoluteDeadline
+  formatAbsoluteDeadline,
+  isDeadlineWithinDays
 } from '@/shared/utils/jobUtils';
 import StatePanel from '@/shared/StatePanel.vue';
 import OnboardingPage from '@/pages/OnboardingPage.vue';
 import SkeletonLoader from '@/shared/SkeletonLoader.vue';
 import { requiresOnboarding } from '@/features/auth/session/authSession';
-import { isRecentWorkspace } from '@/features/basket/recentWorkspaces';
+import { isRecentWorkspace, getRecentWorkspaceIds, getRecentWorkspaceWithTime } from '@/features/basket/recentWorkspaces';
 import { useBasketStore } from '@/stores/basketStore';
 import { useDashboardStore } from '@/stores/dashboardStore';
+import { recommendationApi } from '@/features/recommendations/api/recommendationApi';
+import { useProfileStore } from '@/stores/profileStore';
+import { showToast } from '@/shared/useToast';
 import ConfirmDialog from '@/shared/ConfirmDialog.vue';
 
 const dashboardStore = useDashboardStore();
 const basketStore = useBasketStore();
+const profileStore = useProfileStore();
+const mmJobs = ref([]);
 const showOnboardingModal = ref(requiresOnboarding());
 const priorityJobIds = computed(() => basketStore.priorityJobIds);
 const failedLogos = ref(new Set());
@@ -285,6 +329,48 @@ const basketPreviewJobs = computed(() => {
     .slice(0, 5);
 });
 
+function formatKoreanDateTime(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const hours = String(d.getHours()).padStart(2, '0');
+  const mins = String(d.getMinutes()).padStart(2, '0');
+  return `${year}년 ${month}월 ${day}일 ${hours}:${mins}`;
+}
+
+const displayRecentTask = computed(() => {
+  const recent = getRecentWorkspaceWithTime();
+  if (recent) {
+    const job = basketStore.jobs.find(j => String(j.workspaceId) === recent.id);
+    if (job) {
+      return {
+        companyName: job.companyName,
+        positionTitle: job.positionTitle,
+        actionName: '자소서 이어쓰기',
+        updatedAt: formatKoreanDateTime(recent.time),
+        workspaceId: job.workspaceId
+      };
+    }
+  }
+  if (dashboardStore.summary?.recentActivity) {
+    const apiTask = dashboardStore.summary.recentActivity;
+    return {
+      companyName: apiTask.companyName,
+      positionTitle: apiTask.positionTitle,
+      actionName: apiTask.actionName === '이력서 작성' || !apiTask.actionName ? '자소서 이어쓰기' : `${apiTask.actionName} 이어하기`,
+      updatedAt: formatKoreanDateTime(apiTask.updatedAt),
+      workspaceId: apiTask.workspaceId
+    };
+  }
+  return null;
+});
+
+const recommendationPreviewItems = computed(() => [...mmJobs.value]
+    .sort((left, right) => deadlineRank(left) - deadlineRank(right))
+    .slice(0, 4));
 const activities = ref([]);
 
 onMounted(async () => {
@@ -295,6 +381,13 @@ onMounted(async () => {
   
   const realActivities = await dashboardApi.getActivities();
   activities.value = realActivities || [];
+
+  try {
+    const jobs = await recommendationApi.listMattermostJobs();
+    mmJobs.value = jobs || [];
+  } catch (e) {
+    console.error('Failed to load recommendation jobs', e);
+  }
 });
 
 function handleLogoError(id) {
@@ -316,6 +409,17 @@ function toggleStatusMenu(jobId) {
 function changeStatus(jobId, nextStatus) {
     openStatusJobId.value = null;
     void basketStore.updateStatus(jobId, nextStatus);
+}
+
+async function saveRecommendation(id) {
+  try {
+    await recommendationApi.saveMattermostJob(id);
+    await basketStore.loadJobs();
+    mmJobs.value = mmJobs.value.filter(j => j.id !== id);
+    showToast('공고가 장바구니에 담겼습니다.', 'success');
+  } catch (e) {
+    showToast('공고 저장에 실패했습니다.', 'error');
+  }
 }
 
 async function archiveJob(id) {

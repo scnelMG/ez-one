@@ -31,6 +31,7 @@ public class WorkspaceRow {
     private String companySourceStatus;
     private String companySourceNames;
     private String companySourceUpdatedAt;
+    private String companyCategory;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -86,4 +87,6 @@ public class WorkspaceRow {
     public void setCompanySourceNames(String companySourceNames) { this.companySourceNames = companySourceNames; }
     public String getCompanySourceUpdatedAt() { return companySourceUpdatedAt; }
     public void setCompanySourceUpdatedAt(String companySourceUpdatedAt) { this.companySourceUpdatedAt = companySourceUpdatedAt; }
+    public String getCompanyCategory() { return companyCategory; }
+    public void setCompanyCategory(String companyCategory) { this.companyCategory = companyCategory; }
 }
