@@ -437,6 +437,15 @@
           :style="floatingPanelStyle"
           data-testid="workspace-floating-panel"
         >
+          <div class="panel-resize-handle resize-left" @mousedown.stop="startPanelResize('left', $event)"></div>
+          <div class="panel-resize-handle resize-right" @mousedown.stop="startPanelResize('right', $event)"></div>
+          <div class="panel-resize-handle resize-top" @mousedown.stop="startPanelResize('top', $event)"></div>
+          <div class="panel-resize-handle resize-bottom" @mousedown.stop="startPanelResize('bottom', $event)"></div>
+          <div class="panel-resize-handle resize-top-left" @mousedown.stop="startPanelResize('top-left', $event)"></div>
+          <div class="panel-resize-handle resize-top-right" @mousedown.stop="startPanelResize('top-right', $event)"></div>
+          <div class="panel-resize-handle resize-bottom-left" @mousedown.stop="startPanelResize('bottom-left', $event)"></div>
+          <div class="panel-resize-handle resize-bottom-right" @mousedown.stop="startPanelResize('bottom-right', $event)"></div>
+
           <div class="floating-drag-handle" @mousedown="startPanelDrag">
             <span class="handle-title">참고자료 및 메모</span>
             <button class="icon-button minimize-btn" @click.stop="isMinimized = true" aria-label="최소화">_</button>
@@ -692,6 +701,65 @@ function stopPanelDrag() {
   isDraggingPanel = false;
   document.removeEventListener('mousemove', onPanelDrag);
   document.removeEventListener('mouseup', stopPanelDrag);
+}
+
+let isResizingPanel = false;
+let resizeDirection = '';
+let panelInitialWidth = 0;
+let panelInitialHeight = 0;
+
+function startPanelResize(direction, e) {
+  isResizingPanel = true;
+  resizeDirection = direction;
+  dragStartX = e.clientX;
+  dragStartY = e.clientY;
+  const panel = document.querySelector('.floating-side-panel');
+  if (panel) {
+    const rect = panel.getBoundingClientRect();
+    panelInitialWidth = rect.width;
+    panelInitialHeight = rect.height;
+    panelInitialTop = rect.top;
+    panelInitialLeft = rect.left;
+    floatingPanelStyle.left = `${rect.left}px`;
+    floatingPanelStyle.top = `${rect.top}px`;
+    floatingPanelStyle.right = 'auto';
+  }
+  document.addEventListener('mousemove', onPanelResize);
+  document.addEventListener('mouseup', stopPanelResize);
+}
+
+function onPanelResize(e) {
+  if (!isResizingPanel) return;
+  e.preventDefault();
+  const dx = e.clientX - dragStartX;
+  const dy = e.clientY - dragStartY;
+  
+  if (resizeDirection.includes('right')) {
+    floatingPanelStyle.width = `${Math.max(380, panelInitialWidth + dx)}px`;
+  }
+  if (resizeDirection.includes('left')) {
+    const newWidth = Math.max(380, panelInitialWidth - dx);
+    if (newWidth > 380) {
+      floatingPanelStyle.width = `${newWidth}px`;
+      floatingPanelStyle.left = `${panelInitialLeft + dx}px`;
+    }
+  }
+  if (resizeDirection.includes('bottom')) {
+    floatingPanelStyle.height = `${Math.max(400, panelInitialHeight + dy)}px`;
+  }
+  if (resizeDirection.includes('top')) {
+    const newHeight = Math.max(400, panelInitialHeight - dy);
+    if (newHeight > 400) {
+      floatingPanelStyle.height = `${newHeight}px`;
+      floatingPanelStyle.top = `${panelInitialTop + dy}px`;
+    }
+  }
+}
+
+function stopPanelResize() {
+  isResizingPanel = false;
+  document.removeEventListener('mousemove', onPanelResize);
+  document.removeEventListener('mouseup', stopPanelResize);
 }
 
 const boards = [
