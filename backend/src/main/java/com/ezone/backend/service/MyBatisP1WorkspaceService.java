@@ -648,7 +648,8 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
                 row.getCompanyRepresentative(),
                 row.getCompanyHomepage(),
                 row.getCompanyBusiness(),
-                row.getCompanyAddress()
+                row.getCompanyAddress(),
+                row.getCompanyCategory()
             ),
             mapper.listQuestions(row.getId()).stream().map(this::toQuestionResponse).toList(),
             mapper.listReferences(row.getId()).stream().map(this::toReferenceResponse).toList()

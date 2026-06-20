@@ -57,6 +57,7 @@
     <result property="companyHomepage" column="company_homepage"/>
     <result property="companyBusiness" column="company_business"/>
     <result property="companyAddress" column="company_address"/>
+    <result property="companyCategory" column="company_category"/>
   </resultMap>
 
   <resultMap id="questionRowMap" type="com.ezone.backend.domain.persistence.EssayQuestionRow">
@@ -469,7 +470,7 @@
            cp.capital_amount AS company_capital, cp.revenue_amount AS company_revenue,
            cp.ceo_name AS company_representative,
            COALESCE(cp.homepage_url, c.domain) AS company_homepage,
-           cp.profile_summary AS company_business, cp.address AS company_address
+           cp.profile_summary AS company_business, cp.address AS company_address, cp.company_category AS company_category
     FROM workspaces w
     JOIN basket_jobs bj ON bj.id = w.basket_job_id
     JOIN jobs j ON j.id = bj.job_id

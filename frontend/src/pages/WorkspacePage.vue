@@ -80,7 +80,7 @@
             </div>
             <div>
               <dt>사원수</dt>
-              <dd>{{ displayValue(workspaceStore.workspace.companyDetails?.employeeCount) }}</dd>
+              <dd>{{ displayEmployeeCount(workspaceStore.workspace.companyDetails?.employeeCount) }}</dd>
             </div>
             <div>
               <dt>설립일</dt>
@@ -680,6 +680,8 @@ const boardsWithInlineCreate = new Set(['JD', 'NEWS', 'DART', 'TALENT_PROFILE', 
 const showReferenceCreateButton = computed(() => !boardsWithInlineCreate.has(activeBoard.value));
 const companyDetails = computed(() => workspaceStore.workspace?.companyDetails ?? {});
 const companyTypeLabel = computed(() => {
+  const category = normalizeCompanyValue(companyDetails.value.companyCategory);
+  if (category) return category;
   const type = normalizeCompanyValue(companyDetails.value.companyType);
   if (type && !['Y', 'N'].includes(type.toUpperCase())) return type;
   return displayValue(companyDetails.value.size);
@@ -826,6 +828,12 @@ function normalizeCompanyValue(value) {
 
 function displayValue(value) {
   return normalizeCompanyValue(value) || '-';
+}
+
+function displayEmployeeCount(value) {
+  const norm = normalizeCompanyValue(value);
+  if (!norm || norm === '0') return '-';
+  return Number(norm).toLocaleString() + '명';
 }
 
 function statusClassFromLabel(label) {

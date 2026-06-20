@@ -2,6 +2,7 @@ package com.ezone.backend.service;
 
 import com.ezone.backend.infrastructure.api.DartApiClient;
 import com.ezone.backend.infrastructure.api.NationalPensionApiClient;
+import com.ezone.backend.infrastructure.api.VentureApiClient;
 import com.ezone.backend.mapper.CompanySyncMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,16 +22,21 @@ public class CompanyDataSyncService {
 
     private final NationalPensionApiClient pensionApiClient;
     private final DartApiClient dartApiClient;
+    private final VentureApiClient ventureApiClient;
     private final CompanySyncMapper syncMapper;
 
     private static final String SOURCE_TYPE_PUBLIC_PENSION = "PUBLIC_PENSION";
     private static final String SOURCE_TYPE_DART = "DART";
     private static final String SOURCE_NAME_PENSION = "국민연금공단 사업장 내역";
     private static final String SOURCE_URL_PENSION = "https://www.data.go.kr/data/15083277/openapi.do";
+    private static final String SOURCE_TYPE_VENTURE = "VENTURE_API";
+    private static final String SOURCE_NAME_VENTURE = "벤처기업확인기업 조회";
+    private static final String SOURCE_URL_VENTURE = "https://www.data.go.kr/data/15082006/openapi.do";
 
-    public CompanyDataSyncService(NationalPensionApiClient pensionApiClient, DartApiClient dartApiClient, CompanySyncMapper syncMapper) {
+    public CompanyDataSyncService(NationalPensionApiClient pensionApiClient, DartApiClient dartApiClient, VentureApiClient ventureApiClient, CompanySyncMapper syncMapper) {
         this.pensionApiClient = pensionApiClient;
         this.dartApiClient = dartApiClient;
+        this.ventureApiClient = ventureApiClient;
         this.syncMapper = syncMapper;
     }
 
@@ -135,12 +141,23 @@ public class CompanyDataSyncService {
             }
         }
 
+        // --- Venture API Sync ---
+        String companyCategory = null;
+        List<VentureApiClient.VentureData> ventureDataList = ventureApiClient.searchVentureByName(companyName);
+        if (ventureDataList != null && !ventureDataList.isEmpty()) {
+            VentureApiClient.VentureData ventureData = ventureDataList.get(0);
+            companyCategory = ventureData.getVentureType();
+            if (companyCategory == null || companyCategory.isEmpty()) {
+                companyCategory = "벤처기업"; // Fallback if API returned it but no specific type
+            }
+        }
+
         Long profileId = syncMapper.findCompanyProfileIdByCompanyId(companyId);
         if (profileId == null) {
-            syncMapper.insertCompanyProfile(companyId, address, employeeCount, foundedAt, homepageUrl, SOURCE_TYPE_PUBLIC_PENSION);
+            syncMapper.insertCompanyProfile(companyId, address, employeeCount, foundedAt, homepageUrl, companyCategory, SOURCE_TYPE_PUBLIC_PENSION);
             log.info("Created new company profile for company ID: {}", companyId);
         } else {
-            syncMapper.updateCompanyProfile(companyId, address, employeeCount, foundedAt, homepageUrl);
+            syncMapper.updateCompanyProfile(companyId, address, employeeCount, foundedAt, homepageUrl, companyCategory);
             log.info("Updated existing company profile for company ID: {}", companyId);
         }
 

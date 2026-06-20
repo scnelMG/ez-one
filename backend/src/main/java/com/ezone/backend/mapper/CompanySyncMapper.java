@@ -26,25 +26,27 @@ public interface CompanySyncMapper {
     @Select("SELECT CASE WHEN employee_count IS NOT NULL AND address IS NOT NULL THEN TRUE ELSE FALSE END FROM company_profiles WHERE company_id = #{companyId} LIMIT 1")
     Boolean hasCompleteProfile(@Param("companyId") Long companyId);
 
-    @Insert("INSERT INTO company_profiles (company_id, address, employee_count, founded_at, homepage_url, source_priority) " +
-            "VALUES (#{companyId}, #{address}, #{employeeCount}, #{foundedAt}, #{homepageUrl}, #{sourcePriority})")
+    @Insert("INSERT INTO company_profiles (company_id, address, employee_count, founded_at, homepage_url, company_category, source_priority) " +
+            "VALUES (#{companyId}, #{address}, #{employeeCount}, #{foundedAt}, #{homepageUrl}, #{companyCategory}, #{sourcePriority})")
     void insertCompanyProfile(
             @Param("companyId") Long companyId,
             @Param("address") String address,
             @Param("employeeCount") Integer employeeCount,
             @Param("foundedAt") java.time.LocalDate foundedAt,
             @Param("homepageUrl") String homepageUrl,
+            @Param("companyCategory") String companyCategory,
             @Param("sourcePriority") String sourcePriority);
 
     @Update("UPDATE company_profiles SET address = #{address}, employee_count = #{employeeCount}, " +
-            "founded_at = COALESCE(#{foundedAt}, founded_at), homepage_url = #{homepageUrl}, source_updated_at = CURRENT_TIMESTAMP " +
+            "founded_at = COALESCE(#{foundedAt}, founded_at), homepage_url = #{homepageUrl}, company_category = #{companyCategory}, source_updated_at = CURRENT_TIMESTAMP " +
             "WHERE company_id = #{companyId}")
     void updateCompanyProfile(
             @Param("companyId") Long companyId,
             @Param("address") String address,
             @Param("employeeCount") Integer employeeCount,
             @Param("foundedAt") java.time.LocalDate foundedAt,
-            @Param("homepageUrl") String homepageUrl);
+            @Param("homepageUrl") String homepageUrl,
+            @Param("companyCategory") String companyCategory);
 
     @Update("UPDATE companies SET domain = #{domain} WHERE id = #{companyId}")
     void updateCompanyDomain(@Param("companyId") Long companyId, @Param("domain") String domain);
