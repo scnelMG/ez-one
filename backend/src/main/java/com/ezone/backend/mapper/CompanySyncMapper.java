@@ -59,8 +59,9 @@ public interface CompanySyncMapper {
 
     @Select("SELECT c.name FROM companies c " +
             "LEFT JOIN company_profiles cp ON c.id = cp.company_id " +
-            "WHERE cp.id IS NULL OR cp.employee_count IS NULL OR cp.address IS NULL " +
-            "ORDER BY c.id DESC LIMIT #{limit}")
+            "WHERE (cp.id IS NULL OR cp.employee_count IS NULL OR cp.address IS NULL) " +
+            "  AND (cp.source_updated_at IS NULL) " +
+            "ORDER BY CASE WHEN cp.stock_code IS NOT NULL THEN 0 ELSE 1 END, c.id DESC LIMIT #{limit}")
     java.util.List<String> findCompaniesNeedingPensionSync(@Param("limit") int limit);
 
     public static class CompanyEntity {
