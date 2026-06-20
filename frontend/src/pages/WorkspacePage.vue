@@ -427,106 +427,108 @@
             <span class="handle-title">참고자료 및 메모</span>
             <button class="icon-button minimize-btn" @click.stop="isMinimized = true" aria-label="최소화">_</button>
           </div>
-          <nav class="workspace-side-rail" aria-label="참고자료 게시판">
-            <button
-              v-for="board in boards"
-              :key="board.type"
-              type="button"
-              :class="{ active: activeBoard === board.type }"
-              :data-testid="`panel-trigger-${board.type}`"
-              @click="openBoard(board.type)"
-            >
-              {{ board.shortLabel }}
-            </button>
-          </nav>
-
-          <div class="workspace-drawer-content">
-            <header class="drawer-header">
-              <div>
-                <p class="section-kicker">참고자료</p>
-                <h2>{{ activeBoardTitle }}</h2>
-              </div>
+          <div class="floating-panel-body">
+            <nav class="workspace-side-rail" aria-label="참고자료 게시판">
               <button
-                class="drawer-expand-button"
+                v-for="board in boards"
+                :key="board.type"
                 type="button"
-                aria-label="게시판 전체 보기"
-                data-testid="board-full-view"
-                @click="openBoardFullView"
+                :class="{ active: activeBoard === board.type }"
+                :data-testid="`panel-trigger-${board.type}`"
+                @click="openBoard(board.type)"
               >
-                ↗
+                {{ board.shortLabel }}
               </button>
-            </header>
+            </nav>
 
-            <section v-if="showReferenceCreateButton" class="drawer-reference-list">
-              <button
-                v-for="reference in filteredReferences"
-                :key="reference.id"
-                class="reference-list-item"
-                type="button"
-                :data-testid="`open-reference-${reference.id}`"
-                @click="openReference(reference.id)"
-              >
-                <span>{{ referenceTypeLabel(reference.type) }}</span>
-                <strong>{{ reference.title }}</strong>
-              </button>
-            </section>
-
-            <component :is="activeBoardComponent" />
-
-            <section v-if="workspaceStore.activeReference && showReferenceCreateButton" class="reference-editor-panel">
-              <div class="section-heading compact-heading">
+            <div class="workspace-drawer-content">
+              <header class="drawer-header">
                 <div>
-                  <p class="section-kicker">{{ referenceTypeLabel(workspaceStore.activeReference.type) }}</p>
-                  <h3>{{ workspaceStore.activeReference.title }}</h3>
+                  <p class="section-kicker">참고자료</p>
+                  <h2>{{ activeBoardTitle }}</h2>
                 </div>
                 <button
-                  class="text-button danger"
+                  class="drawer-expand-button"
                   type="button"
-                  data-testid="delete-reference"
-                  @click="deleteReference"
+                  aria-label="게시판 전체 보기"
+                  data-testid="board-full-view"
+                  @click="openBoardFullView"
                 >
-                  삭제
+                  ↗
                 </button>
-              </div>
-              <form class="reference-edit-form" @submit.prevent="saveReference">
-                <label>
-                  유형
-                  <select v-model="referenceForm.referenceType" data-testid="reference-type">
-                    <option v-for="type in creatableReferenceTypes" :key="type" :value="type">
-                      {{ referenceTypeLabel(type) }}
-                    </option>
-                  </select>
-                </label>
-                <label>
-                  제목
-                  <input v-model="referenceForm.title" data-testid="reference-title" required />
-                </label>
-                <label>
-                  본문
-                  <textarea v-model="referenceForm.body" data-testid="reference-body" required />
-                </label>
-                <p class="reference-body-preview">{{ referenceForm.body }}</p>
-                <label>
-                  URL
-                  <input v-model="referenceForm.url" data-testid="reference-url" />
-                </label>
-                <button class="primary-button small-button" type="button" data-testid="save-reference" @click="saveReference">
-                  저장
-                </button>
-              </form>
-            </section>
+              </header>
 
-            <button
-              v-if="showReferenceCreateButton"
-              class="ghost-button drawer-create-button is-icon"
-              type="button"
-              data-testid="create-reference"
-              :aria-label="`${activeBoardTitle} 추가`"
-              title="새 메모 추가"
-              @click="createReference"
-            >
-              +
-            </button>
+              <section v-if="showReferenceCreateButton" class="drawer-reference-list">
+                <button
+                  v-for="reference in filteredReferences"
+                  :key="reference.id"
+                  class="reference-list-item"
+                  type="button"
+                  :data-testid="`open-reference-${reference.id}`"
+                  @click="openReference(reference.id)"
+                >
+                  <span>{{ referenceTypeLabel(reference.type) }}</span>
+                  <strong>{{ reference.title }}</strong>
+                </button>
+              </section>
+
+              <component :is="activeBoardComponent" />
+
+              <section v-if="workspaceStore.activeReference && showReferenceCreateButton" class="reference-editor-panel">
+                <div class="section-heading compact-heading">
+                  <div>
+                    <p class="section-kicker">{{ referenceTypeLabel(workspaceStore.activeReference.type) }}</p>
+                    <h3>{{ workspaceStore.activeReference.title }}</h3>
+                  </div>
+                  <button
+                    class="text-button danger"
+                    type="button"
+                    data-testid="delete-reference"
+                    @click="deleteReference"
+                  >
+                    삭제
+                  </button>
+                </div>
+                <form class="reference-edit-form" @submit.prevent="saveReference">
+                  <label>
+                    유형
+                    <select v-model="referenceForm.referenceType" data-testid="reference-type">
+                      <option v-for="type in creatableReferenceTypes" :key="type" :value="type">
+                        {{ referenceTypeLabel(type) }}
+                      </option>
+                    </select>
+                  </label>
+                  <label>
+                    제목
+                    <input v-model="referenceForm.title" data-testid="reference-title" required />
+                  </label>
+                  <label>
+                    본문
+                    <textarea v-model="referenceForm.body" data-testid="reference-body" required />
+                  </label>
+                  <p class="reference-body-preview">{{ referenceForm.body }}</p>
+                  <label>
+                    URL
+                    <input v-model="referenceForm.url" data-testid="reference-url" />
+                  </label>
+                  <button class="primary-button small-button" type="button" data-testid="save-reference" @click="saveReference">
+                    저장
+                  </button>
+                </form>
+              </section>
+
+              <button
+                v-if="showReferenceCreateButton"
+                class="ghost-button drawer-create-button is-icon"
+                type="button"
+                data-testid="create-reference"
+                :aria-label="`${activeBoardTitle} 추가`"
+                title="새 메모 추가"
+                @click="createReference"
+              >
+                +
+              </button>
+            </div>
           </div>
         </aside>
       </div>
