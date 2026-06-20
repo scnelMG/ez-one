@@ -233,7 +233,8 @@ describe('workspaceApi', () => {
             rightVersionId: '502',
             leftBody: '초안 v1',
             rightBody: '초안 v2',
-            changed: true
+            changed: true,
+            aiSummary: 'AI 요약을 불러오지 못했습니다.'
         });
     });
     it('WS-006/WS-007: updates and deletes an essay question', async () => {

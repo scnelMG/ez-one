@@ -146,11 +146,14 @@ export function createWorkspaceApi(httpClient = defaultHttpClient) {
         },
         async compareVersions(workspaceId, leftVersionId, rightVersionId, customPrompt) {
             try {
-                const response = await httpClient.post(`/api/workspaces/${workspaceId}/versions/compare`, {
+                const payload = {
                     leftVersionId: Number(leftVersionId),
-                    rightVersionId: Number(rightVersionId),
-                    customPrompt: customPrompt
-                });
+                    rightVersionId: Number(rightVersionId)
+                };
+                if (customPrompt?.trim()) {
+                    payload.customPrompt = customPrompt.trim();
+                }
+                const response = await httpClient.post(`/api/workspaces/${workspaceId}/versions/compare`, payload);
                 return toVersionComparison(unwrapApiData(response.data));
             }
             catch {

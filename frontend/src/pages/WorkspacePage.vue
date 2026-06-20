@@ -113,7 +113,11 @@
         </article>
       </section>
 
-      <div class="workspace-layout-wrapper">
+      <div
+        class="workspace-layout-wrapper"
+        :class="{ 'drawer-open': !isMinimized }"
+        data-testid="workspace-push-layout"
+      >
         <main class="workspace-main-pane" :style="drawerStyle" data-testid="workspace-main-pane">
           <div class="workspace-bottom-tabs is-fixed" data-testid="workspace-bottom-tabs">
             <button
@@ -388,7 +392,7 @@
                       ✨ AI 변경점 요약
                     </h3>
                     <div style="display: flex; gap: 8px;">
-                      <button v-if="workspaceStore.versionComparison?.aiSummary" class="ghost-button" @click="compareVersions" :disabled="workspaceStore.status === 'loading'" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: #e0e7ff; color: #4f46e5; border: none; cursor: pointer; font-weight: 600;">
+                      <button v-if="selectedLeftVersionId && selectedRightVersionId" class="ghost-button" @click="compareVersions" :disabled="workspaceStore.status === 'loading'" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: #e0e7ff; color: #4f46e5; border: none; cursor: pointer; font-weight: 600;">
                         🔄 새로고침
                       </button>
                       <button class="primary-button small-button" @click="isEditingPrompt = !isEditingPrompt" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: #8b5cf6; border: none; cursor: pointer;">
@@ -410,8 +414,8 @@
                   <div v-if="workspaceStore.status === 'loading'" class="ai-summary-content" style="padding: 16px; color: #64748b; font-style: italic; text-align: center;">
                     AI가 변경점을 분석하고 요약 중입니다... 잠시만 기다려주세요.
                   </div>
-                  <div v-else-if="workspaceStore.versionComparison?.aiSummary" class="ai-summary-content" style="white-space: pre-wrap; line-height: 1.6; color: #334155; padding-top: 16px; border-top: 1px solid #e2e8f0;">
-                    {{ workspaceStore.versionComparison.aiSummary }}
+                  <div v-else-if="activeComparison?.aiSummary" class="ai-summary-content" style="white-space: pre-wrap; line-height: 1.6; color: #334155; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+                    {{ activeComparison.aiSummary }}
                   </div>
                   <div v-else class="ai-summary-content" style="padding: 16px; color: #64748b; text-align: center;">
                     두 버전을 비교하시면 AI가 변경점을 요약해 드립니다.
@@ -439,9 +443,18 @@
           v-show="!isMinimized"
           class="floating-side-panel"
           :style="floatingPanelStyle"
-          data-testid="workspace-floating-panel"
+          data-testid="workspace-side-drawer"
+          data-panel-testid="workspace-floating-panel"
         >
-          <div class="panel-resize-handle resize-left" @mousedown.stop="startPanelResize('left', $event)"></div>
+          <div
+            class="panel-resize-handle resize-left"
+            role="separator"
+            tabindex="0"
+            data-testid="workspace-panel-divider"
+            @mousedown.stop="startPanelResize('left', $event)"
+            @keydown.left.prevent="nudgeDrawerWidth(24)"
+            @keydown.right.prevent="nudgeDrawerWidth(-24)"
+          ></div>
           <div class="panel-resize-handle resize-right" @mousedown.stop="startPanelResize('right', $event)"></div>
           <div class="panel-resize-handle resize-top" @mousedown.stop="startPanelResize('top', $event)"></div>
           <div class="panel-resize-handle resize-bottom" @mousedown.stop="startPanelResize('bottom', $event)"></div>
@@ -639,6 +652,7 @@ import { computed, h, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch
 import * as DiffPkg from 'diff';
 const diffLines = DiffPkg.diffLines || DiffPkg.default?.diffLines || DiffPkg;
 import { useRoute } from 'vue-router';
+import { rememberRecentWorkspace } from '@/features/basket/recentWorkspaces';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 
 const isCreatingNewVersion = ref(false);
@@ -884,16 +898,34 @@ const cleanCompanyBusiness = computed(() => {
   return looksLikeMetadataOnly ? '' : business;
 });
 const workspaceStatusClass = computed(() => statusClassFromLabel(workspaceStore.workspace?.statusLabel));
+function versionSortKey(version) {
+  const numericId = Number(version.id);
+  if (Number.isFinite(numericId)) return numericId;
+  const timestamp = String(version.id).match(/(\d+)$/)?.[1];
+  return timestamp ? Number(timestamp) : 0;
+}
 const currentQuestionVersions = computed(() => {
   if (!currentQuestion.value) return [];
   return [
     ...localVersions.value,
     ...workspaceStore.versions
-  ].filter((version) => version.questionId === currentQuestion.value.id);
+  ]
+    .filter((version) => version.questionId === currentQuestion.value.id)
+    .sort((left, right) => versionSortKey(left) - versionSortKey(right));
 });
 const selectedLeftVersion = computed(() => currentQuestionVersions.value.find((version) => version.id === selectedLeftVersionId.value) ?? null);
 const selectedRightVersion = computed(() => currentQuestionVersions.value.find((version) => version.id === selectedRightVersionId.value) ?? null);
-const versionDiffRows = computed(() => buildLineDiff(selectedLeftVersion.value?.body ?? '', selectedRightVersion.value?.body ?? ''));
+const activeComparison = computed(() => {
+  const comparison = workspaceStore.versionComparison;
+  if (!comparison) return null;
+  if (String(comparison.leftVersionId) !== String(selectedLeftVersionId.value)) return null;
+  if (String(comparison.rightVersionId) !== String(selectedRightVersionId.value)) return null;
+  return comparison;
+});
+const versionDiffRows = computed(() => buildLineDiff(
+  activeComparison.value?.leftBody ?? selectedLeftVersion.value?.body ?? '',
+  activeComparison.value?.rightBody ?? selectedRightVersion.value?.body ?? ''
+));
 const canSaveFinalEssay = computed(() => Boolean(
   currentQuestion.value
   && finalEssayTitle.value.trim()
@@ -1103,11 +1135,11 @@ async function createVersion() {
   rememberCurrentWorkspaceIfSaved();
 }
 
-function compareVersions() {
+async function compareVersions() {
   const left = selectedLeftVersion.value;
   const right = selectedRightVersion.value;
-  if (!left || !right) return;
-  void workspaceStore.compareVersions(workspaceId.value, left.id, right.id, customAiPrompt.value);
+  if (!left || !right || left.id === right.id) return null;
+  return workspaceStore.compareVersions(workspaceId.value, left.id, right.id, customAiPrompt.value);
 }
 
 function buildLineDiff(leftBody, rightBody) {
@@ -1236,7 +1268,7 @@ function clampDrawerWidth(width, layoutWidth = null) {
 
 async function saveFinalEssay() {
   if (!canSaveFinalEssay.value) return;
-  const previousNewestVersion = currentQuestionVersions.value[0] ?? null;
+  const previousNewestVersion = currentQuestionVersions.value[currentQuestionVersions.value.length - 1] ?? null;
   if (currentQuestion.value.localOnly) {
     const version = {
       id: `local-version-${Date.now()}`,
@@ -1252,6 +1284,8 @@ async function saveFinalEssay() {
     finalEssayBody.value = '';
     isCreatingNewVersion.value = false;
     rememberCurrentWorkspaceIfSaved();
+    await nextTick();
+    await compareVersions();
     return;
   }
   const version = await workspaceStore.createVersion(
@@ -1268,6 +1302,10 @@ async function saveFinalEssay() {
   finalEssayBody.value = '';
   isCreatingNewVersion.value = false;
   rememberCurrentWorkspaceIfSaved();
+  if (version?.id && previousNewestVersion?.id) {
+    await nextTick();
+    await compareVersions();
+  }
 }
 
 async function createReference() {
