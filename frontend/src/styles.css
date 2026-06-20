@@ -11784,3 +11784,25 @@ button.history-metric:hover {
 .bee-minimize-button:hover {
   transform: scale(1.1);
 }
+
+.diff-row-line.added {
+  background-color: #e6ffed;
+}
+.diff-row-line.added pre {
+  color: #22863a;
+}
+.diff-row-line.added .diff-indicator {
+  color: #22863a;
+  opacity: 1;
+}
+
+.diff-row-line.removed {
+  background-color: #ffeef0;
+}
+.diff-row-line.removed pre {
+  color: #cb2431;
+}
+.diff-row-line.removed .diff-indicator {
+  color: #cb2431;
+  opacity: 1;
+}

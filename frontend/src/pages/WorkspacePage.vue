@@ -636,7 +636,8 @@
 
 <script setup>
 import { computed, h, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
-import { diffLines } from 'diff';
+import * as DiffPkg from 'diff';
+const diffLines = DiffPkg.diffLines || DiffPkg.default?.diffLines || DiffPkg;
 import { useRoute } from 'vue-router';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 
@@ -1111,7 +1112,18 @@ function compareVersions() {
 
 function buildLineDiff(leftBody, rightBody) {
   const formatToSentenceLines = (text) => text ? text.replace(/([.?!])\s+/g, '$1\n') : '';
-  const diffs = diffLines(formatToSentenceLines(leftBody), formatToSentenceLines(rightBody));
+  
+  let diffs = [];
+  try {
+    diffs = diffLines(formatToSentenceLines(leftBody), formatToSentenceLines(rightBody));
+  } catch (error) {
+    console.error('Diff calculation failed:', error);
+    // Fallback if diff fails
+    return {
+      leftRows: [{ type: 'same', content: leftBody }],
+      rightRows: [{ type: 'same', content: rightBody }]
+    };
+  }
   
   const leftRows = [];
   const rightRows = [];

@@ -230,13 +230,14 @@ function toEssayVersion(version) {
         createdAt: version.createdAt
     };
 }
-function toVersionComparison(comparison) {
+function toVersionComparison(data) {
     return {
-        leftVersionId: String(comparison.leftVersionId),
-        rightVersionId: String(comparison.rightVersionId),
-        leftBody: comparison.leftBody,
-        rightBody: comparison.rightBody,
-        changed: comparison.changed
+        leftVersionId: String(data.leftVersionId),
+        rightVersionId: String(data.rightVersionId),
+        leftBody: data.leftBody ?? '',
+        rightBody: data.rightBody ?? '',
+        changed: data.changed ?? false,
+        aiSummary: data.aiSummary ?? (data.changed ? 'AI 요약을 불러오지 못했습니다.' : '두 버전의 내용이 동일합니다. 변경된 내용이 없습니다.')
     };
 }
 function toWorkspaceReference(reference) {
