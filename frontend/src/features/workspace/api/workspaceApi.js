@@ -158,14 +158,23 @@ export function createWorkspaceApi(httpClient = defaultHttpClient) {
                 const left = versions.find((version) => version.id === String(leftVersionId));
                 const right = versions.find((version) => version.id === String(rightVersionId));
                 if (!left || !right) {
-                    throw new Error('Version not found');
+                    return {
+                        leftVersionId: String(leftVersionId),
+                        rightVersionId: String(rightVersionId),
+                        leftBody: left ? left.body : '불러올 수 없음',
+                        rightBody: right ? right.body : '불러올 수 없음',
+                        changed: true,
+                        aiSummary: '백엔드 AI 요약 요청 실패. (로컬/네트워크 환경을 확인해주세요)'
+                    };
                 }
+                const changed = left.body !== right.body;
                 return {
                     leftVersionId: left.id,
                     rightVersionId: right.id,
                     leftBody: left.body,
                     rightBody: right.body,
-                    changed: left.body !== right.body
+                    changed: changed,
+                    aiSummary: changed ? `[테스트 요약] 변경된 내용은 다음과 같습니다.\n${customPrompt || ''}` : '변경된 내용이 없습니다.'
                 };
             }
         },

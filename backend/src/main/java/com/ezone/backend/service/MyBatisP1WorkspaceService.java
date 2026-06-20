@@ -422,7 +422,11 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         
         String aiSummary = null;
         if (changed) {
-            aiSummary = openAiClient.generateComparisonSummary(leftBody, rightBody, request.customPrompt());
+            try {
+                aiSummary = openAiClient.generateComparisonSummary(leftBody, rightBody, request.customPrompt());
+            } catch (Exception e) {
+                aiSummary = "AI 요약을 생성하는 중 오류가 발생했습니다. (설정이나 네트워크 상태를 확인해주세요.)";
+            }
         }
 
         return new CompareEssayVersionsResponse(
