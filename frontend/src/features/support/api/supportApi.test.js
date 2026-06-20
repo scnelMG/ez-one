@@ -47,8 +47,8 @@ describe('supportApi', () => {
         await expect(api.createRequest({
             requestType: ['PARTNER', 'SHIP'].join(''),
             category: 'CONTENT',
-            title: '제휴' + ' 문의',
-            body: '제휴 제안입니다.',
+            title: '지원하지 않는 요청',
+            body: '지원하지 않는 요청입니다.',
             companyName: 'Partner Co.'
         })).rejects.toThrow('Only inquiry support requests are supported.');
         expect(post).not.toHaveBeenCalled();

@@ -374,7 +374,8 @@ frontend/src/features/document-profile/
 | --- | --- |
 | 로그인, 온보딩, 메인, 장바구니, 워크스페이스, 서류 입력 정보, 추천 저장, Notion JOB_ONLY | P1 |
 | 마이페이지 내 온보딩 수정, Notion 계정 확인 | P1 보조 |
-| Mattermost 추천 후보, 과거 지원 내역, 알림, 추천 hover 기업 정보 | P2/IA only |
+| SSAFY 사용자 전용 Mattermost 추천 후보 | 활성 |
+| 과거 지원 내역, 알림, 추천 hover 기업 정보 | P2/IA only |
 | 확장 프로그램 서류 자동 입력 보조 | P1. 제출 자동화 없이 입력 보조와 수동 검토만 제공 |
 
 ## UI 상태 기준

@@ -2,7 +2,7 @@
 
 기준 원본: Notion `28. Mattermost 데이터 수집`
 
-Mattermost 수집은 P1 필수 구현 범위가 아니다. SSAFY 추천 고도화를 위한 Should/P2 데이터 소스로만 관리한다.
+Mattermost 수집은 SSAFY 사용자 전용 추천 화면의 활성 데이터 소스로 관리한다. 접근 권한은 `user_profiles.is_ssafy = true`로 제한한다.
 
 ## 목적
 

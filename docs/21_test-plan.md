@@ -51,17 +51,17 @@
 | TC-CALENDAR-P2 | Basket Calendar | 마감 캘린더/주간 일정 |
 | TC-SUPPORT-P2 | Support | 고객지원/문의/약관 |
 | TC-REC-P2 | Recommendation | hover 기업 정보 |
-| TC-MM-P2 | Mattermost | raw 저장과 후보 공고 승인 |
+| TC-MM-ACTIVE | Mattermost | raw 저장, 후보 공고 생성, SSAFY 전용 추천 노출 |
 | TC-REF-AUTO-P2 | References | 자동 JD/news/DART/인재상 수집 |
 | TC-NOTION-SCOPE-P2 | Notion | job+essay, job+essay+canvas 동기화 |
 
-## Mattermost P2 테스트 상세
+## Mattermost 활성 추천 테스트 상세
 
-- `TC-MM-P2-RAW`: webhook secret 검증 후 원문을 `mm_messages`에 저장한다.
-- `TC-MM-P2-FILTER`: 합격 후기/일반 공지는 raw만 저장하고 후보 공고를 만들지 않는다.
-- `TC-MM-P2-CANDIDATE`: 채용공고 메시지는 `mm_parsed_job_posts` 후보를 생성한다.
-- `TC-MM-P2-SSAFY`: `source=mattermost` 추천 조회/저장은 SSAFY 사용자에게만 허용한다.
-- `TC-MM-P2-PROMOTE`: 승인된 후보만 `jobs.source = 'MATTERMOST'`로 승격되어 추천 목록에 노출된다.
+- `TC-MM-RAW`: webhook secret 검증 후 원문을 `mm_messages`에 저장한다.
+- `TC-MM-FILTER`: 합격 후기/일반 공지는 raw만 저장하고 후보 공고를 만들지 않는다.
+- `TC-MM-CANDIDATE`: 채용공고 메시지는 `mm_parsed_job_posts` 후보를 생성한다.
+- `TC-MM-SSAFY`: `source=mattermost` 추천 조회/저장은 SSAFY 사용자에게만 허용한다.
+- `TC-MM-PROMOTE`: 저장 시 필요한 경우 `jobs.source = 'MATTERMOST'`로 승격한다.
 
 ## 검증 규칙
 

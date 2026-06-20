@@ -62,10 +62,10 @@ erDiagram
 | `mm_messages` | id, channel_id, message_id, raw_payload_json, posted_at, received_at, parse_status | Mattermost raw-first 저장 |
 | `mm_parsed_job_posts` | id, mm_message_id, company_name, title, url, deadline_at, review_status | 관리자 검토용 후보 공고 |
 
-## Mattermost P2 구현 추가
+## Mattermost 구현 추가
 
 - `mm_messages`는 Mattermost webhook 원문을 raw-first로 저장한다. `message_id`는 중복 수신 방지를 위해 unique다. `posted_at`은 Mattermost 원본 게시 시각, `received_at`은 backend 수신 시각이다.
-- `mm_parsed_job_posts`는 채용공고로 판단된 후보만 저장한다. `review_status = APPROVED`로 검토된 후보만 `jobs.source = 'MATTERMOST'` 공고로 승격한다.
+- `mm_parsed_job_posts`는 채용공고로 판단된 후보만 저장한다. 추천 목록은 마감 전 파싱 후보를 우선 보여주고, 저장 시 필요한 경우 `jobs.source = 'MATTERMOST'` 공고로 승격한다.
 - Mattermost 추천은 `user_profiles.is_ssafy = true` 사용자에게만 조회/저장 가능하다.
 
 ## Enum 기준

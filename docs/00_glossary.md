@@ -39,7 +39,7 @@
 | Chrome Extension | 지원하는 채용 페이지에서 공고 데이터를 추출하고 저장하는 브라우저 확장 프로그램 | P1은 Jasoseol.com 공고 저장부터 시작 |
 | Jasoseol.com | 확장 공고 저장과 추천 저장 흐름의 첫 지원 소스 | P1 소스 |
 | 추천 공고 | 온보딩/프로필 기준 또는 이후 수집 소스에서 추천되는 공고 | P1은 Jasoseol.com 기반 star-to-basket 지원 |
-| Mattermost 추천 | SSAFY/커뮤니티 데이터 기반 추천 경로 | P2 수집/후보화 흐름 |
+| Mattermost 추천 | SSAFY/커뮤니티 데이터 기반 추천 경로 | SSAFY 사용자 전용 활성 추천 흐름 |
 | Notion 동기화 | EZ-ONE에서 사용자 Notion 워크스페이스로 보내는 외부 동기화 | P1은 `JOB_ONLY` |
 | `JOB_ONLY` | 저장 공고 데이터만 전송하는 Notion 동기화 범위 | MVP 기본값 |
 | 확장 동기화 | 공고, 자소서, 도화지 데이터를 포함하는 Notion 동기화 | P2, P1 아님 |

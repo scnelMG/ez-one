@@ -224,7 +224,7 @@ text { font-family: 'Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic','NanumG
 <text x="708" y="1140" class="t-mid">고객지원</text>
 <path d="M786,1136 H856" class="line"/>
 <rect x="856" y="1120" width="174.7" height="32" rx="16" class="pill"/>
-<text x="943.4" y="1140" class="t-pill">문의·FAQ·이용약관·제휴 제안</text>
+<text x="943.4" y="1140" class="t-pill">문의·FAQ·이용약관</text>
 
 <rect x="404" y="1160" width="150" height="32" rx="7" class="major"/>
 <text x="479" y="1180" class="t-major">알림</text>

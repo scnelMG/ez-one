@@ -13,7 +13,7 @@
 | 공고 저장 | 저장 시 장바구니 row와 워크스페이스를 생성한다. | P1 |
 | 확장 프로그램 | P1 공고 저장 지원 사이트는 Jasoseol.com부터 시작한다. | P1 |
 | 추천 | P1 추천 저장은 Jasoseol.com 기반 star-to-basket이다. | P1 |
-| Mattermost | SSAFY 추천 구조는 유지하되 raw 수집/후보화는 후순위다. | Should/P2 |
+| Mattermost | SSAFY 사용자 전용 추천 화면의 활성 데이터 소스로 사용한다. | 승인된 활성 범위 |
 | Notion | P1은 공고 저장 시 `JOB_ONLY` 자동 동기화만 검증한다. | P1 |
 | 참고자료 | JD/news/DART/인재상은 P1 수동 입력이다. | P1 |
 | 자동 저장 | UI dirty 즉시 표시, API 1초 debounce, 최대 5초 forced save를 사용한다. | P1 |

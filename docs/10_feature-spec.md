@@ -87,8 +87,8 @@ flowchart LR
 | 기능 | 상태 | 기준 |
 | --- | --- | --- |
 | 장바구니 캘린더/주간 일정 | P2 | P1 장바구니 목록/정렬 이후 마감 일정 표시로 검토 |
-| 고객지원 | P1 부분 제공/P2 확장 | FAQ, 1:1 문의, 이용약관은 마이페이지 하위 독립 페이지로 제공한다. 별도 사업 협력 접수는 P1 범위에서 제외한다. |
-| Mattermost 채용공고 수집 | P2 | webhook 원문 raw 저장, 채용공고 후보 파싱, 검토 승인 후 SSAFY 사용자에게만 추천 노출 |
+| 고객지원 | P1 부분 제공/P2 확장 | FAQ, 1:1 문의, 이용약관은 마이페이지 하위 독립 페이지로 제공한다. |
+| Mattermost 채용공고 수집 | SSAFY 전용 활성 | webhook 원문 raw 저장, 채용공고 후보 파싱, SSAFY 사용자에게만 추천 노출 |
 ## 2026-06-16 Past Application History
 
 - The history feature reads user-owned application records from `application_history`, including imported CSV history and basket jobs whose status indicates real application progress or non-application.

@@ -33,7 +33,7 @@
 | ALERT-001 | P2 예약. P1은 화면 내 상태 표시만 제공 |
 | HISTORY-001 | P2 예약. IA에는 유지 |
 | REC-002 | P2 예약. 기업 데이터 안정화 후 |
-| MM-001 | Should/P2. Spring webhook raw 저장, 후보화, 승인 후 SSAFY 전용 추천 노출로 구현 |
+| MM-001 | Spring webhook raw 저장, 후보화, SSAFY 전용 추천 노출로 구현 |
 | REF-003 | P2 예약. P1은 수동 입력 |
 | EXT-002 | Should/P2. 서류 자동 입력 보조 고도화 |
 | NOTION-002 | P2 예약. P1은 `JOB_ONLY` |

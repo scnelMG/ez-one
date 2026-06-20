@@ -20,7 +20,7 @@
 | 10 | Notion `JOB_ONLY` 자동 동기화 | Must |
 | 11 | 마이페이지와 프롬프트 저장/복사 | Should |
 | 12 | 확장 프로그램 서류 입력 보조 고도화 | Should |
-| 13 | Mattermost raw 수집과 추천 후보화 | Should/P2 |
+| 13 | Mattermost raw 수집과 추천 후보화 | 승인된 활성 범위 |
 | 14 | 기업 정보 hover/수집, 자동 참고자료 수집, 과거 지원 통계 | Could/P2 |
 
 ## 핵심 작업
@@ -50,7 +50,7 @@
 | --- | --- | --- |
 | DEV-MYPAGE-001 | 마이페이지와 프롬프트 저장/복사 | P1 핵심 흐름 완료 후 범위 확정 |
 | DEV-EXT-002 | 확장 프로그램 서류 입력 보조 고도화 | 공고 저장 안정화 이후 |
-| DEV-MM-001 | Mattermost raw 수집과 후보화 | Should/P2 |
+| DEV-MM-001 | Mattermost raw 수집과 후보화 | SSAFY 사용자 전용 추천 화면의 활성 데이터 소스 |
 | DEV-P2-001 | 기업 정보 hover/자동 참고자료/과거 지원 통계 | P2/P3 |
 ## 2026-06-04 진행 기록
 
