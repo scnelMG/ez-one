@@ -196,6 +196,9 @@ CREATE TABLE IF NOT EXISTS mm_parsed_job_posts (
   title VARCHAR(255) NOT NULL,
   url VARCHAR(1024) NOT NULL,
   deadline_label VARCHAR(64) NULL,
+  deadline_type VARCHAR(32) NULL,
+  deadline_date DATE NULL,
+  normalized_deadline_label VARCHAR(64) NULL,
   review_status VARCHAR(64) NOT NULL DEFAULT 'NEEDS_REVIEW',
   reviewer_user_id BIGINT NULL,
   promoted_job_id BIGINT NULL,
@@ -208,6 +211,30 @@ CREATE TABLE IF NOT EXISTS mm_parsed_job_posts (
   UNIQUE KEY uk_mm_parsed_job_posts_message_url (mm_message_id, url(255)),
   KEY idx_mm_parsed_job_posts_review_status (review_status),
   KEY idx_mm_parsed_job_posts_promoted_job (promoted_job_id)
+);
+
+CREATE TABLE IF NOT EXISTS mm_recommendation_scores (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NOT NULL,
+  candidate_id BIGINT NOT NULL,
+  score INT NULL,
+  role_score INT NULL,
+  skills_score INT NULL,
+  profile_score INT NULL,
+  deadline_score INT NULL,
+  source_score INT NULL,
+  recommended BOOLEAN NULL,
+  reason VARCHAR(500) NULL,
+  evidence_json JSON NULL,
+  model_version VARCHAR(128) NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_mm_recommendation_scores_user FOREIGN KEY (user_id) REFERENCES users(id),
+  CONSTRAINT fk_mm_recommendation_scores_candidate FOREIGN KEY (candidate_id) REFERENCES mm_parsed_job_posts(id),
+  UNIQUE KEY uk_mm_recommendation_scores_user_candidate (user_id, candidate_id),
+  KEY idx_mm_recommendation_scores_status (status),
+  KEY idx_mm_recommendation_scores_score (score)
 );
 
 CREATE TABLE IF NOT EXISTS workspaces (

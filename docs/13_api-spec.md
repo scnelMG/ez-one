@@ -259,3 +259,14 @@ Requirement: `DATA-002`, `DATA-004`, `JOB-016`, `WS-028`.
 - `GET /api/workspaces/{workspaceId}`의 `companyDetails`는 기존 필드를 유지하고 `sourceStatus`, `sourceNames`, `lastUpdatedAt`을 추가로 내려줄 수 있다.
 - `sourceStatus`는 `OFFICIAL`, `PARTIAL`, `UNVERIFIED` 중 하나다. 공식 출처에서 유효 필드가 2개 이상이면 `OFFICIAL`, 출처는 있으나 핵심 필드가 부족하면 `PARTIAL`, 공식 API 매칭이 없으면 `UNVERIFIED`다.
 - Runtime configuration: `PUBLIC_DATA_API_KEY`, `FINANCIAL_COMPANY_BASIC_INFO_URL`, `OPENDART_API_KEY`, `COMPANY_ENRICHMENT_REALTIME_ENABLED`.
+
+## 2026-06-20 Mattermost Recommendation API
+
+Requirement: `MM-001`, `MM-006`, `MM-007`, `MM-008`, `MM-009`, `REC-003`, `REC-004`.
+
+| Method | Path | Description |
+| --- | --- | --- |
+| GET | `/api/recommendations/jobs?source=mattermost` | Returns all open parsed Mattermost job candidates for SSAFY users. The list includes stored AI score when ready, pending score state when not ready, or rule fallback score. This endpoint must not call the AI client synchronously. |
+| POST | `/api/recommendations/jobs/{recommendationId}/save?source=mattermost` | Saves the selected Mattermost candidate through the normal basket/workspace flow. Missing AI score does not block save. |
+
+Mattermost recommendation rows may include `companyDomain`, `companyType`, `companyLogoUrl`, `postedAt`, `collectedAt`, `recommendationScore`, and `recommendationReason`. `recommendationScore` may be `null` while the stored score status is pending; clients should render this as a calculating state instead of hiding the job.

@@ -92,6 +92,14 @@ Study still needs a formal requirement ID if it remains an active product surfac
 | Workspace ownership | DART disclosure, analysis, read, and save-reference endpoints run through workspace/user ownership checks before returning or saving data. | `DartAnalysisServiceTest` |
 | DART AI output quality | AI output is evaluated through structured JSON, prompt self-check, deterministic source/policy guardrails, score normalization, focused DART text preparation, and regression tests before it can become a completed analysis. Live smoke validation confirmed `gpt-5.4-mini` quality, but actual usage review selected `gpt-4.1` as the cost-controlled default. See `docs/34_dart-ai-evaluation.md`. | `DartAnalysisQualityEvaluatorTest`, `DartAnalysisServiceTest`, `OpenDartHttpClientTest`, `DartGmsLiveSmokeEvaluationTest`, `LocalConfigurationContractTest` |
 
+## 2026-06-20 Mattermost Recommendation Traceability Update
+
+| Requirement | Implementation | Verification |
+| --- | --- | --- |
+| `MM-001`, `MM-006`, `MM-007`, `MM-008` | Mattermost webhook/backfill persists raw messages and parsed job candidates. Parsed candidates now carry normalized deadline fields for recommendation listing. | `MattermostIngestionServiceTest`, `MattermostSchemaContractTest` |
+| `MM-009`, `REC-003`, `REC-004` | SSAFY-only Mattermost recommendation listing returns all open parsed candidates with stored AI score, pending state, or rule fallback without a synchronous AI call. | `MattermostRecommendationServiceTest`, `recommendationApi.test.js` |
+| Mattermost recommendation UI | `/recommendations/mattermost` shows all jobs by default, with segments for 전체 공고, AI 추천, 마감 임박 and sort modes for deadline, score, and recent post time. | `MattermostRecommendationsPage.test.js` |
+
 ## 2026-06-20 Company Enrichment Traceability Update
 
 | Requirement | Implementation | Verification |

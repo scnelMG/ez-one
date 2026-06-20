@@ -485,6 +485,15 @@ frontend/src/
 - AI evidence cards are shown in the right push drawer only. They do not auto-fill or overwrite the essay draft editor.
 - Saved DART analysis results become normal reference material and can be reused through the existing reference side panel.
 
+## 2026-06-20 Mattermost Recommendation Screen Update
+
+- Requirement: `MM-001`, `MM-006`, `MM-007`, `MM-008`, `MM-009`, `REC-003`, `REC-004`.
+- `/recommendations/mattermost` is an active authenticated route for SSAFY users.
+- The first view is the full Mattermost job feed, not a marketing or empty placeholder page.
+- The toolbar provides three segments: 전체 공고, AI 추천, and 마감 임박.
+- The sort control supports 마감 기한순, AI 추천 점수순, and 최근 게시순.
+- Cards separate company type, official company site domain, original posted time, Mattermost source, deadline, score or calculating state, and save/workspace actions.
+
 ## 2026-06-20 Workspace Company Snapshot Status
 
 - Requirement: `DATA-002`, `DATA-004`, `JOB-016`, `WS-028`.

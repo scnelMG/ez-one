@@ -25,7 +25,7 @@
         :body="errorMessage"
       />
       <StatePanel
-        v-else-if="jobs.length === 0"
+        v-else-if="rawJobs.length === 0"
         id="mm-empty"
         tone="navy"
         title="마감 전 MM 공고가 없습니다"
@@ -33,14 +33,51 @@
       />
 
       <template v-else>
+        <div class="mm-controls" aria-label="Mattermost 공고 보기 옵션">
+          <div class="mm-segmented-control" role="group" aria-label="공고 세그먼트">
+            <button
+              type="button"
+              data-testid="mm-segment-all"
+              :class="{ active: activeSegment === 'all' }"
+              @click="activeSegment = 'all'"
+            >
+              전체 공고
+            </button>
+            <button
+              type="button"
+              data-testid="mm-segment-ai"
+              :class="{ active: activeSegment === 'ai' }"
+              @click="activeSegment = 'ai'"
+            >
+              AI 추천
+            </button>
+            <button
+              type="button"
+              data-testid="mm-segment-urgent"
+              :class="{ active: activeSegment === 'urgent' }"
+              @click="activeSegment = 'urgent'"
+            >
+              마감 임박
+            </button>
+          </div>
+          <label class="mm-sort-control">
+            정렬
+            <select v-model="sortMode" data-testid="mm-sort-select" name="mattermostSort">
+              <option value="deadline">마감 기한순</option>
+              <option value="score">AI 추천 점수순</option>
+              <option value="recent">최근 게시순</option>
+            </select>
+          </label>
+        </div>
+
         <div class="mm-toolbar" aria-label="Mattermost 추천공고 상태">
           <div>
-            <strong>{{ jobs.length }}</strong>
-            <span>마감 전 공고</span>
+            <strong>{{ visibleJobs.length }}</strong>
+            <span>{{ toolbarLabel }}</span>
           </div>
           <div>
             <strong>AI</strong>
-            <span>적합도 순 정렬</span>
+            <span>저장 점수 우선</span>
           </div>
           <div>
             <strong>실시간</strong>
@@ -50,7 +87,7 @@
 
         <div class="mm-job-grid" aria-label="Mattermost 추천공고 목록">
           <article
-            v-for="job in jobs"
+            v-for="job in visibleJobs"
             :key="job.id"
             class="mm-job-card"
             :data-testid="`mm-recommendation-card-${job.id}`"
@@ -75,12 +112,15 @@
                 <span>{{ job.recommendationScore }}</span>
                 <small>AI</small>
               </div>
+              <div v-else class="mm-score pending" aria-label="AI 추천 점수 계산 중">
+                <span>계산 중</span>
+              </div>
             </div>
 
             <div class="mm-card-meta">
               <span :class="deadlineClass(job.deadlineLabel)">{{ job.deadlineLabel || '마감 미정' }}</span>
               <span v-if="job.companyType">{{ job.companyType }}</span>
-              <span v-if="job.companyDomain">공식 {{ job.companyDomain }}</span>
+              <span v-if="job.companyDomain">공식 사이트: {{ job.companyDomain }}</span>
               <span v-if="displayedPostedAt(job)">게시 {{ formatMattermostTime(displayedPostedAt(job)) }}</span>
               <span v-else-if="job.collectedAt">수집 {{ formatMattermostTime(job.collectedAt) }}</span>
               <span>Mattermost</span>
@@ -137,13 +177,16 @@ const rawJobs = ref([]);
 const status = ref('loading');
 const errorMessage = ref('');
 const savingJobId = ref(null);
+const activeSegment = ref('all');
+const sortMode = ref('deadline');
 const savedJobs = reactive({});
 
-const jobs = computed(() => [...rawJobs.value].sort((left, right) => {
-  const leftScore = left.recommendationScore ?? 0;
-  const rightScore = right.recommendationScore ?? 0;
-  return rightScore - leftScore;
-}));
+const visibleJobs = computed(() => filteredJobs().sort(compareJobs));
+const toolbarLabel = computed(() => {
+  if (activeSegment.value === 'ai') return 'AI 추천 공고';
+  if (activeSegment.value === 'urgent') return '마감 임박 공고';
+  return '마감 전 공고';
+});
 
 onMounted(loadJobs);
 
@@ -174,10 +217,53 @@ function deadlineClass(deadlineLabel) {
   if (deadlineLabel.includes('상시') || deadlineLabel.includes('수시')) {
     return 'mm-deadline-open';
   }
-  if (/^D-[0-7]$/.test(deadlineLabel)) {
+  if (/^D-[0-7]$/.test(deadlineLabel) || deadlineLabel === '오늘 마감') {
     return 'mm-deadline-soon';
   }
   return 'mm-deadline-date';
+}
+
+function filteredJobs() {
+  if (activeSegment.value === 'ai') {
+    return rawJobs.value.filter((job) => (job.recommendationScore ?? 0) >= 70);
+  }
+  if (activeSegment.value === 'urgent') {
+    return rawJobs.value.filter((job) => deadlineRank(job.deadlineLabel) <= 7);
+  }
+  return [...rawJobs.value];
+}
+
+function compareJobs(left, right) {
+  if (sortMode.value === 'score') {
+    return compareScore(left, right) || compareDeadline(left, right) || compareRecent(left, right);
+  }
+  if (sortMode.value === 'recent') {
+    return compareRecent(left, right) || compareDeadline(left, right) || compareScore(left, right);
+  }
+  return compareDeadline(left, right) || compareScore(left, right) || compareRecent(left, right);
+}
+
+function compareScore(left, right) {
+  return (right.recommendationScore ?? -1) - (left.recommendationScore ?? -1);
+}
+
+function compareDeadline(left, right) {
+  return deadlineRank(left.deadlineLabel) - deadlineRank(right.deadlineLabel);
+}
+
+function compareRecent(left, right) {
+  return new Date(right.postedAt || right.collectedAt || 0).getTime() - new Date(left.postedAt || left.collectedAt || 0).getTime();
+}
+
+function deadlineRank(deadlineLabel) {
+  if (deadlineLabel === '오늘 마감') return 0;
+  const dday = /^D-(\d+)$/.exec(deadlineLabel ?? '');
+  if (dday) return Number(dday[1]);
+  if ((deadlineLabel ?? '').includes('상시') || (deadlineLabel ?? '').includes('수시')) return 500;
+  if ((deadlineLabel ?? '').includes('채용 시')) return 600;
+  if ((deadlineLabel ?? '').includes('미확인')) return 900;
+  const parsed = new Date(deadlineLabel);
+  return Number.isNaN(parsed.getTime()) ? 800 : Math.max(0, Math.ceil((parsed.getTime() - Date.now()) / 86400000));
 }
 
 function displayedPostedAt(job) {
@@ -281,6 +367,50 @@ function formatMattermostTime(value) {
   margin-bottom: 16px;
 }
 
+.mm-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.mm-segmented-control {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mm-segmented-control button,
+.mm-sort-control select {
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  padding: 0 12px;
+}
+
+.mm-segmented-control button.active,
+.mm-segmented-control button:hover {
+  border-color: var(--blue-strong);
+  background: #eef2ff;
+  color: var(--blue-strong);
+}
+
+.mm-sort-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
 .mm-toolbar div {
   min-width: 0;
   padding: 12px 14px;
@@ -376,6 +506,16 @@ function formatMattermostTime(value) {
   background: #eef2ff;
   color: var(--blue-strong);
   font-variant-numeric: tabular-nums;
+}
+
+.mm-score.pending {
+  background: #f8fafc;
+  color: var(--text-secondary);
+}
+
+.mm-score.pending span {
+  margin-bottom: 0;
+  font-size: 0.72rem;
 }
 
 .mm-score span {
