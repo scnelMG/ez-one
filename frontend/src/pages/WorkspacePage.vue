@@ -422,14 +422,18 @@
           </template>
         </main>
 
-        <button 
-          v-if="isMinimized" 
-          class="bee-minimize-button" 
-          @click="isMinimized = false"
-          title="참고자료 열기"
-        >
-          <img src="/bee-mascot.png" alt="참고자료 열기" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" />
-        </button>
+        <Teleport to="body">
+          <button 
+            v-if="isMinimized" 
+            class="bee-minimize-button" 
+            :style="beeStyle"
+            @mousedown="startBeeDrag"
+            @click="onBeeClick"
+            title="참고자료 열기"
+          >
+            <img src="/bee-mascot.png" alt="참고자료 열기" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; pointer-events: none;" />
+          </button>
+        </Teleport>
 
         <aside
           v-show="!isMinimized"
@@ -664,6 +668,7 @@ const isMinimized = ref(false);
 const isEditingPrompt = ref(false);
 const customAiPrompt = ref('자소서 변경 전후의 뉘앙스 차이, 분량의 적절성, 어색한 표현 개선 여부를 중심으로 어떤 점이 나아졌는지, 그리고 어떤 부분이 부족한지 3~5문장으로 요약해줘.');
 const floatingPanelStyle = reactive({ top: '132px', right: '32px', width: '440px', height: 'calc(100vh - 160px)', left: 'auto' });
+const beeStyle = reactive({ top: 'auto', left: 'auto', bottom: '40px', right: '40px' });
 
 let isDraggingPanel = false;
 let dragStartX = 0;
@@ -701,6 +706,53 @@ function stopPanelDrag() {
   isDraggingPanel = false;
   document.removeEventListener('mousemove', onPanelDrag);
   document.removeEventListener('mouseup', stopPanelDrag);
+}
+
+let isDraggingBee = false;
+let hasDraggedBee = false;
+let beeDragStartX = 0;
+let beeDragStartY = 0;
+let beeInitialTop = 0;
+let beeInitialLeft = 0;
+
+function startBeeDrag(e) {
+  isDraggingBee = true;
+  hasDraggedBee = false;
+  beeDragStartX = e.clientX;
+  beeDragStartY = e.clientY;
+  const bee = document.querySelector('.bee-minimize-button');
+  if (bee) {
+    const rect = bee.getBoundingClientRect();
+    beeInitialTop = rect.top;
+    beeInitialLeft = rect.left;
+    beeStyle.top = `${rect.top}px`;
+    beeStyle.left = `${rect.left}px`;
+    beeStyle.bottom = 'auto';
+    beeStyle.right = 'auto';
+  }
+  document.addEventListener('mousemove', onBeeDrag);
+  document.addEventListener('mouseup', stopBeeDrag);
+}
+
+function onBeeDrag(e) {
+  if (!isDraggingBee) return;
+  hasDraggedBee = true;
+  const dx = e.clientX - beeDragStartX;
+  const dy = e.clientY - beeDragStartY;
+  beeStyle.left = `${beeInitialLeft + dx}px`;
+  beeStyle.top = `${beeInitialTop + dy}px`;
+}
+
+function stopBeeDrag() {
+  isDraggingBee = false;
+  document.removeEventListener('mousemove', onBeeDrag);
+  document.removeEventListener('mouseup', stopBeeDrag);
+}
+
+function onBeeClick() {
+  if (!hasDraggedBee) {
+    isMinimized.value = false;
+  }
 }
 
 let isResizingPanel = false;
