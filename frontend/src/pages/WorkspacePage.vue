@@ -428,7 +428,7 @@
           @click="isMinimized = false"
           title="참고자료 열기"
         >
-          🐝
+          <img src="/bee-mascot.png" alt="참고자료 열기" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" />
         </button>
 
         <aside

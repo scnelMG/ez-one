@@ -11765,19 +11765,20 @@ button.history-metric:hover {
   position: fixed;
   bottom: 40px;
   right: 40px;
-  width: 64px;
-  height: 64px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
   background: #fff;
   border: 2px solid #e2e8f0;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-  font-size: 2.2rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   z-index: 999;
   transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  padding: 0;
+  overflow: hidden;
 }
 
 .bee-minimize-button:hover {
