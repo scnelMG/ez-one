@@ -30,7 +30,7 @@ public class CompanyDataSyncService {
         this.syncMapper = syncMapper;
     }
 
-    @Scheduled(cron = "0 30 2 * * ?") // 매일 새벽 2시 30분에 실행
+    @Scheduled(cron = "0 0 12 * * ?") // 매일 낮 12시에 실행 (사용자 요청)
     public void runDailyPensionSync() {
         int limit = 1000;
         List<String> companiesToSync = syncMapper.findCompaniesNeedingPensionSync(limit);
@@ -61,10 +61,10 @@ public class CompanyDataSyncService {
         // 1. 최적화: 우리 DB에 이미 프로필 정보가 있는지 먼저 확인합니다.
         Long existingCompanyId = syncMapper.findCompanyIdByName(companyName);
         if (existingCompanyId != null) {
-            Long existingProfileId = syncMapper.findCompanyProfileIdByCompanyId(existingCompanyId);
-            if (existingProfileId != null) {
-                log.info("Company {} already has a profile in DB. Skipping API call to save rate limit.", companyName);
-                return; // 이미 정보가 있으므로 API 호출 생략 (속도 향상 및 트래픽 절약)
+            Boolean hasData = syncMapper.hasCompleteProfile(existingCompanyId);
+            if (hasData != null && hasData) {
+                log.info("Company {} already has complete profile data in DB. Skipping API call to save rate limit.", companyName);
+                return; // 이미 정보가 있으므로 API 호출 생략
             }
         }
 

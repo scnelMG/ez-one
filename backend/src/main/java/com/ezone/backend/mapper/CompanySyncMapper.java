@@ -20,6 +20,9 @@ public interface CompanySyncMapper {
     @Select("SELECT id FROM company_profiles WHERE company_id = #{companyId} LIMIT 1")
     Long findCompanyProfileIdByCompanyId(@Param("companyId") Long companyId);
 
+    @Select("SELECT CASE WHEN employee_count IS NOT NULL AND address IS NOT NULL THEN TRUE ELSE FALSE END FROM company_profiles WHERE company_id = #{companyId} LIMIT 1")
+    Boolean hasCompleteProfile(@Param("companyId") Long companyId);
+
     @Insert("INSERT INTO company_profiles (company_id, address, employee_count, founded_at, source_priority) " +
             "VALUES (#{companyId}, #{address}, #{employeeCount}, #{foundedAt}, #{sourcePriority})")
     void insertCompanyProfile(

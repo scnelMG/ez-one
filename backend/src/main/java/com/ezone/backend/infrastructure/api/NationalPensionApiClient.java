@@ -58,6 +58,7 @@ public class NationalPensionApiClient {
     }
 
     private List<CompanyPensionData> parseXmlResponse(String xml) {
+        log.info("XML Response: {}", xml);
         List<CompanyPensionData> list = new java.util.ArrayList<>();
         try {
             javax.xml.parsers.DocumentBuilderFactory factory = javax.xml.parsers.DocumentBuilderFactory.newInstance();
