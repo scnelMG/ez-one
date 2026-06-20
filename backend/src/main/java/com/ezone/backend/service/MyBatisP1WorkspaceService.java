@@ -394,7 +394,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         version.setWorkspaceId(workspaceId);
         version.setQuestionId(question.getId());
         version.setVersionName(request.versionName());
-        version.setBody(question.getDraft());
+        version.setBody(request.body() != null ? request.body() : question.getDraft());
         mapper.insertEssayVersion(version);
         return toVersionResponse(version);
     }
