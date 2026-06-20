@@ -56,16 +56,37 @@ public class CompanyDataSyncService {
         }
     }
 
+    @Async
+    public void syncCompanyDataAsync(Long companyId, String companyName) {
+        try {
+            syncCompanyByIdAndName(companyId, companyName);
+        } catch (Exception e) {
+            log.error("Failed to async sync company data for: {}", companyName, e);
+        }
+    }
+
     @Transactional
     public void syncCompanyByName(String companyName) {
+        Long companyId = syncMapper.findCompanyIdByName(companyName);
+        if (companyId != null) {
+            syncCompanyByIdAndName(companyId, companyName);
+        } else {
+            log.warn("syncCompanyByName could not find company ID for: {}", companyName);
+        }
+    }
+
+    @Transactional
+    public void syncCompanyByIdAndName(Long companyId, String companyName) {
+        if (companyId == null) {
+            log.warn("syncCompanyByIdAndName called with null companyId for: {}", companyName);
+            return;
+        }
+
         // 1. 최적화: 우리 DB에 이미 프로필 정보가 있는지 먼저 확인합니다.
-        Long existingCompanyId = syncMapper.findCompanyIdByName(companyName);
-        if (existingCompanyId != null) {
-            Boolean hasData = syncMapper.hasCompleteProfile(existingCompanyId);
-            if (hasData != null && hasData) {
-                log.info("Company {} already has complete profile data in DB. Skipping API call to save rate limit.", companyName);
-                return; // 이미 정보가 있으므로 API 호출 생략
-            }
+        Boolean hasData = syncMapper.hasCompleteProfile(companyId);
+        if (hasData != null && hasData) {
+            log.info("Company {} already has complete profile data in DB. Skipping API call to save rate limit.", companyName);
+            return; // 이미 정보가 있으므로 API 호출 생략
         }
 
         log.info("Starting on-demand company sync from API for: {}", companyName);
@@ -74,7 +95,7 @@ public class CompanyDataSyncService {
         if (dataList == null || dataList.isEmpty()) {
             log.info("No data found from National Pension API for: {}", companyName);
             // 만약 profile이 있다면 source_updated_at만 갱신해서 무한 반복 시도를 방지합니다.
-            Long existingProfileId = syncMapper.findCompanyProfileIdByCompanyId(existingCompanyId != null ? existingCompanyId : syncMapper.findCompanyIdByName(companyName));
+            Long existingProfileId = syncMapper.findCompanyProfileIdByCompanyId(companyId);
             if (existingProfileId != null) {
                 syncMapper.touchProfileSourceUpdatedAt(existingProfileId);
             }
@@ -83,13 +104,7 @@ public class CompanyDataSyncService {
 
         NationalPensionApiClient.CompanyPensionData pensionData = dataList.get(0);
         
-        Long companyId = syncMapper.findCompanyIdByName(companyName);
-        if (companyId == null) {
-            CompanySyncMapper.CompanyEntity newCompany = new CompanySyncMapper.CompanyEntity(companyName);
-            syncMapper.insertCompany(newCompany);
-            companyId = newCompany.getId();
-            log.info("Created new company record for {} (ID: {})", companyName, companyId);
-        }
+
 
         LocalDate foundedAt = null;
         if (pensionData.getJoinDate() != null && pensionData.getJoinDate().length() == 8) {

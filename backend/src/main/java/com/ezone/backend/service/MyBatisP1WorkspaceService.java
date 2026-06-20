@@ -156,7 +156,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         }
 
         // Trigger real-time asynchronous company data sync from public APIs (National Pension / DART)
-        companyDataSyncService.syncCompanyDataAsync(request.companyName());
+        companyDataSyncService.syncCompanyDataAsync(job.getCompanyId(), request.companyName());
 
         BasketJobRow basketJob = new BasketJobRow();
         basketJob.setUserId(userId);
