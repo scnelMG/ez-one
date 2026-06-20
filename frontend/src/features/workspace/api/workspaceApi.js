@@ -144,11 +144,12 @@ export function createWorkspaceApi(httpClient = defaultHttpClient) {
                 return mockVersionList(workspaceId).map((version) => ({ ...version }));
             }
         },
-        async compareVersions(workspaceId, leftVersionId, rightVersionId) {
+        async compareVersions(workspaceId, leftVersionId, rightVersionId, customPrompt) {
             try {
                 const response = await httpClient.post(`/api/workspaces/${workspaceId}/versions/compare`, {
                     leftVersionId: Number(leftVersionId),
-                    rightVersionId: Number(rightVersionId)
+                    rightVersionId: Number(rightVersionId),
+                    customPrompt: customPrompt
                 });
                 return toVersionComparison(unwrapApiData(response.data));
             }

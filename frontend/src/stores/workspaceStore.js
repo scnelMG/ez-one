@@ -118,11 +118,11 @@ export const useWorkspaceStore = defineStore('workspace', () => {
             return null;
         }
     }
-    async function compareVersions(workspaceId, leftVersionId, rightVersionId) {
+    async function compareVersions(workspaceId, leftVersionId, rightVersionId, customPrompt) {
         status.value = 'loading';
         errorMessage.value = '';
         try {
-            versionComparison.value = await workspaceApi.compareVersions(workspaceId, leftVersionId, rightVersionId);
+            versionComparison.value = await workspaceApi.compareVersions(workspaceId, leftVersionId, rightVersionId, customPrompt);
             status.value = 'ready';
         }
         catch (error) {

@@ -113,12 +113,7 @@
         </article>
       </section>
 
-      <section
-        class="workspace-push-layout"
-        :class="{ 'drawer-open': drawerOpen }"
-        :style="drawerStyle"
-        data-testid="workspace-push-layout"
-      >
+      <div class="workspace-layout-wrapper">
         <main class="workspace-main-pane" :style="drawerStyle" data-testid="workspace-main-pane">
           <div class="workspace-bottom-tabs is-fixed" data-testid="workspace-bottom-tabs">
             <button
@@ -387,13 +382,24 @@
 
                 </template>
 
-                <div v-if="workspaceStore.versionComparison?.aiSummary" class="version-summary ai-summary" style="margin-top: 24px; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <div class="version-summary ai-summary" style="margin-top: 24px; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
                   <div class="section-heading compact-heading" style="margin-bottom: 12px;">
                     <h3 style="margin: 0; color: #4338ca; display: flex; align-items: center; gap: 8px; font-size: 1.1rem;">
                       ✨ AI 변경점 요약
                     </h3>
                   </div>
-                  <div class="ai-summary-content" style="white-space: pre-wrap; line-height: 1.6; color: #334155;">
+                  
+                  <div class="ai-prompt-editor" style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 6px;">AI 요약 기준 (프롬프트 커스텀)</label>
+                    <textarea v-model="customAiPrompt" style="width: 100%; min-height: 60px; padding: 10px; font-size: 0.9rem; border: 1px solid #cbd5e1; border-radius: 6px; resize: vertical;" placeholder="AI가 요약할 때 집중할 부분을 적어주세요."></textarea>
+                    <div style="text-align: right; margin-top: 8px;">
+                      <button class="primary-button small-button" @click="compareVersions" :disabled="workspaceStore.status === 'loading'">
+                        {{ workspaceStore.status === 'loading' ? '요약 중...' : '다시 요약하기' }}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div v-if="workspaceStore.versionComparison?.aiSummary" class="ai-summary-content" style="white-space: pre-wrap; line-height: 1.6; color: #334155; padding-top: 16px; border-top: 1px solid #e2e8f0;">
                     {{ workspaceStore.versionComparison.aiSummary }}
                   </div>
                 </div>
@@ -402,27 +408,25 @@
           </template>
         </main>
 
-        <div
-          v-if="drawerOpen"
-          class="workspace-panel-divider"
-          role="separator"
-          aria-label="보조 패널 너비 조절"
-          aria-orientation="vertical"
-          :aria-valuenow="drawerWidth"
-          aria-valuemin="380"
-          aria-valuemax="900"
-          data-testid="workspace-panel-divider"
-          @pointerdown="startDrawerResize"
-          @keydown.left.prevent="nudgeDrawerWidth(24)"
-          @keydown.right.prevent="nudgeDrawerWidth(-24)"
-          tabindex="0"
-        ></div>
+        <button 
+          v-if="isMinimized" 
+          class="bee-minimize-button" 
+          @click="isMinimized = false"
+          title="참고자료 열기"
+        >
+          🐝
+        </button>
 
         <aside
-          v-if="drawerOpen"
-          class="workspace-side-drawer"
-          data-testid="workspace-side-drawer"
+          v-show="!isMinimized"
+          class="floating-side-panel"
+          :style="floatingPanelStyle"
+          data-testid="workspace-floating-panel"
         >
+          <div class="floating-drag-handle" @mousedown="startPanelDrag">
+            <span class="handle-title">참고자료 및 메모</span>
+            <button class="icon-button minimize-btn" @click.stop="isMinimized = true" aria-label="최소화">_</button>
+          </div>
           <nav class="workspace-side-rail" aria-label="참고자료 게시판">
             <button
               v-for="board in boards"
@@ -525,7 +529,7 @@
             </button>
           </div>
         </aside>
-      </section>
+      </div>
 
       <Teleport to="body">
         <div
@@ -629,10 +633,49 @@ const finalEssayTitle = ref('');
 const finalEssayBody = ref('');
 let autoSaveTimer = null;
 let suppressNextDraftWatch = false;
-let resizeStartX = 0;
-let resizeStartWidth = 0;
-let resizeLayoutWidth = 0;
 let syncActiveMarkdownEditor = () => {};
+
+const isMinimized = ref(false);
+const customAiPrompt = ref('자소서 변경 전후의 뉘앙스 차이, 분량의 적절성, 어색한 표현 개선 여부를 중심으로 어떤 점이 나아졌는지, 그리고 어떤 부분이 부족한지 3~5문장으로 요약해줘.');
+const floatingPanelStyle = reactive({ top: '132px', right: '32px', width: '440px', height: 'calc(100vh - 160px)', left: 'auto' });
+
+let isDraggingPanel = false;
+let dragStartX = 0;
+let dragStartY = 0;
+let panelInitialTop = 0;
+let panelInitialLeft = 0;
+
+function startPanelDrag(e) {
+  if (e.target.closest('button')) return;
+  isDraggingPanel = true;
+  dragStartX = e.clientX;
+  dragStartY = e.clientY;
+  const panel = document.querySelector('.floating-side-panel');
+  if (panel) {
+    const rect = panel.getBoundingClientRect();
+    panelInitialTop = rect.top;
+    panelInitialLeft = rect.left;
+    floatingPanelStyle.top = `${rect.top}px`;
+    floatingPanelStyle.left = `${rect.left}px`;
+    floatingPanelStyle.right = 'auto';
+  }
+  document.addEventListener('mousemove', onPanelDrag);
+  document.addEventListener('mouseup', stopPanelDrag);
+}
+
+function onPanelDrag(e) {
+  if (!isDraggingPanel) return;
+  const dx = e.clientX - dragStartX;
+  const dy = e.clientY - dragStartY;
+  floatingPanelStyle.left = `${panelInitialLeft + dx}px`;
+  floatingPanelStyle.top = `${panelInitialTop + dy}px`;
+}
+
+function stopPanelDrag() {
+  isDraggingPanel = false;
+  document.removeEventListener('mousemove', onPanelDrag);
+  document.removeEventListener('mouseup', stopPanelDrag);
+}
 
 const boards = [
   { type: 'JD', shortLabel: 'JD', title: 'JD 게시판' },
@@ -926,7 +969,7 @@ function compareVersions() {
   const left = selectedLeftVersion.value;
   const right = selectedRightVersion.value;
   if (!left || !right) return;
-  void workspaceStore.compareVersions(workspaceId.value, left.id, right.id);
+  void workspaceStore.compareVersions(workspaceId.value, left.id, right.id, customAiPrompt.value);
 }
 
 function buildLineDiff(leftBody, rightBody) {
@@ -1003,8 +1046,8 @@ function splitLines(body) {
 
 function openBoard(type) {
   activeBoard.value = type;
-  drawerOpen.value = true;
-  workspaceStore.clearActiveReference();
+  isMinimized.value = false;
+  workspaceStore.activeReference = null;
 }
 
 function openBoardFullView() {

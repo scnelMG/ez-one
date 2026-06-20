@@ -33,16 +33,20 @@ public class OpenAiClient {
         this.compareModel = compareModel;
     }
 
-    public String generateComparisonSummary(String leftBody, String rightBody) {
+    public String generateComparisonSummary(String leftBody, String rightBody, String customPrompt) {
         if (apiKey == null || apiKey.isBlank()) {
             log.warn("OpenAI API Key is missing. Skipping AI comparison summary.");
             return null;
         }
 
-        String prompt = "You are an expert career consultant. The user has revised their self-introduction essay. " +
-                "I will provide the previous version (버전 1) and the revised version (버전 2).\n" +
-                "Please analyze the differences and write a brief summary (3~5 sentences in Korean) of what has improved or changed. " +
-                "Focus on the flow, specific additions or deletions, and how it aligns with typical essay improvements.\n\n" +
+        String basePrompt = (customPrompt != null && !customPrompt.isBlank()) 
+            ? customPrompt 
+            : "You are an expert career consultant. The user has revised their self-introduction essay. " +
+              "I will provide the previous version (버전 1) and the revised version (버전 2).\n" +
+              "Please analyze the differences and write a brief summary (3~5 sentences in Korean) of what has improved or changed. " +
+              "Focus on the flow, specific additions or deletions, and how it aligns with typical essay improvements.";
+
+        String prompt = basePrompt + "\n\n" +
                 "=== 이전 버전 (버전 1) ===\n" + leftBody + "\n\n" +
                 "=== 비교 버전 (버전 2) ===\n" + rightBody;
 

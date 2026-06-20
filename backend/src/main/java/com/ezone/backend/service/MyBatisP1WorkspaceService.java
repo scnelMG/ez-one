@@ -422,7 +422,7 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         
         String aiSummary = null;
         if (changed) {
-            aiSummary = openAiClient.generateComparisonSummary(leftBody, rightBody);
+            aiSummary = openAiClient.generateComparisonSummary(leftBody, rightBody, request.customPrompt());
         }
 
         return new CompareEssayVersionsResponse(
