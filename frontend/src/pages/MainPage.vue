@@ -325,7 +325,6 @@ const recentTaskJob = computed(() => {
 
 const basketPreviewJobs = computed(() => {
   return [...basketStore.jobs]
-    .filter(job => isDeadlineWithinDays(job, 7))
     .sort((left, right) => deadlineRank(left) - deadlineRank(right))
     .slice(0, 5);
 });
