@@ -383,24 +383,38 @@
                 </template>
 
                 <div class="version-summary ai-summary" style="margin-top: 24px; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
-                  <div class="section-heading compact-heading" style="margin-bottom: 12px;">
+                  <div class="section-heading compact-heading" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
                     <h3 style="margin: 0; color: #4338ca; display: flex; align-items: center; gap: 8px; font-size: 1.1rem;">
                       ✨ AI 변경점 요약
                     </h3>
+                    <div style="display: flex; gap: 8px;">
+                      <button v-if="workspaceStore.versionComparison?.aiSummary" class="ghost-button" @click="compareVersions" :disabled="workspaceStore.status === 'loading'" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: #e0e7ff; color: #4f46e5; border: none; cursor: pointer; font-weight: 600;">
+                        🔄 새로고침
+                      </button>
+                      <button class="primary-button small-button" @click="isEditingPrompt = !isEditingPrompt" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: #8b5cf6; border: none; cursor: pointer;">
+                        {{ isEditingPrompt ? '커스텀 닫기' : '프롬프트 커스텀하기' }}
+                      </button>
+                    </div>
                   </div>
                   
-                  <div class="ai-prompt-editor" style="margin-bottom: 16px;">
+                  <div v-if="isEditingPrompt" class="ai-prompt-editor" style="margin-bottom: 16px; padding: 12px; background: #fff; border-radius: 6px; border: 1px solid #cbd5e1;">
                     <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 6px;">AI 요약 기준 (프롬프트 커스텀)</label>
-                    <textarea v-model="customAiPrompt" style="width: 100%; min-height: 60px; padding: 10px; font-size: 0.9rem; border: 1px solid #cbd5e1; border-radius: 6px; resize: vertical;" placeholder="AI가 요약할 때 집중할 부분을 적어주세요."></textarea>
+                    <textarea v-model="customAiPrompt" style="width: 100%; min-height: 60px; padding: 10px; font-size: 0.9rem; border: 1px solid #e2e8f0; border-radius: 6px; resize: vertical;" placeholder="AI가 요약할 때 집중할 부분을 적어주세요."></textarea>
                     <div style="text-align: right; margin-top: 8px;">
-                      <button class="primary-button small-button" @click="compareVersions" :disabled="workspaceStore.status === 'loading'">
-                        {{ workspaceStore.status === 'loading' ? '요약 중...' : '다시 요약하기' }}
+                      <button class="primary-button small-button" @click="compareVersions(); isEditingPrompt = false;" :disabled="workspaceStore.status === 'loading'" style="background: #4f46e5;">
+                        저장 후 요약하기
                       </button>
                     </div>
                   </div>
 
-                  <div v-if="workspaceStore.versionComparison?.aiSummary" class="ai-summary-content" style="white-space: pre-wrap; line-height: 1.6; color: #334155; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+                  <div v-if="workspaceStore.status === 'loading'" class="ai-summary-content" style="padding: 16px; color: #64748b; font-style: italic; text-align: center;">
+                    AI가 변경점을 분석하고 요약 중입니다... 잠시만 기다려주세요.
+                  </div>
+                  <div v-else-if="workspaceStore.versionComparison?.aiSummary" class="ai-summary-content" style="white-space: pre-wrap; line-height: 1.6; color: #334155; padding-top: 16px; border-top: 1px solid #e2e8f0;">
                     {{ workspaceStore.versionComparison.aiSummary }}
+                  </div>
+                  <div v-else class="ai-summary-content" style="padding: 16px; color: #64748b; text-align: center;">
+                    두 버전을 비교하시면 AI가 변경점을 요약해 드립니다.
                   </div>
                 </div>
               </div>
@@ -638,6 +652,7 @@ let suppressNextDraftWatch = false;
 let syncActiveMarkdownEditor = () => {};
 
 const isMinimized = ref(false);
+const isEditingPrompt = ref(false);
 const customAiPrompt = ref('자소서 변경 전후의 뉘앙스 차이, 분량의 적절성, 어색한 표현 개선 여부를 중심으로 어떤 점이 나아졌는지, 그리고 어떤 부분이 부족한지 3~5문장으로 요약해줘.');
 const floatingPanelStyle = reactive({ top: '132px', right: '32px', width: '440px', height: 'calc(100vh - 160px)', left: 'auto' });
 
@@ -1378,6 +1393,12 @@ function resetBoardDraft(draft, type = activeBoard.value) {
   }
   nextTick(() => syncActiveMarkdownEditor());
 }
+
+watch([selectedLeftVersionId, selectedRightVersionId], ([leftId, rightId]) => {
+  if (leftId && rightId && leftId !== rightId) {
+    compareVersions();
+  }
+});
 
 function saveBoardEntry(draft, type = activeBoard.value) {
   const label = referenceTypeLabel(type);
