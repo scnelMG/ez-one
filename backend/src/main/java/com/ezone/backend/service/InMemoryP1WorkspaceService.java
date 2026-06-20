@@ -371,7 +371,8 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             right.id(),
             left.body(),
             right.body(),
-            !Objects.equals(left.body(), right.body())
+            !Objects.equals(left.body(), right.body()),
+            null
         );
     }
 

@@ -7516,7 +7516,8 @@ li {
 .version-diff-table {
   border: 1px solid var(--color-border);
   border-radius: 8px;
-  overflow: hidden;
+  overflow-y: auto;
+  max-height: 50vh; /* Adjusts dynamically based on screen height */
   background: #ffffff;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   font-size: 0.85rem;
@@ -7524,22 +7525,18 @@ li {
 }
 
 .github-split-diff {
-  display: flex;
-}
-
-.diff-split-pane {
-  flex: 1;
-  min-width: 0;
-}
-
-.diff-split-pane.left-pane {
-  border-right: 1px solid var(--color-border);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
 }
 
 .diff-row-line {
   display: flex;
   min-height: 28px;
   border-bottom: 1px solid transparent; /* Keeps lines aligned vertically even if empty */
+}
+
+.diff-row-line.left-cell {
+  border-right: 1px solid var(--color-border);
 }
 
 .diff-row-line pre {

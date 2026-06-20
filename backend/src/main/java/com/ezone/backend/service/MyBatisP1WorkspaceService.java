@@ -30,6 +30,7 @@ import com.ezone.backend.dto.workspace.UpdateDraftRequest;
 import com.ezone.backend.dto.workspace.WorkspaceDefaultsResponse;
 import com.ezone.backend.dto.workspace.WorkspaceResponse;
 import com.ezone.backend.mapper.ActivityMapper;
+import com.ezone.backend.infrastructure.api.OpenAiClient;
 import com.ezone.backend.mapper.P1WorkspaceMapper;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -51,11 +52,13 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
     private final P1WorkspaceMapper mapper;
     private final ActivityMapper activityMapper;
     private final CompanyDataSyncService companyDataSyncService;
+    private final OpenAiClient openAiClient;
 
-    public MyBatisP1WorkspaceService(P1WorkspaceMapper mapper, ActivityMapper activityMapper, CompanyDataSyncService companyDataSyncService) {
+    public MyBatisP1WorkspaceService(P1WorkspaceMapper mapper, ActivityMapper activityMapper, CompanyDataSyncService companyDataSyncService, OpenAiClient openAiClient) {
         this.mapper = mapper;
         this.activityMapper = activityMapper;
         this.companyDataSyncService = companyDataSyncService;
+        this.openAiClient = openAiClient;
     }
 
     @Override
@@ -413,12 +416,22 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
             .orElseThrow(() -> new IllegalArgumentException("Version not found"));
         EssayVersionRow right = mapper.findVersion(userId, workspaceId, request.rightVersionId())
             .orElseThrow(() -> new IllegalArgumentException("Version not found"));
+        String leftBody = left.getBody() != null ? left.getBody() : "";
+        String rightBody = right.getBody() != null ? right.getBody() : "";
+        boolean changed = !leftBody.equals(rightBody);
+        
+        String aiSummary = null;
+        if (changed) {
+            aiSummary = openAiClient.generateComparisonSummary(leftBody, rightBody);
+        }
+
         return new CompareEssayVersionsResponse(
             left.getId(),
             right.getId(),
-            left.getBody(),
-            right.getBody(),
-            !Objects.equals(left.getBody(), right.getBody())
+            leftBody,
+            rightBody,
+            changed,
+            aiSummary
         );
     }
 

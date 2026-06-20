@@ -259,12 +259,29 @@
 
               <div class="version-workspace">
                 <div class="section-heading">
-                  <div>
-                    <h2 style="color: #8b5cf6;">{{ activeQuestionIndex + 1 }}번 문항 변경점 비교</h2>
+                  <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                    <h2 style="color: #8b5cf6; margin: 0;">{{ activeQuestionIndex + 1 }}번 문항 {{ isCreatingNewVersion ? '새 버전 저장' : '변경점 비교' }}</h2>
+                    <button
+                      v-if="!isCreatingNewVersion"
+                      class="primary-button"
+                      style="background: #8b5cf6; border-color: #8b5cf6;"
+                      type="button"
+                      @click="isCreatingNewVersion = true"
+                    >
+                      새 버전 저장하기
+                    </button>
+                    <button
+                      v-else
+                      class="ghost-button"
+                      type="button"
+                      @click="isCreatingNewVersion = false"
+                    >
+                      비교 화면으로 돌아가기
+                    </button>
                   </div>
                 </div>
 
-                <section class="final-essay-panel">
+                <section v-if="isCreatingNewVersion" class="final-essay-panel">
                   <div class="section-heading compact-heading">
                     <div>
                     </div>
@@ -292,7 +309,8 @@
                   </label>
                 </section>
 
-                <div class="version-control-panel">
+                <template v-else>
+                  <div class="version-control-panel">
                   <label>
                     이전 버전
                     <select v-model="selectedLeftVersionId" data-testid="left-version-select">
@@ -344,28 +362,16 @@
                     </article>
                   </div>
                   <div class="version-diff-table github-split-diff" data-testid="version-diff">
-                    <div class="diff-split-pane left-pane">
-                      <div
-                        v-for="(row, index) in versionDiffRows.leftRows"
-                        :key="`l-${index}`"
-                        class="diff-row diff-row-line"
-                        :class="`is-${row.type}`"
-                      >
+                    <template v-for="(row, index) in versionDiffRows.leftRows" :key="index">
+                      <div class="diff-row diff-row-line left-cell" :class="`is-${row.type}`">
                         <span class="diff-indicator">{{ row.type === 'remove' ? '-' : ' ' }}</span>
                         <pre>{{ row.content }}</pre>
                       </div>
-                    </div>
-                    <div class="diff-split-pane right-pane">
-                      <div
-                        v-for="(row, index) in versionDiffRows.rightRows"
-                        :key="`r-${index}`"
-                        class="diff-row diff-row-line"
-                        :class="`is-${row.type}`"
-                      >
-                        <span class="diff-indicator">{{ row.type === 'add' ? '+' : ' ' }}</span>
-                        <pre>{{ row.content }}</pre>
+                      <div class="diff-row diff-row-line right-cell" :class="`is-${versionDiffRows.rightRows[index].type}`">
+                        <span class="diff-indicator">{{ versionDiffRows.rightRows[index].type === 'add' ? '+' : ' ' }}</span>
+                        <pre>{{ versionDiffRows.rightRows[index].content }}</pre>
                       </div>
-                    </div>
+                    </template>
                   </div>
                   <div class="diff-legend">
                     <span class="legend-item remove"><span class="box"></span> 삭제됨</span>
@@ -379,20 +385,17 @@
                   <p>현재 초안을 버전으로 저장하면 이곳에서 이전 저장본과 변경점을 비교할 수 있습니다.</p>
                 </div>
 
-                <div class="version-list">
-                  <article v-for="version in currentQuestionVersions" :key="version.id" class="version-list-item">
-                    <header>
-                      <strong>{{ version.versionName }}</strong>
-                      <span>{{ version.createdAt ?? '저장됨' }}</span>
-                    </header>
-                    <p>{{ version.body }}</p>
-                  </article>
-                </div>
+                </template>
 
-                <div v-if="workspaceStore.versionComparison" class="version-summary">
-                  <span class="status-chip">비교 API 결과</span>
-                  <p>{{ workspaceStore.versionComparison.leftBody }}</p>
-                  <p>{{ workspaceStore.versionComparison.rightBody }}</p>
+                <div v-if="workspaceStore.versionComparison?.aiSummary" class="version-summary ai-summary" style="margin-top: 24px; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                  <div class="section-heading compact-heading" style="margin-bottom: 12px;">
+                    <h3 style="margin: 0; color: #4338ca; display: flex; align-items: center; gap: 8px; font-size: 1.1rem;">
+                      ✨ AI 변경점 요약
+                    </h3>
+                  </div>
+                  <div class="ai-summary-content" style="white-space: pre-wrap; line-height: 1.6; color: #334155;">
+                    {{ workspaceStore.versionComparison.aiSummary }}
+                  </div>
                 </div>
               </div>
             </section>
@@ -602,8 +605,9 @@
 import { computed, h, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import * as Diff from 'diff';
 import { useRoute } from 'vue-router';
-import { rememberRecentWorkspace } from '@/features/basket/recentWorkspaces';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
+
+const isCreatingNewVersion = ref(false);
 import AppLayout from '@/shared/AppLayout.vue';
 import StatePanel from '@/shared/StatePanel.vue';
 
@@ -913,6 +917,7 @@ async function deleteQuestion() {
 async function createVersion() {
   if (!currentQuestion.value || currentQuestion.value.localOnly) return;
   await saveDraft();
+  isCreatingNewVersion.value = true;
   await workspaceStore.createVersion(workspaceId.value, currentQuestion.value.id, `v${currentQuestionVersions.value.length + 1}`);
   rememberCurrentWorkspaceIfSaved();
 }
@@ -925,11 +930,47 @@ function compareVersions() {
 }
 
 function buildLineDiff(leftBody, rightBody) {
-  const diffs = Diff.diffLines(leftBody || '', rightBody || '');
+  const formatToSentenceLines = (text) => text ? text.replace(/([.?!])\s+/g, '$1\n') : '';
+  const diffs = Diff.diffLines(formatToSentenceLines(leftBody), formatToSentenceLines(rightBody));
+  
   const leftRows = [];
   const rightRows = [];
   
-  diffs.forEach((part) => {
+  for (let i = 0; i < diffs.length; i++) {
+    const part = diffs[i];
+    
+    if (part.removed && i + 1 < diffs.length && diffs[i+1].added) {
+      const addedPart = diffs[i+1];
+      const removedLines = part.value.split('\n');
+      if (removedLines[removedLines.length - 1] === '') removedLines.pop();
+      const addedLines = addedPart.value.split('\n');
+      if (addedLines[addedLines.length - 1] === '') addedLines.pop();
+      
+      const maxLines = Math.max(removedLines.length, addedLines.length);
+      for (let j = 0; j < maxLines; j++) {
+        leftRows.push({ type: j < removedLines.length ? 'remove' : 'empty', content: j < removedLines.length ? removedLines[j] : '' });
+        rightRows.push({ type: j < addedLines.length ? 'add' : 'empty', content: j < addedLines.length ? addedLines[j] : '' });
+      }
+      i++;
+      continue;
+    }
+    
+    if (part.added && i + 1 < diffs.length && diffs[i+1].removed) {
+      const removedPart = diffs[i+1];
+      const addedLines = part.value.split('\n');
+      if (addedLines[addedLines.length - 1] === '') addedLines.pop();
+      const removedLines = removedPart.value.split('\n');
+      if (removedLines[removedLines.length - 1] === '') removedLines.pop();
+      
+      const maxLines = Math.max(removedLines.length, addedLines.length);
+      for (let j = 0; j < maxLines; j++) {
+        leftRows.push({ type: j < removedLines.length ? 'remove' : 'empty', content: j < removedLines.length ? removedLines[j] : '' });
+        rightRows.push({ type: j < addedLines.length ? 'add' : 'empty', content: j < addedLines.length ? addedLines[j] : '' });
+      }
+      i++;
+      continue;
+    }
+
     const lines = part.value.split('\n');
     if (lines[lines.length - 1] === '') lines.pop();
     
@@ -945,7 +986,7 @@ function buildLineDiff(leftBody, rightBody) {
         rightRows.push({ type: 'same', content: line });
       }
     });
-  });
+  }
   
   if (!leftRows.length) {
     leftRows.push({ type: 'same', content: '' });
@@ -1017,6 +1058,7 @@ async function saveFinalEssay() {
     selectedLeftVersionId.value = previousNewestVersion?.id ?? version.id;
     finalEssayTitle.value = '';
     finalEssayBody.value = '';
+    isCreatingNewVersion.value = false;
     rememberCurrentWorkspaceIfSaved();
     return;
   }
@@ -1032,6 +1074,7 @@ async function saveFinalEssay() {
   }
   finalEssayTitle.value = '';
   finalEssayBody.value = '';
+  isCreatingNewVersion.value = false;
   rememberCurrentWorkspaceIfSaved();
 }
 

@@ -5,6 +5,7 @@ public record CompareEssayVersionsResponse(
     Long rightVersionId,
     String leftBody,
     String rightBody,
-    boolean changed
+    boolean changed,
+    String aiSummary
 ) {
 }

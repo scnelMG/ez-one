@@ -50,14 +50,12 @@ public class VentureApiClient {
 
         try {
             // NOTE: Using a generic public data API URL for demonstration, as the exact endpoint requires specific docs.
-            URI uri = UriComponentsBuilder.fromHttpUrl("http://apis.data.go.kr/1423000/VentureCompanyService/getVentureCompanyList")
-                    .queryParam("serviceKey", apiKey)
-                    .queryParam("pageNo", 1)
-                    .queryParam("numOfRows", 10)
-                    .queryParam("entCmpNm", companyName)
-                    .queryParam("type", "json")
-                    .build(true)
-                    .toUri();
+            URI uri = URI.create("http://apis.data.go.kr/1423000/VentureCompanyService/getVentureCompanyList" +
+                    "?serviceKey=" + apiKey +
+                    "&pageNo=1" +
+                    "&numOfRows=10" +
+                    "&entCmpNm=" + java.net.URLEncoder.encode(companyName, java.nio.charset.StandardCharsets.UTF_8) +
+                    "&type=json");
 
             log.info("Calling Venture API for company: {}", companyName);
             ResponseEntity<String> response = restTemplate.getForEntity(uri, String.class);
