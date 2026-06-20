@@ -13,6 +13,9 @@ public interface CompanySyncMapper {
     @Select("SELECT id FROM companies WHERE name = #{name} LIMIT 1")
     Long findCompanyIdByName(@Param("name") String name);
 
+    @Select("SELECT domain FROM companies WHERE id = #{companyId}")
+    String findDomainByCompanyId(@Param("companyId") Long companyId);
+
     @Insert("INSERT INTO companies (name) VALUES (#{name})")
     @Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
     void insertCompany(CompanyEntity company);
@@ -23,23 +26,28 @@ public interface CompanySyncMapper {
     @Select("SELECT CASE WHEN employee_count IS NOT NULL AND address IS NOT NULL THEN TRUE ELSE FALSE END FROM company_profiles WHERE company_id = #{companyId} LIMIT 1")
     Boolean hasCompleteProfile(@Param("companyId") Long companyId);
 
-    @Insert("INSERT INTO company_profiles (company_id, address, employee_count, founded_at, source_priority) " +
-            "VALUES (#{companyId}, #{address}, #{employeeCount}, #{foundedAt}, #{sourcePriority})")
+    @Insert("INSERT INTO company_profiles (company_id, address, employee_count, founded_at, homepage_url, source_priority) " +
+            "VALUES (#{companyId}, #{address}, #{employeeCount}, #{foundedAt}, #{homepageUrl}, #{sourcePriority})")
     void insertCompanyProfile(
             @Param("companyId") Long companyId,
             @Param("address") String address,
             @Param("employeeCount") Integer employeeCount,
             @Param("foundedAt") java.time.LocalDate foundedAt,
+            @Param("homepageUrl") String homepageUrl,
             @Param("sourcePriority") String sourcePriority);
 
     @Update("UPDATE company_profiles SET address = #{address}, employee_count = #{employeeCount}, " +
-            "founded_at = COALESCE(#{foundedAt}, founded_at), source_updated_at = CURRENT_TIMESTAMP " +
+            "founded_at = COALESCE(#{foundedAt}, founded_at), homepage_url = #{homepageUrl}, source_updated_at = CURRENT_TIMESTAMP " +
             "WHERE company_id = #{companyId}")
     void updateCompanyProfile(
             @Param("companyId") Long companyId,
             @Param("address") String address,
             @Param("employeeCount") Integer employeeCount,
-            @Param("foundedAt") java.time.LocalDate foundedAt);
+            @Param("foundedAt") java.time.LocalDate foundedAt,
+            @Param("homepageUrl") String homepageUrl);
+
+    @Update("UPDATE companies SET domain = #{domain} WHERE id = #{companyId}")
+    void updateCompanyDomain(@Param("companyId") Long companyId, @Param("domain") String domain);
 
     @Select("SELECT id FROM company_profile_sources " +
             "WHERE company_id = #{companyId} AND source_type = #{sourceType} LIMIT 1")
