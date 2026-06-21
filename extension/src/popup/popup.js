@@ -919,7 +919,8 @@ function renderAutoFillResult(result) {
     const copyCandidates = Array.isArray(result?.copyCandidates) ? result.copyCandidates : [];
     const primaryItems = uniqueAutoFillItems((isPreview ? planned : filled).filter(isUserVisibleAutoFillItem));
     const primaryFieldKeys = new Set(primaryItems.map((item) => item?.fieldKey).filter(Boolean));
-    const visibleCopyCandidates = copyCandidates.filter((item) => !primaryFieldKeys.has(item?.key));
+    const visibleCopyCandidates = copyCandidates.filter((item) => shouldShowCopyCandidate(item, primaryFieldKeys));
+    const groupedCopyCandidates = groupActivityCopyCandidates(visibleCopyCandidates);
     documentResultTitle.textContent = isPreview ? '입력 전 확인' : '입력이 끝났습니다';
     autofillFilledLabel.textContent = isPreview ? '입력 예정' : '입력됨';
     autofillFilledHeading.textContent = isPreview ? '입력 예정' : '자동 입력됨';
@@ -932,7 +933,7 @@ function renderAutoFillResult(result) {
     autofillApplyButton.disabled = isPreview && primaryItems.length === 0;
     autofillFilledCount.textContent = String(primaryItems.length);
     autofillReviewCount.textContent = String(failed.length);
-    autofillCopyCount.textContent = String(visibleCopyCandidates.length);
+    autofillCopyCount.textContent = String(groupedCopyCandidates.length);
     autofillSummary.textContent = isPreview
         ? `${primaryItems.length}개 항목을 찾았습니다.`
         : `${primaryItems.length}개 항목을 입력했습니다. 확인 필요 ${failed.length}개.`;
@@ -941,14 +942,84 @@ function renderAutoFillResult(result) {
         title: item.label ?? '알 수 없는 입력칸',
         ...getAutofillFailureDisplay(item)
     }), '실패 항목이 없습니다.');
-    renderResultList(autofillCopyList, visibleCopyCandidates.slice(0, 12), (item) => ({
-        title: item.label,
-        body: item.value,
+    renderResultList(autofillCopyList, groupedCopyCandidates.slice(0, 12), formatCopyCandidateDisplay, '복사할 후보가 없습니다.');
+}
+
+function shouldShowCopyCandidate(item, primaryFieldKeys) {
+    if (!primaryFieldKeys.has(item?.key)) return true;
+    return item?.key === 'basicInfo.address' || item?.key === 'basicInfo.addressDetail';
+}
+
+function groupActivityCopyCandidates(candidates) {
+    const grouped = [];
+    const activityGroups = new Map();
+    const activityGroupOrder = [];
+    for (const item of candidates) {
+        const activityMatch = String(item?.key ?? '').match(/^activities\.(\d+)\.(.+)$/);
+        if (!activityMatch) {
+            grouped.push(item);
+            continue;
+        }
+        const index = activityMatch[1];
+        const field = activityMatch[2];
+        if (!activityGroups.has(index)) {
+            activityGroups.set(index, {
+                key: `activities.${index}`,
+                label: `활동 ${Number(index) + 1}`,
+                fields: {},
+                sourceItems: []
+            });
+            activityGroupOrder.push(index);
+        }
+        const group = activityGroups.get(index);
+        group.fields[field] = item.value;
+        group.sourceItems.push(item);
+    }
+    return [
+        ...grouped,
+        ...activityGroupOrder.map((index) => formatActivityCopyCandidate(activityGroups.get(index)))
+    ];
+}
+
+function formatActivityCopyCandidate(group) {
+    const fields = group?.fields ?? {};
+    const title = fields.activityName || fields.title || group?.label || '활동';
+    const rows = [
+        ['활동구분', fields.activityType],
+        ['활동명', fields.activityName || fields.title],
+        ['기관/조직', fields.organization],
+        ['활동기간', fields.period],
+        ['역할', fields.role],
+        ['상세 내용', fields.description || fields.summary],
+        ['성과', fields.outcome]
+    ].filter(([, value]) => normalizeInput(String(value ?? '')));
+    const body = rows
+        .slice(0, 4)
+        .map(([label, value]) => `${label}: ${value}`)
+        .join('\n');
+    const copyText = rows
+        .map(([label, value]) => `${label}: ${value}`)
+        .join('\n');
+    return {
+        key: group.key,
+        label: group.label,
+        title,
+        value: copyText,
+        body,
+        isActivityGroup: true
+    };
+}
+
+function formatCopyCandidateDisplay(item) {
+    return {
+        title: item.title ?? item.label,
+        body: item.body ?? item.value,
+        preserveBodyLines: Boolean(item.isActivityGroup),
         actionLabel: '\uBCF5\uC0AC',
         actionDoneLabel: '\uBCF5\uC0AC\uB428',
         actionValue: item.value,
         actionAriaLabel: `${item.label ?? '\uAC12'} \uBCF5\uC0AC`
-    }), '복사할 후보가 없습니다.');
+    };
 }
 
 function uniqueAutoFillItems(items) {
@@ -987,16 +1058,6 @@ function isSectionOpenItem(item) {
 function getAutofillFailureDisplay(item) {
     const reason = item?.reason;
     const fieldKey = item?.fieldKey ?? '';
-    const value = normalizeInput(String(item?.value ?? ''));
-    if (reason === 'disabled_control' && fieldKey.includes('address')) {
-        return {
-            variant: 'action-needed',
-            badge: '\uC8FC\uC18C \uAC80\uC0C9 \uD544\uC694',
-            body: value
-                ? '\uC8FC\uC18C \uAC80\uC0C9 \uD6C4 \uBCF5\uC0AC \uD6C4\uBCF4\uC5D0\uC11C \uBD99\uC5EC\uB123\uC5B4 \uC8FC\uC138\uC694.'
-                : '\uC9C0\uC6D0\uC11C\uC5D0\uC11C \uC9C1\uC811 \uD655\uC778\uD574 \uC8FC\uC138\uC694.'
-        };
-    }
     if (reason === 'tailored_activity_required') {
         return {
             variant: 'action-needed',
@@ -1020,6 +1081,11 @@ function getAutofillFailureMessage(itemOrReason) {
     const reason = typeof itemOrReason === 'string' ? itemOrReason : itemOrReason?.reason;
     const fieldKey = typeof itemOrReason === 'string' ? '' : itemOrReason?.fieldKey ?? '';
     const value = typeof itemOrReason === 'string' ? '' : normalizeInput(String(itemOrReason?.value ?? ''));
+    if (reason === 'disabled_control' && fieldKey.includes('address')) {
+        return value
+            ? '\uC8FC\uC18C \uAC80\uC0C9 \uD6C4 \uBCF5\uC0AC \uD6C4\uBCF4\uC5D0\uC11C \uBD99\uC5EC\uB123\uC5B4 \uC8FC\uC138\uC694.'
+            : '\uC9C0\uC6D0\uC11C\uC5D0\uC11C \uC9C1\uC811 \uD655\uC778\uD574 \uC8FC\uC138\uC694.';
+    }
     if (reason === 'essay_or_long_text') {
         return '자기소개서 또는 장문 입력칸은 자동 입력하지 않았습니다. 직접 검토해 주세요.';
     }
@@ -1070,6 +1136,10 @@ function renderResultList(list, items, mapper, emptyText) {
         const title = document.createElement('strong');
         heading.className = 'autofill-result-heading';
         const body = document.createElement('span');
+        body.className = 'autofill-result-body';
+        if (mapped.preserveBodyLines) {
+            body.classList.add('is-multiline');
+        }
         title.textContent = mapped.title ?? '';
         heading.append(title);
         if (mapped.badge) {
@@ -1125,6 +1195,9 @@ async function copyTextToClipboard(value) {
     const text = normalizeInput(String(value ?? ''));
     if (!text) {
         return false;
+    }
+    if (window.parent !== window && copyTextWithFallback(text)) {
+        return true;
     }
     try {
         await navigator.clipboard.writeText(text);

@@ -1335,6 +1335,10 @@ legend {
   line-height: 1.4;
 }
 
+.autofill-result-body.is-multiline {
+  white-space: pre-line;
+}
+
 .autofill-result-value {
   display: flex;
   min-width: 0;

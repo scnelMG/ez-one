@@ -17,7 +17,15 @@ export async function handleExternalAuthMessage(storage, message, navigation = {
     if (!isAuthMessage(message)) {
         return false;
     }
-    await saveStoredSession(storage, message);
+    try {
+        await saveStoredSession(storage, message);
+    }
+    catch (error) {
+        if (isExtensionContextInvalidatedError(error)) {
+            return false;
+        }
+        throw error;
+    }
     await returnToSourceTab(navigation.tabs, message.sourceTabId);
     return true;
 }
@@ -52,6 +60,11 @@ function isAuthMessage(message) {
     return value.type === 'EZONE_EXTENSION_AUTH_SESSION' &&
         typeof value.accessToken === 'string' &&
         typeof value.refreshToken === 'string';
+}
+
+function isExtensionContextInvalidatedError(error) {
+    const message = error instanceof Error ? error.message : String(error ?? '');
+    return /extension context invalidated/i.test(message);
 }
 
 async function returnToSourceTab(tabs, sourceTabId) {

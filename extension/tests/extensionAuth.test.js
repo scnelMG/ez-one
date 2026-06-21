@@ -70,4 +70,25 @@ describe('extensionAuth', () => {
         await expect(handleExternalAuthMessage(storage, { type: 'OTHER' })).resolves.toBe(false);
         expect(storage.set).not.toHaveBeenCalled();
     });
+
+    it('ignores auth messages when the extension context was invalidated during storage', async () => {
+        const storage = {
+            set: vi.fn(async () => {
+                throw new Error('Extension context invalidated.');
+            }),
+            get: vi.fn(async () => ({})),
+            remove: vi.fn(async () => undefined)
+        };
+        const tabs = {
+            update: vi.fn(async () => undefined)
+        };
+
+        await expect(handleExternalAuthMessage(storage, {
+            type: 'EZONE_EXTENSION_AUTH_SESSION',
+            accessToken: 'access-token',
+            refreshToken: 'refresh-token',
+            sourceTabId: '42'
+        }, { tabs })).resolves.toBe(false);
+        expect(tabs.update).not.toHaveBeenCalled();
+    });
 });

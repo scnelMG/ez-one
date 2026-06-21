@@ -66,7 +66,7 @@ describe('extension popup script', () => {
         expect(script).toContain('...getAutofillFailureDisplay(item)');
         expect(script).toContain('function getAutofillFailureDisplay');
         expect(script).toContain("fieldKey.includes('address')");
-        expect(script).toContain("variant: 'action-needed'");
+        expect(script).not.toContain("badge: '\\uC8FC\\uC18C \\uAC80\\uC0C9 \\uD544\\uC694'");
         expect(script).toContain('\\uC8FC\\uC18C \\uAC80\\uC0C9 \\uD6C4 \\uBCF5\\uC0AC \\uD6C4\\uBCF4\\uC5D0\\uC11C');
         expect(script).toContain("item.className = 'is-empty'");
         expect(script).toContain('autofill-result-value');
@@ -98,6 +98,7 @@ describe('extension popup script', () => {
         expect(script).toContain('actionValue: item.value');
         expect(script).toContain('autofill-result-copy-button');
         expect(script).toContain('async function copyTextToClipboard');
+        expect(script).toContain('window.parent !== window && copyTextWithFallback(text)');
         expect(script).toContain('navigator.clipboard.writeText(text)');
         expect(script).toContain('function copyTextWithFallback');
     });
@@ -105,9 +106,21 @@ describe('extension popup script', () => {
     it('removes planned or filled items from copy candidates while keeping manual review values copyable', () => {
         expect(script).toContain('primaryFieldKeys');
         expect(script).toContain('visibleCopyCandidates');
-        expect(script).toContain('!primaryFieldKeys.has(item?.key)');
-        expect(script).toContain('autofillCopyCount.textContent = String(visibleCopyCandidates.length)');
-        expect(script).toContain('renderResultList(autofillCopyList, visibleCopyCandidates.slice(0, 12)');
+        expect(script).toContain('groupActivityCopyCandidates');
+        expect(script).toContain('shouldShowCopyCandidate');
+        expect(script).toContain("item?.key === 'basicInfo.address' || item?.key === 'basicInfo.addressDetail'");
+        expect(script).toContain('autofillCopyCount.textContent = String(groupedCopyCandidates.length)');
+        expect(script).toContain('groupedCopyCandidates.slice(0, 12)');
+        expect(script).toContain('formatActivityCopyCandidate');
+    });
+
+    it('groups activity copy candidates by activity instead of showing every field as a flat row', () => {
+        expect(script).toContain('function groupActivityCopyCandidates');
+        expect(script).toContain('/^activities\\.(\\d+)\\.(.+)$/');
+        expect(script).toContain('activityGroupOrder');
+        expect(script).toContain('function formatActivityCopyCandidate');
+        expect(script).toContain('activityType');
+        expect(script).toContain('description');
     });
 
     it('explains tailored activity fields as copy-assisted manual input', () => {
