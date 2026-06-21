@@ -36,7 +36,7 @@ chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => 
         .then((accepted) => {
         sendResponse({ accepted });
         if (accepted) {
-            closeAuthTabAfterResponse(chrome.tabs, sender.tab?.id, message?.sourceTabId);
+            void returnToExtensionTabAfterAuth(chrome.tabs, chrome.scripting, sender.tab?.id, message?.sourceTabId, message?.sourceUrl);
         }
     })
         .catch((error) => sendResponse({
@@ -46,22 +46,61 @@ chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => 
     return true;
 });
 
+async function returnToExtensionTabAfterAuth(tabs, scripting, senderTabId, sourceTabId, sourceUrl) {
+    const parsedSourceTabId = parsePositiveInteger(sourceTabId);
+    if (parsedSourceTabId === null) {
+        return;
+    }
+    let sourceTab;
+    try {
+        sourceTab = await tabs.update(parsedSourceTabId, { active: true });
+    }
+    catch {
+        // Leave the auth tab open so the user can use the web fallback if the source tab is gone.
+        return;
+    }
+    try {
+        await ensurePanelOpenAfterAuth(scripting, {
+            ...(sourceTab ?? {}),
+            id: parsedSourceTabId,
+            url: sourceTab?.url ?? sourceUrl
+        });
+    }
+    catch {
+        // Returning to the source tab is the critical path; the user can reopen the panel manually if reinjection fails.
+    }
+    finally {
+        closeAuthTabAfterResponse(tabs, senderTabId, parsedSourceTabId);
+    }
+}
+
+async function ensurePanelOpenAfterAuth(scripting, tab) {
+    if (!scripting || !canInjectPanel(tab)) {
+        return;
+    }
+    const [panelState] = await scripting.executeScript({
+        target: { tabId: tab.id },
+        func: () => Boolean(document.getElementById('ezone-extension-panel-host'))
+    });
+    if (panelState?.result) {
+        return;
+    }
+    await scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ['assets/panelHost.js']
+    });
+}
+
 function closeAuthTabAfterResponse(tabs, senderTabId, sourceTabId) {
     const parsedSourceTabId = parsePositiveInteger(sourceTabId);
     if (!Number.isInteger(senderTabId) || senderTabId <= 0 || parsedSourceTabId === null || senderTabId === parsedSourceTabId) {
         return;
     }
-    tabs.update(parsedSourceTabId, { active: true })
-        .then(() => {
-        setTimeout(() => {
-            tabs.remove(senderTabId).catch(() => {
-            // The user may close the auth tab before cleanup runs.
-            });
-        }, 120);
-    })
-        .catch(() => {
-        // Leave the auth tab open so the user can use the web fallback if the source tab is gone.
-    });
+    setTimeout(() => {
+        tabs.remove(senderTabId).catch(() => {
+        // The user may close the auth tab before cleanup runs.
+        });
+    }, 120);
 }
 
 function parsePositiveInteger(value) {

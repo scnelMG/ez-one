@@ -789,9 +789,9 @@ textarea {
 .form-shell select,
 .form-shell textarea,
 .document-structured-section select,
-.document-structured-section input,
+.document-structured-section input:not([type="checkbox"]):not([type="radio"]),
 .document-structured-section textarea,
-.document-profile-page input:not([type="checkbox"]),
+.document-profile-page input:not([type="checkbox"]):not([type="radio"]),
 .document-profile-page select,
 .document-profile-page textarea {
   width: 100%;
@@ -811,9 +811,9 @@ textarea {
 .form-shell select:hover,
 .form-shell textarea:hover,
 .document-structured-section select:hover,
-.document-structured-section input:hover,
+.document-structured-section input:not([type="checkbox"]):not([type="radio"]):hover,
 .document-structured-section textarea:hover,
-.document-profile-page input:not([type="checkbox"]):hover,
+.document-profile-page input:not([type="checkbox"]):not([type="radio"]):hover,
 .document-profile-page select:hover,
 .document-profile-page textarea:hover {
   border-color: #a391ff;
@@ -823,9 +823,9 @@ textarea {
 .form-shell select:focus,
 .form-shell textarea:focus,
 .document-structured-section select:focus,
-.document-structured-section input:focus,
+.document-structured-section input:not([type="checkbox"]):not([type="radio"]):focus,
 .document-structured-section textarea:focus,
-.document-profile-page input:not([type="checkbox"]):focus,
+.document-profile-page input:not([type="checkbox"]):not([type="radio"]):focus,
 .document-profile-page select:focus,
 .document-profile-page textarea:focus {
   outline: none;
@@ -4904,13 +4904,39 @@ li {
   font-weight: 800;
 }
 
+.document-wire.document-profile-page {
+  min-height: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
 .document-editor-grid-focused {
-  grid-template-columns: 230px minmax(0, 1fr);
-  gap: 28px;
+  grid-template-columns: 200px minmax(0, 1fr);
+  align-items: start;
+  gap: 24px;
 }
 
 .document-profile-toolbar {
   align-items: flex-start;
+  border-bottom: 0;
+  margin-bottom: 22px;
+  padding-bottom: 0;
+}
+
+.document-profile-toolbar h1 {
+  color: #101828;
+  font-size: 1.55rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.document-profile-toolbar p {
+  margin-top: 8px;
+  color: #667085;
+  font-size: 0.95rem;
+  font-weight: 500;
 }
 
 .document-profile-page,
@@ -4918,19 +4944,87 @@ li {
   font-family: var(--font-sans) !important;
 }
 
-.document-save-controls {
+.document-save-actions {
+  position: static;
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 12px;
+  margin: 28px 0 0;
+  padding: 14px 0 0;
+  border-top: 1px solid #e5eaf2;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.document-save-actions .primary-button {
+  width: auto;
+  min-width: 128px;
+  padding-inline: 28px;
+}
+
+.document-save-feedback {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  margin: 0 2px 0 0;
+  border: 1px solid #d9efe7;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+  color: #047857;
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.2;
+  padding: 0 13px 0 10px;
+}
+
+.document-save-feedback.saved {
+  border-color: #ccebdd;
+  color: #047857;
+}
+
+.document-save-feedback.failed {
+  border-color: #fed7aa;
+  color: #b45309;
+}
+
+.document-save-feedback-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #e8f8ef;
+  color: #047857;
+  flex: 0 0 auto;
+}
+
+.document-save-feedback.failed .document-save-feedback-icon {
+  background: #fff7ed;
+  color: #b45309;
+}
+
+.document-save-feedback-icon svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.2;
 }
 
 .document-form-panel-focused {
-  min-height: 720px;
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
-  padding: 32px;
-  background: #ffffff;
-  transition: all 0.3s ease;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+  background: transparent;
 }
 
 .document-basic-form {
@@ -4948,13 +5042,13 @@ li {
 .document-section-rail {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   overflow: hidden;
-  border: 0;
-  border-radius: 12px;
+  border: 1px solid #e6edf6;
+  border-radius: 10px;
   background: #ffffff;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
-  padding: 16px 0;
+  box-shadow: none;
+  padding: 8px;
 }
 
 @media (min-width: 1025px) {
@@ -4966,49 +5060,63 @@ li {
 }
 
 .profile-group-card {
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  background: #f8fafc;
-  padding: 32px;
+  border: 1px solid #e4eaf3;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 26px 28px;
   display: flex;
   flex-direction: column;
-  gap: 28px;
-  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.02);
+  gap: 22px;
+  box-shadow: none;
 }
 
 .profile-group-card.application-choice-card {
-  border-radius: 8px;
+  border-color: #e4eaf3;
+  border-radius: 10px;
   background: #ffffff;
-  padding: 24px 28px;
-  gap: 20px;
+  padding: 26px 28px;
+  gap: 22px;
   box-shadow: none;
 }
 
 .profile-group-card.application-choice-card .profile-subsection-heading {
-  border-left: 0;
-  border-bottom-color: #dbe3ef;
+  border-bottom-color: #e6edf6;
   margin-bottom: 0;
-  padding-left: 0;
-  padding-bottom: 10px;
+  padding-bottom: 12px;
+}
+
+.profile-group-card.application-choice-card .application-choice-heading {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 16px;
 }
 
 .profile-group-card.application-choice-card .profile-subsection-heading h3 {
-  font-size: 1rem;
+  font-size: 1.08rem;
+}
+
+.application-choice-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  min-width: 0;
 }
 
 .document-section-rail .rail-button {
-  min-height: 48px;
+  min-height: 42px;
   border: 0;
-  border-left: 4px solid transparent;
-  border-radius: 0;
+  border-left: 3px solid transparent;
+  border-radius: 8px;
   background: transparent;
   color: #4b5563;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 700;
-  padding: 0 24px;
+  padding: 0 14px;
   text-align: left;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .document-section-rail .rail-button:hover {
@@ -5024,13 +5132,13 @@ li {
 }
 
 .document-profile-page .section-heading {
-  border-bottom: 2px solid #f1f5f9;
-  margin-bottom: 32px;
-  padding-bottom: 18px;
+  border-bottom: 1px solid #e8eef6;
+  margin-bottom: 22px;
+  padding-bottom: 14px;
 }
 
 .document-profile-page .section-heading h2 {
-  font-size: 1.4rem;
+  font-size: 1.28rem;
   font-weight: 800;
   color: var(--ink);
   margin: 0;
@@ -5044,29 +5152,113 @@ li {
 
 .document-structured-section {
   display: grid;
-  gap: 36px;
+  gap: 20px;
 }
 
 .profile-subsection-heading {
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e8eef6;
   padding-bottom: 12px;
-  border-left: 4px solid var(--blue);
-  padding-left: 14px;
-  margin-bottom: 8px;
+  margin-bottom: 2px;
 }
 
 .profile-subsection-heading h3 {
   margin: 0;
   color: var(--ink);
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   font-weight: 800;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
+}
+
+.profile-photo-field {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 16px;
+  border: 1px solid #e4eaf3;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.profile-photo-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  border: 1px solid #dbe4f0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #94a3b8;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.profile-photo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-photo-meta {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.profile-photo-meta strong {
+  color: #0f172a;
+  font-size: 0.95rem;
+  font-weight: 850;
+}
+
+.profile-photo-meta span {
+  overflow: hidden;
+  color: #64748b;
+  font-size: 0.86rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-photo-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-photo-actions .compact-button,
+.profile-photo-actions .ghost-button.compact {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 76px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0 16px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.profile-photo-actions .secondary-button.compact-button {
+  margin: 0;
+}
+
+.profile-photo-native-input {
+  display: none;
+}
+
+.compact-button {
+  min-height: 36px;
+  padding: 0 14px;
+  cursor: pointer;
 }
 
 .profile-field-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 24px 18px;
+  gap: 20px 18px;
 }
 
 .profile-field-grid.columns-2 {
@@ -5082,8 +5274,8 @@ li {
   display: grid;
   gap: 8px;
   color: #334155;
-  font-size: 0.88rem;
-  font-weight: 700;
+  font-size: 0.84rem;
+  font-weight: 750;
 }
 
 .profile-field-grid label.wide,
@@ -5094,8 +5286,99 @@ li {
 
 .profile-field-grid label.full,
 .profile-field-grid .checkbox-field-wrapper.full,
-.profile-field-grid .radio-field-wrapper.full {
+.profile-field-grid .radio-field-wrapper.full,
+.profile-field-grid .profile-nested-list.full {
   grid-column: 1 / -1;
+}
+
+.profile-nested-list {
+  display: grid;
+  gap: 12px;
+}
+
+.profile-nested-list-head {
+  color: #334155;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.profile-nested-entry {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.profile-nested-entry-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #0f172a;
+}
+
+.profile-date-input {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+.profile-date-input > input[type="text"] {
+  padding-right: 48px;
+  font-variant-numeric: tabular-nums;
+}
+
+.profile-date-picker-button {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #0f172a;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.profile-date-picker-button:hover,
+.profile-date-picker-button:focus-visible {
+  background: #eef2ff;
+  color: #4f46e5;
+  outline: none;
+}
+
+.profile-date-picker-button svg {
+  width: 19px;
+  height: 19px;
+}
+
+.profile-date-picker-button path {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.9;
+}
+
+.document-profile-page .profile-date-input > .profile-date-native {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 42px;
+  min-height: 48px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .checkbox-field-wrapper {
@@ -5110,19 +5393,19 @@ li {
 
 .radio-field-label {
   color: #334155;
-  font-size: 0.88rem;
-  font-weight: 700;
+  font-size: 0.84rem;
+  font-weight: 750;
 }
 
 .profile-entry-card {
   display: grid;
-  gap: 24px;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  background: #ffffff;
-  padding: 24px;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
-  transition: all 0.2s ease;
+  gap: 20px;
+  border: 1px solid #e8eef6;
+  border-radius: 8px;
+  background: #fbfcfe;
+  padding: 20px;
+  box-shadow: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .profile-entry-card:hover {
@@ -5144,6 +5427,61 @@ li {
   color: var(--ink);
   font-size: 1.05rem;
   font-weight: 800;
+}
+
+.profile-entry-card-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.inline-delete-prompt {
+  color: #9f1239;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.profile-entry-card-actions .compact {
+  min-height: 30px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  padding: 0 11px;
+}
+
+.entry-header-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 30px;
+  border: 1px solid #d8e0ec;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #475569;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 750;
+  line-height: 1;
+  padding: 0 11px;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.entry-header-checkbox:hover {
+  border-color: #b8c7ff;
+  color: var(--blue-strong);
+}
+
+.entry-header-checkbox:focus-within {
+  border-color: #6d4dff;
+  box-shadow: 0 0 0 3px rgba(109, 77, 255, 0.15);
+}
+
+.entry-header-checkbox input {
+  width: 14px;
+  min-height: 14px;
+  accent-color: var(--blue);
+  cursor: pointer;
 }
 
 .danger-button {
@@ -5172,7 +5510,7 @@ li {
   cursor: pointer;
   font-weight: 700;
   padding: 0 20px;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .add-profile-button:hover {
@@ -5200,7 +5538,7 @@ li {
   background: #ffffff;
   padding: 0 16px;
   width: 100%;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .document-profile-page .checkbox-field:hover {
@@ -5222,46 +5560,100 @@ li {
 .application-radio-group {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  min-height: 48px;
-  overflow: hidden;
-  border: 1px solid #cbd5e1;
+  min-height: 52px;
+  gap: 8px;
+  border: 1px solid #d5deeb;
   border-radius: 8px;
-  background: #ffffff;
+  background: #f8fafc;
+  padding: 6px;
+}
+
+.application-radio-group.application-radio-group-compact {
+  grid-template-columns: repeat(2, minmax(68px, auto));
+  min-height: 34px;
+  gap: 4px;
+  padding: 4px;
 }
 
 .application-radio-option {
+  position: relative;
   display: inline-flex !important;
   align-items: center;
   justify-content: center;
-  gap: 8px !important;
+  gap: 10px !important;
   min-width: 0;
-  min-height: 46px;
-  border-right: 1px solid #e2e8f0;
-  color: #334155 !important;
+  min-height: 38px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #475569 !important;
   cursor: pointer;
-  font-size: 0.92rem !important;
-  font-weight: 700 !important;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  font-size: 0.86rem !important;
+  font-weight: 750 !important;
+  line-height: 1.2;
+  padding: 0 12px !important;
+  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.application-radio-option:last-child {
-  border-right: 0;
+.application-radio-group-compact .application-radio-option {
+  min-height: 26px;
+  gap: 6px !important;
+  padding: 0 10px !important;
+  font-size: 0.78rem !important;
 }
 
 .application-radio-option:hover {
-  background: #f8fafc;
+  border-color: #cbd5e1;
+  background: #ffffff;
 }
 
 .application-radio-option input {
-  width: 16px;
-  min-height: 16px;
+  position: absolute;
+  width: 1px;
+  min-height: 1px;
   margin: 0;
-  accent-color: var(--blue);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.application-radio-option span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.application-radio-option span::before {
+  width: 8px;
+  height: 8px;
+  border: 1px solid #94a3b8;
+  border-radius: 999px;
+  background: #ffffff;
+  content: "";
+  flex: 0 0 auto;
+}
+
+.application-radio-group-compact .application-radio-option span::before {
+  width: 6px;
+  height: 6px;
 }
 
 .application-radio-option:has(input:checked) {
-  background: var(--blue-soft);
+  border-color: #b8c7ff;
+  background: #eef2ff;
   color: var(--blue-strong) !important;
+  box-shadow: 0 6px 14px rgba(79, 70, 229, 0.08);
+}
+
+.application-radio-option:has(input:checked) span::before {
+  border-color: var(--blue);
+  background: var(--blue);
+  box-shadow: inset 0 0 0 2px #ffffff;
+}
+
+.application-radio-option:has(input:focus-visible) {
+  border-color: #6d4dff;
+  box-shadow: 0 0 0 3px rgba(109, 77, 255, 0.15);
 }
 
 /* Custom Field Layout */
@@ -5275,7 +5667,7 @@ li {
   background: #f8fafc;
   padding: 20px 24px;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.02);
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .custom-field-item:hover {
@@ -5363,6 +5755,17 @@ li {
     grid-template-columns: 1fr;
     gap: 24px;
   }
+  .document-section-rail {
+    position: static;
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 8px;
+  }
+  .document-section-rail .rail-button {
+    flex: 0 0 auto;
+    min-width: max-content;
+    white-space: nowrap;
+  }
 }
 
 @media (max-width: 768px) {
@@ -5374,8 +5777,35 @@ li {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     gap: 20px 14px;
   }
-  .document-form-panel-focused {
-    padding: 24px;
+  .document-save-actions {
+    margin: 24px 0 0;
+    padding: 12px 0 0;
+  }
+  .profile-group-card.application-choice-card .application-choice-heading {
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .profile-photo-field {
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 14px;
+  }
+  .profile-photo-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+  .application-choice-status {
+    justify-content: flex-start;
+    width: auto;
+  }
+  .profile-entry-card-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .profile-entry-card-actions {
+    justify-content: space-between;
+    width: 100%;
   }
 }
 
@@ -5390,8 +5820,12 @@ li {
   .profile-field-grid label.full {
     grid-column: span 1 !important;
   }
-  .document-form-panel-focused {
-    padding: 18px;
+  .document-save-actions {
+    margin: 20px 0 0;
+    padding: 12px 0 0;
+  }
+  .document-save-actions .primary-button {
+    width: 100%;
   }
 }
 

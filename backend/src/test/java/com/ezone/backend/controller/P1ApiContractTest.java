@@ -612,6 +612,31 @@ class P1ApiContractTest {
             eq("{\"nameKo\":\"Hong Gil Dong\",\"email\":\"user@example.com\"}")
         );
 
+        mockMvc.perform(put("/api/document-profile/sections/military")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "payload": {
+                        "military": [
+                          {
+                            "status": "미필",
+                            "branch": "",
+                            "rank": "",
+                            "hasDisability": false,
+                            "isVeteran": false
+                          }
+                        ]
+                      }
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.lastSavedAt", notNullValue()));
+        verify(documentProfileMapper).upsertSection(
+            eq(1L),
+            eq("military"),
+            eq("{\"military\":[{\"status\":\"미필\",\"branch\":\"\",\"rank\":\"\",\"hasDisability\":false,\"isVeteran\":false}]}")
+        );
+
         mockMvc.perform(get("/api/integrations/notion"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.syncScope").value("JOB_ONLY"));

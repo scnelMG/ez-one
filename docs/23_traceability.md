@@ -80,8 +80,15 @@ Study still needs a formal requirement ID if it remains an active product surfac
 
 | Requirement | Implementation | Verification |
 | --- | --- | --- |
+
 | `DATA-002`, `JOB-016`, `HISTORY-008` | Basket save/update checks the official company registry before internal fallback rules, writes official company type/profile data, and records source provenance in `company_profile_sources`. Existing history-linked companies are backfilled through `V31__backfill_official_company_classifications.sql`. | `MyBatisP1WorkspaceServiceTest` |
 | `DATA-002`, `DATA-004`, `JOB-016`, `HISTORY-008` | Unknown companies saved from basket/recommendation/extension flows attempt realtime official API enrichment after the company row is linked. Successful matches write `REALTIME_OFFICIAL_API` profile data and source provenance; provider failures fall back without blocking save. | `MyBatisP1WorkspaceServiceTest` |
+
+## 2026-06-19 Document Profile Photo Traceability Update
+
+| Requirement | Implementation | Verification |
+| --- | --- | --- |
+| `PROFILE-026`, `EXT-013` | `/document-profile` basic-info photo upload stores `basicInfo.profilePhoto`; extension converts the saved image data URL into a `File` for generic image upload inputs only | `DocumentProfilePage.test.js`, `applicationAutoFill.test.js` |
 
 ## 2026-06-19 DART GMS AI Analysis Traceability Update
 

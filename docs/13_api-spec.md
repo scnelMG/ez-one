@@ -192,6 +192,7 @@ History rows are stored in `application_history`. The import process creates lin
 ## 2026-06-18 Realtime Official Company Enrichment Addendum
 
 - Requirement: `DATA-002`, `DATA-004`, `JOB-016`, `HISTORY-008`.
+
 - `POST /api/basket/jobs`, `PATCH /api/basket/jobs/{basketJobId}`, recommendation save, and extension save share the same company enrichment path.
 - If the static official registry has no match, the backend attempts realtime official-provider enrichment by company name.
 - Realtime enrichment is best-effort. API timeouts, missing keys, malformed responses, or empty matches must not roll back the basket job, workspace, or imported history link.
@@ -203,6 +204,14 @@ History rows are stored in `application_history`. The import process creates lin
 - Runtime configuration: `PUBLIC_DATA_API_KEY`, `COMPANY_ENRICHMENT_REALTIME_ENABLED`, `PUBLIC_INSTITUTION_API_URL`, `FTC_AFFILIATE_API_URL`, optional `FTC_PRESENTN_YEAR`, `FTC_AFFILIATE_MAX_PAGES`, and optional `MIDDLE_MARKET_API_URL`.
 - `PUBLIC_INSTITUTION_API_URL` defaults to the public institution `/list` operation, not only the API base URL.
 - The FTC affiliate API requires `presentnYear`; when `FTC_PRESENTN_YEAR` is empty, the backend uses the current year and scans pages up to `FTC_AFFILIATE_MAX_PAGES`.
+
+## 2026-06-19 Document Profile Photo Payload Addendum
+
+- Requirement: `PROFILE-026`, `EXT-013`.
+- `PUT /api/document-profile/sections/basicInfo` may receive `payload.profilePhoto` as `{ "name": string, "type": "image/*", "size": number, "dataUrl": "data:image/...;base64,..." }`.
+- `GET /api/document-profile` and `GET /api/extension/document-profile` return the saved `basicInfo.profilePhoto` value as part of the normal section payload.
+- The current web client limits selected profile photos to image files up to 2 MB before saving, to keep JSON profile reads and extension transfer lightweight.
+- The extension uses the payload only for image file inputs and does not submit or finalize the external application form on behalf of the user.
 
 ## 2026-06-18 Official Company Classification Addendum
 

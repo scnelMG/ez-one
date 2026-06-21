@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { createPinia } from 'pinia';
 import { createMemoryHistory, createRouter } from 'vue-router';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import BasketPage from './BasketPage.vue';
 
 const mocks = vi.hoisted(() => ({
@@ -33,7 +33,9 @@ const makeRouter = () => createRouter({
         { path: '/study', component: { template: '<div>study</div>' } },
         { path: '/document-profile', component: { template: '<div>document profile</div>' } },
         { path: '/mypage/notion', component: { template: '<div>notion</div>' } },
-        { path: '/mypage/terms', component: { template: '<div>terms</div>' } }
+        { path: '/mypage/terms', component: { template: '<div>terms</div>' } },
+        { path: '/mypage/inquiry', component: { template: '<div>inquiry</div>' } },
+        { path: '/mypage/partnership', component: { template: '<div>partnership</div>' } }
     ]
 });
 
@@ -91,6 +93,8 @@ const defaultJobs = [
 
 describe('BasketPage', () => {
     beforeEach(() => {
+        vi.useFakeTimers({ shouldAdvanceTime: true });
+        vi.setSystemTime(new Date(2026, 5, 20));
         localStorage.clear();
         mocks.listJobs.mockReset();
         mocks.createJob.mockReset();
@@ -118,6 +122,10 @@ describe('BasketPage', () => {
         mocks.archiveJob.mockResolvedValue(undefined);
     });
 
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
     it('JOB-005/JOB-014: keeps metrics, places the basket above the smaller calendar, and removes section kickers', async () => {
         const wrapper = await mountBasket('/basket?sort=deadline');
 
@@ -125,7 +133,7 @@ describe('BasketPage', () => {
         expect(wrapper.get('[data-testid="metric-all"]').text()).toContain('4');
         expect(wrapper.get('[data-testid="metric-progress"]').text()).toContain('1');
         expect(wrapper.get('[data-testid="metric-not-started"]').text()).toContain('1');
-        expect(wrapper.get('[data-testid="metric-deadline"]').text()).toContain('2');
+        expect(wrapper.get('[data-testid="metric-deadline"]').text()).toContain('1');
         expect(wrapper.find('[data-testid="recommendation-cta"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="manual-create"]').exists()).toBe(false);
         expect(wrapper.text()).not.toContain('주간 일정');

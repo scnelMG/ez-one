@@ -1,6 +1,7 @@
 export const ACCESS_TOKEN_KEY = 'ezoneAccessToken';
 export const REFRESH_TOKEN_KEY = 'ezoneRefreshToken';
 export const CURRENT_USER_KEY = 'ezoneCurrentUser';
+export const PENDING_EXTENSION_CONTINUATION_KEY = 'ezonePendingExtensionContinuation';
 export function buildWebLoginUrl({ webAppUrl, currentUrl, sourceTabId }) {
     const url = new URL('/login', webAppUrl);
     const connectUrl = new URL('/extension/connect', webAppUrl);
@@ -16,7 +17,15 @@ export async function handleExternalAuthMessage(storage, message, navigation = {
     if (!isAuthMessage(message)) {
         return false;
     }
-    await saveStoredSession(storage, message);
+    try {
+        await saveStoredSession(storage, message);
+    }
+    catch (error) {
+        if (isExtensionContextInvalidatedError(error)) {
+            return false;
+        }
+        throw error;
+    }
     await returnToSourceTab(navigation.tabs, message.sourceTabId);
     return true;
 }
@@ -51,6 +60,11 @@ function isAuthMessage(message) {
     return value.type === 'EZONE_EXTENSION_AUTH_SESSION' &&
         typeof value.accessToken === 'string' &&
         typeof value.refreshToken === 'string';
+}
+
+function isExtensionContextInvalidatedError(error) {
+    const message = error instanceof Error ? error.message : String(error ?? '');
+    return /extension context invalidated/i.test(message);
 }
 
 async function returnToSourceTab(tabs, sourceTabId) {

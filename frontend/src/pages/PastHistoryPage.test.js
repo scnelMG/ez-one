@@ -108,7 +108,9 @@ const makeRouter = () => createRouter({
         { path: '/mypage', component: { template: '<div>my page</div>' } },
         { path: '/mypage/notion', component: { template: '<div>notion</div>' } },
         { path: '/mypage/onboarding', component: { template: '<div>onboarding</div>' } },
-        { path: '/mypage/terms', component: { template: '<div>terms</div>' } }
+        { path: '/mypage/terms', component: { template: '<div>terms</div>' } },
+        { path: '/mypage/inquiry', component: { template: '<div>inquiry</div>' } },
+        { path: '/mypage/partnership', component: { template: '<div>partnership</div>' } }
     ]
 });
 

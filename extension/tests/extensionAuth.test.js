@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { buildWebLoginUrl, handleExternalAuthMessage } from '../src/shared/auth/extensionAuth';
+import { PENDING_EXTENSION_CONTINUATION_KEY, buildWebLoginUrl, handleExternalAuthMessage } from '../src/shared/auth/extensionAuth';
 describe('extensionAuth', () => {
+    it('exposes a storage key for restoring the selected extension task after login', () => {
+        expect(PENDING_EXTENSION_CONTINUATION_KEY).toBe('ezonePendingExtensionContinuation');
+    });
+
     it('opens the web login flow with an extension connect redirect', () => {
         const url = buildWebLoginUrl({
             webAppUrl: 'http://localhost:5173',
@@ -65,5 +69,26 @@ describe('extensionAuth', () => {
         };
         await expect(handleExternalAuthMessage(storage, { type: 'OTHER' })).resolves.toBe(false);
         expect(storage.set).not.toHaveBeenCalled();
+    });
+
+    it('ignores auth messages when the extension context was invalidated during storage', async () => {
+        const storage = {
+            set: vi.fn(async () => {
+                throw new Error('Extension context invalidated.');
+            }),
+            get: vi.fn(async () => ({})),
+            remove: vi.fn(async () => undefined)
+        };
+        const tabs = {
+            update: vi.fn(async () => undefined)
+        };
+
+        await expect(handleExternalAuthMessage(storage, {
+            type: 'EZONE_EXTENSION_AUTH_SESSION',
+            accessToken: 'access-token',
+            refreshToken: 'refresh-token',
+            sourceTabId: '42'
+        }, { tabs })).resolves.toBe(false);
+        expect(tabs.update).not.toHaveBeenCalled();
     });
 });

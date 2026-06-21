@@ -12,7 +12,10 @@ const emptyBasicInfo = {
     gender: '',
     birthdate: '',
     address: '',
-    addressDetail: ''
+    addressDetail: '',
+    applicationCareerType: '',
+    applicationSource: '',
+    profilePhoto: null
 };
 
 export const useDocumentProfileStore = defineStore('documentProfile', () => {
@@ -109,7 +112,10 @@ function normalizeBasicInfo(payload) {
         gender: stringValue(record.gender),
         birthdate: stringValue(record.birthdate),
         address: stringValue(record.address),
-        addressDetail: stringValue(record.addressDetail)
+        addressDetail: stringValue(record.addressDetail),
+        applicationCareerType: stringValue(record.applicationCareerType),
+        applicationSource: stringValue(record.applicationSource),
+        profilePhoto: photoValue(record.profilePhoto)
     };
 }
 
@@ -128,4 +134,21 @@ function normalizeReusableItems(payload) {
 
 function stringValue(value) {
     return typeof value === 'string' ? value : '';
+}
+
+function photoValue(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        return null;
+    }
+    const dataUrl = stringValue(value.dataUrl);
+    const type = stringValue(value.type);
+    if (!dataUrl || !type.startsWith('image/')) {
+        return null;
+    }
+    return {
+        name: stringValue(value.name) || 'resume-photo',
+        type,
+        size: Number.isFinite(Number(value.size)) ? Number(value.size) : 0,
+        dataUrl
+    };
 }
