@@ -172,7 +172,7 @@ class DartAnalysisServiceTest {
                 501L,
                 "DART",
                 ReferenceType.DART,
-                "DART AI analysis - 사업보고서",
+                "DART AI 분석 - 사업보고서",
                 "body",
                 "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260330000123"
             ));
@@ -184,7 +184,8 @@ class DartAnalysisServiceTest {
         ArgumentCaptor<CreateReferenceRequest> captor = ArgumentCaptor.forClass(CreateReferenceRequest.class);
         verify(workspaceService).createReference(Mockito.eq(1L), Mockito.eq(102L), captor.capture());
         assertThat(captor.getValue().boardName()).isEqualTo("DART");
-        assertThat(captor.getValue().body()).contains("R&D signal", "20260330000123", "Keep the source-limited wording.");
+        assertThat(captor.getValue().title()).startsWith("DART AI 분석 - ");
+        assertThat(captor.getValue().body()).contains("DART AI 분석", "근거 카드", "R&D signal", "20260330000123", "Keep the source-limited wording.");
 
         assertThatThrownBy(() -> service.saveAnalysisAsReference(2L, 102L, analysis.id()))
             .isInstanceOf(ForbiddenResourceException.class);

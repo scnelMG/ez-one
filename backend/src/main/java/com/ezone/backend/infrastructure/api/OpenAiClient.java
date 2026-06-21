@@ -41,14 +41,14 @@ public class OpenAiClient {
 
         String basePrompt = (customPrompt != null && !customPrompt.isBlank())
             ? customPrompt
-            : "You are an expert career consultant. The user has revised their self-introduction essay. " +
-              "I will provide the previous version (버전 1) and the revised version (버전 2).\n" +
-              "Please analyze the differences and write a brief summary (3~5 sentences in Korean) of what has improved or changed. " +
-              "Focus on the flow, specific additions or deletions, and how it aligns with typical essay improvements.";
+            : "당신은 한국어 자기소개서 첨삭 컨설턴트입니다. " +
+              "이전 버전과 수정 버전을 비교해 사용자가 바로 이해할 수 있게 요약하세요.\n" +
+              "출력은 한국어로 3개 이하의 짧은 bullet로 작성하고, 좋아진 점과 추가로 확인할 점을 구분하세요. " +
+              "없는 내용은 추측하지 말고, 실제 변경된 표현과 구조만 근거로 설명하세요.";
 
         String prompt = basePrompt + "\n\n" +
-                "=== 이전 버전 (버전 1) ===\n" + leftBody + "\n\n" +
-                "=== 비교 버전 (버전 2) ===\n" + rightBody;
+                "=== 이전 버전 ===\n" + leftBody + "\n\n" +
+                "=== 수정 버전 ===\n" + rightBody;
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -60,8 +60,8 @@ public class OpenAiClient {
                 Map.of("role", "system", "content", "You are a helpful assistant for Korean job applicants."),
                 Map.of("role", "user", "content", prompt)
             ),
-            "temperature", 0.7,
-            "max_tokens", 500
+            "temperature", 0.3,
+            "max_tokens", 350
         );
 
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);

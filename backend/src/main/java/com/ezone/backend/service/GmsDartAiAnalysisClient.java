@@ -81,6 +81,7 @@ public class GmsDartAiAnalysisClient implements DartAiAnalysisClient {
             )
         ));
         body.put("text", Map.of("format", jsonSchema()));
+        body.put("max_output_tokens", 900);
         return body;
     }
 
@@ -91,6 +92,10 @@ public class GmsDartAiAnalysisClient implements DartAiAnalysisClient {
             Do not provide investment advice, stock outlooks, hiring probability, or unsupported claims.
             Prioritize evidence cards and appeal points that can support a resume or essay.
             Every core claim must include a source section and receipt number.
+            Write all user-facing strings in Korean.
+            Keep the output concise: at most 3 evidence cards, 3 appeal points, 3 suggested sentences,
+            3 cautions, and 3 missing-info items.
+            Each evidence card summary should be 2 short Korean sentences or less.
             Before returning JSON, self-check that each evidence card is grounded in the selected receipt number,
             removes investment or hiring-probability language, and avoids generic company introductions.
             Return strict JSON matching the provided schema.
@@ -110,6 +115,7 @@ public class GmsDartAiAnalysisClient implements DartAiAnalysisClient {
             2. Rank signals by relevance to the position and essay questions.
             3. Compose source-grounded appeal cards for user review.
             4. Run a final quality check: keep only claims grounded in the selected DART report, and put uncertainty in missingInfo.
+            5. Return concise Korean copy that a job applicant can immediately review, not a generic company summary.
 
             DART report text:
             %s

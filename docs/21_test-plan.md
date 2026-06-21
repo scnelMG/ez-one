@@ -196,6 +196,7 @@ Requirement: `MM-001`, `MM-006`, `MM-007`, `MM-008`, `MM-009`, `REC-003`, `REC-0
 
 - `TC-COMPANY-MERGE-001`: `MyBatisP1WorkspaceServiceTest` verifies 금융위 primary fields plus OpenDART provenance are persisted and both sources are recorded.
 - `TC-WORKSPACE-COMPANY-STATUS-001`: `WorkspacePage.test.js` verifies `공식 확인됨`, `일부 확인됨`, and `미확인` rendering while hidden fields stay hidden.
+
 ## 2026-06-19 Document Profile Photo Auto-Fill Tests
 
 - `TC-PROFILE-PHOTO-001`: `DocumentProfilePage.test.js` verifies that the basic-info section can read an image file, show the file name/preview, save `profilePhoto`, and remove it before saving.

@@ -245,7 +245,7 @@ describe('WorkspacePage', () => {
             id: '778',
             boardName: 'DART',
             type: 'DART',
-            title: 'DART AI analysis - 사업보고서',
+            title: 'DART AI 분석 - 사업보고서',
             body: 'The report describes AI platform investment.',
             url: 'https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260330000123'
         });
@@ -495,7 +495,7 @@ describe('WorkspacePage', () => {
         await flushPromises();
 
         expect(mocks.saveDartAnalysisReference).toHaveBeenCalledWith('102', '901');
-        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('DART reference saved');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('DART 참고자료로 저장했습니다.');
         expect(wrapper.get('[data-testid="save-dart-analysis-reference"]').attributes('disabled')).toBeDefined();
     });
 

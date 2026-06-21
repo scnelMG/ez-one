@@ -456,7 +456,7 @@ describe('workspaceApi', () => {
                         id: 777,
                         boardName: 'DART',
                         referenceType: 'DART',
-                        title: 'DART AI analysis - 사업보고서',
+                        title: 'DART AI 분석 - 사업보고서',
                         body: 'AI investment',
                         url: 'https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260330000123'
                     },

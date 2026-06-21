@@ -141,6 +141,7 @@ Requirement: `DATA-002`, `DATA-004`, `JOB-016`, `WS-028`.
 | 금융위 기업기본정보 보강 | companyName | 기업명 exact match 후 기업구분, 업종, 대표자, 설립일, 직원 수, 홈페이지, 주소, 주요사업을 profile로 변환 | `company_profiles`, `company_profile_sources` | 키 없음, 빈 결과, 파싱 실패는 `Optional.empty`로 처리하고 저장을 막지 않음 |
 | OpenDART 기업개황 보강 | companyName | `corpCode.xml`에서 가장 구체적인 양방향 이름 매칭 후 `company.json`을 조회해 누락 필드 보강 | corp code, stock code, 법인구분, 대표자, 주소, 홈페이지, 설립일 | OpenDART 실패는 저장 실패로 전파하지 않음 |
 | 워크스페이스 기업정보 상태 | workspaceId | 공식 출처 수와 유효 필드 수로 확인 상태 계산 | `OFFICIAL`, `PARTIAL`, `UNVERIFIED` 및 출처명 | 미확인 상태에서도 워크스페이스는 정상 로드 |
+
 ## 2026-06-19 Document Profile Photo Auto-Fill Addendum
 
 Requirement: `PROFILE-026`, `EXT-013`.

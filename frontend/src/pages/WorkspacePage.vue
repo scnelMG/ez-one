@@ -638,8 +638,7 @@
 
 <script setup>
 import { computed, h, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
-import * as DiffPkg from 'diff';
-const diffLines = DiffPkg.diffLines || DiffPkg.default?.diffLines || DiffPkg;
+import { diffLines } from 'diff';
 import { useRoute } from 'vue-router';
 import { rememberRecentWorkspace } from '@/features/basket/recentWorkspaces';
 import { workspaceApi } from '@/features/workspace/api/workspaceApi';
@@ -1718,7 +1717,7 @@ async function createDartAnalysis(draft) {
   } catch (error) {
     draft.dartAnalysis = null;
     draft.dartAnalysisStatus = 'error';
-    draft.dartAnalysisMessage = 'AI analysis failed. You can still write a manual DART memo.';
+    draft.dartAnalysisMessage = 'AI 분석을 완료하지 못했습니다. DART 수동 메모 작성과 저장은 계속 사용할 수 있어요.';
   }
 }
 
@@ -2123,8 +2122,8 @@ const MarkdownBoard = {
       return h('section', { class: 'dart-ai-panel' }, [
         h('div', { class: 'dart-ai-toolbar' }, [
           h('div', [
-            h('strong', 'DART AI analysis'),
-            h('p', 'Select a disclosure, review AI evidence cards, then save it as a DART reference.')
+            h('strong', 'DART AI 분석'),
+            h('p', '공시를 선택하면 지원서에 쓸 수 있는 근거 카드와 주의점을 정리해 드립니다. 결과를 확인한 뒤 DART 참고자료로 저장하세요.')
           ]),
           h('button', {
             type: 'button',
@@ -2132,7 +2131,7 @@ const MarkdownBoard = {
             'data-testid': 'load-dart-disclosures',
             disabled: draft.dartDisclosureStatus === 'loading',
             onClick: () => loadDartDisclosures(draft)
-          }, draft.dartDisclosureStatus === 'loading' ? 'Loading disclosures' : 'Load disclosures')
+          }, draft.dartDisclosureStatus === 'loading' ? '공시 불러오는 중' : '공시 불러오기')
         ]),
         draft.dartDisclosureMessage ? h('p', { class: 'dart-ai-status' }, draft.dartDisclosureMessage) : null,
         draft.dartDisclosures.length ? h('div', { class: 'dart-disclosure-list' }, draft.dartDisclosures.map((disclosure) => h('button', {
@@ -2147,7 +2146,7 @@ const MarkdownBoard = {
             draft.dartSaveStatus = 'idle';
           }
         }, [
-          h('span', disclosure.recommended ? 'Recommended' : 'Report'),
+          h('span', disclosure.recommended ? '추천 공시' : '공시'),
           h('strong', disclosure.reportName),
           h('small', `${disclosure.receivedDate || ''} ${disclosure.rceptNo}`)
         ]))) : null,
@@ -2158,10 +2157,10 @@ const MarkdownBoard = {
             'data-testid': 'create-dart-analysis',
             disabled: !selected || draft.dartAnalysisStatus === 'loading',
             onClick: () => createDartAnalysis(draft)
-          }, draft.dartAnalysisStatus === 'loading' ? 'Analyzing' : 'Analyze with GMS AI')
+          }, draft.dartAnalysisStatus === 'loading' ? 'AI 분석 중' : 'GMS AI로 분석')
         ]),
         draft.dartAnalysisStatus === 'error'
-          ? h('p', { class: 'dart-ai-status error' }, draft.dartAnalysisMessage || 'AI analysis failed.')
+          ? h('p', { class: 'dart-ai-status error' }, draft.dartAnalysisMessage || 'AI 분석을 완료하지 못했습니다.')
           : null,
         analysis ? h('section', { class: 'dart-analysis-preview', 'data-testid': 'dart-analysis-result' }, [
           h('header', [
@@ -2171,12 +2170,12 @@ const MarkdownBoard = {
           ...(analysis.result?.evidenceCards || []).map((card) => h('article', { class: 'dart-evidence-card', key: `${card.rceptNo}-${card.title}` }, [
             h('strong', card.title),
             h('p', card.summary),
-            h('small', `${card.sourceSection} · ${card.rceptNo} · ${card.relevanceScore}`)
+            h('small', `${card.sourceSection} · ${card.rceptNo} · 관련도 ${card.relevanceScore}`)
           ])),
-          renderDartAnalysisList('Appeal points', analysis.result?.appealPoints || []),
-          renderDartAnalysisList('Suggested sentences', analysis.result?.suggestedSentences || []),
-          renderDartAnalysisList('Cautions', analysis.result?.cautions || []),
-          renderDartAnalysisList('Missing info', analysis.result?.missingInfo || []),
+          renderDartAnalysisList('지원서에 활용할 포인트', analysis.result?.appealPoints || []),
+          renderDartAnalysisList('문장 후보', analysis.result?.suggestedSentences || []),
+          renderDartAnalysisList('주의할 표현', analysis.result?.cautions || []),
+          renderDartAnalysisList('추가 확인 필요', analysis.result?.missingInfo || []),
           h('button', {
             type: 'button',
             class: 'primary-button',
@@ -2184,12 +2183,12 @@ const MarkdownBoard = {
             disabled: analysis.status !== 'COMPLETED' || draft.dartSaveStatus === 'saving' || draft.dartSaveStatus === 'saved',
             onClick: () => saveDartAnalysisReference(draft)
           }, draft.dartSaveStatus === 'saved'
-            ? 'Saved as DART reference'
+            ? 'DART 참고자료로 저장됨'
             : draft.dartSaveStatus === 'saving'
-              ? 'Saving'
-              : 'Save as DART reference'),
-          draft.dartSaveStatus === 'saved' ? h('p', { class: 'dart-ai-status saved' }, 'DART reference saved') : null,
-          draft.dartSaveStatus === 'error' ? h('p', { class: 'dart-ai-status error' }, 'DART reference save failed') : null
+              ? '저장 중'
+              : 'DART 참고자료로 저장'),
+          draft.dartSaveStatus === 'saved' ? h('p', { class: 'dart-ai-status saved' }, 'DART 참고자료로 저장했습니다.') : null,
+          draft.dartSaveStatus === 'error' ? h('p', { class: 'dart-ai-status error' }, 'DART 참고자료 저장에 실패했습니다.') : null
         ]) : null
       ]);
     }

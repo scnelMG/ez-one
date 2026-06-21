@@ -104,7 +104,7 @@ public class DefaultDartAnalysisService implements DartAnalysisService {
                 null,
                 sourceUrl,
                 DartAnalysisContentResponse.empty(),
-                "AI analysis failed. You can still write a manual DART memo."
+                "AI 분석을 완료하지 못했습니다. DART 수동 메모 작성과 저장은 계속 사용할 수 있어요."
             );
         }
         analyses.put(analysisId, new StoredDartAnalysis(userId, workspaceId, response));
@@ -126,7 +126,7 @@ public class DefaultDartAnalysisService implements DartAnalysisService {
         return workspaceService.createReference(userId, workspaceId, new CreateReferenceRequest(
             "DART",
             ReferenceType.DART,
-            "DART AI analysis - " + analysis.reportName(),
+            "DART AI 분석 - " + analysis.reportName(),
             formatReferenceBody(analysis),
             analysis.sourceUrl()
         ));
@@ -156,15 +156,15 @@ public class DefaultDartAnalysisService implements DartAnalysisService {
 
     private String formatReferenceBody(DartAnalysisResponse analysis) {
         StringBuilder builder = new StringBuilder();
-        builder.append("# DART AI analysis\n\n");
-        builder.append("- Company: ").append(defaultText(analysis.companyName())).append('\n');
-        builder.append("- Report: ").append(defaultText(analysis.reportName())).append('\n');
-        builder.append("- Receipt no: ").append(defaultText(analysis.rceptNo())).append("\n\n");
+        builder.append("# DART AI 분석\n\n");
+        builder.append("- 기업: ").append(defaultText(analysis.companyName())).append('\n');
+        builder.append("- 보고서: ").append(defaultText(analysis.reportName())).append('\n');
+        builder.append("- 접수번호: ").append(defaultText(analysis.rceptNo())).append("\n\n");
         appendEvidenceCards(builder, analysis.result().evidenceCards());
-        appendList(builder, "Appeal points", analysis.result().appealPoints());
-        appendList(builder, "Suggested sentences", analysis.result().suggestedSentences());
-        appendList(builder, "Cautions", analysis.result().cautions());
-        appendList(builder, "Missing info", analysis.result().missingInfo());
+        appendList(builder, "지원서에 활용할 포인트", analysis.result().appealPoints());
+        appendList(builder, "문장 후보", analysis.result().suggestedSentences());
+        appendList(builder, "주의할 표현", analysis.result().cautions());
+        appendList(builder, "추가 확인 필요", analysis.result().missingInfo());
         return builder.toString().trim();
     }
 
@@ -172,7 +172,7 @@ public class DefaultDartAnalysisService implements DartAnalysisService {
         if (cards == null || cards.isEmpty()) {
             return;
         }
-        builder.append("## Evidence cards\n");
+        builder.append("## 근거 카드\n");
         for (DartAnalysisContentResponse.EvidenceCard card : cards) {
             builder.append("- ").append(defaultText(card.title()))
                 .append(" (").append(defaultText(card.sourceSection()))
