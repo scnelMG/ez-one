@@ -6,8 +6,8 @@ import {
     REFRESH_TOKEN_KEY,
     buildWebLoginUrl,
     clearStoredSession,
-    getStoredSession,
-    saveStoredSession
+    saveStoredSession,
+    validateStoredSession
 } from '../shared/auth/extensionAuth';
 import './popup.css';
 
@@ -21,9 +21,6 @@ const LOGIN_SESSION_POLL_INTERVAL_MS = 800;
 const LOGIN_SESSION_POLL_TIMEOUT_MS = 120000;
 const PANEL_RESIZE_MESSAGE = 'EZONE_PANEL_RESIZE';
 const PANEL_RESIZE_EPSILON_PX = 2;
-const APPLICATION_FORM_CHANGED_MESSAGE = 'EZONE_APPLICATION_FORM_CHANGED';
-const DOCUMENT_AUTOFILL_REFRESH_DEBOUNCE_MS = 450;
-const DOCUMENT_AUTOFILL_APPLY_SUPPRESS_MS = 1400;
 const LOGIN_CONTINUATIONS = new Set(['jobPreview', 'documentAutoFill']);
 const statusPanel = requireElement('status-panel');
 const loginPanel = requireElement('login-panel');
@@ -75,10 +72,6 @@ let loginSessionPollTimer = null;
 let loginSessionPollStartedAt = 0;
 let panelResizeFrame = null;
 let lastReportedPanelHeight = 0;
-let documentAutoFillRefreshTimer = null;
-let isRefreshingDocumentAutoFill = false;
-let ignoreDocumentAutoFillChangesUntil = 0;
-let lastDocumentAutoFillSignature = null;
 const contentScriptLoadPromises = new Map();
 
 const jobApi = createExtensionJobApi({
@@ -99,7 +92,6 @@ const documentProfileApi = createExtensionDocumentProfileApi({
 setStaticLinks();
 setupPanelAutoResize();
 chrome.storage.onChanged?.addListener(handleSessionStorageChanged);
-chrome.runtime.onMessage?.addListener(handleRuntimeMessage);
 loginButton.addEventListener('click', async () => {
     const tab = await getActiveTab();
     await rememberPendingLoginContinuation(pendingLoginContinuation ?? inferVisibleLoginContinuation());
@@ -177,21 +169,22 @@ void init();
 startPostingChangeWatcher();
 
 async function init() {
-    const session = await getStoredSession(chrome.storage.local);
+    const session = await validateStoredSession(chrome.storage.local, {
+        apiBaseUrl
+    });
     if (!session) {
         hasExtensionSession = false;
         showPanel(loginPanel);
         return;
     }
-    hasExtensionSession = true;
-    await resumePendingExtensionAction();
+    await enterAuthenticatedExtensionSession();
 }
 
 async function handleSessionStorageChanged(changes, areaName) {
     if (!waitingForWebLogin || areaName !== 'local' || !hasSessionTokenChange(changes)) {
         return;
     }
-    const session = await getStoredSession(chrome.storage.local);
+    const session = await readValidatedExtensionSession();
     if (!session) {
         return;
     }
@@ -229,7 +222,7 @@ async function reconcileWebLoginSession() {
         setStatus('로그인 연결이 지연되고 있습니다. Google 로그인 완료 후 다시 시도해 주세요.', true);
         return;
     }
-    const session = await getStoredSession(chrome.storage.local);
+    const session = await readValidatedExtensionSession();
     if (!session) {
         return;
     }
@@ -239,8 +232,18 @@ async function reconcileWebLoginSession() {
 async function resumeAfterWebLogin() {
     stopLoginSessionPolling();
     waitingForWebLogin = false;
-    hasExtensionSession = true;
+    await enterAuthenticatedExtensionSession();
+}
+
+async function enterAuthenticatedExtensionSession() {
+    hasExtensionSession = Boolean(true);
     await resumePendingExtensionAction();
+}
+
+async function readValidatedExtensionSession() {
+    return await validateStoredSession(chrome.storage.local, {
+        apiBaseUrl
+    });
 }
 
 async function resumePendingExtensionAction() {
@@ -427,7 +430,7 @@ async function previewDocumentAutoFill() {
         const profile = await documentProfileApi.getDocumentProfile();
         pendingDocumentAutoFillProfile = profile;
         await ensureContentScriptLoaded(tab.id, 'assets/applicationAutoFill.js', () => Boolean(window.ezOneAutoFillApplicationLoaded));
-        const result = await chrome.tabs.sendMessage(tab.id, {
+        const result = await sendContentScriptMessage(tab.id, {
             type: 'EZONE_PREVIEW_APPLICATION_AUTOFILL',
             profile
         });
@@ -454,11 +457,10 @@ async function applyDocumentAutoFill() {
         }
         const profile = pendingDocumentAutoFillProfile ?? await documentProfileApi.getDocumentProfile();
         await ensureContentScriptLoaded(tab.id, 'assets/applicationAutoFill.js', () => Boolean(window.ezOneAutoFillApplicationLoaded));
-        const result = await chrome.tabs.sendMessage(tab.id, {
+        const result = await sendContentScriptMessage(tab.id, {
             type: 'EZONE_APPLY_APPLICATION_AUTOFILL',
             profile
         });
-        ignoreDocumentAutoFillChangesUntil = Date.now() + DOCUMENT_AUTOFILL_APPLY_SUPPRESS_MS;
         pendingDocumentAutoFillProfile = null;
         renderAutoFillResult(result);
         showPanel(documentResultPanel);
@@ -475,72 +477,13 @@ async function applyDocumentAutoFill() {
     }
 }
 
-function handleRuntimeMessage(message, sender) {
-    if (message?.type !== APPLICATION_FORM_CHANGED_MESSAGE) {
-        return false;
-    }
-    if (documentResultPanel.hidden || Date.now() < ignoreDocumentAutoFillChangesUntil) {
-        return false;
-    }
-    scheduleDocumentAutoFillRefresh({
-        sourceTabId: sender?.tab?.id,
-        signature: message.signature
-    });
-    return false;
-}
-
-function scheduleDocumentAutoFillRefresh({ sourceTabId, signature } = {}) {
-    if (signature && signature === lastDocumentAutoFillSignature) {
-        return;
-    }
-    if (documentAutoFillRefreshTimer !== null) {
-        clearTimeout(documentAutoFillRefreshTimer);
-    }
-    documentAutoFillRefreshTimer = setTimeout(() => {
-        documentAutoFillRefreshTimer = null;
-        void refreshDocumentAutoFillPreview({ sourceTabId, signature });
-    }, DOCUMENT_AUTOFILL_REFRESH_DEBOUNCE_MS);
-}
-
-async function refreshDocumentAutoFillPreview({ sourceTabId, signature } = {}) {
-    if (isRefreshingDocumentAutoFill) {
-        return;
-    }
-    try {
-        isRefreshingDocumentAutoFill = true;
-        const tab = await getActiveTab();
-        if (!tab.id || (sourceTabId && tab.id !== sourceTabId)) {
-            return;
-        }
-        const profile = pendingDocumentAutoFillProfile ?? await documentProfileApi.getDocumentProfile();
-        pendingDocumentAutoFillProfile = profile;
-        await ensureContentScriptLoaded(tab.id, 'assets/applicationAutoFill.js', () => Boolean(window.ezOneAutoFillApplicationLoaded));
-        const result = await chrome.tabs.sendMessage(tab.id, {
-            type: 'EZONE_PREVIEW_APPLICATION_AUTOFILL',
-            profile
-        });
-        lastDocumentAutoFillSignature = signature ?? null;
-        renderAutoFillResult(result);
-        showPanel(documentResultPanel);
-    }
-    catch (error) {
-        if (await handleAuthExpired(error, 'documentAutoFill')) {
-            return;
-        }
-        console.warn('EZ-ONE document autofill refresh failed', error);
-    }
-    finally {
-        isRefreshingDocumentAutoFill = false;
-    }
-}
-
 async function ensureContentScriptLoaded(tabId, file, isLoaded) {
     const loadKey = `${tabId}:${file}`;
     if (contentScriptLoadPromises.has(loadKey)) {
         await contentScriptLoadPromises.get(loadKey);
         return;
     }
-    const loadPromise = loadContentScript(tabId, file, isLoaded)
+    const loadPromise = withTransientTabRetry(() => loadContentScript(tabId, file, isLoaded))
         .finally(() => contentScriptLoadPromises.delete(loadKey));
     contentScriptLoadPromises.set(loadKey, loadPromise);
     await loadPromise;
@@ -558,6 +501,42 @@ async function loadContentScript(tabId, file, isLoaded) {
         target: { tabId },
         files: [file]
     });
+}
+
+async function sendContentScriptMessage(tabId, message) {
+    return await withTransientTabRetry(() => chrome.tabs.sendMessage(tabId, message));
+}
+
+async function withTransientTabRetry(operation) {
+    let lastError;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+            return await operation();
+        }
+        catch (error) {
+            lastError = error;
+            if (!isTransientTabError(error) || attempt === 2) {
+                throw error;
+            }
+            await sleep(120);
+        }
+    }
+    throw lastError;
+}
+
+function isTransientTabError(error) {
+    const message = error instanceof Error ? error.message : String(error ?? '');
+    return [
+        'Frame with ID 0 was removed',
+        'Receiving end does not exist',
+        'Could not establish connection',
+        'The tab was closed',
+        'No tab with id'
+    ].some((item) => message.includes(item));
+}
+
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function renderPosting(posting) {
@@ -921,6 +900,7 @@ function renderAutoFillResult(result) {
     const primaryFieldKeys = new Set(primaryItems.map((item) => item?.fieldKey).filter(Boolean));
     const visibleCopyCandidates = copyCandidates.filter((item) => shouldShowCopyCandidate(item, primaryFieldKeys));
     const groupedCopyCandidates = groupActivityCopyCandidates(visibleCopyCandidates);
+    const manualReviewItems = buildManualReviewItems(failed, groupedCopyCandidates);
     documentResultTitle.textContent = isPreview ? '입력 전 확인' : '입력이 끝났습니다';
     autofillFilledLabel.textContent = isPreview ? '입력 예정' : '입력됨';
     autofillFilledHeading.textContent = isPreview ? '입력 예정' : '자동 입력됨';
@@ -932,16 +912,13 @@ function renderAutoFillResult(result) {
     }
     autofillApplyButton.disabled = isPreview && primaryItems.length === 0;
     autofillFilledCount.textContent = String(primaryItems.length);
-    autofillReviewCount.textContent = String(failed.length);
+    autofillReviewCount.textContent = String(manualReviewItems.length);
     autofillCopyCount.textContent = String(groupedCopyCandidates.length);
     autofillSummary.textContent = isPreview
         ? `${primaryItems.length}개 항목을 찾았습니다.`
-        : `${primaryItems.length}개 항목을 입력했습니다. 확인 필요 ${failed.length}개.`;
+        : `${primaryItems.length}개 항목을 입력했습니다. 확인 필요 ${manualReviewItems.length}개.`;
     renderResultList(autofillFilledList, primaryItems, (item) => getPrimaryAutoFillDisplay(item, isPreview), isPreview ? '입력 예정 항목이 없습니다.' : '자동 입력된 항목이 없습니다.');
-    renderResultList(autofillFailedList, failed, (item) => ({
-        title: item.label ?? '알 수 없는 입력칸',
-        ...getAutofillFailureDisplay(item)
-    }), '실패 항목이 없습니다.');
+    renderResultList(autofillFailedList, manualReviewItems, formatManualReviewDisplay, '확인 필요 항목이 없습니다.');
     renderResultList(autofillCopyList, groupedCopyCandidates.slice(0, 12), formatCopyCandidateDisplay, '복사할 후보가 없습니다.');
 }
 
@@ -1022,6 +999,50 @@ function formatCopyCandidateDisplay(item) {
     };
 }
 
+function buildManualReviewItems(failed, copyCandidates) {
+    const seenKeys = new Set();
+    const reviewItems = [];
+    for (const item of failed) {
+        const key = item?.fieldKey ?? item?.key ?? item?.label;
+        if (key) {
+            seenKeys.add(key);
+        }
+        reviewItems.push(item);
+    }
+    for (const item of copyCandidates) {
+        const key = item?.key ?? item?.fieldKey ?? item?.label;
+        if (!key || seenKeys.has(key)) {
+            continue;
+        }
+        seenKeys.add(key);
+        reviewItems.push({
+            ...item,
+            fieldKey: key,
+            reason: 'manual_copy_candidate'
+        });
+    }
+    return reviewItems;
+}
+
+function formatManualReviewDisplay(item) {
+    if (item?.reason === 'manual_copy_candidate') {
+        return formatManualCopyReviewDisplay(item);
+    }
+    return {
+        title: item.label ?? '알 수 없는 입력칸',
+        ...getAutofillFailureDisplay(item)
+    };
+}
+
+function formatManualCopyReviewDisplay(item) {
+    const display = formatCopyCandidateDisplay(item);
+    return {
+        ...display,
+        badge: '직접 입력',
+        body: display.body || '자동 입력하지 않은 값입니다. 복사 후보에서 붙여넣거나 직접 입력해 주세요.'
+    };
+}
+
 function uniqueAutoFillItems(items) {
     const seen = new Set();
     const unique = [];
@@ -1089,8 +1110,17 @@ function getAutofillFailureMessage(itemOrReason) {
     if (reason === 'essay_or_long_text') {
         return '자기소개서 또는 장문 입력칸은 자동 입력하지 않았습니다. 직접 검토해 주세요.';
     }
+    if (reason === 'manual_free_text') {
+        return '\uAE30\uC5C5/\uC9C1\uBB34\uC5D0 \uB9DE\uCDB0 \uC9C1\uC811 \uC791\uC131\uD558\uBA74 \uC88B\uC740 \uC7A5\uBB38 \uD56D\uBAA9\uC785\uB2C8\uB2E4. \uC790\uB3D9 \uC785\uB825\uC5D0\uC11C \uC81C\uC678\uD558\uACE0 \uD655\uC778 \uD544\uC694\uB85C \uD45C\uC2DC\uD588\uC2B5\uB2C8\uB2E4.';
+    }
+    if (reason === 'manual_add_section') {
+        return '\uD544\uC694\uD558\uBA74 \uD654\uBA74\uC5D0\uC11C \uCD94\uAC00\uD558\uACE0 \uB0B4\uC6A9\uC744 \uC9C1\uC811 \uC791\uC131\uD574 \uC8FC\uC138\uC694.';
+    }
     if (reason === 'select_option_not_found') {
-        return '선택 가능한 옵션과 내 서류 정보가 맞지 않습니다. 직접 선택해 주세요.';
+        if (/^certificates\.certificates\.\d+\.certificateName$/.test(fieldKey)) {
+            return '자격증 검색 결과에서 같은 자격증명을 선택하지 못했습니다. 표기가 다를 수 있어 복사 후보를 확인해 주세요.';
+        }
+        return '선택 목록에서 일치하는 항목을 찾지 못했습니다. 복사 후보를 확인하거나 직접 선택해 주세요.';
     }
     if (reason === 'control_not_ready') {
         return '\uC785\uB825\uCE78\uC774 \uC544\uC9C1 \uC5F4\uB9AC\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4. \uD56D\uBAA9\uC744 \uC5F0 \uB4A4 \uB2E4\uC2DC \uC778\uC2DD\uC744 \uB20C\uB7EC\uC8FC\uC138\uC694.';
@@ -1103,6 +1133,9 @@ function getAutofillFailureMessage(itemOrReason) {
     }
     if (reason === 'unsupported_profile_field') {
         return '\uC9C0\uC6D0\uC11C\uC5D0\uC11C \uC9C1\uC811 \uC785\uB825\uD574 \uC8FC\uC138\uC694.';
+    }
+    if (reason === 'required_field') {
+        return '지원서의 필수 입력 항목입니다. 직접 입력하거나 확인해 주세요.';
     }
     if (reason === 'tailored_activity_required') {
         return '활동은 지원 직무에 맞게 선택해 붙여넣어 주세요.';

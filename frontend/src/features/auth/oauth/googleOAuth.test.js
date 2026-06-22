@@ -34,6 +34,13 @@ describe('googleOAuth', () => {
         expect(consumeOAuthState('state-a')).toBe('/basket');
         expect(consumeOAuthState('state-b')).toBe('/document-profile');
     });
+    it('EXT-003/AUTH-004: preserves extension connect redirect query through OAuth state', () => {
+        const redirectPath = '/extension/connect?sourceUrl=https%3A%2F%2Fwww.jasoseol.com%2Frecruit%2F1&sourceTabId=42';
+
+        const state = createOAuthState(redirectPath);
+
+        expect(consumeOAuthState(state)).toBe(redirectPath);
+    });
     it('AUTH-004: asks Google to show account selection only for explicit account switching', () => {
         const url = buildGoogleOAuthUrl({
             clientId: 'google-client-id',

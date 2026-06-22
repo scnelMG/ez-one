@@ -38,6 +38,20 @@ describe('extension popup script', () => {
         expect(script).toContain('window.ezOneAutoFillApplicationLoaded');
     });
 
+    it('retries transient tab/frame failures while loading and messaging autofill content scripts', () => {
+        expect(script).toContain('async function withTransientTabRetry');
+        expect(script).toContain('function isTransientTabError');
+        expect(script).toContain('function sendContentScriptMessage');
+        expect(script).toContain('Frame with ID 0 was removed');
+        expect(script).toContain('Receiving end does not exist');
+        expect(script).toContain('await sleep(120)');
+        expect(script).toContain('withTransientTabRetry(() => loadContentScript');
+        expect(script).toContain('sendContentScriptMessage(tab.id, {');
+        expect(script).toContain('type: \'EZONE_PREVIEW_APPLICATION_AUTOFILL\'');
+        expect(script).toContain('type: \'EZONE_APPLY_APPLICATION_AUTOFILL\'');
+        expect(script).not.toContain('chrome.tabs.sendMessage(tab.id, {');
+    });
+
     it('previews document autofill before applying values to the page', () => {
         expect(script).toContain("requireElement('autofill-apply-button')");
         expect(script).toContain("requireElement('autofill-rescan-button')");
@@ -52,14 +66,14 @@ describe('extension popup script', () => {
         expect(script).not.toContain('void runDocumentAutoFill();');
     });
 
-    it('refreshes document autofill preview when the application page changes while the panel is open', () => {
-        expect(script).toContain("const APPLICATION_FORM_CHANGED_MESSAGE = 'EZONE_APPLICATION_FORM_CHANGED'");
-        expect(script).toContain('chrome.runtime.onMessage?.addListener(handleRuntimeMessage);');
-        expect(script).toContain('function handleRuntimeMessage(message, sender)');
-        expect(script).toContain('message?.type !== APPLICATION_FORM_CHANGED_MESSAGE');
-        expect(script).toContain('documentResultPanel.hidden');
-        expect(script).toContain('refreshDocumentAutoFillPreview');
-        expect(script).toContain('pendingDocumentAutoFillProfile ?? await documentProfileApi.getDocumentProfile()');
+    it('does not refresh document autofill preview automatically when the application page changes', () => {
+        expect(script).not.toContain("const APPLICATION_FORM_CHANGED_MESSAGE = 'EZONE_APPLICATION_FORM_CHANGED'");
+        expect(script).not.toContain('chrome.runtime.onMessage?.addListener(handleRuntimeMessage);');
+        expect(script).not.toContain('function handleRuntimeMessage(message, sender)');
+        expect(script).not.toContain('scheduleDocumentAutoFillRefresh');
+        expect(script).not.toContain('refreshDocumentAutoFillPreview');
+        expect(script).toContain("autofillRescanButton.addEventListener('click'");
+        expect(script).toContain('void previewDocumentAutoFill();');
     });
 
     it('explains address fields that require the site address-search flow', () => {
@@ -81,6 +95,13 @@ describe('extension popup script', () => {
         expect(script).toContain('\\uC11C\\uB958 \\uC785\\uB825 \\uC815\\uBCF4\\uC5D0 \\uAC12\\uC744 \\uCD94\\uAC00');
     });
 
+    it('explains certificate autocomplete failures without blaming the profile value', () => {
+        expect(script).toContain("reason === 'select_option_not_found'");
+        expect(script).toContain('^certificates\\.certificates\\.\\d+\\.certificateName$');
+        expect(script).toContain('자격증 검색 결과에서 같은 자격증명을 선택하지 못했습니다.');
+        expect(script).not.toContain('선택 가능한 옵션과 내 서류 정보가 맞지 않습니다.');
+    });
+
     it('separates fields that cannot be filled because the service profile has no value', () => {
         expect(script).toContain("variant: 'profile-missing'");
         expect(script).toContain("\\uC11C\\uBE44\\uC2A4\\uC5D0 \\uC5C6\\uB294 \\uC815\\uBCF4");
@@ -90,6 +111,18 @@ describe('extension popup script', () => {
     it('explains application-specific fields that the document profile does not model', () => {
         expect(script).toContain("reason === 'unsupported_profile_field'");
         expect(script).toContain('\\uC9C0\\uC6D0\\uC11C\\uC5D0\\uC11C \\uC9C1\\uC811 \\uC785\\uB825');
+    });
+
+    it('explains required application fields as manual review items', () => {
+        expect(script).toContain("reason === 'required_field'");
+        expect(script).toContain('지원서의 필수 입력 항목입니다. 직접 입력하거나 확인해 주세요.');
+    });
+
+    it('explains optional free-text and addable sections as manual review items', () => {
+        expect(script).toContain("reason === 'manual_free_text'");
+        expect(script).toContain("reason === 'manual_add_section'");
+        expect(script).toContain('\\uAE30\\uC5C5/\\uC9C1\\uBB34\\uC5D0 \\uB9DE\\uCDB0 \\uC9C1\\uC811 \\uC791\\uC131');
+        expect(script).toContain('\\uD544\\uC694\\uD558\\uBA74 \\uD654\\uBA74\\uC5D0\\uC11C \\uCD94\\uAC00');
     });
 
     it('adds copy buttons to document autofill copy candidates', () => {
@@ -107,6 +140,10 @@ describe('extension popup script', () => {
         expect(script).toContain('primaryFieldKeys');
         expect(script).toContain('visibleCopyCandidates');
         expect(script).toContain('groupActivityCopyCandidates');
+        expect(script).toContain('buildManualReviewItems(failed, groupedCopyCandidates)');
+        expect(script).toContain("reason: 'manual_copy_candidate'");
+        expect(script).toContain('formatManualCopyReviewDisplay(item)');
+        expect(script).toContain('확인 필요 항목이 없습니다.');
         expect(script).toContain('shouldShowCopyCandidate');
         expect(script).toContain("item?.key === 'basicInfo.address' || item?.key === 'basicInfo.addressDetail'");
         expect(script).toContain('autofillCopyCount.textContent = String(groupedCopyCandidates.length)');
@@ -160,6 +197,22 @@ describe('extension popup script', () => {
         expect(script).toContain('await clearExtensionSession();');
         expect(script).toContain('await rememberPendingLoginContinuation(continuation);');
         expect(script).toContain('showPanel(loginPanel);');
+    });
+
+    it('EXT-003: validates stored extension sessions before showing feature selection', () => {
+        expect(script).toContain('validateStoredSession');
+        expect(script).toContain('const session = await validateStoredSession(chrome.storage.local');
+        expect(script).not.toContain('const session = await getStoredSession(chrome.storage.local);');
+        expect(script).toContain('hasExtensionSession = false;');
+        expect(script).toContain('showPanel(loginPanel);');
+        expect(script).not.toContain('hasExtensionSession = true;\\n    await resumePendingExtensionAction();');
+    });
+
+    it('EXT-003: preserves the active tab and requested action before starting web login', () => {
+        expect(script).toContain('await rememberPendingLoginContinuation(pendingLoginContinuation ?? inferVisibleLoginContinuation())');
+        expect(script).toContain('sourceTabId: tab.id');
+        expect(script).toContain('currentUrl: tab.url ??');
+        expect(script).toContain("const LOGIN_CONTINUATIONS = new Set(['jobPreview', 'documentAutoFill'])");
     });
 
     it('automatically resumes the selected extension task after web login stores the session', () => {

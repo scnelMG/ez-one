@@ -1,18 +1,10 @@
 import { handleExternalAuthMessage } from './shared/auth/extensionAuth';
 
 chrome.action.onClicked.addListener(async (tab) => {
-    try {
-        if (!canInjectPanel(tab)) {
-            return;
-        }
-
-        await chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            files: ['assets/panelHost.js']
-        });
-    } catch (error) {
-        console.error(error);
+    if (!canInjectPanel(tab)) {
+        return;
     }
+    await injectPanelSafely(chrome.scripting, tab);
 });
 
 function canInjectPanel(tab) {
@@ -29,18 +21,17 @@ function canInjectPanel(tab) {
 }
 
 chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
-    handleExternalAuthMessage(chrome.storage.local, message, {
-        tabs: chrome.tabs,
-        senderTabId: sender.tab?.id
-    })
-        .then((accepted) => {
-        sendResponse({ accepted });
+    handleExternalAuthMessage(chrome.storage.local, message)
+        .then(async (accepted) => {
+        let returnedToSource = false;
         if (accepted) {
-            void returnToExtensionTabAfterAuth(chrome.tabs, chrome.scripting, sender.tab?.id, message?.sourceTabId, message?.sourceUrl);
+            returnedToSource = await returnToExtensionTabAfterAuth(chrome.tabs, chrome.scripting, sender.tab?.id, message?.sourceTabId, message?.sourceUrl);
         }
+        sendResponse({ accepted, returnedToSource });
     })
         .catch((error) => sendResponse({
         accepted: false,
+        returnedToSource: false,
         message: error instanceof Error ? error.message : 'Auth session could not be stored.'
     }));
     return true;
@@ -49,15 +40,14 @@ chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => 
 async function returnToExtensionTabAfterAuth(tabs, scripting, senderTabId, sourceTabId, sourceUrl) {
     const parsedSourceTabId = parsePositiveInteger(sourceTabId);
     if (parsedSourceTabId === null) {
-        return;
+        return await returnToSourceUrlFallback(tabs, senderTabId, sourceUrl);
     }
     let sourceTab;
     try {
         sourceTab = await tabs.update(parsedSourceTabId, { active: true });
     }
     catch {
-        // Leave the auth tab open so the user can use the web fallback if the source tab is gone.
-        return;
+        return await returnToSourceUrlFallback(tabs, senderTabId, sourceUrl);
     }
     try {
         await ensurePanelOpenAfterAuth(scripting, {
@@ -72,23 +62,77 @@ async function returnToExtensionTabAfterAuth(tabs, scripting, senderTabId, sourc
     finally {
         closeAuthTabAfterResponse(tabs, senderTabId, parsedSourceTabId);
     }
+    return true;
+}
+
+async function returnToSourceUrlFallback(tabs, senderTabId, sourceUrl) {
+    const safeSourceUrl = parseSafeHttpUrl(sourceUrl);
+    if (!tabs || !safeSourceUrl) {
+        return false;
+    }
+    try {
+        if (Number.isInteger(senderTabId) && senderTabId > 0) {
+            await tabs.update(senderTabId, { url: safeSourceUrl, active: true });
+            return true;
+        }
+        await tabs.create({ url: safeSourceUrl, active: true });
+        return true;
+    }
+    catch {
+        return false;
+    }
 }
 
 async function ensurePanelOpenAfterAuth(scripting, tab) {
     if (!scripting || !canInjectPanel(tab)) {
         return;
     }
-    const [panelState] = await scripting.executeScript({
-        target: { tabId: tab.id },
-        func: () => Boolean(document.getElementById('ezone-extension-panel-host'))
-    });
-    if (panelState?.result) {
-        return;
+    await removeExistingPanelHost(scripting, tab.id);
+    await injectPanelSafely(scripting, tab);
+}
+
+async function removeExistingPanelHost(scripting, tabId) {
+    try {
+        await scripting.executeScript({
+            target: { tabId },
+            func: () => document.getElementById('ezone-extension-panel-host')?.remove()
+        });
     }
-    await scripting.executeScript({
-        target: { tabId: tab.id },
-        files: ['assets/panelHost.js']
-    });
+    catch (error) {
+        if (!isTransientScriptingError(error)) {
+            throw error;
+        }
+    }
+}
+
+async function injectPanelSafely(scripting, tab) {
+    if (!scripting || !canInjectPanel(tab)) {
+        return false;
+    }
+    try {
+        await scripting.executeScript({
+            target: { tabId: tab.id },
+            files: ['assets/panelHost.js']
+        });
+        return true;
+    }
+    catch (error) {
+        if (isTransientScriptingError(error)) {
+            return false;
+        }
+        console.warn('EZ-ONE panel injection failed', error);
+        return false;
+    }
+}
+
+function isTransientScriptingError(error) {
+    const message = error instanceof Error ? error.message : String(error ?? '');
+    return [
+        'Frame with ID 0 was removed',
+        'The tab was closed',
+        'No tab with id',
+        'Cannot access contents of url'
+    ].some((text) => message.includes(text));
 }
 
 function closeAuthTabAfterResponse(tabs, senderTabId, sourceTabId) {
@@ -112,4 +156,20 @@ function parsePositiveInteger(value) {
         return parsed > 0 ? parsed : null;
     }
     return null;
+}
+
+function parseSafeHttpUrl(value) {
+    if (typeof value !== 'string') {
+        return null;
+    }
+    try {
+        const url = new URL(value);
+        if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+            return null;
+        }
+        return url.href;
+    }
+    catch {
+        return null;
+    }
 }

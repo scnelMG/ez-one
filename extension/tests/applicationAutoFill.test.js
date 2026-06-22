@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { applyAutoFillPlan, applyAutoFillPlanAsync, buildAutoFillPlan, flattenDocumentProfileValues, previewAutoFillPlan } from '../src/content/applicationAutoFill';
+import { describe, expect, it, vi } from 'vitest';
+import { applyAutoFillPlan, applyAutoFillPlanAsync, applyAutoFillPlanFast, applyAutoFillPlanFastAsync, buildAutoFillPlan, flattenDocumentProfileValues, previewAutoFillPlan } from '../src/content/applicationAutoFill';
 
 const profile = {
     sections: {
@@ -26,6 +26,69 @@ const profile = {
 };
 
 describe('applicationAutoFill', () => {
+    it('EXT-021: releases temporary DOM cache observers after planning', () => {
+        const disconnectedObservers = [];
+        const originalMutationObserver = window.MutationObserver;
+        class TrackingMutationObserver {
+            constructor(callback) {
+                this.callback = callback;
+                this.disconnected = false;
+                disconnectedObservers.push(this);
+            }
+
+            observe() {}
+
+            disconnect() {
+                this.disconnected = true;
+            }
+        }
+        window.MutationObserver = TrackingMutationObserver;
+        document.body.innerHTML = '<form><label>Name<input /></label></form>';
+
+        try {
+            buildAutoFillPlan(document, profile);
+        }
+        finally {
+            window.MutationObserver = originalMutationObserver;
+            document.body.innerHTML = '';
+        }
+
+        expect(disconnectedObservers.length).toBeGreaterThan(0);
+        expect(disconnectedObservers.every((observer) => observer.disconnected)).toBe(true);
+    });
+
+    it('EXT-021: fast apply fills current controls without waiting for deferred controls', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = '<form><label>Name<input id="name" /></label></form>';
+        const nameInput = doc.getElementById('name');
+        const result = applyAutoFillPlanFast({
+            fillable: [{
+                element: nameInput,
+                fieldKey: 'basicInfo.nameKo',
+                label: 'Name',
+                value: 'Hong Gil Dong'
+            }, {
+                element: doc.body,
+                fieldKey: 'education.universities.0.majors.0.majorName',
+                label: 'Major',
+                value: 'Computer Science',
+                waitForControlBeforeFill: true,
+                relatedValues: []
+            }],
+            failed: [],
+            skipped: [],
+            copyCandidates: []
+        });
+
+        expect(nameInput.value).toBe('Hong Gil Dong');
+        expect(result.filled).toEqual([
+            expect.objectContaining({ fieldKey: 'basicInfo.nameKo', value: 'Hong Gil Dong' })
+        ]);
+        expect(result.failed).toEqual([
+            expect.objectContaining({ fieldKey: 'education.universities.0.majors.0.majorName', reason: 'control_not_ready' })
+        ]);
+    });
+
     it('EXT-013: matches label, placeholder, name/id, table header, and nearby text controls', () => {
         const doc = document.implementation.createHTMLDocument('application');
         doc.body.innerHTML = `
@@ -317,6 +380,228 @@ describe('applicationAutoFill', () => {
         expect(candidateKeys).not.toContain('education.0.schoolName');
         expect(candidateKeys).not.toContain('projects.0.title');
         expect(candidateKeys).not.toContain('customFields.7');
+    });
+
+    it('EXT-021: fills Kakao ATS basic info controls from stable names and visible choices', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <div class="remix-css-re11db">
+          <div class="remix-css-ke50n9"><p>\uC774\uB984</p></div>
+          <div class="remix-css-3btwcy"><input name="basicInfoGroupAnswers.name" placeholder="\uD64D\uAE38\uB3D9" /></div>
+        </div>
+        <div class="remix-css-re11db">
+          <div class="remix-css-ke50n9"><p>\uC0DD\uB144\uC6D4\uC77C</p></div>
+          <div class="remix-css-3btwcy"><input id="birthdate" placeholder="YYYY.MM.DD" /></div>
+        </div>
+        <div class="remix-css-re11db">
+          <div class="remix-css-ke50n9"><p>\uC131\uBCC4</p></div>
+          <div class="remix-css-3btwcy">
+            <button id="gender-male" type="button"><p>\uB0A8</p></button>
+            <button id="gender-female" type="button"><p>\uC5EC</p></button>
+          </div>
+        </div>
+        <div class="remix-css-re11db">
+          <div class="remix-css-ke50n9"><p>\uD578\uB4DC\uD3F0\uBC88\uD638</p></div>
+          <div class="remix-css-3btwcy"><input name="basicInfoGroupAnswers.mobilePhone" placeholder="010-1234-1234" /></div>
+        </div>
+        <div class="remix-css-re11db">
+          <div class="remix-css-ke50n9"><p>\uC774\uBA54\uC77C\uC8FC\uC18C</p></div>
+          <div class="remix-css-3btwcy"><input name="basicInfoGroupAnswers.email" placeholder="abc@xxx.com" /></div>
+        </div>
+        <div class="remix-css-re11db">
+          <div class="remix-css-ke50n9"><p>\uC9C0\uC6D0\uACBD\uB85C</p></div>
+          <button id="application-source" type="button" aria-haspopup="listbox"><p>\uC9C0\uC6D0\uACBD\uB85C\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
+        </div>
+        <div class="remix-css-re11db">
+          <button type="button">\uC8FC\uC18C\uC785\uB825</button>
+          <input name="addressGroupResumeItemAnswers.currentAddress.address" placeholder="\uC8FC\uC18C" disabled />
+          <input name="addressGroupResumeItemAnswers.currentAddress.detailAddress" placeholder="\uC0C1\uC138 \uC8FC\uC18C\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694." disabled />
+        </div>
+      </form>
+    `;
+        const sourceButton = doc.getElementById('application-source');
+        sourceButton.addEventListener('click', () => {
+            if (doc.getElementById('dropdown-body')) return;
+            const dropdown = doc.createElement('div');
+            dropdown.id = 'dropdown-body';
+            dropdown.innerHTML = `
+          <button type="button" value="50722"><p>\uC7A1\uCF54\uB9AC\uC544 / \uC0AC\uB78C\uC778</p></button>
+          <button type="button" value="50725"><p>\uB9C1\uCEE4\uB9AC\uC5B4 / \uCE90\uCE58 / \uC790\uC18C\uC124\uB2F7\uCEF4</p></button>
+          <button type="button" value="572885"><p>\uB9C1\uD06C\uB4DC\uC778</p></button>
+        `;
+            sourceButton.parentElement.append(dropdown);
+        });
+        doc.getElementById('gender-male').addEventListener('click', () => {
+            doc.getElementById('gender-male').dataset.selected = 'true';
+        });
+        doc.getElementById('gender-female').addEventListener('click', () => {
+            doc.getElementById('gender-female').dataset.selected = 'true';
+        });
+
+        const kakaoProfile = {
+            sections: {
+                basicInfo: {
+                    nameKo: '\uBC15\uBBFC\uADDC',
+                    phone: '010-5464-9945',
+                    email: 'qkralsrb4407@naver.com',
+                    birthdate: '2001-03-28',
+                    gender: '\uB0A8\uC131',
+                    applicationSource: '\uB9C1\uCEE4\uB9AC\uC5B4 / \uCE90\uCE58 / \uC790\uC18C\uC124\uB2F7\uCEF4',
+                    address: '\uD559\uD558\uC11C\uB85C 121\uBC88\uAE38 120',
+                    addressDetail: '\uC138\uC885\uBE4C\uB529 302\uD638'
+                }
+            },
+            customFields: []
+        };
+
+        const result = applyAutoFillPlan(buildAutoFillPlan(doc, kakaoProfile));
+
+        expect(result.filled).toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'basicInfo.nameKo', value: '\uBC15\uBBFC\uADDC' }),
+            expect.objectContaining({ fieldKey: 'basicInfo.birthdate', value: '2001.03.28' }),
+            expect.objectContaining({ fieldKey: 'basicInfo.gender', value: '\uB0A8' }),
+            expect.objectContaining({ fieldKey: 'basicInfo.phone', value: '010-5464-9945' }),
+            expect.objectContaining({ fieldKey: 'basicInfo.email', value: 'qkralsrb4407@naver.com' }),
+            expect.objectContaining({ fieldKey: 'basicInfo.applicationSource', value: '\uB9C1\uCEE4\uB9AC\uC5B4 / \uCE90\uCE58 / \uC790\uC18C\uC124\uB2F7\uCEF4' })
+        ]));
+        expect(doc.querySelector('[name="basicInfoGroupAnswers.name"]').value).toBe('\uBC15\uBBFC\uADDC');
+        expect(doc.getElementById('birthdate').value).toBe('2001.03.28');
+        expect(doc.getElementById('gender-male').dataset.selected).toBe('true');
+        expect(doc.querySelector('[name="basicInfoGroupAnswers.mobilePhone"]').value).toBe('010-5464-9945');
+        expect(doc.querySelector('[name="basicInfoGroupAnswers.email"]').value).toBe('qkralsrb4407@naver.com');
+        expect(result.failed).toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'basicInfo.address', reason: 'disabled_control' })
+        ]));
+        expect(result.copyCandidates).toEqual(expect.arrayContaining([
+            expect.objectContaining({ key: 'basicInfo.address', value: '\uD559\uD558\uC11C\uB85C 121\uBC88\uAE38 120' }),
+            expect.objectContaining({ key: 'basicInfo.addressDetail', value: '\uC138\uC885\uBE4C\uB529 302\uD638' })
+        ]));
+    });
+
+    it('EXT-021: fills Kakao ATS career detail fields from structured career profile values', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uACBD\uB825\uC0AC\uD56D">
+          <div class="remix-css-uf1ume"><p>- \uC9C1\uC7A5\uACBD\uB825 </p></div>
+          <div class="remix-css-p9ewyl">
+            <div class="remix-css-ke50n9"><p>\uACE0\uC6A9\uD615\uD0DC</p></div>
+            <button id="employment-type" type="button" aria-haspopup="listbox"><p>\uACE0\uC6A9\uD615\uD0DC\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
+          </div>
+          <div class="remix-css-re11db">
+            <div class="remix-css-ke50n9"><p>\uADFC\uBB34\uAE30\uAC04</p></div>
+            <button id="is-employed" type="button"><p>\uC7AC\uC9C1\uC911</p></button>
+            <button id="has-left" type="button"><p>\uD1F4\uC0AC</p></button>
+            <input id="career-start" placeholder="\uC785\uC0AC\uC77C" />
+            <input id="career-end" placeholder="\uD1F4\uC0AC\uC77C" disabled />
+          </div>
+          <div class="remix-css-t25awl">
+            <div class="remix-css-ke50n9"><p>\uD68C\uC0AC\uBA85</p></div>
+            <input id="company-name" placeholder="\uD68C\uC0AC\uBA85\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694." />
+          </div>
+          <div class="remix-css-t25awl">
+            <div class="remix-css-ke50n9"><p>\uD1F4\uC9C1\uC0AC\uC720</p></div>
+            <input id="retirement-reason" name="careerGroupAnswers.0.retirementReason" placeholder="\uD1F4\uC9C1\uC0AC\uC720\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694." />
+          </div>
+          <div class="remix-css-15r62hv">
+            <div class="remix-css-1vyw480"><p>\uB2F4\uB2F9\uC5C5\uBB34</p></div>
+            <textarea id="career-comment" name="careerGroupAnswers.0.comment" placeholder="\uC0C1\uC138 \uB0B4\uC6A9\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694."></textarea>
+          </div>
+        </section>
+      </form>
+    `;
+        const employmentButton = doc.getElementById('employment-type');
+        employmentButton.addEventListener('click', () => {
+            if (doc.getElementById('employment-menu')) return;
+            const menu = doc.createElement('div');
+            menu.id = 'employment-menu';
+            menu.setAttribute('role', 'listbox');
+            menu.innerHTML = `
+          <button type="button" value="50733"><p>\uC815\uADDC\uC9C1</p></button>
+          <button type="button" value="50734"><p>\uACC4\uC57D\uC9C1</p></button>
+          <button type="button" value="50739"><p>\uC778\uD134</p></button>
+        `;
+            menu.querySelectorAll('button').forEach((optionButton) => {
+                optionButton.addEventListener('click', () => {
+                    employmentButton.querySelector('p').textContent = optionButton.textContent.trim();
+                    menu.remove();
+                });
+            });
+            employmentButton.parentElement.append(menu);
+        });
+        doc.getElementById('is-employed').addEventListener('click', () => {
+            doc.getElementById('is-employed').dataset.selected = 'true';
+        });
+        doc.getElementById('has-left').addEventListener('click', () => {
+            doc.getElementById('has-left').dataset.selected = 'true';
+            doc.getElementById('career-end').disabled = false;
+        });
+        const careerProfile = {
+            sections: {
+                career: {
+                    careers: [{
+                        companyName: '\uCE74\uCE74\uC624\uBC45\uD06C',
+                        employmentType: '\uC815\uADDC\uC9C1',
+                        startDate: '2024-01-02',
+                        endDate: '2025-02-03',
+                        isEmployed: false,
+                        resignationReason: '\uACC4\uC57D \uB9CC\uB8CC',
+                        duties: '\uB370\uC774\uD130 \uD30C\uC774\uD504\uB77C\uC778 \uAD6C\uCD95'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = applyAutoFillPlan(buildAutoFillPlan(doc, careerProfile));
+
+        expect(result.filled).toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'career.careers.0.companyName', value: '\uCE74\uCE74\uC624\uBC45\uD06C' }),
+            expect.objectContaining({ fieldKey: 'career.careers.0.employmentType', value: '\uC815\uADDC\uC9C1' }),
+            expect.objectContaining({ fieldKey: 'career.careers.0.startDate', value: '2024.01.02' }),
+            expect.objectContaining({ fieldKey: 'career.careers.0.endDate', value: '2025.02.03' }),
+            expect.objectContaining({ fieldKey: 'career.careers.0.isEmployed', value: '\uD1F4\uC0AC' }),
+            expect.objectContaining({ fieldKey: 'career.careers.0.resignationReason', value: '\uACC4\uC57D \uB9CC\uB8CC' }),
+            expect.objectContaining({ fieldKey: 'career.careers.0.duties', value: '\uB370\uC774\uD130 \uD30C\uC774\uD504\uB77C\uC778 \uAD6C\uCD95' })
+        ]));
+        expect(doc.getElementById('company-name').value).toBe('\uCE74\uCE74\uC624\uBC45\uD06C');
+        expect(doc.getElementById('employment-type').textContent).toContain('\uC815\uADDC\uC9C1');
+        expect(doc.getElementById('career-start').value).toBe('2024.01.02');
+        expect(doc.getElementById('career-end').value).toBe('2025.02.03');
+        expect(doc.getElementById('has-left').dataset.selected).toBe('true');
+        expect(doc.getElementById('retirement-reason').value).toBe('\uACC4\uC57D \uB9CC\uB8CC');
+        expect(doc.getElementById('career-comment').value).toBe('\uB370\uC774\uD130 \uD30C\uC774\uD504\uB77C\uC778 \uAD6C\uCD95');
+    });
+
+    it('EXT-013: does not report career wildcard fields when no career record is saved', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uACBD\uB825">
+          <label>\uB2F4\uB2F9\uC5C5\uBB34<textarea id="career-comment" placeholder="\uC0C1\uC138 \uB0B4\uC6A9\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694."></textarea></label>
+        </section>
+      </form>
+    `;
+        const educationOnlyProfile = {
+            sections: {
+                education: {
+                    highSchool: {
+                        schoolName: '\uBD80\uC0B0\uB3D9\uACE0\uB4F1\uD559\uAD50'
+                    }
+                }
+            },
+            customFields: []
+        };
+
+        const result = previewAutoFillPlan(buildAutoFillPlan(doc, educationOnlyProfile));
+
+        expect(result.failed).not.toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'career.careers.*.duties' })
+        ]));
+        expect(result.failed).not.toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'career.careers.0.duties' })
+        ]));
     });
 
     it('EXT-013: prefers specific Korean document labels over generic name matches', () => {
@@ -654,6 +939,72 @@ describe('applicationAutoFill', () => {
         expect(doc.getElementById('discharge-type').textContent).toContain('\uC18C\uC9D1\uD574\uC81C');
     });
 
+    it('EXT-031: waits briefly for fast custom-select options rendered after opening', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <label>\uC785\uB300\uC77C<input id="enlistment-date" /></label>
+        <label>\uC81C\uB300\uC77C<input id="discharge-date" /></label>
+        <div class="ats-inline-flex ats-flex-col ats-relative ats-group">
+          <button id="rank" type="button" aria-haspopup="listbox"><p>\uACC4\uAE09\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
+        </div>
+        <div class="ats-inline-flex ats-flex-col ats-relative ats-group">
+          <button id="discharge-type" type="button" aria-haspopup="listbox"><p>\uC81C\uB300\uAD6C\uBD84\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
+        </div>
+      </form>
+    `;
+        const openDropdownLater = (trigger, options) => {
+            setTimeout(() => {
+                const wrapper = trigger.closest('.ats-inline-flex');
+                if (!wrapper || wrapper.querySelector('#dropdown-body')) return;
+                const dropdown = doc.createElement('div');
+                dropdown.id = 'dropdown-body';
+                dropdown.innerHTML = `<ul>${options.map((option) => `<li><button type="button" value="${option.value}"><span><p>${option.label}</p></span></button></li>`).join('')}</ul>`;
+                dropdown.querySelectorAll('button').forEach((optionButton) => {
+                    optionButton.addEventListener('mousedown', () => {
+                        trigger.querySelector('p').textContent = optionButton.textContent.trim();
+                        dropdown.remove();
+                    });
+                });
+                wrapper.append(dropdown);
+            }, 20);
+        };
+        doc.getElementById('rank').addEventListener('mousedown', () => {
+            openDropdownLater(doc.getElementById('rank'), [
+                { value: '01', label: '\uC774\uBCD1' },
+                { value: '04', label: '\uBCD1\uC7A5' }
+            ]);
+        });
+        doc.getElementById('discharge-type').addEventListener('mousedown', () => {
+            openDropdownLater(doc.getElementById('discharge-type'), [
+                { value: '01', label: '\uB9CC\uAE30\uC81C\uB300' },
+                { value: '02', label: '\uC18C\uC9D1\uD574\uC81C' }
+            ]);
+        });
+        const militaryProfile = {
+            sections: {
+                military: {
+                    military: [{
+                        enlistmentDate: '2023-07-31',
+                        dischargeDate: '2025-04-30',
+                        rank: '\uC774\uBCD1',
+                        dischargeType: '\uC18C\uC9D1\uD574\uC81C'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanFastAsync(buildAutoFillPlan(doc, militaryProfile));
+
+        expect(result.filled).toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'military.rank', value: '\uC774\uBCD1' }),
+            expect.objectContaining({ fieldKey: 'military.dischargeType', value: '\uC18C\uC9D1\uD574\uC81C' })
+        ]));
+        expect(doc.getElementById('rank').textContent).toContain('\uC774\uBCD1');
+        expect(doc.getElementById('discharge-type').textContent).toContain('\uC18C\uC9D1\uD574\uC81C');
+    });
+
     it('EXT-031: clicks Midas parent choices before filling dependent dropdowns', async () => {
         const doc = document.implementation.createHTMLDocument('application');
         doc.body.innerHTML = `
@@ -921,6 +1272,283 @@ describe('applicationAutoFill', () => {
         expect(doc.getElementById('university-grade').value).toBe('3.93');
     });
 
+    it('EXT-031: skips absent optional education fields while still reaching major inputs', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <div>
+          <div id="high-school-section">
+            <button id="open-high-school" type="button"><p>고등학교 *</p></button>
+          </div>
+          <div id="university-section">
+            <button id="open-university" type="button"><p>대학교 *</p></button>
+          </div>
+        </div>
+      </form>
+    `;
+        doc.getElementById('open-high-school').addEventListener('click', () => {
+            if (doc.getElementById('high-school-name')) return;
+            doc.getElementById('high-school-section').insertAdjacentHTML('beforeend', `
+          <section aria-label="고등학교">
+            <label>학교정보<input id="high-school-name" /></label>
+            <label>입학일<input id="high-school-start" /></label>
+            <label>졸업일<input id="high-school-end" /></label>
+          </section>
+        `);
+        });
+        doc.getElementById('open-university').addEventListener('click', () => {
+            if (doc.getElementById('university-name')) return;
+            doc.getElementById('university-section').insertAdjacentHTML('beforeend', `
+          <section aria-label="대학교">
+            <label>학교정보<input id="university-name" /></label>
+            <label>학위구분<input id="degree-type" /></label>
+            <label>입학일<input id="university-start" /></label>
+            <label>졸업일<input id="university-end" /></label>
+            <p>전공 *</p>
+            <button id="add-major" type="button"><p>추가하기</p></button>
+            <div id="major-container"></div>
+          </section>
+        `);
+            doc.getElementById('add-major').addEventListener('click', () => {
+                if (doc.getElementById('major-name-0')) return;
+                doc.getElementById('major-container').insertAdjacentHTML('beforeend', `
+            <div class="major-row">
+              <label>전공명<input id="major-name-0" placeholder="전공명을 검색해주세요." /></label>
+              <div class="major-types">
+                <button id="major-primary" type="button">주전공</button>
+                <button id="major-linked" type="button">연계전공</button>
+              </div>
+              <button id="major-category-0" type="button"><p>전공계열을 선택해주세요.</p></button>
+              <div class="major-day-night">
+                <button id="major-day" type="button">주간</button>
+                <button id="major-night" type="button">야간</button>
+              </div>
+            </div>
+          `);
+                const category = doc.getElementById('major-category-0');
+                category.addEventListener('mousedown', () => {
+                    if (doc.getElementById('major-category-options')) return;
+                    const menu = doc.createElement('div');
+                    menu.id = 'major-category-options';
+                    menu.innerHTML = '<button type="button">공학계열(산업)</button>';
+                    menu.querySelector('button').addEventListener('mousedown', () => {
+                        category.querySelector('p').textContent = '공학계열(산업)';
+                        menu.remove();
+                    });
+                    category.after(menu);
+                });
+            });
+        });
+        const educationProfile = {
+            sections: {
+                education: {
+                    highSchool: {
+                        schoolName: '부산동고등학교',
+                        location: '부산',
+                        track: '인문계',
+                        admissionDate: '2017-03-02',
+                        graduationDate: '2020-02-28'
+                    },
+                    universities: [{
+                        schoolName: '부산대학교',
+                        degreeType: '학사',
+                        location: '부산',
+                        majorCategory: '공학',
+                        admissionDate: '2020-03-02',
+                        graduationDate: '2026-02-20',
+                        grade: '3.93',
+                        gradeScale: '4.5',
+                        credits: '149',
+                        majors: [{
+                            major: '산업공학과',
+                            majorType: '주전공',
+                            majorCategory: '공학계열(산업)',
+                            dayNight: '주간'
+                        }]
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanAsync(buildAutoFillPlan(doc, educationProfile));
+        const failedKeys = result.failed.map((item) => item.fieldKey);
+        const copyCandidateKeys = result.copyCandidates.map((item) => item.key);
+
+        expect(failedKeys).not.toEqual(expect.arrayContaining([
+            'education.highSchool.location',
+            'education.highSchool.track',
+            'education.universities.0.location',
+            'education.universities.0.majorCategory',
+            'education.universities.0.grade',
+            'education.universities.0.gradeScale',
+            'education.universities.0.credits'
+        ]));
+        expect(copyCandidateKeys).not.toEqual(expect.arrayContaining([
+            'education.highSchool.location',
+            'education.highSchool.track',
+            'education.universities.0.location',
+            'education.universities.0.majorCategory',
+            'education.universities.0.grade',
+            'education.universities.0.gradeScale',
+            'education.universities.0.credits'
+        ]));
+        expect(result.filled).not.toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'education.universities.0.majorCategory' })
+        ]));
+        expect(doc.getElementById('major-name-0').value).toBe('산업공학과');
+        expect(doc.getElementById('major-category-0').textContent).toContain('공학계열(산업)');
+    });
+
+    it('EXT-031: fast apply opens education sections before filling fields', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <div>
+          <h5>\uD559\uB825\uC0AC\uD56D</h5>
+          <div id="high-school-section">
+            <button id="open-high-school" type="button"><p>\uACE0\uB4F1\uD559\uAD50 *</p></button>
+          </div>
+          <div id="university-section">
+            <button id="open-university" type="button"><p>\uB300\uD559\uAD50 *</p></button>
+          </div>
+        </div>
+      </form>
+    `;
+        doc.getElementById('open-high-school').addEventListener('click', () => {
+            if (doc.getElementById('high-school-name')) return;
+            doc.getElementById('high-school-section').insertAdjacentHTML('beforeend', `
+          <section aria-label="\uACE0\uB4F1\uD559\uAD50">
+            <label>\uD559\uAD50\uC815\uBCF4<input id="high-school-name" /></label>
+            <label>\uC7AC\uD559\uAE30\uAC04<input id="high-school-start" placeholder="\uC785\uD559\uC77C" /></label>
+          </section>
+        `);
+        });
+        doc.getElementById('open-university').addEventListener('click', () => {
+            if (doc.getElementById('university-name')) return;
+            doc.getElementById('university-section').insertAdjacentHTML('beforeend', `
+          <section aria-label="\uB300\uD559\uAD50">
+            <label>\uD559\uAD50\uC815\uBCF4<input id="university-name" /></label>
+            <label>\uD559\uC5C5\uC131\uC801<input id="university-grade" /></label>
+          </section>
+        `);
+        });
+        const educationProfile = {
+            sections: {
+                education: {
+                    highSchool: {
+                        schoolName: '\uBD80\uC0B0\uB3D9\uACE0\uB4F1\uD559\uAD50',
+                        admissionDate: '2017-03-02'
+                    },
+                    universities: [{
+                        schoolName: '\uBD80\uC0B0\uB300\uD559\uAD50',
+                        grade: '3.93'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanFastAsync(buildAutoFillPlan(doc, educationProfile));
+
+        expect(result.failed).toEqual([]);
+        expect(doc.getElementById('high-school-name').value).toBe('\uBD80\uC0B0\uB3D9\uACE0\uB4F1\uD559\uAD50');
+        expect(doc.getElementById('high-school-start').value).toBe('2017.03.02');
+        expect(doc.getElementById('university-name').value).toBe('\uBD80\uC0B0\uB300\uD559\uAD50');
+        expect(doc.getElementById('university-grade').value).toBe('3.93');
+    });
+
+    it('EXT-031: fast apply follows page order before filling visible lower fields', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section id="university-section">
+          <button id="open-university" type="button"><p>\uB300\uD559\uAD50 *</p></button>
+        </section>
+        <section>
+          <label>\uC774\uBA54\uC77C<input id="email" /></label>
+        </section>
+      </form>
+    `;
+        const events = [];
+        doc.getElementById('open-university').addEventListener('click', () => {
+            events.push('open-university');
+            if (doc.getElementById('university-name')) return;
+            doc.getElementById('university-section').insertAdjacentHTML('beforeend', `
+          <label>\uD559\uAD50\uC815\uBCF4<input id="university-name" placeholder="\uD559\uAD50\uBA85" /></label>
+        `);
+            doc.getElementById('university-name').addEventListener('input', () => events.push('university-name'));
+        });
+        doc.getElementById('email').addEventListener('input', () => events.push('email'));
+        const sequentialProfile = {
+            sections: {
+                basicInfo: {
+                    email: 'hong@example.com'
+                },
+                education: {
+                    universities: [{
+                        schoolName: '\uBD80\uC0B0\uB300\uD559\uAD50'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanFastAsync(buildAutoFillPlan(doc, sequentialProfile));
+
+        expect(result.failed).toEqual([]);
+        expect(events).toEqual(['open-university', 'university-name', 'email']);
+        expect(doc.getElementById('university-name').value).toBe('\uBD80\uC0B0\uB300\uD559\uAD50');
+        expect(doc.getElementById('email').value).toBe('hong@example.com');
+    });
+
+    it('EXT-031: fast apply fills a major row after clicking the Midas major add button', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <div class="remix-css-98imfe">
+          <div class="remix-css-re11db">
+            <div class="remix-css-ke50n9"><p>\uC804\uACF5</p><span>*</span></div>
+            <div class="remix-css-3btwcy">
+              <div direction="column" class="remix-css-1uo98h9">
+                <div id="major-container" class="remix-css-161k9a0"></div>
+                <button id="add-major" type="button" class="remix-css-q6816z">
+                  <svg></svg>
+                  \uCD94\uAC00\uD558\uAE30
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+    `;
+        doc.getElementById('add-major').addEventListener('click', () => {
+            if (doc.getElementById('major-name-0')) return;
+            doc.getElementById('major-container').innerHTML = `
+          <div class="major-row">
+            <label>\uC804\uACF5\uBA85<input id="major-name-0" placeholder="\uC804\uACF5\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." /></label>
+          </div>
+        `;
+        });
+        const educationProfile = {
+            sections: {
+                education: {
+                    universities: [{
+                        majors: [{
+                            major: '\uC0B0\uC5C5\uACF5\uD559\uACFC'
+                        }]
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanFastAsync(buildAutoFillPlan(doc, educationProfile));
+
+        expect(result.failed).toEqual([]);
+        expect(doc.getElementById('major-name-0').value).toBe('\uC0B0\uC5C5\uACF5\uD559\uACFC');
+    });
+
     it('EXT-031: selects school autocomplete options for fields created by section openers', async () => {
         const doc = document.implementation.createHTMLDocument('application');
         doc.body.innerHTML = `
@@ -1041,6 +1669,255 @@ describe('applicationAutoFill', () => {
         expect(doc.getElementById('university-start').value).toBe('2020.03.02');
         expect(doc.getElementById('university-end').value).toBe('2026.02.20');
         expect(doc.getElementById('university-major').value).toBe('\uC0B0\uC5C5\uACF5\uD559\uACFC');
+    });
+
+    it('EXT-031: selects school autocomplete options that include campus text before opening major rows', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uB300\uD559\uAD50">
+          <h3>\uB300\uD559\uAD50</h3>
+          <label>\uD559\uAD50\uC815\uBCF4<input id="university-name" placeholder="\uD559\uAD50\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." /></label>
+          <div id="university-detail"></div>
+        </section>
+      </form>
+    `;
+        const universityName = doc.getElementById('university-name');
+        universityName.addEventListener('input', () => {
+            if (doc.getElementById('university-name-option')) return;
+            const option = doc.createElement('button');
+            option.id = 'university-name-option';
+            option.type = 'button';
+            option.textContent = '\uBD80\uC0B0\uB300\uD559\uAD50 \uBD80\uC0B0\uCEA0\uD37C\uC2A4';
+            option.addEventListener('mousedown', () => {
+                universityName.value = '\uBD80\uC0B0\uB300\uD559\uAD50';
+                option.remove();
+                doc.getElementById('university-detail').innerHTML = `
+              <button id="university-location" type="button" aria-haspopup="listbox"><p>\uD559\uAD50 \uC18C\uC7AC\uC9C0\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
+              <button id="campus-type" type="button" aria-haspopup="listbox"><p>\uBCF8\uAD50/\uBD84\uAD50\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
+              <input id="grade" placeholder="\uC131\uC801 \uD3C9\uC810" />
+              <input id="grade-scale" placeholder="\uB9CC\uC810\uAE30\uC900" />
+              <input id="credits" placeholder="\uC774\uC218\uD559\uC810" />
+              <button id="add-major" type="button"><p>\uCD94\uAC00\uD558\uAE30</p></button>
+              <div id="major-container"></div>
+            `;
+                installMenu(doc.getElementById('university-location'), ['\uBD80\uC0B0', '\uC11C\uC6B8']);
+                installMenu(doc.getElementById('campus-type'), ['\uBCF8\uAD50', '\uBD84\uAD50']);
+                doc.getElementById('add-major').addEventListener('click', () => {
+                    if (doc.getElementById('major-name')) return;
+                    doc.getElementById('major-container').innerHTML = `
+                  <div class="major-row">
+                    <label>\uC804\uACF5\uBA85<input id="major-name" placeholder="\uC804\uACF5\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." /></label>
+                    <button id="major-category" type="button" aria-haspopup="listbox"><p>\uC804\uACF5\uACC4\uC5F4\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
+                    <button id="major-type" type="button" aria-haspopup="listbox"><p>\uC804\uACF5\uAD6C\uBD84\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
+                    <button id="day-night" type="button" aria-haspopup="listbox"><p>\uC8FC\uAC04/\uC57C\uAC04\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
+                  </div>
+                `;
+                    installMajorAutocomplete(doc.getElementById('major-name'));
+                    installMenu(doc.getElementById('major-category'), ['\uACF5\uD559\uACC4\uC5F4(\uC0B0\uC5C5)', '\uACF5\uD559\uACC4\uC5F4(\uCEF4\uD4E8\uD130\u00B7\uD1B5\uC2E0)']);
+                    installMenu(doc.getElementById('major-type'), ['\uC8FC\uC804\uACF5', '\uC5F0\uACC4\uC804\uACF5']);
+                    installMenu(doc.getElementById('day-night'), ['\uC8FC\uAC04', '\uC57C\uAC04']);
+                });
+            });
+            doc.body.append(option);
+        });
+        function installMajorAutocomplete(input) {
+            input.addEventListener('input', () => {
+                if (doc.getElementById('major-option')) return;
+                const option = doc.createElement('button');
+                option.id = 'major-option';
+                option.type = 'button';
+                option.textContent = '\uC0B0\uC5C5\uACF5\uD559\uACFC';
+                option.addEventListener('mousedown', () => {
+                    input.value = option.textContent;
+                    option.remove();
+                });
+                input.parentElement.append(option);
+            });
+        }
+        function installMenu(button, options) {
+            button.addEventListener('mousedown', () => {
+                if (button.parentElement.querySelector('[role="listbox"]')) return;
+                const menu = doc.createElement('div');
+                menu.setAttribute('role', 'listbox');
+                menu.innerHTML = options.map((option) => `<button type="button" role="option"><p>${option}</p></button>`).join('');
+                menu.querySelectorAll('button').forEach((optionButton) => {
+                    const choose = () => {
+                        button.querySelector('p').textContent = optionButton.textContent.trim();
+                        menu.remove();
+                    };
+                    optionButton.addEventListener('pointerdown', choose);
+                    optionButton.addEventListener('mousedown', choose);
+                    optionButton.addEventListener('click', choose);
+                });
+                button.parentElement.append(menu);
+            });
+        }
+        const educationProfile = {
+            sections: {
+                education: {
+                    universities: [{
+                        schoolName: '\uBD80\uC0B0\uB300\uD559\uAD50',
+                        location: '\uBD80\uC0B0',
+                        campusType: '\uBCF8\uAD50',
+                        grade: '3.93',
+                        gradeScale: '4.5',
+                        completedCredits: '149',
+                        majors: [{
+                            major: '\uC0B0\uC5C5\uACF5\uD559\uACFC',
+                            majorCategory: '\uACF5\uD559\uACC4\uC5F4(\uC0B0\uC5C5)',
+                            majorType: '\uC8FC\uC804\uACF5',
+                            dayNight: '\uC8FC\uAC04'
+                        }]
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanAsync(buildAutoFillPlan(doc, educationProfile));
+
+        expect(result.failed).toEqual([]);
+        expect(doc.getElementById('university-name-option')).toBeNull();
+        expect(universityName.value).toBe('\uBD80\uC0B0\uB300\uD559\uAD50');
+        expect(result.filled).toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'education.universities.0.schoolName', value: '\uBD80\uC0B0\uB300\uD559\uAD50 \uBD80\uC0B0\uCEA0\uD37C\uC2A4' }),
+            expect.objectContaining({ fieldKey: 'education.universities.0.location', value: '\uBD80\uC0B0' }),
+            expect.objectContaining({ fieldKey: 'education.universities.0.campusType', value: '\uBCF8\uAD50' })
+        ]));
+    });
+
+    it('EXT-031: does not pause on an empty school detail container after selecting a school option', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uB300\uD559\uAD50">
+          <h3>\uB300\uD559\uAD50</h3>
+          <label>\uD559\uAD50\uC815\uBCF4<input id="university-name" placeholder="\uD559\uAD50\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." /></label>
+          <div id="university-detail" data-field="answers"></div>
+        </section>
+      </form>
+    `;
+        const universityName = doc.getElementById('university-name');
+        universityName.addEventListener('input', () => {
+            if (doc.getElementById('university-name-option')) return;
+            const option = doc.createElement('button');
+            option.id = 'university-name-option';
+            option.type = 'button';
+            option.textContent = '\uBD80\uC0B0\uB300\uD559\uAD50';
+            option.addEventListener('mousedown', () => {
+                universityName.value = option.textContent;
+                option.remove();
+            });
+            doc.body.append(option);
+        });
+        const educationProfile = {
+            sections: {
+                education: {
+                    universities: [{
+                        schoolName: '\uBD80\uC0B0\uB300\uD559\uAD50',
+                        location: '\uBD80\uC0B0',
+                        campusType: '\uBCF8\uAD50'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const startedAt = performance.now();
+        const result = await applyAutoFillPlanAsync(buildAutoFillPlan(doc, educationProfile));
+        const durationMs = performance.now() - startedAt;
+
+        expect(result.filled).toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'education.universities.0.schoolName' })
+        ]));
+        expect(durationMs).toBeLessThan(900);
+    });
+
+    it('EXT-031: waits for the school autocomplete option when only campus controls are initially visible', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uB300\uD559\uAD50">
+          <h3>\uB300\uD559\uAD50</h3>
+          <label>\uD559\uAD50\uC815\uBCF4<input id="university-name" placeholder="\uD559\uAD50\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." /></label>
+          <button id="campus-type" type="button" aria-haspopup="listbox"><p>\uBCF8\uAD50/\uBD84\uAD50\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
+          <div id="university-detail"></div>
+        </section>
+      </form>
+    `;
+        const universityName = doc.getElementById('university-name');
+        universityName.addEventListener('input', () => {
+            setTimeout(() => {
+                if (doc.getElementById('university-name-option')) return;
+                const option = doc.createElement('button');
+                option.id = 'university-name-option';
+                option.type = 'button';
+                option.textContent = '\uBD80\uC0B0\uB300\uD559\uAD50';
+                option.addEventListener('mousedown', () => {
+                    universityName.value = option.textContent;
+                    option.remove();
+                    doc.getElementById('university-detail').innerHTML = `
+                <button id="university-location" type="button" aria-haspopup="listbox"><p>\uD559\uAD50 \uC18C\uC7AC\uC9C0\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
+                <input id="university-grade" placeholder="\uC131\uC801 \uD3C9\uC810" />
+                <p>\uC804\uACF5 *</p>
+                <button id="add-major" type="button"><p>\uCD94\uAC00\uD558\uAE30</p></button>
+                <div id="major-container"></div>
+              `;
+                    installMenu(doc.getElementById('university-location'), ['\uC11C\uC6B8', '\uBD80\uC0B0']);
+                    doc.getElementById('add-major').addEventListener('click', () => {
+                        if (doc.getElementById('major-name')) return;
+                        doc.getElementById('major-container').innerHTML = `
+                    <div class="major-row">
+                      <label>\uC804\uACF5\uBA85<input id="major-name" placeholder="\uC804\uACF5\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." /></label>
+                    </div>
+                  `;
+                    });
+                });
+                doc.body.append(option);
+            }, 650);
+        });
+        function installMenu(button, options) {
+            button.addEventListener('mousedown', () => {
+                if (button.parentElement.querySelector('[role="listbox"]')) return;
+                const menu = doc.createElement('div');
+                menu.setAttribute('role', 'listbox');
+                menu.innerHTML = options.map((option) => `<button type="button" role="option"><p>${option}</p></button>`).join('');
+                menu.querySelectorAll('button').forEach((optionButton) => {
+                    optionButton.addEventListener('mousedown', () => {
+                        button.querySelector('p').textContent = optionButton.textContent.trim();
+                        menu.remove();
+                    });
+                });
+                button.parentElement.append(menu);
+            });
+        }
+        installMenu(doc.getElementById('campus-type'), ['\uBCF8\uAD50', '\uBD84\uAD50']);
+        const educationProfile = {
+            sections: {
+                education: {
+                    universities: [{
+                        schoolName: '\uBD80\uC0B0\uB300\uD559\uAD50',
+                        location: '\uBD80\uC0B0',
+                        campusType: '\uBCF8\uAD50',
+                        grade: '3.93',
+                        majors: [{
+                            major: '\uC0B0\uC5C5\uACF5\uD559\uACFC'
+                        }]
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanAsync(buildAutoFillPlan(doc, educationProfile));
+
+        expect(result.failed).toEqual([]);
+        expect(doc.getElementById('university-name-option')).toBeNull();
+        expect(doc.getElementById('university-location').textContent).toContain('\uBD80\uC0B0');
+        expect(doc.getElementById('campus-type').textContent).toContain('\uBCF8\uAD50');
+        expect(doc.getElementById('university-grade').value).toBe('3.93');
+        expect(doc.getElementById('major-name').value).toBe('\uC0B0\uC5C5\uACF5\uD559\uACFC');
     });
 
     it('EXT-031: does not open major rows as a duplicate side effect when they are already planned', async () => {
@@ -1445,6 +2322,38 @@ describe('applicationAutoFill', () => {
         expect(doc.getElementById('university-major-category-1').textContent).toContain('\uACF5\uD559\uACC4\uC5F4(\uCEF4\uD4E8\uD130\u00B7\uD1B5\uC2E0)');
         expect(clickedMajorChoices).toEqual(['\uC8FC\uC804\uACF5', '\uC8FC\uAC04', '\uC5F0\uACC4\uC804\uACF5', '\uC8FC\uAC04']);
     }, 10000);
+
+    it('EXT-031: commits education date inputs with blur events so saved forms keep the value', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uB300\uD559\uAD50">
+          <h3>\uB300\uD559\uAD50</h3>
+          <label>\uC785\uD559\uC77C<input id="university-start" name="collegeGroupAnswers.0.admissionDate" placeholder="YYYY.MM.DD" /></label>
+        </section>
+      </form>
+    `;
+        let committedValue = '';
+        doc.getElementById('university-start').addEventListener('blur', (event) => {
+            committedValue = event.target.value;
+        });
+        const educationProfile = {
+            sections: {
+                education: {
+                    universities: [{
+                        admissionDate: '2020-03-02'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = applyAutoFillPlan(buildAutoFillPlan(doc, educationProfile));
+
+        expect(result.failed).toEqual([]);
+        expect(doc.getElementById('university-start').value).toBe('2020.03.02');
+        expect(committedValue).toBe('2020.03.02');
+    });
 
     it('EXT-031: maps Midas education period start and end inputs by row order', () => {
         const doc = document.implementation.createHTMLDocument('application');
@@ -3659,6 +4568,99 @@ describe('applicationAutoFill', () => {
         expect(doc.getElementById('high-school-graduation-date').value).toBe('2020.02.28');
     });
 
+    it('EXT-031: waits for the university school option before filling fields unlocked by selection', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uB300\uD559\uAD50">
+          <h3>\uB300\uD559\uAD50</h3>
+          <label>\uD559\uAD50\uC815\uBCF4<input id="university-name" name="collegeGroupAnswers.0.schoolName" placeholder="\uD559\uAD50\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." /></label>
+          <input id="university-start" name="collegeGroupAnswers.0.admissionDate" placeholder="\uC785\uD559\uC77C" />
+          <input id="university-end" name="collegeGroupAnswers.0.graduationDate" placeholder="\uC878\uC5C5\uC77C" />
+          <button id="university-location" type="button" disabled><p>\uD559\uAD50 \uC18C\uC7AC\uC9C0\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
+          <button id="university-campus-main" type="button" disabled>\uBCF8\uAD50</button>
+          <button id="university-campus-branch" type="button" disabled>\uBD84\uAD50</button>
+          <button id="university-department-category" type="button"><p>\uD559\uACFC\uACC4\uC5F4\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
+          <input id="university-grade" type="number" name="collegeGroupAnswers.0.collegeGrade.score" placeholder="\uD3C9\uC810" />
+          <button id="university-grade-scale" type="button"><p>\uB9CC\uC810\uAE30\uC900</p></button>
+          <input id="university-credits" name="collegeGroupAnswers.0.majorCredits" />
+        </section>
+      </form>
+    `;
+        const addSelectBehavior = (trigger, options) => {
+            trigger.addEventListener('mousedown', () => {
+                if (trigger.disabled || doc.getElementById(`${trigger.id}-options`)) return;
+                const menu = doc.createElement('div');
+                menu.id = `${trigger.id}-options`;
+                menu.innerHTML = options.map((option) => `<button type="button"><p>${option}</p></button>`).join('');
+                menu.querySelectorAll('button').forEach((optionButton) => {
+                    optionButton.addEventListener('mousedown', () => {
+                        trigger.querySelector('p').textContent = optionButton.textContent.trim();
+                        menu.remove();
+                    });
+                });
+                doc.body.append(menu);
+            });
+        };
+        addSelectBehavior(doc.getElementById('university-location'), ['\uC11C\uC6B8', '\uBD80\uC0B0']);
+        addSelectBehavior(doc.getElementById('university-department-category'), ['\uC778\uBB38', '\uACF5\uD559']);
+        addSelectBehavior(doc.getElementById('university-grade-scale'), ['4.3', '4.5']);
+        doc.getElementById('university-campus-main').addEventListener('click', () => {
+            doc.getElementById('university-campus-main').setAttribute('data-selected', 'true');
+        });
+        const input = doc.getElementById('university-name');
+        input.addEventListener('input', () => {
+            setTimeout(() => {
+                if (doc.getElementById('university-name-option')) return;
+                const option = doc.createElement('button');
+                option.id = 'university-name-option';
+                option.type = 'button';
+                option.textContent = '\uBD80\uC0B0\uB300\uD559\uAD50';
+                option.addEventListener('mousedown', () => {
+                    input.value = option.textContent;
+                    option.remove();
+                    doc.getElementById('university-location').disabled = false;
+                    doc.getElementById('university-campus-main').disabled = false;
+                    doc.getElementById('university-campus-branch').disabled = false;
+                });
+                doc.body.append(option);
+            }, 520);
+        });
+        const educationProfile = {
+            sections: {
+                education: {
+                    universities: [{
+                        schoolName: '\uBD80\uC0B0\uB300\uD559\uAD50',
+                        admissionDate: '2020-03-02',
+                        graduationDate: '2026-02-20',
+                        location: '\uBD80\uC0B0',
+                        campusType: '\uBCF8\uAD50',
+                        majorCategory: '\uACF5\uD559',
+                        grade: '3.93',
+                        gradeScale: '4.5',
+                        completedCredits: '149'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanAsync(buildAutoFillPlan(doc, educationProfile));
+
+        expect(result.failed).toEqual([]);
+        expect(doc.getElementById('university-name-option')).toBeNull();
+        expect(doc.getElementById('university-location').disabled).toBe(false);
+        expect(doc.getElementById('university-location').textContent).toContain('\uBD80\uC0B0');
+        expect(doc.getElementById('university-campus-main').disabled).toBe(false);
+        expect(doc.getElementById('university-campus-main').getAttribute('data-selected')).toBe('true');
+        expect(doc.getElementById('university-department-category').textContent).toContain('\uACF5\uD559');
+        expect(doc.getElementById('university-start').value).toBe('2020.03.02');
+        expect(doc.getElementById('university-end').value).toBe('2026.02.20');
+        expect(doc.getElementById('university-grade').value).toBe('3.93');
+        expect(doc.getElementById('university-grade-scale').textContent).toContain('4.5');
+        expect(doc.getElementById('university-credits').value).toBe('149');
+    });
+
     it('EXT-031: ignores Midas education add buttons while choosing school autocomplete results', async () => {
         const doc = document.implementation.createHTMLDocument('application');
         doc.body.innerHTML = `
@@ -4995,6 +5997,177 @@ describe('applicationAutoFill', () => {
         expect(doc.getElementById('major-category-1')?.textContent).toContain('\uACF5\uD559\uACC4\uC5F4(\uC0B0\uC5C5)');
     });
 
+    it('EXT-031: fills visible Midas university and selected major details without reopening the major row', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uB300\uD559\uAD50">
+          <h3>\uB300\uD559\uAD50</h3>
+          <div class="remix-css-p9ewyl">
+            <p>\uD559\uACFC\uACC4\uC5F4</p>
+            <button id="department-category" type="button" aria-haspopup="listbox"><p>\uD559\uACFC\uACC4\uC5F4\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
+          </div>
+          <div>
+            <p>\uD559\uC5C5\uC131\uC801</p>
+            <input id="grade" name="collegeGroupAnswers.0.collegeGrade.score" placeholder="\uD3C9\uC810" type="number" />
+            <button id="grade-scale" type="button" aria-haspopup="listbox"><p>\uB9CC\uC810\uAE30\uC900</p></button>
+          </div>
+          <div>
+            <p>\uC774\uC218\uD559\uC810</p>
+            <input id="credits" name="collegeGroupAnswers.0.majorCredits" type="text" />
+            <p>\uD559\uC810 \uC774\uC218</p>
+          </div>
+          <p>\uC804\uACF5 *</p>
+          <div class="remix-css-yq5w1l" id="major-row-0">
+            <div class="remix-css-1q558ez">
+              <div class="remix-css-ugntnr">
+                <div class="remix-css-zezw7x"><p>\uC0B0\uC5C5\uACF5\uD559\uACFC</p><svg></svg></div>
+              </div>
+              <div class="remix-css-19nvx8u">
+                <li><button id="major-primary" type="button">\uC8FC\uC804\uACF5</button></li>
+                <li><button id="major-linked" type="button">\uC5F0\uACC4\uC804\uACF5</button></li>
+              </div>
+            </div>
+            <div class="remix-css-1q558ez">
+              <div class="remix-css-ieri5n">
+                <button id="major-category" type="button" aria-haspopup="listbox"><p>\uC804\uACF5\uACC4\uC5F4\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
+              </div>
+              <div class="remix-css-kzfr2u">
+                <li><button id="major-day" type="button">\uC8FC\uAC04</button></li>
+                <li><button id="major-night" type="button">\uC57C\uAC04</button></li>
+              </div>
+            </div>
+            <button id="remove-major" type="button"><svg></svg></button>
+          </div>
+          <button id="add-major" type="button">+ \uCD94\uAC00\uD558\uAE30</button>
+        </section>
+      </form>
+    `;
+        let addClicks = 0;
+        let primaryClicks = 0;
+        let dayClicks = 0;
+        doc.getElementById('add-major').addEventListener('click', () => {
+            addClicks += 1;
+        });
+        doc.getElementById('major-primary').addEventListener('click', () => {
+            primaryClicks += 1;
+        });
+        doc.getElementById('major-day').addEventListener('click', () => {
+            dayClicks += 1;
+        });
+        const installSelect = (button, options) => {
+            const open = () => {
+                if (doc.getElementById(`${button.id}-options`)) return;
+                const menu = doc.createElement('div');
+                menu.id = `${button.id}-options`;
+                menu.setAttribute('role', 'listbox');
+                menu.innerHTML = options.map((option) => `<button type="button" role="option"><p>${option}</p></button>`).join('');
+                menu.querySelectorAll('button').forEach((optionButton) => {
+                    optionButton.addEventListener('mousedown', () => {
+                        button.querySelector('p').textContent = optionButton.textContent.trim();
+                        menu.remove();
+                    });
+                });
+                button.parentElement.append(menu);
+            };
+            button.addEventListener('mousedown', open);
+            button.addEventListener('click', open);
+        };
+        installSelect(doc.getElementById('department-category'), ['\uC778\uBB38', '\uACF5\uD559']);
+        installSelect(doc.getElementById('grade-scale'), ['4.3', '4.5']);
+        installSelect(doc.getElementById('major-category'), ['\uACF5\uD559\uACC4\uC5F4(\uC0B0\uC5C5)', '\uACF5\uD559\uACC4\uC5F4(\uCEF4\uD4E8\uD130\u00B7\uD1B5\uC2E0)']);
+        const educationProfile = {
+            sections: {
+                education: {
+                    universities: [{
+                        majorCategory: '\uACF5\uD559',
+                        grade: '3.93',
+                        gradeScale: '4.5',
+                        completedCredits: '149',
+                        majors: [{
+                            major: '\uC0B0\uC5C5\uACF5\uD559\uACFC',
+                            majorCategory: '\uACF5\uD559\uACC4\uC5F4(\uC0B0\uC5C5)',
+                            majorType: '\uC8FC\uC804\uACF5',
+                            dayNight: '\uC8FC\uAC04'
+                        }]
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanAsync(buildAutoFillPlan(doc, educationProfile));
+
+        expect(result.failed).toEqual([]);
+        expect(addClicks).toBe(0);
+        expect(doc.getElementById('department-category').textContent).toContain('\uACF5\uD559');
+        expect(doc.getElementById('grade').value).toBe('3.93');
+        expect(doc.getElementById('grade-scale').textContent).toContain('4.5');
+        expect(doc.getElementById('credits').value).toBe('149');
+        expect(doc.getElementById('major-category').textContent).toContain('\uACF5\uD559\uACC4\uC5F4(\uC0B0\uC5C5)');
+        expect(primaryClicks).toBe(1);
+        expect(dayClicks).toBe(1);
+    });
+
+    it('EXT-031: keeps visible university fields while skipping absent selected-major category details', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uB300\uD559\uAD50">
+          <h3>\uB300\uD559\uAD50</h3>
+          <p>\uC804\uACF5 *</p>
+          <div class="remix-css-yq5w1l">
+            <div class="remix-css-1q558ez">
+              <div class="remix-css-ugntnr">
+                <div class="remix-css-zezw7x"><p>\uC0B0\uC5C5\uACF5\uD559\uACFC</p><svg></svg></div>
+              </div>
+              <div class="remix-css-19nvx8u">
+                <li><button type="button">\uC8FC\uC804\uACF5</button></li>
+                <li><button type="button">\uC5F0\uACC4\uC804\uACF5</button></li>
+              </div>
+            </div>
+          </div>
+          <div>
+            <p>\uD559\uC5C5\uC131\uC801</p>
+            <input id="grade" name="collegeGroupAnswers.0.collegeGrade.score" placeholder="\uD3C9\uC810" type="number" />
+            <button id="grade-scale" type="button" aria-haspopup="listbox"><p>\uB9CC\uC810\uAE30\uC900</p></button>
+          </div>
+          <div>
+            <p>\uC774\uC218\uD559\uC810</p>
+            <input id="credits" name="collegeGroupAnswers.0.majorCredits" type="text" />
+          </div>
+        </section>
+      </form>
+    `;
+        const educationProfile = {
+            sections: {
+                education: {
+                    universities: [{
+                        grade: '3.93',
+                        gradeScale: '4.5',
+                        completedCredits: '149',
+                        majors: [{
+                            major: '\uC0B0\uC5C5\uACF5\uD559\uACFC',
+                            majorCategory: '\uACF5\uD559\uACC4\uC5F4(\uC0B0\uC5C5)',
+                            majorType: '\uC8FC\uC804\uACF5',
+                            dayNight: '\uC8FC\uAC04'
+                        }]
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const fieldOrder = buildAutoFillPlan(doc, educationProfile).fillable.map((item) => item.fieldKey);
+
+        expect(fieldOrder).toEqual(expect.arrayContaining([
+            'education.universities.0.grade',
+            'education.universities.0.gradeScale',
+            'education.universities.0.credits'
+        ]));
+        expect(fieldOrder).not.toContain('education.universities.0.majors.0.majorCategory');
+    });
+
     it('EXT-031: plans the major add button when the next visible Midas major row is still disabled', () => {
         const doc = document.implementation.createHTMLDocument('application');
         doc.body.innerHTML = `
@@ -5170,6 +6343,61 @@ describe('applicationAutoFill', () => {
         expect(doc.querySelectorAll('.major-row').length).toBeGreaterThanOrEqual(1);
         expect([doc.getElementById('major-name-0')?.value, doc.getElementById('major-name-1')?.value].filter(Boolean)).toContain('\uBE45\uB370\uC774\uD130');
         expect(clicked.length).toBeGreaterThan(0);
+    });
+
+    it('EXT-031: falls back to native click when a Midas major add button does not render from synthetic events', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uB300\uD559\uAD50">
+          <h3>\uB300\uD559\uAD50</h3>
+          <div class="remix-css-re11db">
+            <div class="remix-css-ke50n9"><p>\uC804\uACF5</p><span>*</span></div>
+            <div class="remix-css-3btwcy">
+              <div direction="column" class="remix-css-1uo98h9">
+                <div id="major-container" class="remix-css-161k9a0"></div>
+                <button id="add-major" type="button" class="remix-css-q6816z">\uCD94\uAC00\uD558\uAE30</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </form>
+    `;
+        const addButton = doc.getElementById('add-major');
+        let nativeClicks = 0;
+        addButton.click = () => {
+            nativeClicks += 1;
+            const index = doc.querySelectorAll('.major-row').length;
+            doc.getElementById('major-container').insertAdjacentHTML('beforeend', `
+          <div class="major-row">
+            <input id="major-name-${index}" placeholder="\uC804\uACF5\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." />
+            <button type="button">\uC8FC\uC804\uACF5</button>
+            <button type="button">\uC5F0\uACC4\uC804\uACF5</button>
+            <button type="button">\uC8FC\uAC04</button>
+            <button type="button">\uC57C\uAC04</button>
+          </div>
+        `);
+        };
+        const educationProfile = {
+            sections: {
+                education: {
+                    universities: [{
+                        majors: [{
+                            major: '\uC0B0\uC5C5\uACF5\uD559\uACFC',
+                            majorType: '\uC8FC\uC804\uACF5',
+                            dayNight: '\uC8FC\uAC04'
+                        }]
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanAsync(buildAutoFillPlan(doc, educationProfile));
+
+        expect(nativeClicks).toBe(1);
+        expect(result.failed).toEqual([]);
+        expect(doc.getElementById('major-name-0').value).toBe('\uC0B0\uC5C5\uACF5\uD559\uACFC');
     });
 
     it('EXT-031: treats the Midas major add area as empty even when the university school chip exists', () => {
@@ -5603,6 +6831,220 @@ describe('applicationAutoFill', () => {
         expect(selectedDayNight[1]).toBe('\uC8FC\uAC04');
     });
 
+    it('EXT-031: does not require a missing Midas major category control for selected major chip rows', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uB300\uD559\uAD50">
+          <h3>\uB300\uD559\uAD50</h3>
+          <p>\uC804\uACF5 *</p>
+          <div id="major-container">
+            <div class="major-row" id="major-row-0" data-row="0">
+              <div class="remix-css-zezw7x"><p>\uC0B0\uC5C5\uACF5\uD559\uACFC</p><svg><path d="M13.875 8.36328H4.125V9.63829H13.875V8.36328Z"></path></svg></div>
+              <div class="major-types">
+                <button type="button">\uC8FC\uC804\uACF5</button>
+                <button type="button">\uC5F0\uACC4\uC804\uACF5</button>
+              </div>
+              <div class="major-day-night">
+                <button type="button">\uC8FC\uAC04</button>
+                <button type="button">\uC57C\uAC04</button>
+              </div>
+            </div>
+            <div class="major-row" id="major-row-1" data-row="1">
+              <div class="remix-css-zezw7x"><p>\uBE45\uB370\uC774\uD130</p><svg><path d="M13.875 8.36328H4.125V9.63829H13.875V8.36328Z"></path></svg></div>
+              <div class="major-types">
+                <button type="button">\uC8FC\uC804\uACF5</button>
+                <button type="button">\uC5F0\uACC4\uC804\uACF5</button>
+              </div>
+              <div class="major-day-night">
+                <button type="button">\uC8FC\uAC04</button>
+                <button type="button">\uC57C\uAC04</button>
+              </div>
+            </div>
+          </div>
+          <button id="add-major" type="button">+ \uCD94\uAC00\uD558\uAE30</button>
+        </section>
+      </form>
+    `;
+        const clicked = [];
+        doc.querySelectorAll('.major-row').forEach((row) => {
+            row.querySelectorAll('button').forEach((button) => {
+                button.addEventListener('click', () => clicked.push(`${row.dataset.row}:${button.textContent.trim()}`));
+            });
+        });
+        const educationProfile = {
+            sections: {
+                education: {
+                    universities: [{
+                        majors: [{
+                            major: '\uC0B0\uC5C5\uACF5\uD559\uACFC',
+                            majorCategory: '\uACF5\uD559\uACC4\uC5F4(\uC0B0\uC5C5)',
+                            majorType: '\uC8FC\uC804\uACF5',
+                            dayNight: '\uC8FC\uAC04'
+                        }, {
+                            major: '\uBE45\uB370\uC774\uD130',
+                            majorCategory: '\uACF5\uD559\uACC4\uC5F4(\uCEF4\uD4E8\uD130\u00B7\uD1B5\uC2E0)',
+                            majorType: '\uC5F0\uACC4\uC804\uACF5',
+                            dayNight: '\uC8FC\uAC04'
+                        }]
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanAsync(buildAutoFillPlan(doc, educationProfile));
+
+        expect(result.failed.map((item) => item.fieldKey)).not.toEqual(expect.arrayContaining([
+            'education.universities.0.majors.0.majorCategory',
+            'education.universities.0.majors.1.majorCategory'
+        ]));
+        expect(result.copyCandidates.map((item) => item.key)).not.toEqual(expect.arrayContaining([
+            'education.universities.0.majors.0.majorCategory',
+            'education.universities.0.majors.1.majorCategory'
+        ]));
+        expect(clicked).toEqual(expect.arrayContaining([
+            '0:\uC8FC\uC804\uACF5',
+            '0:\uC8FC\uAC04',
+            '1:\uC5F0\uACC4\uC804\uACF5',
+            '1:\uC8FC\uAC04'
+        ]));
+    });
+
+    it('EXT-031: plans the Midas major add button inside a university block without a section heading', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <div class="remix-css-98imfe">
+          <div class="remix-css-t25awl">
+            <div class="remix-css-ke50n9"><p>\uD559\uC704\uAD6C\uBD84</p></div>
+            <div class="remix-css-3btwcy"><button type="button">\uD559\uC0AC</button></div>
+          </div>
+          <div class="remix-css-re11db">
+            <div class="remix-css-ke50n9"><p>\uD559\uAD50\uC815\uBCF4</p></div>
+            <div class="remix-css-3btwcy">
+              <div class="remix-css-zezw7x"><p>\uBD80\uC0B0\uB300\uD559\uAD50</p><svg></svg></div>
+              <button type="button">\uBCF8\uAD50</button>
+            </div>
+          </div>
+          <div class="remix-css-re11db">
+            <div class="remix-css-ke50n9"><p>\uC804\uACF5</p></div>
+            <div class="remix-css-3btwcy">
+              <div direction="column" class="remix-css-1uo98h9">
+                <div class="remix-css-161k9a0"></div>
+                <button id="add-major" type="button" class="remix-css-q6816z">
+                  <svg><path d="M9.63828 4.125H8.36328V13.875H9.63828V4.125Z"></path></svg>
+                  \uCD94\uAC00\uD558\uAE30
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+    `;
+        const educationProfile = {
+            sections: {
+                education: {
+                    universities: [{
+                        schoolName: '\uBD80\uC0B0\uB300\uD559\uAD50',
+                        majors: [{
+                            major: '\uC0B0\uC5C5\uACF5\uD559\uACFC',
+                            majorType: '\uC8FC\uC804\uACF5',
+                            dayNight: '\uC8FC\uAC04'
+                        }]
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const plan = buildAutoFillPlan(doc, educationProfile);
+
+        expect(plan.fillable).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                fieldKey: 'education.universities.0.majors.0.majorName.open',
+                element: doc.getElementById('add-major')
+            })
+        ]));
+    });
+
+    it('EXT-031: plans the Midas major add button when the university block has period shortcut buttons before it', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <div class="remix-css-98imfe">
+          <div class="remix-css-t25awl">
+            <div class="remix-css-ke50n9"><p>\uD559\uC704\uAD6C\uBD84</p></div>
+            <div class="remix-css-3btwcy"><button type="button">\uD559\uC0AC</button></div>
+          </div>
+          <div class="remix-css-re11db">
+            <div class="remix-css-ke50n9"><p>\uD559\uAD50\uC815\uBCF4</p></div>
+            <div class="remix-css-3btwcy">
+              <div class="remix-css-zezw7x"><p>\uBD80\uC0B0\uB300\uD559\uAD50</p><svg></svg></div>
+              <button type="button">\uBCF8\uAD50</button>
+            </div>
+          </div>
+          <div class="remix-css-re11db">
+            <div class="remix-css-ke50n9"><p>\uC7AC\uD559\uAE30\uAC04</p></div>
+            <div class="remix-css-3btwcy">
+              <input placeholder="\uC785\uD559\uC77C" value="2020.03" />
+              <input placeholder="\uC878\uC5C5\uC77C" value="2026.02" />
+              <div class="remix-css-lmgx3u">
+                <button type="button"><svg></svg>1 \uD559\uAE30</button>
+                <button type="button"><svg></svg>1 \uB144</button>
+                <button type="button"><svg></svg>2 \uB144</button>
+              </div>
+            </div>
+          </div>
+          <div class="remix-css-t25awl">
+            <div class="remix-css-ke50n9"><p>\uC785\uD559\uAD6C\uBD84</p></div>
+            <div class="remix-css-3btwcy"><button type="button">\uC785\uD559</button><button type="button">\uD3B8\uC785</button></div>
+          </div>
+          <div class="remix-css-re11db">
+            <div class="remix-css-ke50n9"><p>\uC878\uC5C5\uAD6C\uBD84</p></div>
+            <div class="remix-css-3btwcy"><button type="button">\uC878\uC5C5</button><button type="button">\uC878\uC5C5\uC608\uC815</button></div>
+          </div>
+          <div class="remix-css-re11db">
+            <div class="remix-css-ke50n9"><p>\uC804\uACF5</p><span>*</span></div>
+            <div class="remix-css-3btwcy">
+              <div direction="column" class="remix-css-1uo98h9">
+                <div class="remix-css-161k9a0"></div>
+                <button id="add-major" type="button" class="remix-css-q6816z">
+                  <svg><path d="M9.63828 4.125H8.36328V13.875H9.63828V4.125Z"></path></svg>
+                  \uCD94\uAC00\uD558\uAE30
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+    `;
+        const educationProfile = {
+            sections: {
+                education: {
+                    universities: [{
+                        schoolName: '\uBD80\uC0B0\uB300\uD559\uAD50',
+                        majors: [{
+                            major: '\uC0B0\uC5C5\uACF5\uD559\uACFC',
+                            majorType: '\uC8FC\uC804\uACF5',
+                            dayNight: '\uC8FC\uAC04'
+                        }]
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const plan = buildAutoFillPlan(doc, educationProfile);
+
+        expect(plan.fillable).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                fieldKey: 'education.universities.0.majors.0.majorName.open',
+                element: doc.getElementById('add-major')
+            })
+        ]));
+    });
+
     it('EXT-026: keeps language test score out of acquired date fields', () => {
         const doc = document.implementation.createHTMLDocument('application');
         doc.body.innerHTML = `
@@ -5744,6 +7186,94 @@ describe('applicationAutoFill', () => {
             'certificates.certificates.0.acquiredDate',
             'certificates.certificates.0.registrationNumber'
         ]);
+    });
+
+    it('EXT-032: clicks delayed Midas language test option before filling unlocked score and registration fields', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uC5B4\uD559">
+          <h3>\uACF5\uC778\uC678\uAD6D\uC5B4\uC2DC\uD5D8</h3>
+          <label>\uC2DC\uD5D8\uBA85
+            <input id="language-test-search" placeholder="\uC2DC\uD5D8\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." />
+          </label>
+          <input id="exam-code" type="hidden" name="examCode" />
+          <label>\uCDE8\uB4DD\uC77C<input id="language-date" /></label>
+          <label>\uB4F1\uB85D\uBC88\uD638<input id="language-registration" disabled /></label>
+          <div>
+            <p>\uC810\uC218/\uB4F1\uAE09</p>
+            <button id="language-score-add" type="button">\uCD94\uAC00\uD558\uAE30</button>
+            <button id="language-score" type="button" disabled>\uB4F1\uAE09</button>
+          </div>
+          <div id="language-score-options"></div>
+        </section>
+      </form>
+    `;
+        let scoreAddClicks = 0;
+        doc.getElementById('language-score-add').addEventListener('click', () => {
+            scoreAddClicks += 1;
+        });
+        const search = doc.getElementById('language-test-search');
+        search.addEventListener('input', () => {
+            setTimeout(() => {
+                if (doc.getElementById('opic-option')) return;
+                const option = doc.createElement('button');
+                option.id = 'opic-option';
+                option.type = 'button';
+                option.textContent = 'OPIc(\uC601\uC5B4)';
+                option.addEventListener('mousedown', () => {
+                    search.value = option.textContent;
+                    doc.getElementById('exam-code').value = 'OPIC_EN';
+                    doc.getElementById('language-registration').disabled = false;
+                    doc.getElementById('language-score').disabled = false;
+                    option.remove();
+                });
+                doc.body.append(option);
+            }, 520);
+        });
+        doc.getElementById('language-score').addEventListener('click', () => {
+            doc.getElementById('language-score-options').innerHTML = `
+        <button id="score-none" type="button" role="option">\uC120\uD0DD\uC548\uD568</button>
+        <button id="score-al" type="button" role="option">Advanced Low</button>
+        <button id="score-ih" type="button" role="option">Intermediate High</button>
+        <button id="score-im3" type="button" role="option">Intermediate Mid 3</button>
+        <button id="score-im2" type="button" role="option">Intermediate Mid 2</button>
+        <button id="score-im1" type="button" role="option">Intermediate Mid 1</button>
+        <button id="score-il" type="button" role="option">Intermediate Low</button>
+        <button id="score-nh" type="button" role="option">Novice High</button>
+        <button id="score-nm" type="button" role="option">Novice Mid</button>
+        <button id="score-nl" type="button" role="option">Novice Low</button>
+      `;
+            doc.querySelectorAll('#language-score-options button').forEach((button) => {
+                button.addEventListener('click', () => {
+                    doc.getElementById('language-score').textContent = button.textContent.trim();
+                    doc.getElementById('language-score-options').innerHTML = '';
+                });
+            });
+        });
+        const languageProfile = {
+            sections: {
+                certificates: {
+                    languageTests: [{
+                        testName: 'OPIc(\uC601\uC5B4)',
+                        score: 'IM1',
+                        acquiredDate: '2025-04-21',
+                        registrationNumber: '2K0014711552'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanAsync(buildAutoFillPlan(doc, languageProfile));
+
+        expect(result.failed).toEqual([]);
+        expect(doc.getElementById('opic-option')).toBeNull();
+        expect(doc.getElementById('exam-code').value).toBe('OPIC_EN');
+        expect(doc.getElementById('language-date').value).toBe('2025-04-21');
+        expect(doc.getElementById('language-registration').value).toBe('2K0014711552');
+        expect(scoreAddClicks).toBe(0);
+        expect(doc.getElementById('language-score').textContent).toBe('Intermediate Mid 1');
     });
 
     it('EXT-029: does not use a Midas register option as the selected certificate name', async () => {
@@ -6265,6 +7795,126 @@ describe('applicationAutoFill', () => {
         expect(doc.getElementById('certificate-registration-0').value).toBe('ADsP-049026379');
     });
 
+    it('EXT-032: retries ADsP certificate search with the short keyword before filling details', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uC790\uACA9\uC99D">
+          <h3>\uC790\uACA9\uC99D</h3>
+          <button id="add-certificate" type="button">+ \uCD94\uAC00\uD558\uAE30</button>
+          <div id="certificate-fields"></div>
+        </section>
+      </form>
+    `;
+        doc.getElementById('add-certificate').addEventListener('click', () => {
+            const row = doc.createElement('div');
+            row.className = 'certificate-row';
+            row.innerHTML = `
+        <label>\uC790\uACA9\uC99D\uBA85
+          <input id="certificate-name-0" role="combobox" aria-autocomplete="list" placeholder="\uC790\uACA9\uC99D\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." />
+        </label>
+        <div id="certificate-options-0" role="listbox"></div>
+        <div id="certificate-detail-0"></div>
+      `;
+            doc.getElementById('certificate-fields').append(row);
+            const search = doc.getElementById('certificate-name-0');
+            search.addEventListener('input', () => {
+                if (search.value !== 'ADsp') {
+                    doc.getElementById('certificate-options-0').innerHTML = '';
+                    return;
+                }
+                doc.getElementById('certificate-options-0').innerHTML = `
+          <button id="certificate-option-0" type="button" role="option">ADsP(\uB370\uC774\uD130 \uBD84\uC11D \uC900\uC804\uBB38\uAC00)</button>
+        `;
+                doc.getElementById('certificate-option-0').addEventListener('click', () => {
+                    search.value = 'ADsP(\uB370\uC774\uD130 \uBD84\uC11D \uC900\uC804\uBB38\uAC00)';
+                    doc.getElementById('certificate-options-0').innerHTML = '';
+                    doc.getElementById('certificate-detail-0').innerHTML = `
+            <label>\uBC1C\uAE09\uAE30\uAD00<input id="certificate-issuer-0" placeholder="\uBC1C\uAE09\uAE30\uAD00\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694." /></label>
+            <label>\uCDE8\uB4DD\uC77C<input id="certificate-date-0" placeholder="\uCDE8\uB4DD\uC77C" /></label>
+            <label>\uB4F1\uB85D\uBC88\uD638<input id="certificate-registration-0" placeholder="\uB4F1\uB85D\uBC88\uD638\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694." /></label>
+          `;
+                });
+            });
+        });
+        const certificateProfile = {
+            sections: {
+                certificates: {
+                    certificates: [{
+                        certificateName: 'ADsp(\uB370\uC774\uD130 \uBD84\uC11D \uC900\uC804\uBB38\uAC00)',
+                        issuer: '\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0',
+                        acquiredDate: '2026-06-05',
+                        registrationNumber: 'ADsP-049026379'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanAsync(buildAutoFillPlan(doc, certificateProfile));
+
+        expect(result.failed).toEqual([]);
+        expect(doc.getElementById('certificate-name-0').value).toBe('ADsP(\uB370\uC774\uD130 \uBD84\uC11D \uC900\uC804\uBB38\uAC00)');
+        expect(doc.getElementById('certificate-issuer-0').value).toBe('\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0');
+        expect(doc.getElementById('certificate-date-0').value).toBe('2026-06-05');
+        expect(doc.getElementById('certificate-registration-0').value).toBe('ADsP-049026379');
+    });
+
+    it('EXT-032: does not fill ADsP details into another selected certificate row when ADsP selection is not committed', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uC790\uACA9\uC99D">
+          <h3>\uC790\uACA9\uC99D</h3>
+          <div id="certificate-fields">
+            <div class="certificate-row" id="certificate-row-0">
+              <div class="remix-css-zezw7x"><p>\uC815\uBCF4\uCC98\uB9AC\uAE30\uC0AC</p><svg></svg></div>
+              <label>\uBC1C\uAE09\uAE30\uAD00<input id="certificate-issuer-0" name="licenseGroupAnswer.licenseAnswers.0.organization" /></label>
+              <label>\uCDE8\uB4DD\uC77C<input id="certificate-date-0" /></label>
+              <label>\uB4F1\uB85D\uBC88\uD638<input id="certificate-registration-0" name="licenseGroupAnswer.licenseAnswers.0.registNumber" /></label>
+            </div>
+            <div class="certificate-row" id="certificate-row-1">
+              <label>\uC790\uACA9\uC99D\uBA85
+                <input id="certificate-name-1" role="combobox" aria-autocomplete="list" placeholder="\uC790\uACA9\uC99D\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." />
+              </label>
+              <div id="certificate-options-1" role="listbox"></div>
+            </div>
+          </div>
+        </section>
+      </form>
+    `;
+        const search = doc.getElementById('certificate-name-1');
+        search.addEventListener('input', () => {
+            doc.getElementById('certificate-options-1').innerHTML = `
+        <button id="certificate-option-adsp" type="button" role="option">ADsP(\uB370\uC774\uD130 \uBD84\uC11D \uC900\uC804\uBB38\uAC00)</button>
+      `;
+        });
+        const certificateProfile = {
+            sections: {
+                certificates: {
+                    certificates: [{
+                        certificateName: 'ADsp(\uB370\uC774\uD130 \uBD84\uC11D \uC900\uC804\uBB38\uAC00)',
+                        issuer: '\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0',
+                        acquiredDate: '2026-06-05',
+                        registrationNumber: 'ADsP-049026379'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanAsync(buildAutoFillPlan(doc, certificateProfile));
+
+        expect(result.filled.map((item) => item.fieldKey)).not.toEqual(expect.arrayContaining([
+            'certificates.certificates.0.issuer',
+            'certificates.certificates.0.acquiredDate',
+            'certificates.certificates.0.registrationNumber'
+        ]));
+        expect(doc.getElementById('certificate-issuer-0').value).toBe('');
+        expect(doc.getElementById('certificate-date-0').value).toBe('');
+        expect(doc.getElementById('certificate-registration-0').value).toBe('');
+    });
+
     it('EXT-032: keeps revealed certificate details with the selected row after each autocomplete click', async () => {
         const doc = document.implementation.createHTMLDocument('application');
         doc.body.innerHTML = `
@@ -6335,6 +7985,161 @@ describe('applicationAutoFill', () => {
         expect(doc.getElementById('certificate-issuer-1').value).toBe('\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0');
         expect(doc.getElementById('certificate-date-1').value).toBe('2026-06-05');
         expect(doc.getElementById('certificate-registration-1').value).toBe('ADsP-049026379');
+    });
+
+    it('EXT-032: uses a blank Midas certificate row when an earlier selected row belongs to another saved certificate', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uC790\uACA9\uC99D">
+          <h3>\uC790\uACA9\uC99D</h3>
+          <div id="certificate-fields">
+            <div class="certificate-row" id="certificate-row-0">
+              <div class="remix-css-zezw7x"><p>\uC815\uBCF4\uCC98\uB9AC\uAE30\uC0AC</p><svg></svg></div>
+              <label>\uBC1C\uAE09\uAE30\uAD00<input id="certificate-issuer-0" name="licenseGroupAnswer.licenseAnswers.0.organization" /></label>
+              <label>\uCDE8\uB4DD\uC77C<input id="certificate-date-0" /></label>
+              <label>\uB4F1\uB85D\uBC88\uD638<input id="certificate-registration-0" name="licenseGroupAnswer.licenseAnswers.0.registNumber" /></label>
+            </div>
+            <div class="certificate-row" id="certificate-row-1">
+              <label>\uC790\uACA9\uC99D\uBA85
+                <input id="certificate-name-1" role="combobox" aria-autocomplete="list" placeholder="\uC790\uACA9\uC99D\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." />
+              </label>
+              <div id="certificate-options-1" role="listbox"></div>
+              <div id="certificate-detail-1"></div>
+            </div>
+          </div>
+          <button id="add-certificate" type="button">+ \uCD94\uAC00\uD558\uAE30</button>
+        </section>
+      </form>
+    `;
+        let addClicks = 0;
+        doc.getElementById('add-certificate').addEventListener('click', () => {
+            addClicks += 1;
+        });
+        const search = doc.getElementById('certificate-name-1');
+        search.addEventListener('input', () => {
+            doc.getElementById('certificate-options-1').innerHTML = `
+        <button id="certificate-option-adsp" type="button" role="option">ADsP(\uB370\uC774\uD130 \uBD84\uC11D \uC900\uC804\uBB38\uAC00)</button>
+      `;
+            doc.getElementById('certificate-option-adsp').addEventListener('mousedown', () => {
+                search.value = 'ADsP(\uB370\uC774\uD130 \uBD84\uC11D \uC900\uC804\uBB38\uAC00)';
+                doc.getElementById('certificate-options-1').innerHTML = '';
+                doc.getElementById('certificate-detail-1').innerHTML = `
+          <label>\uBC1C\uAE09\uAE30\uAD00<input id="certificate-issuer-1" name="licenseGroupAnswer.licenseAnswers.1.organization" /></label>
+          <label>\uCDE8\uB4DD\uC77C<input id="certificate-date-1" /></label>
+          <label>\uB4F1\uB85D\uBC88\uD638<input id="certificate-registration-1" name="licenseGroupAnswer.licenseAnswers.1.registNumber" /></label>
+        `;
+            });
+        });
+        const certificateProfile = {
+            sections: {
+                certificates: {
+                    certificates: [{
+                        certificateName: 'ADsP(\uB370\uC774\uD130 \uBD84\uC11D \uC900\uC804\uBB38\uAC00)',
+                        issuer: '\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0',
+                        acquiredDate: '2026-06-05',
+                        registrationNumber: 'ADsP-049026379'
+                    }, {
+                        certificateName: '\uC815\uBCF4\uCC98\uB9AC\uAE30\uC0AC',
+                        issuer: '\uD55C\uAD6D\uC0B0\uC5C5\uC778\uB825\uACF5\uB2E8',
+                        acquiredDate: '2024-09-10',
+                        registrationNumber: '24202030579W'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanAsync(buildAutoFillPlan(doc, certificateProfile));
+
+        expect(result.failed).toEqual([]);
+        expect(addClicks).toBe(0);
+        expect(doc.getElementById('certificate-name-1').value).toBe('ADsP(\uB370\uC774\uD130 \uBD84\uC11D \uC900\uC804\uBB38\uAC00)');
+        expect(doc.getElementById('certificate-issuer-0').value).toBe('\uD55C\uAD6D\uC0B0\uC5C5\uC778\uB825\uACF5\uB2E8');
+        expect(doc.getElementById('certificate-date-0').value).toBe('2024-09-10');
+        expect(doc.getElementById('certificate-registration-0').value).toBe('24202030579W');
+        expect(doc.getElementById('certificate-issuer-1').value).toBe('\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0');
+        expect(doc.getElementById('certificate-date-1').value).toBe('2026-06-05');
+        expect(doc.getElementById('certificate-registration-1').value).toBe('ADsP-049026379');
+    });
+
+    it('EXT-032: uses the blank certificate search row after an already selected ADsP row', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uC790\uACA9/\uAE30\uD0C0">
+          <h5>\uC790\uACA9/\uC9C0\uC2DD/\uAE30\uC220</h5>
+          <div id="certificate-fields">
+            <div class="certificate-row" id="certificate-row-0">
+              <div class="selected-certificate-name"><p>ADsP(\uB370\uC774\uD130 \uBD84\uC11D \uC900\uC804\uBB38\uAC00)</p></div>
+              <label>\uBC1C\uAE09\uAE30\uAD00<input id="certificate-issuer-0" name="licenseGroupAnswer.licenseAnswers.0.organization" /></label>
+              <label>\uCDE8\uB4DD\uC77C<input id="certificate-date-0" /></label>
+              <label>\uB4F1\uB85D\uBC88\uD638<input id="certificate-registration-0" name="licenseGroupAnswer.licenseAnswers.0.registNumber" /></label>
+            </div>
+            <div class="certificate-row" id="certificate-row-1">
+              <label>\uC790\uACA9\uC99D\uBA85
+                <input id="certificate-name-1" role="combobox" aria-autocomplete="list" placeholder="\uC790\uACA9\uC99D\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." />
+              </label>
+              <div id="certificate-options-1" role="listbox"></div>
+              <div id="certificate-detail-1"></div>
+            </div>
+          </div>
+          <button id="add-certificate" type="button">+ \uCD94\uAC00\uD558\uAE30</button>
+        </section>
+      </form>
+    `;
+        let addClicks = 0;
+        doc.getElementById('add-certificate').addEventListener('click', () => {
+            addClicks += 1;
+        });
+        const search = doc.getElementById('certificate-name-1');
+        search.addEventListener('input', () => {
+            doc.getElementById('certificate-options-1').innerHTML = `
+        <button id="certificate-option-info" type="button" role="option">\uC815\uBCF4\uCC98\uB9AC\uAE30\uC0AC</button>
+      `;
+            const option = doc.getElementById('certificate-option-info');
+            const selectInfoCertificate = () => {
+                search.value = '\uC815\uBCF4\uCC98\uB9AC\uAE30\uC0AC';
+                doc.getElementById('certificate-options-1').innerHTML = '';
+                doc.getElementById('certificate-detail-1').innerHTML = `
+          <label>\uBC1C\uAE09\uAE30\uAD00<input id="certificate-issuer-1" name="licenseGroupAnswer.licenseAnswers.1.organization" /></label>
+          <label>\uCDE8\uB4DD\uC77C<input id="certificate-date-1" /></label>
+          <label>\uB4F1\uB85D\uBC88\uD638<input id="certificate-registration-1" name="licenseGroupAnswer.licenseAnswers.1.registNumber" /></label>
+        `;
+            };
+            option.addEventListener('mousedown', selectInfoCertificate);
+            option.addEventListener('click', selectInfoCertificate);
+        });
+        const certificateProfile = {
+            sections: {
+                certificates: {
+                    certificates: [{
+                        certificateName: 'ADsP(\uB370\uC774\uD130 \uBD84\uC11D \uC900\uC804\uBB38\uAC00)',
+                        issuer: '\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0',
+                        acquiredDate: '2026-06-05',
+                        registrationNumber: 'ADsP-049026379'
+                    }, {
+                        certificateName: '\uC815\uBCF4\uCC98\uB9AC\uAE30\uC0AC',
+                        issuer: '\uD55C\uAD6D\uC0B0\uC5C5\uC778\uB825\uACF5\uB2E8',
+                        acquiredDate: '2024-09-10',
+                        registrationNumber: '24202030579W'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanAsync(buildAutoFillPlan(doc, certificateProfile));
+
+        expect(result.failed).toEqual([]);
+        expect(addClicks).toBe(0);
+        expect(doc.getElementById('certificate-issuer-0').value).toBe('\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0');
+        expect(doc.getElementById('certificate-date-0').value).toBe('2026-06-05');
+        expect(doc.getElementById('certificate-registration-0').value).toBe('ADsP-049026379');
+        expect(doc.getElementById('certificate-name-1').value).toBe('\uC815\uBCF4\uCC98\uB9AC\uAE30\uC0AC');
+        expect(doc.getElementById('certificate-issuer-1').value).toBe('\uD55C\uAD6D\uC0B0\uC5C5\uC778\uB825\uACF5\uB2E8');
+        expect(doc.getElementById('certificate-date-1').value).toBe('2024-09-10');
+        expect(doc.getElementById('certificate-registration-1').value).toBe('24202030579W');
     });
 
     it('EXT-032: keeps certificate rows separate from language rows inside a mixed Midas section', async () => {
@@ -6476,6 +8281,153 @@ describe('applicationAutoFill', () => {
         expect(doc.getElementById('certificate-registration-3').value).toBe('SQLD-046012160');
     });
 
+    it('EXT-032: selects compact Kakao ATS certificate options and fills readonly acquired dates', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uC790\uACA9/\uAE30\uD0C0">
+          <h5>\uC790\uACA9/\uC9C0\uC2DD/\uAE30\uC220</h5>
+          <div id="certificate-fields"></div>
+          <button id="add-certificate" type="button">\uCD94\uAC00\uD558\uAE30</button>
+        </section>
+      </form>
+    `;
+        const optionLabels = [
+            'ADsP(\uB370\uC774\uD130\uBD84\uC11D\uC900\uC804\uBB38\uAC00)',
+            'SQLD'
+        ];
+        const appendDetails = (row, index) => {
+            row.querySelector('.certificate-details').innerHTML = `
+        <label>\uBC1C\uAE09\uAE30\uAD00<input id="certificate-issuer-${index}" name="licenseGroupAnswer.licenseAnswers.${index}.organization" /></label>
+        <label>\uB4F1\uB85D\uBC88\uD638<input id="certificate-registration-${index}" name="licenseGroupAnswer.licenseAnswers.${index}.registNumber" /></label>
+      `;
+            row.querySelector('.certificate-details').insertAdjacentHTML('beforeend', `<label>\uCDE8\uB4DD\uC77C<input id="certificate-date-${index}" placeholder="\uCDE8\uB4DD\uC77C" readonly style="cursor:pointer" /></label>`);
+        };
+        const appendCertificateRow = () => {
+            const index = doc.querySelectorAll('.certificate-row').length;
+            const row = doc.createElement('div');
+            row.className = 'certificate-row';
+            row.innerHTML = `
+        <label>\uC790\uACA9\uC99D\uBA85
+          <input id="certificate-name-${index}" placeholder="\uC790\uACA9\uC99D\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." />
+        </label>
+        <div class="certificate-details"></div>
+      `;
+            const input = row.querySelector('input');
+            input.addEventListener('input', () => {
+                setTimeout(() => {
+                    if (row.querySelector('#dropdown-body')) return;
+                    const menu = doc.createElement('div');
+                    menu.id = 'dropdown-body';
+                    menu.innerHTML = `<button type="button"><span>${optionLabels[index]}</span></button>`;
+                    menu.querySelector('button').addEventListener('click', () => {
+                        input.value = optionLabels[index];
+                        const chip = doc.createElement('div');
+                        chip.className = 'remix-css-zezw7x';
+                        chip.innerHTML = `<p>${optionLabels[index]}</p><span>x</span>`;
+                        input.replaceWith(chip);
+                        appendDetails(row, index);
+                        menu.remove();
+                    });
+                    input.parentElement.append(menu);
+                }, 20);
+            });
+            doc.getElementById('certificate-fields').append(row);
+        };
+        appendCertificateRow();
+        appendCertificateRow();
+        doc.getElementById('add-certificate').addEventListener('click', appendCertificateRow);
+        const certificateProfile = {
+            sections: {
+                certificates: {
+                    certificates: [{
+                        certificateName: 'ADsP(\uB370\uC774\uD130 \uBD84\uC11D \uC900\uC804\uBB38\uAC00)',
+                        issuer: '\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0',
+                        acquiredDate: '2026-06-05',
+                        registrationNumber: 'ADsP-049026379'
+                    }, {
+                        certificateName: 'SQLD(SQL\uAC1C\uBC1C\uC790)',
+                        issuer: '\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0',
+                        acquiredDate: '2022-09-30',
+                        registrationNumber: 'SQLD-046012160'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanFastAsync(buildAutoFillPlan(doc, certificateProfile));
+        expect(result.failed).toEqual([]);
+        expect(doc.getElementById('certificate-registration-1').value).toBe('SQLD-046012160');
+        expect(doc.getElementById('certificate-date-0').value).toBe('2026-06-05');
+        expect(doc.getElementById('certificate-date-1').value).toBe('2022-09-30');
+    });
+
+    it('EXT-032: does not fill certificate details before the certificate name autocomplete is committed', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uC790\uACA9/\uAE30\uD0C0">
+          <h5>\uC790\uACA9/\uC9C0\uC2DD/\uAE30\uC220</h5>
+          <div class="certificate-row" id="certificate-row-0">
+            <div class="remix-css-zezw7x"><p>ADsP(\uB370\uC774\uD130\uBD84\uC11D\uC900\uC804\uBB38\uAC00)</p><svg></svg></div>
+            <label>\uBC1C\uAE09\uAE30\uAD00<input id="certificate-issuer-0" name="licenseGroupAnswer.licenseAnswers.0.organization" /></label>
+            <label>\uCDE8\uB4DD\uC77C<input id="certificate-date-0" placeholder="\uCDE8\uB4DD\uC77C" readonly /></label>
+            <label>\uB4F1\uB85D\uBC88\uD638<input id="certificate-registration-0" name="licenseGroupAnswer.licenseAnswers.0.registNumber" /></label>
+          </div>
+          <div class="certificate-row" id="certificate-row-1">
+            <div class="remix-css-zezw7x"><p>\uC815\uBCF4\uCC98\uB9AC\uAE30\uC0AC</p><svg></svg></div>
+            <label>\uBC1C\uAE09\uAE30\uAD00<input id="certificate-issuer-1" name="licenseGroupAnswer.licenseAnswers.1.organization" /></label>
+            <label>\uCDE8\uB4DD\uC77C<input id="certificate-date-1" placeholder="\uCDE8\uB4DD\uC77C" readonly /></label>
+            <label>\uB4F1\uB85D\uBC88\uD638<input id="certificate-registration-1" name="licenseGroupAnswer.licenseAnswers.1.registNumber" /></label>
+          </div>
+          <div class="certificate-row" id="certificate-row-2">
+            <label>\uC790\uACA9\uC99D\uBA85
+              <input id="certificate-name-2" role="combobox" aria-autocomplete="list" value="\uBE45\uB370\uC774\uD130\uBD84\uC11D\uAE30\uC0AC" placeholder="\uC790\uACA9\uC99D\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." />
+            </label>
+            <label>\uBC1C\uAE09\uAE30\uAD00<input id="certificate-issuer-2" name="licenseGroupAnswer.licenseAnswers.2.organization" /></label>
+            <label>\uCDE8\uB4DD\uC77C<input id="certificate-date-2" placeholder="\uCDE8\uB4DD\uC77C" readonly /></label>
+            <label>\uB4F1\uB85D\uBC88\uD638<input id="certificate-registration-2" name="licenseGroupAnswer.licenseAnswers.2.registNumber" /></label>
+          </div>
+        </section>
+      </form>
+    `;
+        const certificateProfile = {
+            sections: {
+                certificates: {
+                    certificates: [{
+                        certificateName: 'ADsP(\uB370\uC774\uD130\uBD84\uC11D\uC900\uC804\uBB38\uAC00)',
+                        issuer: '\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0',
+                        acquiredDate: '2026-06-05',
+                        registrationNumber: 'ADsP-049026379'
+                    }, {
+                        certificateName: '\uC815\uBCF4\uCC98\uB9AC\uAE30\uC0AC',
+                        issuer: '\uD55C\uAD6D\uC0B0\uC5C5\uC778\uB825\uACF5\uB2E8',
+                        acquiredDate: '2024-09-10',
+                        registrationNumber: '24202030579W'
+                    }, {
+                        certificateName: '\uBE45\uB370\uC774\uD130\uBD84\uC11D\uAE30\uC0AC',
+                        issuer: '\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0',
+                        acquiredDate: '2023-12-22',
+                        registrationNumber: 'BAE-007005143'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanFastAsync(buildAutoFillPlan(doc, certificateProfile));
+
+        expect(result.failed).toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'certificates.certificates.2.certificateName', reason: 'select_option_not_found' })
+        ]));
+        expect(doc.getElementById('certificate-registration-0').value).toBe('ADsP-049026379');
+        expect(doc.getElementById('certificate-registration-1').value).toBe('24202030579W');
+        expect(doc.getElementById('certificate-issuer-2').value).toBe('');
+        expect(doc.getElementById('certificate-date-2').value).toBe('');
+        expect(doc.getElementById('certificate-registration-2').value).toBe('');
+    });
+
     it('EXT-032: maps certificate detail controls by row when an earlier autocomplete row has no detail fields yet', async () => {
         const doc = document.implementation.createHTMLDocument('application');
         doc.body.innerHTML = `
@@ -6525,6 +8477,1083 @@ describe('applicationAutoFill', () => {
         ]));
     });
 
+    it('EXT-032: fills Kakao ATS selected certificate detail fields without reopening the certificate row', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uC790\uACA9/\uAE30\uD0C0">
+          <h5>\uC790\uACA9/\uC9C0\uC2DD/\uAE30\uC220</h5>
+          <div class="remix-css-98imfe">
+            <div class="remix-css-re11db">
+              <div class="remix-css-ke50n9"><p>\uC790\uACA9\uC99D</p></div>
+              <div class="remix-css-3btwcy">
+                <div class="remix-css-1uo98h9">
+                  <div class="remix-css-161k9a0">
+                    <div class="remix-css-yq5w1l" id="selected-certificate-row">
+                      <div class="remix-css-1q558ez">
+                        <div class="remix-css-1uyhs9h">
+                          <div class="remix-css-ugntnr">
+                            <div class="remix-css-zezw7x"><p>\uC815\uBCF4\uCC98\uB9AC\uAE30\uC0AC</p><svg></svg></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="remix-css-t25awl">
+                        <div class="remix-css-ke50n9"><p>\uBC1C\uAE09\uAE30\uAD00</p></div>
+                        <input id="certificate-issuer" placeholder="\uBC1C\uAE09\uAE30\uAD00\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694." name="licenseGroupAnswer.licenseAnswers.0.organization" />
+                      </div>
+                      <div class="remix-css-t25awl">
+                        <div class="remix-css-ke50n9"><p>\uCDE8\uB4DD\uC77C</p></div>
+                        <input id="certificate-date" placeholder="\uCDE8\uB4DD\uC77C" />
+                      </div>
+                      <div class="remix-css-t25awl">
+                        <div class="remix-css-ke50n9"><p>\uB4F1\uB85D\uBC88\uD638</p></div>
+                        <input id="certificate-registration" placeholder="\uB4F1\uB85D\uBC88\uD638\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694." name="licenseGroupAnswer.licenseAnswers.0.registNumber" />
+                      </div>
+                    </div>
+                  </div>
+                  <button id="add-certificate" type="button">\uCD94\uAC00\uD558\uAE30</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </form>
+    `;
+        let addClicks = 0;
+        doc.getElementById('add-certificate').addEventListener('click', () => {
+            addClicks += 1;
+        });
+        const certificateProfile = {
+            sections: {
+                certificates: {
+                    certificates: [{
+                        certificateName: '\uC815\uBCF4\uCC98\uB9AC\uAE30\uC0AC',
+                        issuer: '\uD55C\uAD6D\uC0B0\uC5C5\uC778\uB825\uACF5\uB2E8',
+                        acquiredDate: '2024-09-10',
+                        registrationNumber: '24202030579W'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = applyAutoFillPlan(buildAutoFillPlan(doc, certificateProfile));
+
+        expect(addClicks).toBe(0);
+        expect(result.failed).toEqual([]);
+        expect(result.filled).toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'certificates.certificates.0.issuer', value: '\uD55C\uAD6D\uC0B0\uC5C5\uC778\uB825\uACF5\uB2E8' }),
+            expect.objectContaining({ fieldKey: 'certificates.certificates.0.acquiredDate', value: '2024-09-10' }),
+            expect.objectContaining({ fieldKey: 'certificates.certificates.0.registrationNumber', value: '24202030579W' })
+        ]));
+        expect(doc.getElementById('certificate-issuer').value).toBe('\uD55C\uAD6D\uC0B0\uC5C5\uC778\uB825\uACF5\uB2E8');
+        expect(doc.getElementById('certificate-date').value).toBe('2024-09-10');
+        expect(doc.getElementById('certificate-registration').value).toBe('24202030579W');
+    });
+
+    it('EXT-032: waits for Kakao ATS certificate autocomplete options before filling details', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uC790\uACA9/\uAE30\uD0C0">
+          <h5>\uC790\uACA9/\uC9C0\uC2DD/\uAE30\uC220</h5>
+          <div id="certificate-row">
+            <label>\uC790\uACA9\uC99D\uBA85
+              <input id="certificate-name" placeholder="\uC790\uACA9\uC99D\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." />
+            </label>
+            <div id="certificate-details"></div>
+          </div>
+        </section>
+      </form>
+    `;
+        const input = doc.getElementById('certificate-name');
+        input.addEventListener('input', () => {
+            setTimeout(() => {
+                if (doc.getElementById('dropdown-body')) return;
+                const menu = doc.createElement('div');
+                menu.id = 'dropdown-body';
+                menu.innerHTML = '<button type="button"><span>\uC815\uBCF4\uCC98\uB9AC\uAE30\uC0AC</span></button>';
+                menu.querySelector('button').addEventListener('click', () => {
+                    input.value = '\uC815\uBCF4\uCC98\uB9AC\uAE30\uC0AC';
+                    doc.getElementById('certificate-details').innerHTML = `
+              <label>\uBC1C\uAE09\uAE30\uAD00<input id="certificate-issuer" name="licenseGroupAnswer.licenseAnswers.0.organization" /></label>
+              <label>\uCDE8\uB4DD\uC77C<input id="certificate-date" placeholder="\uCDE8\uB4DD\uC77C" /></label>
+              <label>\uB4F1\uB85D\uBC88\uD638<input id="certificate-registration" name="licenseGroupAnswer.licenseAnswers.0.registNumber" /></label>
+            `;
+                    menu.remove();
+                });
+                input.parentElement.append(menu);
+            }, 120);
+        });
+        const certificateProfile = {
+            sections: {
+                certificates: {
+                    certificates: [{
+                        certificateName: '\uC815\uBCF4\uCC98\uB9AC\uAE30\uC0AC',
+                        issuer: '\uD55C\uAD6D\uC0B0\uC5C5\uC778\uB825\uACF5\uB2E8',
+                        acquiredDate: '2024-09-10',
+                        registrationNumber: '24202030579W'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanFastAsync(buildAutoFillPlan(doc, certificateProfile));
+        expect(result.failed).toEqual([]);
+        expect(input.value).toBe('\uC815\uBCF4\uCC98\uB9AC\uAE30\uC0AC');
+        expect(doc.getElementById('certificate-issuer').value).toBe('\uD55C\uAD6D\uC0B0\uC5C5\uC778\uB825\uACF5\uB2E8');
+        expect(doc.getElementById('certificate-date').value).toBe('2024-09-10');
+        expect(doc.getElementById('certificate-registration').value).toBe('24202030579W');
+    });
+
+    it('EXT-032: commits Kakao ATS certificate autocomplete with keyboard when option click is ignored', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uC790\uACA9/\uAE30\uD0C0">
+          <h5>\uC790\uACA9/\uC9C0\uC2DD/\uAE30\uC220</h5>
+          <div id="certificate-row">
+            <label>\uC790\uACA9\uC99D\uBA85
+              <input id="certificate-name" role="combobox" aria-autocomplete="list" placeholder="\uC790\uACA9\uC99D\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." />
+            </label>
+            <div id="certificate-details"></div>
+          </div>
+        </section>
+      </form>
+    `;
+        const input = doc.getElementById('certificate-name');
+        input.addEventListener('input', () => {
+            if (doc.getElementById('dropdown-body')) return;
+            const menu = doc.createElement('div');
+            menu.id = 'dropdown-body';
+            menu.innerHTML = '<button type="button"><span>SQLD(SQL\uAC1C\uBC1C\uC790)</span></button>';
+            input.parentElement.append(menu);
+        });
+        input.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter') return;
+            input.value = 'SQLD(SQL\uAC1C\uBC1C\uC790)';
+            doc.getElementById('certificate-details').innerHTML = `
+          <label>\uBC1C\uAE09\uAE30\uAD00<input id="certificate-issuer" name="licenseGroupAnswer.licenseAnswers.0.organization" /></label>
+          <label>\uCDE8\uB4DD\uC77C<input id="certificate-date" placeholder="\uCDE8\uB4DD\uC77C" /></label>
+          <label>\uB4F1\uB85D\uBC88\uD638<input id="certificate-registration" name="licenseGroupAnswer.licenseAnswers.0.registNumber" /></label>
+        `;
+            doc.getElementById('dropdown-body')?.remove();
+        });
+        const certificateProfile = {
+            sections: {
+                certificates: {
+                    certificates: [{
+                        certificateName: 'SQLD(SQL\uAC1C\uBC1C\uC790)',
+                        issuer: '\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0',
+                        acquiredDate: '2022-09-30',
+                        registrationNumber: 'SQLD-046012160'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanFastAsync(buildAutoFillPlan(doc, certificateProfile));
+
+        expect(result.failed).toEqual([]);
+        expect(input.value).toBe('SQLD(SQL\uAC1C\uBC1C\uC790)');
+        expect(doc.getElementById('certificate-issuer').value).toBe('\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0');
+        expect(doc.getElementById('certificate-date').value).toBe('2022-09-30');
+        expect(doc.getElementById('certificate-registration').value).toBe('SQLD-046012160');
+    });
+
+    it('EXT-032: commits SQLD after existing certificate rows without moving its details into ADsP', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uC790\uACA9/\uAE30\uD0C0">
+          <h5>\uC790\uACA9/\uC9C0\uC2DD/\uAE30\uC220</h5>
+          <div class="certificate-row" id="certificate-row-0">
+            <div class="remix-css-zezw7x"><p>ADsP(\uB370\uC774\uD130\uBD84\uC11D\uC900\uC804\uBB38\uAC00)</p><svg></svg></div>
+            <label>\uBC1C\uAE09\uAE30\uAD00<input id="certificate-issuer-0" name="licenseGroupAnswer.licenseAnswers.0.organization" /></label>
+            <label>\uCDE8\uB4DD\uC77C<input id="certificate-date-0" placeholder="\uCDE8\uB4DD\uC77C" readonly /></label>
+            <label>\uB4F1\uB85D\uBC88\uD638<input id="certificate-registration-0" name="licenseGroupAnswer.licenseAnswers.0.registNumber" /></label>
+          </div>
+          <div class="certificate-row" id="certificate-row-1">
+            <div class="remix-css-zezw7x"><p>\uC815\uBCF4\uCC98\uB9AC\uAE30\uC0AC</p><svg></svg></div>
+            <label>\uBC1C\uAE09\uAE30\uAD00<input id="certificate-issuer-1" name="licenseGroupAnswer.licenseAnswers.1.organization" /></label>
+            <label>\uCDE8\uB4DD\uC77C<input id="certificate-date-1" placeholder="\uCDE8\uB4DD\uC77C" readonly /></label>
+            <label>\uB4F1\uB85D\uBC88\uD638<input id="certificate-registration-1" name="licenseGroupAnswer.licenseAnswers.1.registNumber" /></label>
+          </div>
+          <div class="certificate-row" id="certificate-row-2">
+            <div class="remix-css-zezw7x"><p>\uBE45\uB370\uC774\uD130\uBD84\uC11D\uAE30\uC0AC</p><svg></svg></div>
+            <label>\uBC1C\uAE09\uAE30\uAD00<input id="certificate-issuer-2" name="licenseGroupAnswer.licenseAnswers.2.organization" /></label>
+            <label>\uCDE8\uB4DD\uC77C<input id="certificate-date-2" placeholder="\uCDE8\uB4DD\uC77C" readonly /></label>
+            <label>\uB4F1\uB85D\uBC88\uD638<input id="certificate-registration-2" name="licenseGroupAnswer.licenseAnswers.2.registNumber" /></label>
+          </div>
+          <div class="certificate-row" id="certificate-row-3">
+            <label>\uC790\uACA9\uC99D\uBA85
+              <input id="certificate-name-3" role="combobox" aria-autocomplete="list" value="SQLD" placeholder="\uC790\uACA9\uC99D\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." />
+            </label>
+            <div id="dropdown-body">
+              <button type="button"><span>SQLD(SQL\uAC1C\uBC1C\uC790)</span></button>
+              <button type="button"><span>+ 'SQLD' \uB4F1\uB85D\uD558\uAE30</span></button>
+            </div>
+            <div id="certificate-details-3"></div>
+          </div>
+        </section>
+      </form>
+    `;
+        const sqlInput = doc.getElementById('certificate-name-3');
+        sqlInput.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter') return;
+            sqlInput.value = 'SQLD(SQL\uAC1C\uBC1C\uC790)';
+            doc.getElementById('dropdown-body')?.remove();
+            doc.getElementById('certificate-details-3').innerHTML = `
+          <label>\uBC1C\uAE09\uAE30\uAD00<input id="certificate-issuer-3" name="licenseGroupAnswer.licenseAnswers.3.organization" /></label>
+          <label>\uCDE8\uB4DD\uC77C<input id="certificate-date-3" placeholder="\uCDE8\uB4DD\uC77C" readonly /></label>
+          <label>\uB4F1\uB85D\uBC88\uD638<input id="certificate-registration-3" name="licenseGroupAnswer.licenseAnswers.3.registNumber" /></label>
+        `;
+        });
+        const certificateProfile = {
+            sections: {
+                certificates: {
+                    certificates: [{
+                        certificateName: 'ADsP(\uB370\uC774\uD130\uBD84\uC11D\uC900\uC804\uBB38\uAC00)',
+                        issuer: '\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0',
+                        acquiredDate: '2026-06-05',
+                        registrationNumber: 'ADsP-049026379'
+                    }, {
+                        certificateName: '\uC815\uBCF4\uCC98\uB9AC\uAE30\uC0AC',
+                        issuer: '\uD55C\uAD6D\uC0B0\uC5C5\uC778\uB825\uACF5\uB2E8',
+                        acquiredDate: '2024-09-10',
+                        registrationNumber: '24202030579W'
+                    }, {
+                        certificateName: '\uBE45\uB370\uC774\uD130\uBD84\uC11D\uAE30\uC0AC',
+                        issuer: '\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0',
+                        acquiredDate: '2023-12-22',
+                        registrationNumber: 'BAE-007005143'
+                    }, {
+                        certificateName: 'SQLD(SQL\uAC1C\uBC1C\uC790)',
+                        issuer: '\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0',
+                        acquiredDate: '2022-09-30',
+                        registrationNumber: 'SQLD-046012160'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const plan = buildAutoFillPlan(doc, certificateProfile);
+        const result = await applyAutoFillPlanFastAsync(plan);
+
+        expect(result.failed).toEqual([]);
+        expect(doc.getElementById('certificate-registration-0').value).toBe('ADsP-049026379');
+        expect(doc.getElementById('certificate-registration-1').value).toBe('24202030579W');
+        expect(doc.getElementById('certificate-registration-2').value).toBe('BAE-007005143');
+        expect(doc.getElementById('certificate-registration-3').value).toBe('SQLD-046012160');
+        expect(doc.getElementById('certificate-issuer-3').value).toBe('\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0');
+        expect(doc.getElementById('certificate-date-3').value).toBe('2022-09-30');
+    });
+
+    it('EXT-032: selects SQLD in the fourth Kakao ATS certificate row without explicit row classes', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uC790\uACA9/\uAE30\uD0C0">
+          <h5>\uC790\uACA9/\uC9C0\uC2DD/\uAE30\uC220</h5>
+          <div class="remix-css-1uo98h9">
+            <div class="remix-css-yq5w1l" id="ats-row-0">
+              <div class="remix-css-zezw7x"><p>ADsP(\uB370\uC774\uD130\uBD84\uC11D\uC900\uC804\uBB38\uAC00)</p><svg></svg></div>
+              <input id="certificate-issuer-0" name="licenseGroupAnswer.licenseAnswers.0.organization" placeholder="\uBC1C\uAE09\uAE30\uAD00" />
+              <button id="certificate-date-0" type="button" aria-haspopup="dialog">\uCDE8\uB4DD\uC77C</button>
+              <input id="certificate-registration-0" name="licenseGroupAnswer.licenseAnswers.0.registNumber" placeholder="\uB4F1\uB85D\uBC88\uD638" />
+            </div>
+            <div class="remix-css-yq5w1l" id="ats-row-1">
+              <div class="remix-css-zezw7x"><p>\uC815\uBCF4\uCC98\uB9AC\uAE30\uC0AC</p><svg></svg></div>
+              <input id="certificate-issuer-1" name="licenseGroupAnswer.licenseAnswers.1.organization" placeholder="\uBC1C\uAE09\uAE30\uAD00" />
+              <button id="certificate-date-1" type="button" aria-haspopup="dialog">\uCDE8\uB4DD\uC77C</button>
+              <input id="certificate-registration-1" name="licenseGroupAnswer.licenseAnswers.1.registNumber" placeholder="\uB4F1\uB85D\uBC88\uD638" />
+            </div>
+            <div class="remix-css-yq5w1l" id="ats-row-2">
+              <div class="remix-css-zezw7x"><p>\uBE45\uB370\uC774\uD130\uBD84\uC11D\uAE30\uC0AC</p><svg></svg></div>
+              <input id="certificate-issuer-2" name="licenseGroupAnswer.licenseAnswers.2.organization" placeholder="\uBC1C\uAE09\uAE30\uAD00" />
+              <button id="certificate-date-2" type="button" aria-haspopup="dialog">\uCDE8\uB4DD\uC77C</button>
+              <input id="certificate-registration-2" name="licenseGroupAnswer.licenseAnswers.2.registNumber" placeholder="\uB4F1\uB85D\uBC88\uD638" />
+            </div>
+            <div class="remix-css-yq5w1l" id="ats-row-3">
+              <input id="certificate-name-3" placeholder="\uC790\uACA9\uC99D\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." />
+              <div id="certificate-details-3"></div>
+            </div>
+          </div>
+        </section>
+      </form>
+    `;
+        const sqlInput = doc.getElementById('certificate-name-3');
+        sqlInput.addEventListener('input', () => {
+            if (doc.getElementById('dropdown-body')) return;
+            const menu = doc.createElement('div');
+            menu.id = 'dropdown-body';
+            menu.innerHTML = `
+          <button type="button"><span>SQLD(SQL\uAC1C\uBC1C\uC790)</span></button>
+          <button type="button"><span>+ 'SQLD' \uB4F1\uB85D\uD558\uAE30</span></button>
+        `;
+            menu.querySelector('button').addEventListener('click', () => {
+                const chip = doc.createElement('div');
+                chip.className = 'remix-css-zezw7x';
+                chip.innerHTML = '<p>SQLD(SQL\uAC1C\uBC1C\uC790)</p><svg></svg>';
+                sqlInput.replaceWith(chip);
+                doc.getElementById('certificate-details-3').innerHTML = `
+            <input id="certificate-issuer-3" name="licenseGroupAnswer.licenseAnswers.3.organization" placeholder="\uBC1C\uAE09\uAE30\uAD00" />
+            <input id="certificate-date-3" placeholder="\uCDE8\uB4DD\uC77C" />
+            <input id="certificate-registration-3" name="licenseGroupAnswer.licenseAnswers.3.registNumber" placeholder="\uB4F1\uB85D\uBC88\uD638" />
+          `;
+                menu.remove();
+            });
+            sqlInput.parentElement.append(menu);
+        });
+        const certificateProfile = {
+            sections: {
+                certificates: {
+                    certificates: [{
+                        certificateName: 'ADsP(\uB370\uC774\uD130\uBD84\uC11D\uC900\uC804\uBB38\uAC00)',
+                        issuer: '\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0',
+                        acquiredDate: '2026-06-05',
+                        registrationNumber: 'ADsP-049026379'
+                    }, {
+                        certificateName: '\uC815\uBCF4\uCC98\uB9AC\uAE30\uC0AC',
+                        issuer: '\uD55C\uAD6D\uC0B0\uC5C5\uC778\uB825\uACF5\uB2E8',
+                        acquiredDate: '2024-09-10',
+                        registrationNumber: '24202030579W'
+                    }, {
+                        certificateName: '\uBE45\uB370\uC774\uD130\uBD84\uC11D\uAE30\uC0AC',
+                        issuer: '\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0',
+                        acquiredDate: '2023-12-22',
+                        registrationNumber: 'BAE-007005143'
+                    }, {
+                        certificateName: 'SQLD(SQL\uAC1C\uBC1C\uC790)',
+                        issuer: '\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0',
+                        acquiredDate: '2022-09-30',
+                        registrationNumber: 'SQLD-046012160'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanFastAsync(buildAutoFillPlan(doc, certificateProfile));
+
+        expect(result.failed).not.toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'certificates.certificates.3.certificateName' })
+        ]));
+        expect(doc.getElementById('certificate-registration-0').value).toBe('ADsP-049026379');
+        expect(doc.getElementById('certificate-registration-1').value).toBe('24202030579W');
+        expect(doc.getElementById('certificate-registration-2').value).toBe('BAE-007005143');
+        expect(doc.getElementById('certificate-registration-3').value).toBe('SQLD-046012160');
+        expect(doc.getElementById('certificate-issuer-3').value).toBe('\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0');
+        expect(doc.getElementById('certificate-date-3').value).toBe('2022-09-30');
+    });
+
+    it('EXT-032: adds the fourth Kakao ATS certificate row before entering SQLD', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uC790\uACA9/\uAE30\uD0C0">
+          <h5>\uC790\uACA9/\uC9C0\uC2DD/\uAE30\uC220</h5>
+          <div class="remix-css-1uo98h9" id="certificate-fields">
+            <div class="remix-css-yq5w1l" id="ats-row-0">
+              <div class="remix-css-zezw7x"><p>ADsP(\uB370\uC774\uD130\uBD84\uC11D\uC900\uC804\uBB38\uAC00)</p><svg></svg></div>
+              <input id="certificate-issuer-0" name="licenseGroupAnswer.licenseAnswers.0.organization" />
+              <input id="certificate-date-0" placeholder="\uCDE8\uB4DD\uC77C" />
+              <input id="certificate-registration-0" name="licenseGroupAnswer.licenseAnswers.0.registNumber" />
+            </div>
+            <div class="remix-css-yq5w1l" id="ats-row-1">
+              <div class="remix-css-zezw7x"><p>\uC815\uBCF4\uCC98\uB9AC\uAE30\uC0AC</p><svg></svg></div>
+              <input id="certificate-issuer-1" name="licenseGroupAnswer.licenseAnswers.1.organization" />
+              <input id="certificate-date-1" placeholder="\uCDE8\uB4DD\uC77C" />
+              <input id="certificate-registration-1" name="licenseGroupAnswer.licenseAnswers.1.registNumber" />
+            </div>
+            <div class="remix-css-yq5w1l" id="ats-row-2">
+              <div class="remix-css-zezw7x"><p>\uBE45\uB370\uC774\uD130\uBD84\uC11D\uAE30\uC0AC</p><svg></svg></div>
+              <input id="certificate-issuer-2" name="licenseGroupAnswer.licenseAnswers.2.organization" />
+              <input id="certificate-date-2" placeholder="\uCDE8\uB4DD\uC77C" />
+              <input id="certificate-registration-2" name="licenseGroupAnswer.licenseAnswers.2.registNumber" />
+            </div>
+          </div>
+          <button id="add-certificate" type="button">+ \uCD94\uAC00\uD558\uAE30</button>
+        </section>
+      </form>
+    `;
+        doc.getElementById('add-certificate').addEventListener('click', () => {
+            if (doc.getElementById('ats-row-3')) return;
+            doc.getElementById('certificate-fields').insertAdjacentHTML('beforeend', `
+        <div class="remix-css-yq5w1l" id="ats-row-3">
+          <input id="certificate-name-3" placeholder="\uC790\uACA9\uC99D\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." />
+          <div id="certificate-details-3"></div>
+        </div>
+      `);
+            const sqlInput = doc.getElementById('certificate-name-3');
+            sqlInput.addEventListener('input', () => {
+                if (doc.getElementById('dropdown-body')) return;
+                const menu = doc.createElement('div');
+                menu.id = 'dropdown-body';
+                menu.innerHTML = '<button type="button"><span>SQLD(SQL\uAC1C\uBC1C\uC790)</span></button>';
+                menu.querySelector('button').addEventListener('click', () => {
+                    const chip = doc.createElement('div');
+                    chip.className = 'remix-css-zezw7x';
+                    chip.innerHTML = '<p>SQLD(SQL\uAC1C\uBC1C\uC790)</p><svg></svg>';
+                    sqlInput.replaceWith(chip);
+                    doc.getElementById('certificate-details-3').innerHTML = `
+            <input id="certificate-issuer-3" name="licenseGroupAnswer.licenseAnswers.3.organization" />
+            <input id="certificate-date-3" placeholder="\uCDE8\uB4DD\uC77C" />
+            <input id="certificate-registration-3" name="licenseGroupAnswer.licenseAnswers.3.registNumber" />
+          `;
+                    menu.remove();
+                });
+                sqlInput.parentElement.append(menu);
+            });
+        });
+        const certificateProfile = {
+            sections: {
+                certificates: {
+                    certificates: [{
+                        certificateName: 'ADsP(\uB370\uC774\uD130\uBD84\uC11D\uC900\uC804\uBB38\uAC00)',
+                        issuer: '\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0',
+                        acquiredDate: '2026-06-05',
+                        registrationNumber: 'ADsP-049026379'
+                    }, {
+                        certificateName: '\uC815\uBCF4\uCC98\uB9AC\uAE30\uC0AC',
+                        issuer: '\uD55C\uAD6D\uC0B0\uC5C5\uC778\uB825\uACF5\uB2E8',
+                        acquiredDate: '2024-09-10',
+                        registrationNumber: '24202030579W'
+                    }, {
+                        certificateName: '\uBE45\uB370\uC774\uD130\uBD84\uC11D\uAE30\uC0AC',
+                        issuer: '\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0',
+                        acquiredDate: '2023-12-22',
+                        registrationNumber: 'BAE-007005143'
+                    }, {
+                        certificateName: 'SQLD(SQL\uAC1C\uBC1C\uC790)',
+                        issuer: '\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0',
+                        acquiredDate: '2022-09-30',
+                        registrationNumber: 'SQLD-046012160'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanFastAsync(buildAutoFillPlan(doc, certificateProfile));
+
+        expect(result.failed).toEqual([]);
+        expect(doc.getElementById('certificate-name-3')).toBeNull();
+        expect(doc.getElementById('certificate-issuer-3').value).toBe('\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0');
+        expect(doc.getElementById('certificate-date-3').value).toBe('2022-09-30');
+        expect(doc.getElementById('certificate-registration-3').value).toBe('SQLD-046012160');
+    });
+
+    it('EXT-032: keeps adding Kakao ATS certificate rows after the first blank row is selected', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uC790\uACA9/\uAE30\uD0C0">
+          <h5>\uC790\uACA9/\uC9C0\uC2DD/\uAE30\uC220</h5>
+          <div class="remix-css-1uo98h9" id="certificate-fields">
+            <div class="remix-css-yq5w1l" id="ats-row-0">
+              <input id="certificate-name-0" placeholder="\uC790\uACA9\uC99D\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." />
+              <div id="certificate-details-0"></div>
+            </div>
+          </div>
+          <button id="add-certificate" type="button">+ \uCD94\uAC00\uD558\uAE30</button>
+        </section>
+      </form>
+    `;
+        const savedCertificates = [
+            ['ADsP(\uB370\uC774\uD130\uBD84\uC11D\uC900\uC804\uBB38\uAC00)', '\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0', '2026-06-05', 'ADsP-049026379'],
+            ['\uC815\uBCF4\uCC98\uB9AC\uAE30\uC0AC', '\uD55C\uAD6D\uC0B0\uC5C5\uC778\uB825\uACF5\uB2E8', '2024-09-10', '24202030579W'],
+            ['\uBE45\uB370\uC774\uD130\uBD84\uC11D\uAE30\uC0AC', '\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0', '2023-12-22', 'BAE-007005143'],
+            ['SQLD(SQL\uAC1C\uBC1C\uC790)', '\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0', '2022-09-30', 'SQLD-046012160']
+        ];
+        const attachCertificateSearch = (index) => {
+            const input = doc.getElementById(`certificate-name-${index}`);
+            input.addEventListener('input', () => {
+                doc.getElementById('dropdown-body')?.remove();
+                const menu = doc.createElement('div');
+                menu.id = 'dropdown-body';
+                const matching = savedCertificates.find(([name]) => {
+                    const typed = input.value.replace(/\s+/g, '');
+                    return name.replace(/\s+/g, '').includes(typed) || typed.includes(name.split('(')[0].replace(/\s+/g, ''));
+                }) ?? savedCertificates[index];
+                menu.innerHTML = `<button type="button"><span>${matching[0]}</span></button>`;
+                menu.querySelector('button').addEventListener('click', () => {
+                    const chip = doc.createElement('div');
+                    chip.className = 'remix-css-zezw7x';
+                    chip.innerHTML = `<p>${matching[0]}</p><svg></svg>`;
+                    input.replaceWith(chip);
+                    doc.getElementById(`certificate-details-${index}`).innerHTML = `
+            <input id="certificate-issuer-${index}" name="licenseGroupAnswer.licenseAnswers.${index}.organization" />
+            <input id="certificate-date-${index}" placeholder="\uCDE8\uB4DD\uC77C" />
+            <input id="certificate-registration-${index}" name="licenseGroupAnswer.licenseAnswers.${index}.registNumber" />
+          `;
+                    menu.remove();
+                });
+                input.parentElement.append(menu);
+            });
+        };
+        attachCertificateSearch(0);
+        let addClicks = 0;
+        doc.getElementById('add-certificate').addEventListener('click', () => {
+            addClicks += 1;
+            const index = doc.querySelectorAll('[id^="ats-row-"]').length;
+            doc.getElementById('certificate-fields').insertAdjacentHTML('beforeend', `
+        <div class="remix-css-yq5w1l" id="ats-row-${index}">
+          <input id="certificate-name-${index}" placeholder="\uC790\uACA9\uC99D\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." />
+          <div id="certificate-details-${index}"></div>
+        </div>
+      `);
+            attachCertificateSearch(index);
+        });
+        const certificateProfile = {
+            sections: {
+                certificates: {
+                    certificates: savedCertificates.map(([certificateName, issuer, acquiredDate, registrationNumber]) => ({
+                        certificateName,
+                        issuer,
+                        acquiredDate,
+                        registrationNumber
+                    }))
+                }
+            },
+            customFields: []
+        };
+
+        const plan = buildAutoFillPlan(doc, certificateProfile);
+        const result = await applyAutoFillPlanFastAsync(plan);
+
+        expect(result.failed).toEqual([]);
+        expect(addClicks).toBe(3);
+        expect(Array.from(doc.querySelectorAll('.remix-css-zezw7x')).map((chip) => chip.textContent.trim())).toEqual(savedCertificates.map(([name]) => name));
+        expect(doc.getElementById('certificate-registration-0').value).toBe('ADsP-049026379');
+        expect(doc.getElementById('certificate-registration-1').value).toBe('24202030579W');
+        expect(doc.getElementById('certificate-registration-2').value).toBe('BAE-007005143');
+        expect(doc.getElementById('certificate-registration-3').value).toBe('SQLD-046012160');
+        expect(doc.getElementById('certificate-date-0').value).toBe('2026-06-05');
+        expect(doc.getElementById('certificate-date-1').value).toBe('2024-09-10');
+        expect(doc.getElementById('certificate-date-2').value).toBe('2023-12-22');
+        expect(doc.getElementById('certificate-date-3').value).toBe('2022-09-30');
+    });
+
+    it('EXT-032: chooses the certificate add button after the selected row when other add buttons exist first', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uC790\uACA9/\uAE30\uD0C0">
+          <h5>\uC790\uACA9/\uC9C0\uC2DD/\uAE30\uC220</h5>
+          <button id="other-add" type="button">+ \uCD94\uAC00\uD558\uAE30</button>
+          <div id="certificate-fields">
+            <div id="ats-row-0">
+              <input id="certificate-name-0" placeholder="\uC790\uACA9\uC99D\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." />
+              <div id="certificate-details-0"></div>
+            </div>
+          </div>
+          <button id="add-certificate" type="button">+ \uCD94\uAC00\uD558\uAE30</button>
+        </section>
+      </form>
+    `;
+        const savedCertificates = [
+            ['ADsP(\uB370\uC774\uD130\uBD84\uC11D\uC900\uC804\uBB38\uAC00)', '\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0', '2026-06-05', 'ADsP-049026379'],
+            ['\uC815\uBCF4\uCC98\uB9AC\uAE30\uC0AC', '\uD55C\uAD6D\uC0B0\uC5C5\uC778\uB825\uACF5\uB2E8', '2024-09-10', '24202030579W']
+        ];
+        const attachCertificateSearch = (index) => {
+            const input = doc.getElementById(`certificate-name-${index}`);
+            input.addEventListener('input', () => {
+                doc.getElementById('dropdown-body')?.remove();
+                const menu = doc.createElement('div');
+                menu.id = 'dropdown-body';
+                const matching = savedCertificates.find(([name]) => {
+                    const typed = input.value.replace(/\s+/g, '');
+                    return name.replace(/\s+/g, '').includes(typed) || typed.includes(name.split('(')[0].replace(/\s+/g, ''));
+                }) ?? savedCertificates[index];
+                menu.innerHTML = `<button type="button"><span>${matching[0]}</span></button>`;
+                menu.querySelector('button').addEventListener('click', () => {
+                    const chip = doc.createElement('div');
+                    chip.className = 'remix-css-zezw7x';
+                    chip.innerHTML = `<p>${matching[0]}</p><svg></svg>`;
+                    input.replaceWith(chip);
+                    doc.getElementById(`certificate-details-${index}`).innerHTML = `
+            <input id="certificate-issuer-${index}" name="licenseGroupAnswer.licenseAnswers.${index}.organization" />
+            <input id="certificate-date-${index}" placeholder="\uCDE8\uB4DD\uC77C" />
+            <input id="certificate-registration-${index}" name="licenseGroupAnswer.licenseAnswers.${index}.registNumber" />
+          `;
+                    menu.remove();
+                });
+                input.parentElement.append(menu);
+            });
+        };
+        attachCertificateSearch(0);
+        let otherAddClicks = 0;
+        let certificateAddClicks = 0;
+        doc.getElementById('other-add').addEventListener('click', () => {
+            otherAddClicks += 1;
+        });
+        doc.getElementById('add-certificate').addEventListener('click', () => {
+            certificateAddClicks += 1;
+            const index = doc.querySelectorAll('[id^="ats-row-"]').length;
+            doc.getElementById('certificate-fields').insertAdjacentHTML('beforeend', `
+        <div id="ats-row-${index}">
+          <input id="certificate-name-${index}" placeholder="\uC790\uACA9\uC99D\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." />
+          <div id="certificate-details-${index}"></div>
+        </div>
+      `);
+            attachCertificateSearch(index);
+        });
+        const certificateProfile = {
+            sections: {
+                certificates: {
+                    certificates: savedCertificates.map(([certificateName, issuer, acquiredDate, registrationNumber]) => ({
+                        certificateName,
+                        issuer,
+                        acquiredDate,
+                        registrationNumber
+                    }))
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanFastAsync(buildAutoFillPlan(doc, certificateProfile));
+
+        expect(result.failed).toEqual([]);
+        expect(otherAddClicks).toBe(0);
+        expect(certificateAddClicks).toBe(1);
+        expect(Array.from(doc.querySelectorAll('.remix-css-zezw7x')).map((chip) => chip.textContent.trim())).toEqual(savedCertificates.map(([name]) => name));
+        expect(doc.getElementById('certificate-registration-0').value).toBe('ADsP-049026379');
+        expect(doc.getElementById('certificate-registration-1').value).toBe('24202030579W');
+        expect(doc.getElementById('certificate-date-0').value).toBe('2026-06-05');
+        expect(doc.getElementById('certificate-date-1').value).toBe('2024-09-10');
+    });
+
+    it('EXT-032: maps a no-name acquired date input by sibling licenseAnswers index in a selected SQLD row', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uC790\uACA9/\uAE30\uD0C0">
+          <h5>\uC790\uACA9/\uC9C0\uC2DD/\uAE30\uC220</h5>
+          <div id="ats-row-3">
+            <div class="remix-css-zezw7x"><p>SQLD(SQL\uAC1C\uBC1C\uC790)</p><svg></svg></div>
+            <div class="remix-css-t25awl">
+              <input id="certificate-issuer-3" name="licenseGroupAnswer.licenseAnswers.3.organization" placeholder="\uBC1C\uAE09\uAE30\uAD00\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694." />
+            </div>
+            <div class="remix-css-1gtfl7l">
+              <svg></svg>
+              <input id="certificate-date-3" placeholder="\uCDE8\uB4DD\uC77C" type="text" style="cursor:pointer" />
+            </div>
+            <div class="remix-css-t25awl">
+              <input id="certificate-registration-3" name="licenseGroupAnswer.licenseAnswers.3.registNumber" placeholder="\uB4F1\uB85D\uBC88\uD638\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694." />
+            </div>
+          </div>
+        </section>
+      </form>
+    `;
+        const certificateProfile = {
+            sections: {
+                certificates: {
+                    certificates: [{
+                        certificateName: 'ADsP(\uB370\uC774\uD130\uBD84\uC11D\uC900\uC804\uBB38\uAC00)',
+                        acquiredDate: '2026-06-05',
+                        registrationNumber: 'ADsP-049026379'
+                    }, {
+                        certificateName: '\uC815\uBCF4\uCC98\uB9AC\uAE30\uC0AC',
+                        acquiredDate: '2024-09-10',
+                        registrationNumber: '24202030579W'
+                    }, {
+                        certificateName: '\uBE45\uB370\uC774\uD130\uBD84\uC11D\uAE30\uC0AC',
+                        acquiredDate: '2023-12-22',
+                        registrationNumber: 'BAE-007005143'
+                    }, {
+                        certificateName: 'SQLD(SQL\uAC1C\uBC1C\uC790)',
+                        issuer: '\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0',
+                        acquiredDate: '2022-09-30',
+                        registrationNumber: 'SQLD-046012160'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanFastAsync(buildAutoFillPlan(doc, certificateProfile));
+
+        expect(result.failed).not.toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'certificates.certificates.3.acquiredDate' })
+        ]));
+        expect(doc.getElementById('certificate-issuer-3').value).toBe('\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0');
+        expect(doc.getElementById('certificate-date-3').value).toBe('2022-09-30');
+        expect(doc.getElementById('certificate-registration-3').value).toBe('SQLD-046012160');
+    });
+
+    it('EXT-032: fills Kakao ATS certificate acquired date after stable row inputs', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uC790\uACA9/\uAE30\uD0C0">
+          <h5>\uC790\uACA9/\uC9C0\uC2DD/\uAE30\uC220</h5>
+          <div id="ats-row-3">
+            <div class="remix-css-zezw7x"><p>SQLD(SQL\uAC1C\uBC1C\uC790)</p><svg></svg></div>
+            <input id="certificate-issuer-3" name="licenseGroupAnswer.licenseAnswers.3.organization" />
+            <input id="certificate-date-3" placeholder="\uCDE8\uB4DD\uC77C" type="text" style="cursor:pointer" />
+            <input id="certificate-registration-3" name="licenseGroupAnswer.licenseAnswers.3.registNumber" />
+          </div>
+        </section>
+      </form>
+    `;
+        const dateInput = doc.getElementById('certificate-date-3');
+        const resetDateOnSiblingChange = () => {
+            dateInput.value = '';
+        };
+        doc.getElementById('certificate-issuer-3').addEventListener('change', resetDateOnSiblingChange);
+        doc.getElementById('certificate-registration-3').addEventListener('change', resetDateOnSiblingChange);
+        const certificateProfile = {
+            sections: {
+                certificates: {
+                    certificates: [{
+                        certificateName: 'ADsP(\uB370\uC774\uD130\uBD84\uC11D\uC900\uC804\uBB38\uAC00)',
+                        acquiredDate: '2026-06-05',
+                        registrationNumber: 'ADsP-049026379'
+                    }, {
+                        certificateName: '\uC815\uBCF4\uCC98\uB9AC\uAE30\uC0AC',
+                        acquiredDate: '2024-09-10',
+                        registrationNumber: '24202030579W'
+                    }, {
+                        certificateName: '\uBE45\uB370\uC774\uD130\uBD84\uC11D\uAE30\uC0AC',
+                        acquiredDate: '2023-12-22',
+                        registrationNumber: 'BAE-007005143'
+                    }, {
+                        certificateName: 'SQLD(SQL\uAC1C\uBC1C\uC790)',
+                        issuer: '\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0',
+                        acquiredDate: '2022-09-30',
+                        registrationNumber: 'SQLD-046012160'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanFastAsync(buildAutoFillPlan(doc, certificateProfile));
+
+        expect(result.failed).toEqual([]);
+        expect(doc.getElementById('certificate-issuer-3').value).toBe('\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0');
+        expect(doc.getElementById('certificate-registration-3').value).toBe('SQLD-046012160');
+        expect(dateInput.value).toBe('2022-09-30');
+    });
+
+    it('EXT-032: keyboard commits SQLD when the option click does not commit selection', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uC790\uACA9/\uAE30\uD0C0">
+          <h5>\uC790\uACA9/\uC9C0\uC2DD/\uAE30\uC220</h5>
+          <div id="certificate-row">
+            <input id="certificate-name" role="combobox" aria-autocomplete="list" placeholder="\uC790\uACA9\uC99D\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." />
+            <div id="certificate-details"></div>
+          </div>
+        </section>
+      </form>
+    `;
+        const input = doc.getElementById('certificate-name');
+        input.addEventListener('input', () => {
+            if (doc.getElementById('dropdown-body')) return;
+            const menu = doc.createElement('div');
+            menu.id = 'dropdown-body';
+            menu.innerHTML = '<button id="sql-option" type="button"><span>SQLD(SQL\uAC1C\uBC1C\uC790)</span></button>';
+            menu.querySelector('button').addEventListener('click', () => {
+                menu.querySelector('button').focus();
+            });
+            input.parentElement.append(menu);
+        });
+        input.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter') return;
+            input.value = 'SQLD(SQL\uAC1C\uBC1C\uC790)';
+            doc.getElementById('dropdown-body')?.remove();
+            doc.getElementById('certificate-details').innerHTML = `
+          <input id="certificate-issuer" name="licenseGroupAnswer.licenseAnswers.0.organization" />
+          <input id="certificate-date" placeholder="\uCDE8\uB4DD\uC77C" />
+          <input id="certificate-registration" name="licenseGroupAnswer.licenseAnswers.0.registNumber" />
+        `;
+        });
+        const certificateProfile = {
+            sections: {
+                certificates: {
+                    certificates: [{
+                        certificateName: 'SQLD(SQL\uAC1C\uBC1C\uC790)',
+                        issuer: '\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0',
+                        acquiredDate: '2022-09-30',
+                        registrationNumber: 'SQLD-046012160'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanFastAsync(buildAutoFillPlan(doc, certificateProfile));
+
+        expect(result.failed).toEqual([]);
+        expect(doc.getElementById('certificate-issuer').value).toBe('\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0');
+        expect(doc.getElementById('certificate-date').value).toBe('2022-09-30');
+        expect(doc.getElementById('certificate-registration').value).toBe('SQLD-046012160');
+    });
+
+    it('EXT-032: orders visible selected certificate details before searching the next certificate', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uC790\uACA9/\uAE30\uD0C0">
+          <h5>\uC790\uACA9/\uC9C0\uC2DD/\uAE30\uC220</h5>
+          <div class="certificate-row" id="certificate-row-0">
+            <div class="remix-css-zezw7x"><p>ADsP(\uB370\uC774\uD130\uBD84\uC11D\uC900\uC804\uBB38\uAC00)</p><svg></svg></div>
+            <label>\uBC1C\uAE09\uAE30\uAD00<input id="certificate-issuer-0" name="licenseGroupAnswer.licenseAnswers.0.organization" /></label>
+            <label>\uCDE8\uB4DD\uC77C<input id="certificate-date-0" placeholder="\uCDE8\uB4DD\uC77C" readonly /></label>
+            <label>\uB4F1\uB85D\uBC88\uD638<input id="certificate-registration-0" name="licenseGroupAnswer.licenseAnswers.0.registNumber" /></label>
+          </div>
+          <div class="certificate-row" id="certificate-row-1">
+            <label>\uC790\uACA9\uC99D\uBA85
+              <input id="certificate-name-1" role="combobox" aria-autocomplete="list" value="SQLD" placeholder="\uC790\uACA9\uC99D\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." />
+            </label>
+            <div id="dropdown-body"><button type="button"><span>SQLD(SQL\uAC1C\uBC1C\uC790)</span></button></div>
+          </div>
+        </section>
+      </form>
+    `;
+        const certificateProfile = {
+            sections: {
+                certificates: {
+                    certificates: [{
+                        certificateName: 'ADsP(\uB370\uC774\uD130\uBD84\uC11D\uC900\uC804\uBB38\uAC00)',
+                        issuer: '\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0',
+                        acquiredDate: '2026-06-05',
+                        registrationNumber: 'ADsP-049026379'
+                    }, {
+                        certificateName: 'SQLD(SQL\uAC1C\uBC1C\uC790)',
+                        issuer: '\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0',
+                        acquiredDate: '2022-09-30',
+                        registrationNumber: 'SQLD-046012160'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const plan = buildAutoFillPlan(doc, certificateProfile);
+        const firstCertificateFields = plan.fillable
+            .map((item) => item.fieldKey)
+            .filter((fieldKey) => fieldKey.startsWith('certificates.certificates.'));
+
+        expect(firstCertificateFields.slice(0, 3)).toEqual([
+            'certificates.certificates.0.issuer',
+            'certificates.certificates.0.registrationNumber',
+            'certificates.certificates.0.acquiredDate'
+        ]);
+        expect(firstCertificateFields.indexOf('certificates.certificates.0.acquiredDate')).toBeLessThan(
+            firstCertificateFields.indexOf('certificates.certificates.1.certificateName')
+        );
+    });
+
+    it('EXT-032: does not pause before the next certificate when acquired date is a blocked date button', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uC790\uACA9/\uAE30\uD0C0">
+          <h5>\uC790\uACA9/\uC9C0\uC2DD/\uAE30\uC220</h5>
+          <div id="certificate-row">
+            <label>\uC790\uACA9\uC99D\uBA85
+              <input id="certificate-name" role="combobox" aria-autocomplete="list" placeholder="\uC790\uACA9\uC99D\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." />
+            </label>
+            <div id="certificate-details"></div>
+          </div>
+        </section>
+      </form>
+    `;
+        const input = doc.getElementById('certificate-name');
+        input.addEventListener('input', () => {
+            if (doc.getElementById('dropdown-body')) return;
+            const menu = doc.createElement('div');
+            menu.id = 'dropdown-body';
+            menu.innerHTML = '<button type="button"><span>\uC815\uBCF4\uCC98\uB9AC\uAE30\uC0AC</span></button>';
+            menu.querySelector('button').addEventListener('click', () => {
+                input.value = '\uC815\uBCF4\uCC98\uB9AC\uAE30\uC0AC';
+                doc.getElementById('certificate-details').innerHTML = `
+          <label>\uBC1C\uAE09\uAE30\uAD00<input id="certificate-issuer" name="licenseGroupAnswer.licenseAnswers.0.organization" /></label>
+          <button id="certificate-date" type="button" aria-haspopup="dialog">\uCDE8\uB4DD\uC77C</button>
+          <label>\uB4F1\uB85D\uBC88\uD638<input id="certificate-registration" name="licenseGroupAnswer.licenseAnswers.0.registNumber" /></label>
+        `;
+                menu.remove();
+            });
+            input.parentElement.append(menu);
+        });
+        const certificateProfile = {
+            sections: {
+                certificates: {
+                    certificates: [{
+                        certificateName: '\uC815\uBCF4\uCC98\uB9AC\uAE30\uC0AC',
+                        issuer: '\uD55C\uAD6D\uC0B0\uC5C5\uC778\uB825\uACF5\uB2E8',
+                        acquiredDate: '2024-09-10',
+                        registrationNumber: '24202030579W'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const startedAt = Date.now();
+        const result = await applyAutoFillPlanFastAsync(buildAutoFillPlan(doc, certificateProfile));
+        const elapsedMs = Date.now() - startedAt;
+
+        expect(elapsedMs).toBeLessThan(900);
+        expect(doc.getElementById('certificate-issuer').value).toBe('\uD55C\uAD6D\uC0B0\uC5C5\uC778\uB825\uACF5\uB2E8');
+        expect(doc.getElementById('certificate-registration').value).toBe('24202030579W');
+        expect(result.mode).toBe('applied');
+    });
+
+    it('EXT-032: waits for delayed Kakao ATS certificate date inputs after selecting a certificate', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uC790\uACA9/\uAE30\uD0C0">
+          <h5>\uC790\uACA9/\uC9C0\uC2DD/\uAE30\uC220</h5>
+          <div id="certificate-row">
+            <label>\uC790\uACA9\uC99D\uBA85
+              <input id="certificate-name" placeholder="\uC790\uACA9\uC99D\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." />
+            </label>
+            <div id="certificate-details"></div>
+          </div>
+        </section>
+      </form>
+    `;
+        const input = doc.getElementById('certificate-name');
+        input.addEventListener('input', () => {
+            setTimeout(() => {
+                if (doc.getElementById('dropdown-body')) return;
+                const menu = doc.createElement('div');
+                menu.id = 'dropdown-body';
+                menu.innerHTML = '<button type="button"><span>\uC815\uBCF4\uCC98\uB9AC\uAE30\uC0AC</span></button>';
+                menu.querySelector('button').addEventListener('click', () => {
+                    input.value = '\uC815\uBCF4\uCC98\uB9AC\uAE30\uC0AC';
+                    const details = doc.getElementById('certificate-details');
+                    details.innerHTML = `
+              <label>\uBC1C\uAE09\uAE30\uAD00<input id="certificate-issuer" name="licenseGroupAnswer.licenseAnswers.0.organization" /></label>
+              <label>\uB4F1\uB85D\uBC88\uD638<input id="certificate-registration" name="licenseGroupAnswer.licenseAnswers.0.registNumber" /></label>
+            `;
+                    setTimeout(() => {
+                        details.insertAdjacentHTML('beforeend', '<label>\uCDE8\uB4DD\uC77C<input id="certificate-date" placeholder="\uCDE8\uB4DD\uC77C" style="cursor:pointer" /></label>');
+                    }, 520);
+                    menu.remove();
+                });
+                input.parentElement.append(menu);
+            }, 20);
+        });
+        const certificateProfile = {
+            sections: {
+                certificates: {
+                    certificates: [{
+                        certificateName: '\uC815\uBCF4\uCC98\uB9AC\uAE30\uC0AC',
+                        issuer: '\uD55C\uAD6D\uC0B0\uC5C5\uC778\uB825\uACF5\uB2E8',
+                        acquiredDate: '2024-09-10',
+                        registrationNumber: '24202030579W'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanFastAsync(buildAutoFillPlan(doc, certificateProfile));
+
+        expect(result.failed).toEqual([]);
+        expect(doc.getElementById('certificate-issuer').value).toBe('\uD55C\uAD6D\uC0B0\uC5C5\uC778\uB825\uACF5\uB2E8');
+        expect(doc.getElementById('certificate-date').value).toBe('2024-09-10');
+        expect(doc.getElementById('certificate-registration').value).toBe('24202030579W');
+    });
+
+    it('EXT-030: keeps Kakao ATS activity fields manual with saved activity copy candidates', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uC790\uACA9/\uAE30\uD0C0">
+          <h5>\uACBD\uD5D8</h5>
+          <div class="remix-css-98imfe">
+            <div class="remix-css-p9ewyl">
+              <div class="remix-css-ke50n9"><p>\uD65C\uB3D9\uAD6C\uBD84</p></div>
+              <button id="activity-type" type="button" aria-haspopup="listbox"><p>\uD65C\uB3D9 \uAD6C\uBD84\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694</p></button>
+            </div>
+            <div class="remix-css-t25awl">
+              <div class="remix-css-ke50n9"><p>\uAE30\uAD00 \uBC0F \uC870\uC9C1\uBA85</p></div>
+              <input id="activity-organization" placeholder="\uAE30\uAD00 \uBC0F \uC870\uC9C1\uBA85\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694." name="activityAnswers.0.organization" />
+            </div>
+            <div class="remix-css-t25awl">
+              <div class="remix-css-ke50n9"><p>\uD65C\uB3D9\uAE30\uAC04</p></div>
+              <input id="activity-start" placeholder="\uD65C\uB3D9\uAE30\uAC04" />
+              <input id="activity-end" placeholder="\uD65C\uB3D9\uAE30\uAC04" />
+            </div>
+            <div class="remix-css-t25awl">
+              <div class="remix-css-ke50n9"><p>\uC5ED\uD560</p></div>
+              <input id="activity-role" placeholder="\uC9C1\uC704 \uB610\uB294 \uC5ED\uD560\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694" name="activityAnswers.0.role" />
+            </div>
+            <div class="remix-css-15r62hv">
+              <div class="remix-css-1vyw480"><p>\uC0C1\uC138 \uB0B4\uC6A9</p></div>
+              <textarea id="activity-description" placeholder="\uD65C\uB3D9 \uB0B4\uC6A9\uC744 \uC0C1\uC138\uD788 \uC785\uB825\uD574\uC8FC\uC138\uC694." name="activityAnswers.0.contents"></textarea>
+            </div>
+          </div>
+        </section>
+      </form>
+    `;
+        const activityButton = doc.getElementById('activity-type');
+        activityButton.addEventListener('click', () => {
+            if (doc.getElementById('activity-menu')) return;
+            const menu = doc.createElement('div');
+            menu.id = 'activity-menu';
+            menu.setAttribute('role', 'listbox');
+            menu.innerHTML = `
+          <button type="button" role="option"><p>\uB3D9\uC544\uB9AC</p></button>
+          <button type="button" role="option"><p>\uD559\uD68C</p></button>
+        `;
+            menu.querySelectorAll('button').forEach((optionButton) => {
+                optionButton.addEventListener('click', () => {
+                    activityButton.querySelector('p').textContent = optionButton.textContent.trim();
+                    menu.remove();
+                });
+            });
+            activityButton.parentElement.append(menu);
+        });
+        const activityProfile = {
+            sections: {
+                other: {
+                    activities: [{
+                        activityType: '\uB3D9\uC544\uB9AC',
+                        organization: '\uBD80\uC0B0\uB300\uD559\uAD50 \uD540\uD14C\uD06C\uC735\uD569\uC804\uACF5',
+                        startDate: '2023-03-01',
+                        endDate: '2023-12-31',
+                        role: '\uD300\uC7A5',
+                        description: '\uAE08\uC735 \uB370\uC774\uD130 \uBD84\uC11D \uC2A4\uD130\uB514\uB97C \uAE30\uD68D\uD558\uACE0 \uC6B4\uC601'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = applyAutoFillPlan(buildAutoFillPlan(doc, activityProfile));
+
+        expect(result.failed).toEqual([
+            expect.objectContaining({ fieldKey: 'activities.assist', reason: 'tailored_activity_required' })
+        ]);
+        expect(result.filled.map((item) => item.fieldKey)).not.toEqual(expect.arrayContaining([
+            expect.stringMatching(/^activities\./)
+        ]));
+        expect(doc.getElementById('activity-type').textContent).toContain('\uD65C\uB3D9 \uAD6C\uBD84\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694');
+        expect(doc.getElementById('activity-organization').value).toBe('');
+        expect(doc.getElementById('activity-start').value).toBe('');
+        expect(doc.getElementById('activity-end').value).toBe('');
+        expect(doc.getElementById('activity-role').value).toBe('');
+        expect(doc.getElementById('activity-description').value).toBe('');
+        expect(result.copyCandidates).toEqual(expect.arrayContaining([
+            expect.objectContaining({ key: 'activities.0.organization', value: '\uBD80\uC0B0\uB300\uD559\uAD50 \uD540\uD14C\uD06C\uC735\uD569\uC804\uACF5' }),
+            expect.objectContaining({ key: 'activities.0.role', value: '\uD300\uC7A5' }),
+            expect.objectContaining({ key: 'activities.0.description', value: '\uAE08\uC735 \uB370\uC774\uD130 \uBD84\uC11D \uC2A4\uD130\uB514\uB97C \uAE30\uD68D\uD558\uACE0 \uC6B4\uC601' })
+        ]));
+    });
+
     it('EXT-022: reports unmatched fields without blocking filled fields', () => {
         const doc = document.implementation.createHTMLDocument('application');
         doc.body.innerHTML = `
@@ -6543,6 +9572,25 @@ describe('applicationAutoFill', () => {
         expect(result.copyCandidates).toEqual(expect.arrayContaining([
             expect.objectContaining({ key: 'basicInfo.email', value: 'hong@example.com' }),
             expect.objectContaining({ key: 'basicInfo.phone', value: '010-1234-5678' })
+        ]));
+    });
+
+    it('EXT-022: reports required application fields that still need manual input', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <label><span>*</span>\uC7A5\uC810<input id="strength" required /></label>
+        <label>\uBE44\uD544\uC218 \uBA54\uBAA8<input id="memo" /></label>
+      </form>
+    `;
+
+        const result = applyAutoFillPlan(buildAutoFillPlan(doc, profile));
+
+        expect(result.failed).toEqual(expect.arrayContaining([
+            expect.objectContaining({ label: '\uC7A5\uC810', reason: 'required_field' })
+        ]));
+        expect(result.failed).not.toEqual(expect.arrayContaining([
+            expect.objectContaining({ label: '\uBE44\uD544\uC218 \uBA54\uBAA8', reason: 'required_field' })
         ]));
     });
 
@@ -6640,6 +9688,41 @@ describe('applicationAutoFill', () => {
         ]);
     });
 
+    it('EXT-022: surfaces remaining free-text and addable sections as manual review after successful fills', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <label>\uC774\uB984<input id="name" aria-label="\uC774\uB984" /></label>
+        <section>
+          <h3>\uACBD\uD5D8 \uBC0F \uACBD\uB825\uAE30\uC220\uC11C</h3>
+          <textarea id="career-description" placeholder="\uBCF4\uC720\uD55C \uC804\uBB38\uC9C0\uC2DD \uBC0F \uC2A4\uD0AC\uC5D0 \uADFC\uAC70\uD558\uC5EC \uBCF8\uC778\uC774 \uC218\uD589\uD55C \uC8FC\uC694\uC5C5\uBB34/\uD504\uB85C\uC81D\uD2B8\uC5D0 \uB300\uD574 \uC0C1\uC138\uD788 \uAE30\uB85D\uD574 \uC8FC\uC138\uC694."></textarea>
+          <div><span>\uACBD\uB825\uAE30\uC220\uC11C</span><button type="button">+ \uCD94\uAC00\uD558\uAE30</button></div>
+          <div><span>\uD3EC\uD2B8\uD3F4\uB9AC\uC624</span><button type="button">+ \uCD94\uAC00\uD558\uAE30</button></div>
+        </section>
+      </form>
+    `;
+        const basicProfile = {
+            sections: {
+                basicInfo: {
+                    nameKo: '\uD64D\uAE38\uB3D9'
+                }
+            },
+            customFields: []
+        };
+
+        const result = applyAutoFillPlan(buildAutoFillPlan(doc, basicProfile));
+
+        expect(doc.getElementById('name').value).toBe('\uD64D\uAE38\uB3D9');
+        expect(result.filled).toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'basicInfo.nameKo' })
+        ]));
+        expect(result.failed).toEqual(expect.arrayContaining([
+            expect.objectContaining({ label: '\uACBD\uD5D8 \uBC0F \uACBD\uB825\uAE30\uC220\uC11C', reason: 'manual_free_text' }),
+            expect.objectContaining({ label: '\uACBD\uB825\uAE30\uC220\uC11C \uCD94\uAC00', reason: 'manual_add_section' }),
+            expect.objectContaining({ label: '\uD3EC\uD2B8\uD3F4\uB9AC\uC624 \uCD94\uAC00', reason: 'manual_add_section' })
+        ]));
+    });
+
     it('EXT-030: keeps activity fields manual and shows saved activity copy candidates', () => {
         const doc = document.implementation.createHTMLDocument('application');
         doc.body.innerHTML = `
@@ -6678,6 +9761,7 @@ describe('applicationAutoFill', () => {
         expect(result.failed).toEqual([
             expect.objectContaining({ fieldKey: 'activities.assist', reason: 'tailored_activity_required' })
         ]);
+        expect(doc.getElementById('activity-type').value).toBe('');
         expect(doc.getElementById('activity-organization').value).toBe('');
         expect(doc.getElementById('activity-start').value).toBe('');
         expect(doc.getElementById('activity-end').value).toBe('');
@@ -6745,6 +9829,7 @@ describe('applicationAutoFill', () => {
         expect(result.copyCandidates).toEqual(expect.arrayContaining([
             expect.objectContaining({ key: 'activities.0.organization', value: '\uD559\uAD50 A' }),
             expect.objectContaining({ key: 'activities.1.organization', value: '\uD559\uAD50 B' }),
+            expect.objectContaining({ key: 'activities.0.period', value: '2023-01-01 ~ 2023-02-01' }),
             expect.objectContaining({ key: 'activities.1.period', value: '2024-03-01 ~ 2024-04-01' }),
             expect.objectContaining({ key: 'activities.1.description', value: 'B \uD65C\uB3D9' })
         ]));
@@ -6833,5 +9918,39 @@ describe('applicationAutoFill', () => {
             'https://portfolio.example.com'
         ]));
         expect(values.map((value) => value.value)).not.toContain('This should never be auto-filled.');
+    });
+
+    it('EXT-021: returns a partial result instead of staying in progress when deferred controls never render', async () => {
+        vi.useFakeTimers();
+        try {
+            const doc = document.implementation.createHTMLDocument('application');
+            doc.body.innerHTML = '<form><section aria-label="\uB300\uD559\uAD50"><h3>\uB300\uD559\uAD50</h3></section></form>';
+            const plan = {
+                fillable: Array.from({ length: 12 }, (_, index) => ({
+                    element: doc.body,
+                    fieldKey: `education.universities.0.majors.${index}.majorName`,
+                    label: `\uC804\uACF5 ${index + 1}`,
+                    value: `Missing major ${index + 1}`,
+                    waitForControlBeforeFill: true,
+                    relatedValues: []
+                })),
+                failed: [],
+                skipped: [],
+                copyCandidates: []
+            };
+
+            const resultPromise = applyAutoFillPlanAsync(plan);
+            await vi.advanceTimersByTimeAsync(30000);
+            const result = await resultPromise;
+
+            expect(result.mode).toBe('applied');
+            expect(result.failed).toEqual(expect.arrayContaining([
+                expect.objectContaining({ reason: 'autofill_timeout' })
+            ]));
+            expect(result.failedCount).toBeGreaterThan(0);
+        }
+        finally {
+            vi.useRealTimers();
+        }
     });
 });

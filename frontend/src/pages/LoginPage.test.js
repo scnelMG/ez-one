@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import LoginPage from './LoginPage.vue';
 const mocks = vi.hoisted(() => ({
     buildGoogleOAuthUrl: vi.fn(() => new URL('https://accounts.google.com/o/oauth2/v2/auth?state=state-123')),
+    createOAuthState: vi.fn(() => 'state-123'),
     loginWithEmail: vi.fn(),
     signup: vi.fn(),
     saveAuthSession: vi.fn()
@@ -19,7 +20,7 @@ vi.mock('@/features/auth/session/authSession', () => ({
 }));
 vi.mock('@/features/auth/oauth/googleOAuth', () => ({
     buildGoogleOAuthUrl: mocks.buildGoogleOAuthUrl,
-    createOAuthState: vi.fn(() => 'state-123'),
+    createOAuthState: mocks.createOAuthState,
     getGoogleClientId: vi.fn(() => 'google-client-id'),
     getGoogleRedirectUri: vi.fn(() => 'http://localhost:5173/login/callback')
 }));
@@ -38,6 +39,7 @@ describe('LoginPage', () => {
         mocks.loginWithEmail.mockReset();
         mocks.signup.mockReset();
         mocks.buildGoogleOAuthUrl.mockClear();
+        mocks.createOAuthState.mockClear();
         mocks.saveAuthSession.mockReset();
     });
     it('AUTH-001: starts real Google OAuth with the protected redirect target', async () => {
@@ -54,6 +56,24 @@ describe('LoginPage', () => {
         expect(mocks.buildGoogleOAuthUrl).toHaveBeenCalledWith(expect.not.objectContaining({
             selectAccount: true
         }));
+        expect(mocks.createOAuthState).toHaveBeenCalledWith('/basket');
+        expect(location.assign).toHaveBeenCalledWith('https://accounts.google.com/o/oauth2/v2/auth?state=state-123');
+    });
+    it('EXT-003/AUTH-004: stores extension connect redirects in Google OAuth state unchanged', async () => {
+        vi.stubGlobal('location', { assign: vi.fn(), origin: 'http://localhost:5173' });
+        const redirect = '/extension/connect?sourceUrl=https%3A%2F%2Fwww.jasoseol.com%2Frecruit%2F1&sourceTabId=42';
+        const router = makeRouter();
+        router.push(`/login?redirect=${encodeURIComponent(redirect)}`);
+        await router.isReady();
+        const wrapper = mount(LoginPage, {
+            global: {
+                plugins: [router]
+            }
+        });
+
+        await wrapper.get('button[data-testid="google-login"]').trigger('click');
+
+        expect(mocks.createOAuthState).toHaveBeenCalledWith(redirect);
         expect(location.assign).toHaveBeenCalledWith('https://accounts.google.com/o/oauth2/v2/auth?state=state-123');
     });
     it('AUTH-004: hides account switching from the default login entry', async () => {

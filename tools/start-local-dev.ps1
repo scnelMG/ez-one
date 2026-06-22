@@ -25,6 +25,12 @@ function Require-Key($Values, $Key, $Source) {
     }
 }
 
+function Set-ProcessEnvironment($Values) {
+    foreach ($key in $Values.Keys) {
+        [Environment]::SetEnvironmentVariable($key, $Values[$key], "Process")
+    }
+}
+
 function Test-HttpReady($Uri) {
     try {
         $statusCode = & curl.exe -s -o NUL -w "%{http_code}" --max-time 2 $Uri
@@ -317,6 +323,8 @@ Require-Key $backendEnv "GOOGLE_CLIENT_SECRET" "backend/.env"
 Require-Key $frontendEnv "VITE_API_BASE_URL" "frontend/.env"
 Require-Key $frontendEnv "VITE_GOOGLE_CLIENT_ID" "frontend/.env"
 Require-Key $frontendEnv "VITE_GOOGLE_REDIRECT_URI" "frontend/.env"
+
+Set-ProcessEnvironment $backendEnv
 
 $dbHost = $backendEnv["DB_HOST"]
 $dbPort = [int]$backendEnv["DB_PORT"]

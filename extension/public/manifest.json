@@ -23,6 +23,7 @@
   "host_permissions": [
     "https://www.jasoseol.com/*",
     "https://jasoseol.com/*",
+    "https://*.recruiter.co.kr/*",
     "http://www.jasoseol.com/*",
     "http://jasoseol.com/*",
     "http://localhost:8080/*",
