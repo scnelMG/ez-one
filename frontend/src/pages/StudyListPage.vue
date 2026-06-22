@@ -17,15 +17,67 @@
         <article class="dashboard-section">
           <h2>참여 중인 스터디</h2>
           <div v-if="studyStore.status === 'loading'" class="loading-state">불러오는 중...</div>
-          <div v-else-if="studyStore.myStudies.length === 0" class="empty-state">
-            아직 참여 중인 스터디가 없습니다. 새 스터디를 만들어 보세요!
+          <div v-else-if="studyStore.myStudies.length === 0" class="study-empty-showcase">
+            <div class="empty-copy">
+              <span class="eyebrow">처음 시작하는 취업스터디</span>
+              <h3>스터디를 만들면 대시보드, 자소서 피드백, 공고 추천이 한 곳에 모입니다.</h3>
+              <p>
+                팀원별 지원 현황을 보고, 공유한 자소서에 피드백을 남기고,
+                각자 발견한 좋은 공고를 추천하면서 준비 흐름을 놓치지 않게 도와줘요.
+              </p>
+              <button class="primary-button" type="button" @click="openCreateModal">스터디 만들기</button>
+            </div>
+            <div class="feature-preview-grid" aria-label="취업스터디 기능 예시">
+              <article class="feature-preview dashboard-preview">
+                <div class="preview-topline">
+                  <strong>스터디 대시보드</strong>
+                  <span>4명 참여</span>
+                </div>
+                <div class="mini-chart-row" v-for="row in previewMembers" :key="row.name">
+                  <span>{{ row.name }}</span>
+                  <div class="mini-chart-track"><i :style="{ width: row.progress + '%' }"></i></div>
+                  <b>{{ row.count }}</b>
+                </div>
+              </article>
+              <article class="feature-preview feedback-preview">
+                <div class="preview-topline">
+                  <strong>자소서 피드백</strong>
+                  <span>NEW</span>
+                </div>
+                <p>네이버 서비스 기획 직무 1번 문항</p>
+                <div class="comment-chip">문장 흐름은 좋아요. 수치 근거를 한 줄 더 넣어보면 좋겠어요.</div>
+              </article>
+              <article class="feature-preview job-preview">
+                <div class="preview-topline">
+                  <strong>지인 공고 추천</strong>
+                  <span>D-7</span>
+                </div>
+                <p>핀테크 PM 인턴</p>
+                <div class="job-tags"><span>서비스기획</span><span>금융권</span><span>추천</span></div>
+              </article>
+            </div>
           </div>
           <div v-else class="study-grid">
             <div class="study-card" v-for="study in studyStore.myStudies" :key="study.id" @click="goToStudy(study.id)">
               <div class="study-info">
                 <h3>{{ study.name }}</h3>
                 <p>{{ study.description }}</p>
-                <p class="member-count">멤버: {{ study.memberCount || 1 }}명</p>
+                <div class="study-member-summary">
+                  <p class="member-count">멤버 {{ study.memberCount || 1 }}명</p>
+                  <div class="member-avatar-stack" :aria-label="`${study.name} 멤버 프로필`">
+                    <span
+                      v-for="member in memberPreview(study)"
+                      :key="member.key"
+                      class="member-avatar-preview"
+                      :title="member.label"
+                    >
+                      {{ member.initial }}
+                    </span>
+                    <span v-if="remainingMemberCount(study) > 0" class="member-avatar-preview more">
+                      +{{ remainingMemberCount(study) }}
+                    </span>
+                  </div>
+                </div>
               </div>
               <div class="study-image-upload" @click.stop>
                 <img v-if="study.imageUrl" :src="study.imageUrl" alt="Study Thumbnail" class="study-thumb" />
@@ -140,6 +192,11 @@ const studyStore = useStudyStore();
 
 const isCreateModalOpen = ref(false);
 const isPreviewModalOpen = ref(false);
+const previewMembers = [
+  { name: '나', progress: 70, count: 7 },
+  { name: '민지', progress: 48, count: 5 },
+  { name: '준호', progress: 32, count: 3 }
+];
 const createForm = reactive({ 
   name: '', 
   description: '',
@@ -212,6 +269,36 @@ function goToStudy(studyId) {
   router.push(`/study/${studyId}`);
 }
 
+function getMemberLabel(member) {
+  return member?.userName || member?.userNickname || member?.userEmail?.split('@')[0] || '팀원';
+}
+
+function memberPreview(study) {
+  const members = Array.isArray(study.members) ? study.members : [];
+  if (members.length > 0) {
+    return members.slice(0, 4).map((member, index) => {
+      const label = getMemberLabel(member);
+      return {
+        key: member.id || member.userEmail || `${study.id}-${index}`,
+        label,
+        initial: label.charAt(0).toUpperCase()
+      };
+    });
+  }
+
+  const count = Math.max(study.memberCount || 1, 1);
+  return Array.from({ length: Math.min(count, 4) }, (_, index) => ({
+    key: `${study.id}-placeholder-${index}`,
+    label: `팀원 ${index + 1}`,
+    initial: index === 0 ? '나' : String(index + 1)
+  }));
+}
+
+function remainingMemberCount(study) {
+  const total = Math.max(study.memberCount || 1, 1);
+  return Math.max(total - 4, 0);
+}
+
 async function respondInvite(inviteId, accept) {
   try {
     await studyStore.respondToInvite(inviteId, accept);
@@ -247,7 +334,7 @@ async function respondInvite(inviteId, accept) {
 }
 .study-card {
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 24px;
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
@@ -258,6 +345,14 @@ async function respondInvite(inviteId, accept) {
 }
 .study-info {
   flex-grow: 1;
+  min-width: 0;
+}
+.study-info h3 {
+  margin-bottom: 8px;
+}
+.study-info p {
+  color: var(--text-secondary);
+  line-height: 1.5;
 }
 .study-image-upload {
   width: 160px;
@@ -290,7 +385,163 @@ async function respondInvite(inviteId, accept) {
 .member-count {
   font-size: 0.85rem;
   color: var(--text-secondary);
-  margin-top: 12px;
+  margin: 0;
+}
+.study-member-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+.member-avatar-stack {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+}
+.member-avatar-preview {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid white;
+  background: #eef2ff;
+  color: #4338ca;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 800;
+  margin-left: -8px;
+  box-shadow: 0 4px 10px rgba(79, 70, 229, 0.12);
+}
+.member-avatar-preview:first-child {
+  margin-left: 0;
+}
+.member-avatar-preview:nth-child(2) {
+  background: #ecfeff;
+  color: #0e7490;
+}
+.member-avatar-preview:nth-child(3) {
+  background: #f0fdf4;
+  color: #15803d;
+}
+.member-avatar-preview:nth-child(4) {
+  background: #fff7ed;
+  color: #c2410c;
+}
+.member-avatar-preview.more {
+  background: #f8fafc;
+  color: var(--text-secondary);
+}
+.study-empty-showcase {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: minmax(260px, 0.8fr) minmax(360px, 1.2fr);
+  gap: 24px;
+  align-items: stretch;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 28px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+}
+.empty-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+}
+.empty-copy h3 {
+  font-size: 1.45rem;
+  line-height: 1.35;
+  color: var(--text-primary);
+}
+.empty-copy p {
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+.eyebrow {
+  color: #4f46e5;
+  font-weight: 800;
+  font-size: 0.9rem;
+}
+.feature-preview-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.feature-preview {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  padding: 18px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+}
+.dashboard-preview {
+  grid-row: span 2;
+}
+.preview-topline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.preview-topline strong {
+  color: var(--text-primary);
+}
+.preview-topline span {
+  font-size: 0.8rem;
+  color: #4f46e5;
+  font-weight: 800;
+}
+.mini-chart-row {
+  display: grid;
+  grid-template-columns: 46px 1fr 28px;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+.mini-chart-track {
+  height: 10px;
+  background: #eef2f7;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.mini-chart-track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #4f46e5, #06b6d4);
+}
+.feedback-preview p,
+.job-preview p {
+  color: var(--text-primary);
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.comment-chip {
+  border-left: 3px solid #10b981;
+  background: #ecfdf5;
+  color: #065f46;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+.job-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.job-tags span {
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+  background: #eff6ff;
+  border-radius: 999px;
+  padding: 5px 9px;
+  font-size: 0.78rem;
+  font-weight: 700;
 }
 .invite-list {
   display: flex;
@@ -461,5 +712,27 @@ async function respondInvite(inviteId, accept) {
   font-size: 0.7rem;
   padding: 2px 6px;
   border-radius: 12px;
+}
+@media (max-width: 860px) {
+  .study-page {
+    padding: 24px 16px;
+  }
+  .study-empty-showcase {
+    grid-template-columns: 1fr;
+  }
+  .feature-preview-grid {
+    grid-template-columns: 1fr;
+  }
+  .dashboard-preview {
+    grid-row: auto;
+  }
+  .study-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .study-image-upload {
+    width: 100%;
+    height: 180px;
+  }
 }
 </style>

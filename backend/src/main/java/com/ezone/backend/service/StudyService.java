@@ -77,7 +77,18 @@ public class StudyService {
     public List<StudyGroupDto> listMyStudies(String userEmail) {
         return studyMapper.findStudyGroupsByUserEmail(userEmail).stream().map(g -> {
             StudyGroupDto dto = mapToDto(g);
-            List<StudyMemberRow> members = studyMapper.findMembersByStudyId(g.getId());
+            List<StudyMemberDto> members = studyMapper.findMembersByStudyId(g.getId()).stream()
+                .map(m -> {
+                    StudyMemberDto mDto = new StudyMemberDto();
+                    mDto.setId(m.getId());
+                    mDto.setUserEmail(m.getUserEmail());
+                    mDto.setRole(m.getRole());
+                    mDto.setJoinedAt(m.getJoinedAt());
+                    mDto.setUserName(m.getUserName());
+                    mDto.setUserNickname(m.getUserNickname());
+                    return mDto;
+                }).collect(Collectors.toList());
+            dto.setMembers(members);
             dto.setMemberCount(members.size());
             return dto;
         }).collect(Collectors.toList());

@@ -1,15 +1,18 @@
 <template>
   <AppLayout>
     <section class="study-detail-page">
-      <header class="study-header" :style="studyStore.currentStudy?.imageUrl ? { backgroundImage: `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url(${studyStore.currentStudy.imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center', color: 'white' } : {}">
-        <div class="breadcrumb">
-          <RouterLink to="/study" style="color: #000; font-weight: 600;">← 취업 스터디 목록으로</RouterLink>
+      <div class="study-top-link">
+        <RouterLink to="/study">← 취업스터디 목록으로</RouterLink>
+      </div>
+
+      <header class="study-header">
+        <div class="study-title-group">
+          <h1>{{ studyStore.currentStudy?.name || '로딩 중...' }}</h1>
+          <p class="study-description">{{ studyStore.currentStudy?.description || '스터디 설명이 없습니다.' }}</p>
         </div>
-        <h1>{{ studyStore.currentStudy?.name || '로딩 중...' }}</h1>
-        <p class="study-description" :style="studyStore.currentStudy?.imageUrl ? { color: '#f3f4f6' } : {}">{{ studyStore.currentStudy?.description }}</p>
         <div class="header-actions">
           <button class="primary-button" type="button" @click="openInviteModal">팀원 초대</button>
-          
+
           <div class="dropdown-container" v-if="amILeader || amIMember">
             <button class="icon-button settings-button" type="button" @click="toggleSettings" title="스터디 설정">⚙️</button>
             <div class="dropdown-menu" v-if="isSettingsOpen">
@@ -20,31 +23,34 @@
         </div>
       </header>
 
+      <div v-if="studyStore.currentStudy?.imageUrl" class="study-cover">
+        <img :src="studyStore.currentStudy.imageUrl" alt="스터디 대표 이미지" />
+      </div>
+
       <div class="study-layout">
-        <!-- 좌측 사이드바: 탭 메뉴 -->
-        <aside class="study-sidebar document-section-rail" aria-label="스터디 탭 메뉴">
+        <nav class="study-tab-menu" aria-label="스터디 탭 메뉴">
           <button
-            class="rail-button"
+            class="study-tab-button"
             :class="{ active: activeTab === 'dashboard' }"
             @click="activeTab = 'dashboard'"
           >
             스터디 대시보드
           </button>
           <button
-            class="rail-button"
+            class="study-tab-button"
             :class="{ active: activeTab === 'essays' }"
             @click="activeTab = 'essays'"
           >
             자소서 피드백
           </button>
           <button
-            class="rail-button"
+            class="study-tab-button"
             :class="{ active: activeTab === 'jobs' }"
             @click="activeTab = 'jobs'"
           >
             지인 공고 추천
           </button>
-        </aside>
+        </nav>
 
         <!-- 우측 메인 콘텐츠 -->
         <main class="study-main-content">
@@ -796,28 +802,62 @@ const confirmDelete = async () => {
   max-width: 1200px;
   margin: 0 auto;
 }
-.breadcrumb {
-  margin-bottom: 16px;
-  font-size: 0.9rem;
+.study-top-link {
+  margin-bottom: 18px;
+}
+.study-top-link a {
+  color: var(--text-secondary);
+  font-weight: 800;
+  text-decoration: none;
+}
+.study-top-link a:hover {
+  color: var(--color-primary);
 }
 .study-header {
-  margin-bottom: 32px;
-  padding: 32px 40px;
-  border-radius: 16px;
+  margin-bottom: 18px;
+  padding: 0;
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
-  background: linear-gradient(135deg, #ede9fe 0%, #f3f4f6 100%);
-  position: relative;
+  align-items: flex-start;
+  gap: 24px;
+}
+.study-title-group {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+  min-width: 0;
+  flex-wrap: wrap;
 }
 .study-header h1 {
-  font-size: 2rem;
-  margin-bottom: 8px;
+  font-size: 1.9rem;
+  margin: 0;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+.study-description {
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
+  max-width: 560px;
 }
 .header-actions {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0;
+}
+.study-cover {
+  height: 260px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  margin-bottom: 22px;
+  background: #f8fafc;
+}
+.study-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .dropdown-container {
   position: relative;
@@ -865,14 +905,42 @@ const confirmDelete = async () => {
 }
 .study-layout {
   display: flex;
-  gap: 40px;
+  flex-direction: column;
+  gap: 24px;
 }
-.study-sidebar {
-  width: 240px;
-  flex-shrink: 0;
+.study-tab-menu {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.04);
+}
+.study-tab-button {
+  min-height: 86px;
+  border: 0;
+  border-right: 1px solid var(--line);
+  background: white;
+  color: var(--text-secondary);
+  font-size: 1.05rem;
+  font-weight: 900;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+.study-tab-button:last-child {
+  border-right: 0;
+}
+.study-tab-button:hover {
+  background: #f8fafc;
+}
+.study-tab-button.active {
+  color: #4f46e5;
+  background: #eef2ff;
+  box-shadow: inset 0 4px 0 #4f46e5;
 }
 .study-main-content {
-  flex-grow: 1;
+  width: 100%;
 }
 .section-heading {
   display: flex;
@@ -1263,7 +1331,7 @@ const confirmDelete = async () => {
 .dashboard-section {
   background: white;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 24px;
   margin-bottom: 24px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.02);
@@ -1321,17 +1389,18 @@ const confirmDelete = async () => {
   color: white;
 }
 .member-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 .member-card-new {
   background: white;
   border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
+  border-radius: 8px;
+  padding: 18px;
+  display: grid;
+  grid-template-columns: minmax(260px, 0.8fr) minmax(360px, 1.2fr);
+  align-items: center;
   gap: 16px;
   transition: transform 0.2s, box-shadow 0.2s;
 }
@@ -1400,8 +1469,8 @@ const confirmDelete = async () => {
 }
 .member-stats-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  grid-template-columns: repeat(4, minmax(80px, 1fr));
+  gap: 10px;
 }
 .stat-box-new {
   border-radius: 8px;
@@ -1448,6 +1517,39 @@ const confirmDelete = async () => {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+@media (max-width: 860px) {
+  .study-detail-page {
+    padding: 24px 16px;
+  }
+  .study-header {
+    flex-direction: column;
+  }
+  .study-title-group {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .study-header h1 {
+    white-space: normal;
+  }
+  .study-tab-menu {
+    grid-template-columns: 1fr;
+  }
+  .study-tab-button {
+    min-height: 66px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .study-tab-button:last-child {
+    border-bottom: 0;
+  }
+  .member-card-new {
+    grid-template-columns: 1fr;
+  }
+  .member-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 .reason-accordion {
   display: flex;
