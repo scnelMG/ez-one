@@ -63,6 +63,24 @@ public interface StudyMapper {
     @org.apache.ibatis.annotations.Delete("DELETE FROM study_group WHERE id = #{studyId}")
     void deleteStudyGroup(@Param("studyId") String studyId);
 
+    @org.apache.ibatis.annotations.Delete("DELETE FROM study_essay_read_log WHERE study_id = #{studyId}")
+    void deleteStudyEssayReadLogsByStudyId(@Param("studyId") String studyId);
+
+    @org.apache.ibatis.annotations.Delete("DELETE ef FROM essay_feedback ef JOIN shared_essay se ON ef.shared_essay_id = se.id WHERE se.study_id = #{studyId}")
+    void deleteEssayFeedbacksByStudyId(@Param("studyId") String studyId);
+
+    @org.apache.ibatis.annotations.Delete("DELETE FROM shared_essay WHERE study_id = #{studyId}")
+    void deleteSharedEssaysByStudyId(@Param("studyId") String studyId);
+
+    @org.apache.ibatis.annotations.Delete("DELETE FROM shared_job WHERE study_id = #{studyId}")
+    void deleteSharedJobsByStudyId(@Param("studyId") String studyId);
+
+    @org.apache.ibatis.annotations.Delete("DELETE FROM study_invite WHERE study_id = #{studyId}")
+    void deleteStudyInvitesByStudyId(@Param("studyId") String studyId);
+
+    @org.apache.ibatis.annotations.Delete("DELETE FROM study_member WHERE study_id = #{studyId}")
+    void deleteStudyMembersByStudyId(@Param("studyId") String studyId);
+
     @org.apache.ibatis.annotations.Delete("DELETE FROM study_member WHERE study_id = #{studyId} AND user_email = #{userEmail}")
     void deleteStudyMember(@Param("studyId") String studyId, @Param("userEmail") String userEmail);
 

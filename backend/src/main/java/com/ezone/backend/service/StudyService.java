@@ -481,7 +481,7 @@ public class StudyService {
             throw new IllegalStateException("스터디장만 스터디를 삭제할 수 있습니다.");
         }
 
-        studyMapper.deleteStudyGroup(studyId);
+        deleteStudyCascade(studyId);
     }
 
     @org.springframework.transaction.annotation.Transactional
@@ -499,7 +499,7 @@ public class StudyService {
 
         if ("LEADER".equals(me.getRole())) {
             if (members.size() == 1) {
-                studyMapper.deleteStudyGroup(studyId);
+                deleteStudyCascade(studyId);
                 return;
             }
             if (delegateEmail == null || delegateEmail.trim().isEmpty()) {
@@ -514,6 +514,16 @@ public class StudyService {
         }
 
         studyMapper.deleteStudyMember(studyId, userEmail);
+    }
+
+    private void deleteStudyCascade(String studyId) {
+        studyMapper.deleteStudyEssayReadLogsByStudyId(studyId);
+        studyMapper.deleteEssayFeedbacksByStudyId(studyId);
+        studyMapper.deleteSharedEssaysByStudyId(studyId);
+        studyMapper.deleteSharedJobsByStudyId(studyId);
+        studyMapper.deleteStudyInvitesByStudyId(studyId);
+        studyMapper.deleteStudyMembersByStudyId(studyId);
+        studyMapper.deleteStudyGroup(studyId);
     }
 
     private StudyMemberRow requireStudyMember(String studyId, String userEmail) {

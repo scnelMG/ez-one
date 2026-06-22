@@ -1,6 +1,10 @@
 <template>
   <AppLayout>
     <section class="study-detail-page">
+      <div v-if="studyStore.currentStudy?.imageUrl" class="study-cover">
+        <img :src="studyStore.currentStudy.imageUrl" alt="스터디 대표 이미지" />
+      </div>
+
       <div class="study-top-link">
         <RouterLink to="/study">← 취업스터디 목록으로</RouterLink>
       </div>
@@ -22,10 +26,6 @@
           </div>
         </div>
       </header>
-
-      <div v-if="studyStore.currentStudy?.imageUrl" class="study-cover">
-        <img :src="studyStore.currentStudy.imageUrl" alt="스터디 대표 이미지" />
-      </div>
 
       <div class="study-layout">
         <nav class="study-tab-menu" aria-label="스터디 탭 메뉴">
@@ -1630,8 +1630,8 @@ const confirmDelete = async () => {
   border-radius: 8px;
   padding: 18px;
   display: grid;
-  grid-template-columns: minmax(260px, 0.8fr) minmax(360px, 1.2fr);
-  align-items: center;
+  grid-template-columns: 1fr;
+  align-items: start;
   gap: 16px;
   transition: transform 0.2s, box-shadow 0.2s;
 }
