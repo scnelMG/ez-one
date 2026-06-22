@@ -124,8 +124,10 @@ export const useStudyStore = defineStore('study', {
       this.status = 'loading';
       try {
         await studyApi.deleteStudy(studyId);
-        // Remove from list
-        this.studies = this.studies.filter(s => s.id !== studyId);
+        this.myStudies = this.myStudies.filter(s => s.id !== studyId);
+        if (this.currentStudy?.id === studyId) {
+          this.currentStudy = null;
+        }
         this.status = 'ready';
       } catch (error) {
         this.status = 'error';
@@ -138,7 +140,10 @@ export const useStudyStore = defineStore('study', {
       this.status = 'loading';
       try {
         await studyApi.leaveStudy(studyId, delegateEmail);
-        this.studies = this.studies.filter(s => s.id !== studyId);
+        this.myStudies = this.myStudies.filter(s => s.id !== studyId);
+        if (this.currentStudy?.id === studyId) {
+          this.currentStudy = null;
+        }
         this.status = 'ready';
       } catch (error) {
         this.status = 'error';

@@ -450,7 +450,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import AppLayout from '@/shared/AppLayout.vue';
 import { useStudyStore } from '@/stores/studyStore';
 import { studyApi } from '@/features/study/api/studyApi';
@@ -459,6 +459,7 @@ import { workspaceApi } from '@/features/workspace/api/workspaceApi';
 import { getCurrentUser } from '@/features/auth/session/authSession';
 
 const route = useRoute();
+const router = useRouter();
 const studyStore = useStudyStore();
 const activeTab = ref('dashboard');
 const studyId = route.params.studyId;
