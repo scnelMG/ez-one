@@ -140,7 +140,6 @@
                   <span v-if="studySettings.showUnreadBadge && essay.isNew" class="badge new-badge">NEW</span>
                 </h3>
                 <div class="shared-essay-meta">
-                  <span>공고 단위 공유</span>
                   <span>{{ sharedQuestionCount(essay) }}개 문항</span>
                   <span>마감일 {{ essay.deadlineLabel || '-' }}</span>
                 </div>
@@ -270,28 +269,32 @@
                   class="question-share-item"
                   :class="{ selected: selectedQuestionIds[q.id] }"
                 >
-                  <label class="question-check-row">
-                    <input
-                      type="checkbox"
-                      v-model="selectedQuestionIds[q.id]"
-                      :disabled="getVersionsForQuestion(q.id).length === 0"
-                      @change="handleQuestionToggle(q.id)"
-                    />
+                  <div class="question-heading-row">
                     <span class="question-number">문항 {{ index + 1 }}</span>
                     <strong>{{ q.prompt }}</strong>
-                  </label>
+                  </div>
                   <div v-if="getVersionsForQuestion(q.id).length === 0" class="no-version-note">
                     저장된 버전이 없어 공유할 수 없습니다.
                   </div>
-                  <label v-else class="version-select-label">
-                    <span>공유할 버전</span>
-                    <select v-model="selectedVersions[q.id]" :disabled="!selectedQuestionIds[q.id]">
-                      <option value="">버전을 선택하세요</option>
-                      <option v-for="v in getVersionsForQuestion(q.id)" :key="v.id" :value="v.id">
-                        {{ v.versionName }} · {{ formatDateTime(v.createdAt) }}
-                      </option>
-                    </select>
-                  </label>
+                  <div v-else class="question-share-controls">
+                    <label class="version-select-label">
+                      <span>버전 선택</span>
+                      <select v-model="selectedVersions[q.id]" @change="handleVersionChange(q.id)">
+                        <option value="">버전을 선택하세요</option>
+                        <option v-for="v in getVersionsForQuestion(q.id)" :key="v.id" :value="v.id">
+                          문항 {{ index + 1 }} · {{ v.versionName }} · {{ formatDateTime(v.createdAt) }}
+                        </option>
+                      </select>
+                    </label>
+                    <label class="share-checkbox-label">
+                      <input
+                        type="checkbox"
+                        v-model="selectedQuestionIds[q.id]"
+                        :disabled="!selectedVersions[q.id]"
+                      />
+                      <span>이 문항 공유</span>
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>
@@ -689,8 +692,9 @@ async function selectWorkspace(basket) {
     selectedQuestionIds.value = {};
     selectedVersions.value = {};
     workspaceQuestions.value.forEach(q => {
+      const versions = workspaceVersions.value.filter(v => v.questionId === String(q.id));
       selectedQuestionIds.value[q.id] = false;
-      selectedVersions.value[q.id] = '';
+      selectedVersions.value[q.id] = versions.length === 1 ? versions[0].id : '';
     });
   } catch (e) {
     alert('워크스페이스 정보를 불러오지 못했습니다.');
@@ -704,15 +708,9 @@ function getVersionsForQuestion(questionId) {
   return workspaceVersions.value.filter(v => v.questionId === String(questionId));
 }
 
-function handleQuestionToggle(questionId) {
-  if (!selectedQuestionIds.value[questionId]) {
-    selectedVersions.value[questionId] = '';
-    return;
-  }
-
-  const versions = getVersionsForQuestion(questionId);
-  if (versions.length === 1) {
-    selectedVersions.value[questionId] = versions[0].id;
+function handleVersionChange(questionId) {
+  if (!selectedVersions.value[questionId]) {
+    selectedQuestionIds.value[questionId] = false;
   }
 }
 
@@ -1285,16 +1283,12 @@ const confirmDelete = async () => {
   border-color: #8b5cf6;
   background: #faf5ff;
 }
-.question-check-row {
+.question-heading-row {
   display: grid;
-  grid-template-columns: auto auto 1fr;
+  grid-template-columns: auto 1fr;
   align-items: start;
   gap: 10px;
-  cursor: pointer;
   line-height: 1.5;
-}
-.question-check-row input {
-  margin-top: 4px;
 }
 .question-number {
   color: #4f46e5;
@@ -1314,6 +1308,31 @@ const confirmDelete = async () => {
   font-weight: 800;
   color: var(--text-primary);
   white-space: nowrap;
+}
+.question-share-controls {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+}
+.share-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: white;
+  color: var(--text-primary);
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.share-checkbox-label:has(input:disabled) {
+  color: var(--text-secondary);
+  cursor: not-allowed;
+  background: #f8fafc;
 }
 
 /* Detail Modal Styles */
