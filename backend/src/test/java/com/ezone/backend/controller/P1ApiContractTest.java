@@ -20,10 +20,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.ezone.backend.config.SecurityConfig;
 import com.ezone.backend.domain.persistence.DocumentProfileSectionRow;
 import com.ezone.backend.domain.UserAccount;
+import com.ezone.backend.domain.persistence.UserProfileRow;
 import com.ezone.backend.dto.support.SupportRequestResponse;
 import com.ezone.backend.mapper.DocumentProfileMapper;
 import com.ezone.backend.mapper.SupportRequestMapper;
 import com.ezone.backend.mapper.UserAccountMapper;
+import com.ezone.backend.mapper.UserProfileMapper;
 import com.ezone.backend.mapper.UserSessionMapper;
 import com.ezone.backend.security.JwtAccessTokenVerifier;
 import com.ezone.backend.security.JwtAuthenticationFilter;
@@ -103,6 +105,9 @@ class P1ApiContractTest {
     private DocumentProfileMapper documentProfileMapper;
 
     @MockitoBean
+    private UserProfileMapper userProfileMapper;
+
+    @MockitoBean
     private MattermostRecommendationService mattermostRecommendationService;
 
     @BeforeEach
@@ -122,6 +127,16 @@ class P1ApiContractTest {
             "2026-06-17T10:00:00"
         )));
         when(documentProfileMapper.findLastSavedAt(1L)).thenReturn(Optional.of("2026-06-17T10:00:00"));
+        when(userProfileMapper.findByUserId(1L)).thenReturn(Optional.of(new UserProfileRow(
+            1L,
+            "[\"Backend\"]",
+            "[\"Startup\"]",
+            "[\"IT\"]",
+            "[\"Seoul\"]",
+            "[\"Java\"]",
+            true,
+            true
+        )));
         when(mattermostRecommendationService.listOpenRecommendations(1L)).thenReturn(List.of());
     }
 

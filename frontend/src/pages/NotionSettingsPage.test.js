@@ -88,10 +88,15 @@ describe('NotionSettingsPage', () => {
         expect(mocks.getConnection).toHaveBeenCalled();
         expect(mocks.listSyncLogs).toHaveBeenCalled();
         expect(wrapper.find('[data-testid="mypage-left-board"]').exists()).toBe(false);
-        expect(wrapper.text()).toContain('마이페이지 · 노션 연동 관리');
-        expect(wrapper.text()).toContain('Notion 연동 상태');
+        expect(wrapper.find('.page-header .eyebrow').exists()).toBe(false);
+        expect(wrapper.find('.page-header h1 + p').exists()).toBe(false);
+        expect(wrapper.text()).toContain('Notion 연동 관리');
+        expect(wrapper.text()).not.toContain('마이페이지 · 노션 연동 관리');
+        expect(wrapper.find('.mypage-summary-strip').exists()).toBe(false);
+        expect(wrapper.find('.notion-account-card').exists()).toBe(false);
+        expect(wrapper.find('.account-settings-card').exists()).toBe(true);
         expect(wrapper.text()).toContain('공고 자동 동기화 꺼짐');
-        expect(wrapper.text()).toContain('로그인 이메일과 노션 이메일이 서로 달라도 연동돼요.');
+        expect(wrapper.text()).not.toContain('로그인 이메일과 노션 이메일이 서로 달라도 연동돼요.');
         expect(wrapper.text()).toContain('hong.gildong@gmail.com');
         expect(wrapper.text()).toContain('gildong.work@gmail.com');
         expect(wrapper.text()).toContain('자소서 · 도화지');

@@ -23,6 +23,14 @@ describe('profileApi', () => {
         expect(profile.desiredRoles).toEqual(['백엔드 개발자']);
         expect(profile.completed).toBe(true);
     });
+    it('ONB-001: surfaces profile load failures instead of replacing them with empty preferences', async () => {
+        const api = createProfileApi({
+            get: vi.fn().mockRejectedValue(new Error('server restarting')),
+            put: vi.fn()
+        });
+
+        await expect(api.getUserProfile()).rejects.toThrow('server restarting');
+    });
     it('ONB-001: saves onboarding preferences through /api/me/profile', async () => {
         const put = vi.fn().mockResolvedValue({
             data: {

@@ -1,11 +1,13 @@
 package com.ezone.backend.service;
 
+import com.ezone.backend.domain.persistence.UserProfileRow;
 import com.ezone.backend.dto.profile.DocumentProfileResponse;
 import com.ezone.backend.dto.profile.UpsertDocumentSectionRequest;
 import com.ezone.backend.dto.profile.UserProfileRequest;
 import com.ezone.backend.dto.profile.UserProfileResponse;
 import com.ezone.backend.mapper.DocumentProfileMapper;
 import com.ezone.backend.mapper.UserAccountMapper;
+import com.ezone.backend.mapper.UserProfileMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -23,22 +25,30 @@ public class InMemoryProfileService implements ProfileService {
     private static final TypeReference<Map<String, Object>> SECTION_PAYLOAD_TYPE = new TypeReference<>() {
     };
 
+    private static final TypeReference<List<String>> STRING_LIST_TYPE = new TypeReference<>() {
+    };
+
     private final UserAccountMapper userAccountMapper;
     private final ObjectMapper objectMapper;
     private final DocumentProfileMapper documentProfileMapper;
-    private final Map<Long, UserProfileResponse> userProfiles = new LinkedHashMap<>();
+    private final UserProfileMapper userProfileMapper;
 
     @Autowired
     public InMemoryProfileService(
         UserAccountMapper userAccountMapper,
         ObjectMapper objectMapper,
-        ObjectProvider<DocumentProfileMapper> documentProfileMapper
+        ObjectProvider<DocumentProfileMapper> documentProfileMapper,
+        ObjectProvider<UserProfileMapper> userProfileMapper
     ) {
-        this(userAccountMapper, objectMapper, documentProfileMapper.getIfAvailable());
+        this(userAccountMapper, objectMapper, documentProfileMapper.getIfAvailable(), userProfileMapper.getIfAvailable());
     }
 
     public InMemoryProfileService(UserAccountMapper userAccountMapper) {
-        this(userAccountMapper, new ObjectMapper(), (DocumentProfileMapper) null);
+        this(userAccountMapper, new ObjectMapper(), (DocumentProfileMapper) null, (UserProfileMapper) null);
+    }
+
+    public InMemoryProfileService(UserAccountMapper userAccountMapper, UserProfileMapper userProfileMapper) {
+        this(userAccountMapper, new ObjectMapper(), (DocumentProfileMapper) null, userProfileMapper);
     }
 
     InMemoryProfileService(
@@ -46,39 +56,46 @@ public class InMemoryProfileService implements ProfileService {
         ObjectMapper objectMapper,
         DocumentProfileMapper documentProfileMapper
     ) {
+        this(userAccountMapper, objectMapper, documentProfileMapper, (UserProfileMapper) null);
+    }
+
+    InMemoryProfileService(
+        UserAccountMapper userAccountMapper,
+        ObjectMapper objectMapper,
+        DocumentProfileMapper documentProfileMapper,
+        UserProfileMapper userProfileMapper
+    ) {
         this.userAccountMapper = userAccountMapper;
         this.objectMapper = objectMapper;
         this.documentProfileMapper = documentProfileMapper;
-        seedDemoProfile();
+        this.userProfileMapper = userProfileMapper;
     }
 
     @Override
     public UserProfileResponse getUserProfile(Long userId) {
-        return userProfiles.computeIfAbsent(userId, ignored -> new UserProfileResponse(
-            List.of(),
-            List.of(),
-            List.of(),
-            List.of(),
-            List.of(),
-            false,
-            false
-        ));
+        return requireUserProfileMapper().findByUserId(userId)
+            .map(this::toResponse)
+            .orElseGet(() -> emptyProfile(false));
     }
 
     @Override
+    @Transactional
     public UserProfileResponse updateUserProfile(Long userId, UserProfileRequest request) {
-        userAccountMapper.markProfileCompleted(userId);
-        UserProfileResponse response = new UserProfileResponse(
-            safeList(request.desiredRoles()),
-            safeList(request.companyTypes()),
-            safeList(request.industries()),
-            safeList(request.regions()),
-            safeList(request.skills()),
-            request.ssafy(),
-            true
+        UserProfileMapper mapper = requireUserProfileMapper();
+        mapper.upsert(
+            userId,
+            writeList(safeList(request.desiredRoles())),
+            writeList(safeList(request.companyTypes())),
+            writeList(safeList(request.industries())),
+            writeList(safeList(request.regions())),
+            writeList(safeList(request.skills())),
+            request.ssafy()
         );
-        userProfiles.put(userId, response);
-        return response;
+        userAccountMapper.markProfileCompleted(userId);
+
+        return mapper.findByUserId(userId)
+            .map(this::toResponse)
+            .orElseThrow(() -> new IllegalStateException("Saved user profile could not be loaded."));
     }
 
     @Override
@@ -101,20 +118,53 @@ public class InMemoryProfileService implements ProfileService {
         return getDocumentProfile(userId);
     }
 
-    private void seedDemoProfile() {
-        userProfiles.put(1L, new UserProfileResponse(
-            List.of("백엔드 개발자"),
-            List.of("대기업", "스타트업"),
-            List.of("핀테크", "생산성 도구"),
-            List.of("서울", "경기"),
-            List.of("Java", "Spring Boot", "MyBatis"),
-            true,
-            true
-        ));
+    private UserProfileResponse emptyProfile(boolean completed) {
+        return new UserProfileResponse(
+            List.of(),
+            List.of(),
+            List.of(),
+            List.of(),
+            List.of(),
+            false,
+            completed
+        );
+    }
+
+    private UserProfileResponse toResponse(UserProfileRow row) {
+        return new UserProfileResponse(
+            readList(row.desiredRolesJson()),
+            readList(row.companyTypesJson()),
+            readList(row.industriesJson()),
+            readList(row.regionsJson()),
+            readList(row.skillsJson()),
+            row.ssafy(),
+            row.completed()
+        );
     }
 
     private List<String> safeList(List<String> values) {
         return values == null ? List.of() : values;
+    }
+
+    private List<String> readList(String valueJson) {
+        if (valueJson == null || valueJson.isBlank()) {
+            return List.of();
+        }
+        try {
+            return objectMapper.readValue(valueJson, STRING_LIST_TYPE);
+        }
+        catch (JsonProcessingException exception) {
+            throw new IllegalStateException("User profile list payload is not valid JSON.", exception);
+        }
+    }
+
+    private String writeList(List<String> values) {
+        try {
+            return objectMapper.writeValueAsString(values == null ? List.of() : values);
+        }
+        catch (JsonProcessingException exception) {
+            throw new IllegalArgumentException("User profile list payload cannot be serialized.", exception);
+        }
     }
 
     private Map<String, Object> readPayload(String payloadJson) {
@@ -140,5 +190,12 @@ public class InMemoryProfileService implements ProfileService {
             throw new IllegalStateException("Document profile persistence is not configured.");
         }
         return documentProfileMapper;
+    }
+
+    private UserProfileMapper requireUserProfileMapper() {
+        if (userProfileMapper == null) {
+            throw new IllegalStateException("User profile persistence is not configured.");
+        }
+        return userProfileMapper;
     }
 }

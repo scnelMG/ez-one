@@ -4,7 +4,7 @@
       <div>
         <p v-if="eyebrow" class="eyebrow">{{ eyebrow }}</p>
         <h1>{{ title }}</h1>
-        <p>{{ description }}</p>
+        <p v-if="description">{{ description }}</p>
       </div>
       <slot name="action" />
     </div>
@@ -22,7 +22,7 @@
   },
   description: {
     type: String,
-    required: true
+    default: ''
   }
 });
 </script>

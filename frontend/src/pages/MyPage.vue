@@ -2,62 +2,78 @@
   <AppLayout>
     <section class="wire-page mypage-page">
       <PageHeader
-        eyebrow="마이페이지"
         :title="pageTitle"
-        :description="pageDescription"
       />
 
       <MyPageNav />
 
       <section v-if="activeSection === 'account'" class="mypage-panel" aria-label="내 계정">
-        <div class="section-heading">
-          <div>
-            <h2>프로필</h2>
+        <article class="account-settings-card">
+          <div class="account-setting-row account-photo-row">
+            <span class="profile-avatar-fallback large account-photo-preview">
+              <img
+                v-if="accountProfileImageUrl"
+                data-testid="account-profile-photo"
+                :src="accountProfileImageUrl"
+                alt=""
+              />
+              <span v-else>{{ profileInitial }}</span>
+            </span>
+            <div class="account-setting-main">
+              <span>프로필 사진</span>
+              <strong>{{ accountProfileImageUrl ? '등록됨' : '등록된 사진 없음' }}</strong>
+            </div>
+            <div class="account-photo-actions">
+              <label class="ghost-button account-photo-upload">
+                사진 변경
+                <input
+                  data-testid="profile-photo-input"
+                  type="file"
+                  accept="image/*"
+                  @change="handleProfilePhotoChange"
+                />
+              </label>
+              <button
+                v-if="accountProfileImageUrl"
+                class="text-button"
+                type="button"
+                @click="removeProfilePhoto"
+              >
+                삭제
+              </button>
+            </div>
           </div>
-        </div>
-        <article class="account-profile-card">
-          <span class="profile-avatar-fallback large">{{ profileInitial }}</span>
-          <div class="account-profile-fields">
-            <label>
-              이름
+
+          <div class="account-setting-row">
+            <label class="account-setting-main">
+              <span>이름</span>
               <input
                 v-model="nickname"
                 data-testid="nickname-input"
                 name="nickname"
                 autocomplete="name"
                 maxlength="50"
-                placeholder="서비스에서 사용할 이름…"
+                placeholder="서비스에서 사용할 이름"
               />
             </label>
-            <p>상단 프로필과 문의 내역에 표시되는 이름입니다.</p>
+            <button
+              class="primary-button"
+              type="button"
+              data-testid="save-account-profile"
+              :disabled="saving"
+              @click="saveProfile"
+            >
+              {{ saving ? '저장 중' : '저장' }}
+            </button>
           </div>
-          <button
-            class="primary-button"
-            type="button"
-            data-testid="save-account-profile"
-            :disabled="saving"
-            @click="saveProfile"
-          >
-            {{ saving ? '저장 중…' : '이름 저장' }}
-          </button>
-        </article>
 
-        <article class="account-login-card">
-          <div class="section-heading compact-heading">
-            <div>
-              <p class="section-kicker">로그인 정보</p>
-              <h3>Google 계정으로 로그인 중</h3>
+          <div class="account-setting-row">
+            <div class="account-setting-main">
+              <span>Google 계정</span>
+              <strong>{{ currentUser?.email }}</strong>
             </div>
-            <span class="status-chip green">Google 로그인</span>
+            <span class="account-setting-note">비밀번호 없음</span>
           </div>
-          <p>{{ currentUser?.email }}</p>
-          <small>EZ-ONE은 Google 계정으로 로그인하며 별도 비밀번호를 저장하지 않습니다.</small>
-        </article>
-
-        <article class="account-warning-card">
-          <strong>Notion 연동은 계정과 분리해 관리됩니다.</strong>
-          <p>연결 상태와 동기화 범위는 Notion 연동 관리에서 확인할 수 있습니다.</p>
-          <RouterLink to="/mypage/notion">Notion 연동 관리</RouterLink>
         </article>
 
         <div class="account-actions">
@@ -68,25 +84,7 @@
       </section>
 
       <section v-else-if="activeSection === 'onboarding'" class="mypage-panel" aria-label="온보딩 정보">
-        <div class="section-heading">
-          <div>
-            <h2>지원 준비 기본 정보</h2>
-          </div>
-          <small>지원 준비 기본 정보로 사용됩니다. 언제든 수정할 수 있습니다.</small>
-        </div>
-        <div class="mypage-summary-strip" aria-label="온보딩 정보 사용처">
-          <div>
-            <span>추천 기준</span>
-            <strong>직무 · 기업 · 지역</strong>
-            <p>저장한 선호 정보로 공고 추천과 필터 기준을 맞춥니다.</p>
-          </div>
-          <div>
-            <span>문서 기본값</span>
-            <strong>기술 · SSAFY 여부</strong>
-            <p>지원 문서와 확장 프로그램 보조 정보의 기본값으로 사용합니다.</p>
-          </div>
-        </div>
-        <div class="preference-chip-form">
+        <div class="preference-chip-form onboarding-settings-form">
           <section class="onboarding-field-group" aria-label="희망 직무">
             <strong>희망 직무</strong>
             <div class="onboarding-chip-list">
@@ -119,8 +117,8 @@
               </button>
             </div>
           </section>
-          <section class="onboarding-field-group" aria-label="산업">
-            <strong>산업</strong>
+          <section class="onboarding-field-group" aria-label="계열 및 업종">
+            <strong>계열 / 업종</strong>
             <div class="onboarding-chip-list">
               <button
                 v-for="industry in industryOptions"
@@ -184,8 +182,8 @@
                 아니오
               </button>
             </div>
+            <p class="onboarding-helper">SSAFY 여부는 지원 준비 정보로 저장돼요.</p>
           </section>
-          <p class="mattermost-note">저장된 온보딩 정보는 지원 문서 기본 정보로만 사용됩니다.</p>
         </div>
         <div class="form-actions">
           <p v-if="preferenceStatusMessage" class="form-status" role="status">{{ preferenceStatusMessage }}</p>
@@ -199,10 +197,7 @@
       </section>
 
       <section v-else-if="activeSection === 'qna'" class="mypage-panel" aria-label="자주 묻는 질문">
-        <div class="section-heading">
-          <div>
-            <h2>FAQ 검색</h2>
-          </div>
+        <div class="faq-toolbar">
           <input
             v-model="faqSearch"
             class="mypage-search"
@@ -229,8 +224,8 @@
           </button>
         </div>
         <article v-for="item in filteredFaqItems" :key="item.q" class="faq-row">
-          <strong>Q {{ item.q }}</strong>
-          <p>A {{ item.a }}</p>
+          <strong>{{ item.q }}</strong>
+          <p>{{ item.a }}</p>
         </article>
         <div v-if="filteredFaqItems.length === 0" class="mypage-empty-state" role="status">
           <strong>검색 결과가 없습니다.</strong>
@@ -239,61 +234,46 @@
       </section>
 
       <section v-else-if="activeSection === 'inquiry'" class="mypage-panel" aria-label="1:1 문의">
-        <div class="section-heading">
-          <div>
-            <p class="section-kicker">문의</p>
-            <h2>1:1 문의 작성</h2>
+        <div class="support-layout">
+          <form class="support-form" @submit.prevent="submitInquiry">
+            <label>
+              문의 유형
+              <select v-model="inquiryForm.type" name="inquiryCategory" autocomplete="off">
+                <option value="ACCOUNT">계정</option>
+                <option value="ERROR">오류</option>
+                <option value="SUGGESTION">기능 제안</option>
+                <option value="ETC">기타</option>
+              </select>
+            </label>
+            <label>
+              제목
+              <input v-model="inquiryForm.title" name="inquiryTitle" autocomplete="off" placeholder="문의 제목" required />
+            </label>
+            <label>
+              내용
+              <textarea v-model="inquiryForm.body" name="inquiryBody" autocomplete="off" placeholder="문제가 발생한 화면, 기대한 동작, 실제 결과를 적어 주세요." required />
+            </label>
+            <button class="primary-button" type="submit" :disabled="supportSubmitting">
+              {{ supportSubmitting ? '접수 중' : '문의 접수' }}
+            </button>
+          </form>
+          <div class="support-history">
+            <strong>내 문의 내역</strong>
+            <span v-if="supportRequests.length === 0" class="support-empty">아직 접수된 문의가 없습니다.</span>
+            <article v-for="request in supportRequests" :key="request.id ?? request.title" class="support-history-row">
+              <div>
+                <strong>{{ request.title }}</strong>
+                <small>{{ formatSupportDate(request.createdAt ?? request.created_at) }}</small>
+              </div>
+              <span class="status-chip">{{ formatSupportStatus(request.status) }}</span>
+            </article>
           </div>
         </div>
-        <form class="support-form" @submit.prevent="submitInquiry">
-          <label>
-            문의 유형
-            <select v-model="inquiryForm.type" name="inquiryCategory" autocomplete="off">
-              <option value="ACCOUNT">계정</option>
-              <option value="ERROR">오류</option>
-              <option value="SUGGESTION">기능 제안</option>
-              <option value="ETC">기타</option>
-            </select>
-          </label>
-          <label>
-            제목
-            <input v-model="inquiryForm.title" name="inquiryTitle" autocomplete="off" placeholder="문의 제목을 입력하세요…" required />
-          </label>
-          <label>
-            내용
-            <textarea v-model="inquiryForm.body" name="inquiryBody" autocomplete="off" placeholder="문제가 발생한 화면, 기대한 동작, 실제 결과를 적어 주세요…" required />
-          </label>
-          <button class="primary-button" type="submit" :disabled="supportSubmitting">
-            {{ supportSubmitting ? '접수 중' : '문의 접수' }}
-          </button>
-        </form>
         <p v-if="supportStatusMessage" class="form-status" role="status">{{ supportStatusMessage }}</p>
-        <div class="support-history">
-          <strong>내 문의 내역</strong>
-          <span v-if="supportRequests.length === 0" class="support-empty">아직 접수된 문의가 없습니다.</span>
-          <article v-for="request in supportRequests" :key="request.id ?? request.title" class="support-history-row">
-            <div>
-              <strong>{{ request.title }}</strong>
-              <small>{{ formatSupportDate(request.createdAt ?? request.created_at) }}</small>
-            </div>
-            <span class="status-chip">{{ formatSupportStatus(request.status) }}</span>
-          </article>
-        </div>
       </section>
 
       <section v-else class="mypage-panel" aria-label="이용약관">
-        <div class="section-heading">
-          <div>
-            <h2>서비스 이용 기준</h2>
-          </div>
-          <small>시행일 2026.01.01</small>
-        </div>
-        <div class="terms-tabs">
-          <span>제1조 목적</span>
-          <span>제2조 정의</span>
-          <span>계정 및 로그인</span>
-          <span>개인정보 처리 기준</span>
-        </div>
+        <p class="terms-effective-date">시행일 2026.01.01</p>
         <article class="terms-paper">
           <h3>제1조 목적</h3>
           <p>본 약관은 EZ-ONE이 제공하는 채용 공고 저장, 지원 워크스페이스, 작성 자료 관리, Notion JOB_ONLY 동기화 서비스를 이용할 때 필요한 기본 사항을 정합니다.</p>
@@ -371,31 +351,26 @@ const inquiryForm = reactive({
 
 const pageCopy = {
   account: {
-    title: '내 계정',
-    description: '로그인 계정과 외부 연동 상태를 확인하고 계정 정보를 관리합니다.'
+    title: '내 계정'
   },
   onboarding: {
-    title: '온보딩 정보',
-    description: '지원 준비에 사용하는 직무, 기업 유형, 지역, 기술 정보를 수정합니다.'
+    title: '온보딩 정보'
   },
   qna: {
-    title: '자주 묻는 질문',
-    description: '자주 묻는 질문을 빠르게 확인합니다.'
+    title: '자주 묻는 질문'
   },
   inquiry: {
-    title: '1:1 문의',
-    description: '계정, 오류, 기능 문의를 접수하고 처리 상태를 확인합니다.'
+    title: '1:1 문의'
   },
   terms: {
-    title: '이용약관',
-    description: '서비스 이용약관과 개인정보 처리 기준을 확인합니다.'
+    title: '이용약관'
   }
 };
 
 const activeSection = computed(() => route.meta.mypageSection ?? 'account');
 const pageTitle = computed(() => pageCopy[activeSection.value]?.title ?? pageCopy.account.title);
-const pageDescription = computed(() => pageCopy[activeSection.value]?.description ?? pageCopy.account.description);
 const profileInitial = computed(() => (nickname.value || currentUser.value?.email || 'E').trim().charAt(0).toUpperCase());
+const accountProfileImageUrl = computed(() => currentUser.value?.profileImageUrl || currentUser.value?.pictureUrl || currentUser.value?.photoUrl || currentUser.value?.avatarUrl || '');
 const filteredFaqItems = computed(() => {
   const query = faqSearch.value.trim().toLowerCase();
   return faqItems.filter((item) => {
@@ -457,9 +432,10 @@ async function saveProfile() {
   statusMessage.value = '';
   try {
     const updatedUser = await authApi.updateCurrentUser({ nickname: nextNickname });
-    currentUser.value = updatedUser;
-    nickname.value = updatedUser.nickname;
-    saveCurrentUser(updatedUser);
+    const nextUser = { ...(currentUser.value ?? {}), ...updatedUser };
+    currentUser.value = nextUser;
+    nickname.value = nextUser.nickname;
+    saveCurrentUser(nextUser);
     statusMessage.value = '프로필 이름이 저장되었습니다.';
     showToast('프로필 이름이 저장되었습니다.');
   } catch {
@@ -468,6 +444,51 @@ async function saveProfile() {
   } finally {
     saving.value = false;
   }
+}
+
+function handleProfilePhotoChange(event) {
+  const file = event.target.files?.[0];
+  event.target.value = '';
+  if (!file) {
+    return;
+  }
+  if (!file.type.startsWith('image/')) {
+    statusMessage.value = '이미지 파일만 등록할 수 있습니다.';
+    showToast(statusMessage.value, { tone: 'red' });
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    const dataUrl = typeof reader.result === 'string' ? reader.result : '';
+    if (!dataUrl) {
+      statusMessage.value = '프로필 사진을 불러오지 못했습니다.';
+      showToast(statusMessage.value, { tone: 'red' });
+      return;
+    }
+    persistCurrentUserProfile({ profileImageUrl: dataUrl });
+    statusMessage.value = '프로필 사진이 저장되었습니다.';
+    showToast(statusMessage.value);
+  };
+  reader.onerror = () => {
+    statusMessage.value = '프로필 사진을 불러오지 못했습니다.';
+    showToast(statusMessage.value, { tone: 'red' });
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeProfilePhoto() {
+  persistCurrentUserProfile({ profileImageUrl: '', pictureUrl: '', photoUrl: '', avatarUrl: '' });
+  statusMessage.value = '프로필 사진이 삭제되었습니다.';
+  showToast(statusMessage.value);
+}
+
+function persistCurrentUserProfile(patch) {
+  const nextUser = {
+    ...(currentUser.value ?? {}),
+    ...patch
+  };
+  currentUser.value = nextUser;
+  saveCurrentUser(nextUser);
 }
 
 async function savePreferences() {

@@ -7682,9 +7682,7 @@ li {
   padding: 0;
 }
 
-.account-profile-card,
-.account-login-card,
-.account-warning-card,
+.account-settings-card,
 .notion-account-card,
 .sync-settings-card,
 .sync-log-card,
@@ -7730,21 +7728,13 @@ li {
   font-size: 0.82rem;
 }
 
-.account-profile-card {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 16px;
-  background: #fbfcff;
-}
-
 .profile-avatar-fallback.large {
   width: 72px;
   height: 72px;
   font-size: 1.5rem;
 }
 
-.account-profile-card label,
+.account-setting-main,
 .support-form label,
 .preference-chip-form label,
 .sync-location {
@@ -7754,19 +7744,89 @@ li {
   font-weight: 900;
 }
 
-.account-profile-fields {
+.account-settings-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.account-setting-row {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  min-height: 76px;
+  padding: 18px;
+}
+
+.account-setting-row + .account-setting-row {
+  border-top: 1px solid var(--color-border);
+}
+
+.account-name-row {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.account-photo-row {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.account-photo-preview {
+  overflow: hidden;
+}
+
+.account-photo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.account-photo-actions {
+  display: flex;
+  align-items: center;
   gap: 8px;
+}
+
+.account-photo-upload {
+  cursor: pointer;
+}
+
+.account-photo-upload input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.account-setting-main {
   min-width: 0;
 }
 
-.account-profile-fields p {
-  margin: 0;
+.account-setting-main span {
   color: var(--color-muted);
-  font-size: 0.82rem;
+  font-size: 0.78rem;
+  font-weight: 900;
 }
 
-.account-profile-card input,
+.account-setting-main strong {
+  color: var(--color-ink);
+  font-size: 0.96rem;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.account-setting-note {
+  color: var(--color-muted);
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.account-setting-link {
+  color: var(--color-primary-strong);
+  font-weight: 900;
+}
+
+.account-settings-card input,
 .support-form input,
 .support-form select,
 .support-form textarea,
@@ -7802,12 +7862,6 @@ li {
   opacity: 0.58;
 }
 
-.account-warning-card {
-  border-color: rgba(217, 119, 6, 0.32);
-  background: #fff8eb;
-}
-
-.account-warning-card a,
 .sync-location a {
   color: var(--color-primary-strong);
   font-weight: 900;
@@ -7825,6 +7879,10 @@ li {
   gap: 16px;
 }
 
+.onboarding-settings-form {
+  max-width: 980px;
+}
+
 .preference-group {
   display: grid;
   gap: 8px;
@@ -7838,6 +7896,11 @@ li {
 
 .mypage-search {
   max-width: 460px;
+}
+
+.faq-toolbar {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .faq-filter-row {
@@ -7866,11 +7929,21 @@ li {
 
 .faq-row {
   display: grid;
-  gap: 10px;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
+  gap: 6px;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
   background: #fff;
-  padding: 16px;
+  padding: 15px 2px;
+}
+
+.faq-row:first-of-type {
+  border-top: 1px solid var(--color-border);
+}
+
+.faq-row strong {
+  color: var(--color-ink);
+  font-size: 0.94rem;
 }
 
 .faq-row p {
@@ -7878,10 +7951,20 @@ li {
   color: var(--color-muted);
 }
 
+.support-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(280px, 0.55fr);
+  align-items: start;
+  gap: 18px;
+}
+
 .support-form {
   display: grid;
-  gap: 16px;
-  max-width: 760px;
+  gap: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: #fff;
+  padding: 18px;
 }
 
 .support-form textarea {
@@ -7894,7 +7977,7 @@ li {
   gap: 10px;
   border: 1px solid var(--color-border);
   border-radius: 8px;
-  background: #fbfcff;
+  background: #fff;
   padding: 16px;
 }
 
@@ -7951,17 +8034,44 @@ li {
 }
 
 @media (max-width: 700px) {
-  .account-profile-card {
-    grid-template-columns: auto minmax(0, 1fr);
+  .account-name-row,
+  .account-photo-row,
+  .account-setting-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
   }
 
-  .account-profile-card .primary-button {
-    grid-column: 1 / -1;
+  .account-name-row .profile-avatar-fallback,
+  .account-photo-row .profile-avatar-fallback {
+    width: 56px;
+    height: 56px;
+    font-size: 1.2rem;
+  }
+
+  .account-name-row .primary-button,
+  .account-photo-actions {
     width: 100%;
+  }
+
+  .account-photo-actions {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .support-form {
     max-width: none;
+  }
+
+  .faq-toolbar {
+    justify-content: stretch;
+  }
+
+  .mypage-search {
+    max-width: none;
+  }
+
+  .support-layout {
+    grid-template-columns: 1fr;
   }
 
   .support-history-row {
@@ -7985,7 +8095,19 @@ li {
 }
 
 .terms-paper {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: #fff;
+  padding: 22px;
   line-height: 1.75;
+}
+
+.terms-effective-date {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.84rem;
+  font-weight: 800;
+  text-align: right;
 }
 
 .notion-account-card {
@@ -8026,6 +8148,12 @@ li {
 .sync-log-card {
   display: grid;
   gap: 14px;
+}
+
+.compact-section-title {
+  color: var(--color-ink);
+  font-size: 0.98rem;
+  font-weight: 900;
 }
 
 .notion-log-list {

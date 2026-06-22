@@ -112,7 +112,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import bellIconUrl from '@/assets/bell.svg';
 import logoUrl from '@/assets/ez-one-logo-final.png';
@@ -125,13 +125,20 @@ const router = useRouter();
 const profileStore = useProfileStore();
 const isProfileMenuOpen = ref(false);
 let profileMenuCloseTimer = null;
-const currentUser = computed(() => getCurrentUser());
+const currentUser = ref(getCurrentUser());
 const isSsafyUser = computed(() => profileStore.profile?.ssafy === true);
 
 onMounted(async () => {
   if (currentUser.value && !profileStore.profile && profileStore.status === 'idle') {
     await profileStore.loadProfile();
   }
+  window.addEventListener('ezone:current-user-updated', syncCurrentUser);
+  window.addEventListener('storage', syncCurrentUser);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('ezone:current-user-updated', syncCurrentUser);
+  window.removeEventListener('storage', syncCurrentUser);
 });
 
 const profileDisplayName = computed(() => {
@@ -164,6 +171,10 @@ function scheduleProfileMenuClose() {
     isProfileMenuOpen.value = false;
     profileMenuCloseTimer = null;
   }, 180);
+}
+
+function syncCurrentUser() {
+  currentUser.value = getCurrentUser();
 }
 
 async function logout() {

@@ -116,10 +116,19 @@ describe('MyPage', () => {
         const wrapper = await mountPage('/mypage');
 
         expect(wrapper.get('.page-header h1').text()).toBe('내 계정');
+        expect(wrapper.find('.page-header .eyebrow').exists()).toBe(false);
+        expect(wrapper.find('.page-header h1 + p').exists()).toBe(false);
         expect(wrapper.text()).not.toContain('마이페이지 ·');
         expect(wrapper.find('[data-testid="mypage-left-board"]').exists()).toBe(false);
-        expect(wrapper.text()).toContain('Google 계정으로 로그인 중');
-        expect(wrapper.text()).toContain('Notion 연동은 계정과 분리해 관리됩니다.');
+        const accountPanel = wrapper.get('[aria-label="내 계정"]');
+        expect(accountPanel.text()).toContain('Google 계정');
+        expect(accountPanel.text()).toContain('비밀번호 없음');
+        expect(accountPanel.text()).not.toContain('Notion');
+        expect(accountPanel.find('a[href="/mypage/notion"]').exists()).toBe(false);
+        expect(wrapper.find('.section-heading').exists()).toBe(false);
+        expect(wrapper.text()).not.toContain('로그인 정보');
+        expect(wrapper.text()).not.toContain('상단 프로필과 문의 내역');
+        expect(wrapper.text()).not.toContain('연결 상태와 동기화 범위');
 
         await wrapper.get('[data-testid="nickname-input"]').setValue('홍길동');
         await wrapper.get('[data-testid="save-account-profile"]').trigger('click');
@@ -128,6 +137,24 @@ describe('MyPage', () => {
         expect(mocks.updateCurrentUser).toHaveBeenCalledWith({ nickname: '홍길동' });
         expect(JSON.parse(localStorage.getItem('ezone.currentUser') ?? '{}').nickname).toBe('홍길동');
         expect(wrapper.text()).toContain('프로필 이름이 저장되었습니다.');
+    });
+
+    it('MY-ACCOUNT: uploads a profile photo into the current account session', async () => {
+        mockFileReader('data:image/png;base64,profile-photo');
+        const wrapper = await mountPage('/mypage');
+        const input = wrapper.get('[data-testid="profile-photo-input"]');
+        const file = new File(['profile'], 'profile.png', { type: 'image/png' });
+
+        Object.defineProperty(input.element, 'files', {
+            value: [file],
+            configurable: true
+        });
+        await input.trigger('change');
+        await flushPromises();
+
+        expect(wrapper.get('[data-testid="account-profile-photo"]').attributes('src')).toBe('data:image/png;base64,profile-photo');
+        expect(JSON.parse(localStorage.getItem('ezone.currentUser') ?? '{}').profileImageUrl).toBe('data:image/png;base64,profile-photo');
+        expect(wrapper.text()).toContain('프로필 사진이 저장되었습니다.');
     });
 
     it('MY-ACCOUNT: shows an inline error when nickname save fails', async () => {
@@ -159,7 +186,10 @@ describe('MyPage', () => {
         expect(wrapper.get('.page-header h1').text()).toBe('온보딩 정보');
         expect(wrapper.text()).not.toContain('마이페이지 · 온보딩 정보');
         expect(wrapper.text()).toContain('프론트엔드');
-        expect(wrapper.text()).toContain('지원 준비 기본 정보');
+        expect(wrapper.text()).toContain('계열 / 업종');
+        expect(wrapper.text()).toContain('SSAFY 여부는 지원 준비 정보로 저장돼요.');
+        expect(wrapper.find('.mypage-summary-strip').exists()).toBe(false);
+        expect(wrapper.find('[aria-label="온보딩 정보"] > .section-heading').exists()).toBe(false);
 
         await wrapper.get('[data-testid="profile-role-option-프론트엔드"]').trigger('click');
         await wrapper.get('[data-testid="profile-role-option-백엔드"]').trigger('click');
@@ -217,6 +247,7 @@ describe('MyPage', () => {
         expect(searchInput.attributes('type')).toBe('search');
         expect(searchInput.attributes('name')).toBe('faqSearch');
         expect(searchInput.attributes('aria-label')).toBe('FAQ 검색');
+        expect(wrapper.find('[aria-label="자주 묻는 질문"] > .section-heading').exists()).toBe(false);
         expect(wrapper.findAll('[data-testid^="faq-filter-"]').every((filter) => filter.element.tagName === 'BUTTON')).toBe(true);
         expect(wrapper.findAll('.faq-row').length).toBeGreaterThanOrEqual(12);
 
@@ -233,6 +264,8 @@ describe('MyPage', () => {
 
         expect(mocks.getMyRequests).toHaveBeenCalled();
         expect(wrapper.text()).toContain('Notion 동기화 오류');
+        expect(wrapper.find('[aria-label="1:1 문의"] > .section-heading').exists()).toBe(false);
+        expect(wrapper.text()).not.toContain('1:1 문의 작성');
 
         await wrapper.find('input[required]').setValue('새 문의');
         await wrapper.find('textarea').setValue('문의 내용입니다.');
@@ -262,6 +295,8 @@ describe('MyPage', () => {
         expect((await mountPage('/mypage/qna')).text()).toContain('공고별로 첨부 자료는 어디서 보나요?');
         const terms = await mountPage('/mypage/terms');
         expect(terms.get('.page-header h1').text()).toBe('이용약관');
+        expect(terms.find('.terms-tabs').exists()).toBe(false);
+        expect(terms.find('[aria-label="이용약관"] > .section-heading').exists()).toBe(false);
         expect(terms.text()).toContain('제1조 목적');
         expect(terms.text()).toContain('제2조 정의');
         expect(terms.text()).toContain('계정 및 로그인');
@@ -289,4 +324,14 @@ async function mountPage(path) {
 
 function flushPromises() {
     return new Promise((resolve) => setTimeout(resolve));
+}
+
+function mockFileReader(result) {
+    class MockFileReader {
+        readAsDataURL() {
+            this.result = result;
+            setTimeout(() => this.onload?.(), 0);
+        }
+    }
+    vi.stubGlobal('FileReader', MockFileReader);
 }
