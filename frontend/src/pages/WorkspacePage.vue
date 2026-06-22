@@ -248,7 +248,7 @@
               <div class="version-workspace">
                 <div class="section-heading">
                   <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-                    <h2 style="color: #8b5cf6; margin: 0;">{{ activeQuestionIndex + 1 }}번 문항 {{ isCreatingNewVersion ? '새 버전 저장' : '변경점 비교' }}</h2>
+                    <h2 class="version-section-title">{{ activeQuestionIndex + 1 }}번 문항 {{ isCreatingNewVersion ? '새 버전 저장' : '변경점 비교' }}</h2>
                     <button
                       v-if="!isCreatingNewVersion"
                       class="primary-button"
@@ -377,11 +377,11 @@
 
                 <div class="version-summary ai-summary" style="margin-top: 24px; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
                   <div class="section-heading compact-heading" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                    <h3 style="margin: 0; color: #4338ca; display: flex; align-items: center; gap: 8px; font-size: 1.1rem;">
-                      ✨ AI 변경점 요약
+                    <h3 class="version-section-title">
+                      AI 변경점 요약
                     </h3>
                     <div style="display: flex; gap: 8px;">
-                      <button v-if="selectedLeftVersionId && selectedRightVersionId" class="ghost-button" @click="compareVersions" :disabled="workspaceStore.status === 'loading'" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: #e0e7ff; color: #4f46e5; border: none; cursor: pointer; font-weight: 600;">
+                      <button v-if="selectedLeftVersionId && selectedRightVersionId" class="ghost-button" @click="compareVersions" :disabled="workspaceStore.isComparingVersions" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: #e0e7ff; color: #4f46e5; border: none; cursor: pointer; font-weight: 600;">
                         🔄 새로고침
                       </button>
                       <button class="primary-button small-button" @click="isEditingPrompt = !isEditingPrompt" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: #8b5cf6; border: none; cursor: pointer;">
@@ -394,14 +394,15 @@
                     <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 6px;">AI 요약 기준 (프롬프트 커스텀)</label>
                     <textarea v-model="customAiPrompt" style="width: 100%; min-height: 60px; padding: 10px; font-size: 0.9rem; border: 1px solid #e2e8f0; border-radius: 6px; resize: vertical;" placeholder="AI가 요약할 때 집중할 부분을 적어주세요."></textarea>
                     <div style="text-align: right; margin-top: 8px;">
-                      <button class="primary-button small-button" @click="compareVersions(); isEditingPrompt = false;" :disabled="workspaceStore.status === 'loading'" style="background: #4f46e5;">
+                      <button class="primary-button small-button" @click="compareVersions(); isEditingPrompt = false;" :disabled="workspaceStore.isComparingVersions" style="background: #4f46e5;">
                         저장 후 요약하기
                       </button>
                     </div>
                   </div>
 
-                  <div v-if="workspaceStore.status === 'loading'" class="ai-summary-content" style="padding: 16px; color: #64748b; font-style: italic; text-align: center;">
-                    AI가 변경점을 분석하고 요약 중입니다... 잠시만 기다려주세요.
+                  <div v-if="workspaceStore.isComparingVersions" class="ai-summary-loading" data-testid="ai-summary-loading">
+                    <span class="ai-summary-spinner" aria-hidden="true"></span>
+                    <span>AI가 자소서 변경점을 요약하는 중입니다.</span>
                   </div>
                   <div v-else-if="activeComparison?.aiSummary" class="ai-summary-content" style="white-space: pre-wrap; line-height: 1.6; color: #334155; padding-top: 16px; border-top: 1px solid #e2e8f0;">
                     {{ activeComparison.aiSummary }}

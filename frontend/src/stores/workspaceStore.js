@@ -8,6 +8,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     const defaults = ref(null);
     const versions = ref([]);
     const versionComparison = ref(null);
+    const isComparingVersions = ref(false);
     const activeReference = ref(null);
     const errorMessage = ref('');
     async function loadWorkspace(workspaceId) {
@@ -122,19 +123,20 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         }
     }
     async function compareVersions(workspaceId, leftVersionId, rightVersionId, customPrompt) {
-        status.value = 'loading';
+        isComparingVersions.value = true;
         errorMessage.value = '';
         try {
             const comparison = await workspaceApi.compareVersions(workspaceId, leftVersionId, rightVersionId, customPrompt);
             versionComparison.value = comparison;
-            status.value = 'ready';
             return comparison;
         }
         catch (error) {
-            status.value = 'ready';
             errorMessage.value = messageFromError(error, '버전을 비교하지 못했습니다.');
             alert(errorMessage.value);
             return null;
+        }
+        finally {
+            isComparingVersions.value = false;
         }
     }
     async function createReference(workspaceId, payload) {
@@ -217,6 +219,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         defaults,
         versions,
         versionComparison,
+        isComparingVersions,
         activeReference,
         errorMessage,
         loadWorkspace,

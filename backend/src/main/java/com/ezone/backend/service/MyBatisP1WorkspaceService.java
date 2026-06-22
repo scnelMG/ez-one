@@ -536,6 +536,9 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         if (changed) {
             try {
                 aiSummary = openAiClient.generateComparisonSummary(leftBody, rightBody, request.customPrompt());
+                if (aiSummary == null || aiSummary.isBlank()) {
+                    aiSummary = "AI 요약을 생성하지 못했습니다. GMS API 키, 비교 모델, 네트워크 설정을 확인해주세요.";
+                }
             } catch (Exception e) {
                 aiSummary = "AI 요약을 생성하는 중 오류가 발생했습니다. (설정이나 네트워크 상태를 확인해주세요.)";
             }
