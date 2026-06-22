@@ -8,7 +8,9 @@ public class SharedEssayRow {
     private String userEmail;
     private String workspaceId;
     private String versionIds; // Stored as JSON string
+    private String latestAddedVersionIds;
     private LocalDateTime sharedAt;
+    private LocalDateTime updatedAt;
     
     // Joined columns from jobs/basket_jobs
     private String companyName;
@@ -25,8 +27,12 @@ public class SharedEssayRow {
     public void setWorkspaceId(String workspaceId) { this.workspaceId = workspaceId; }
     public String getVersionIds() { return versionIds; }
     public void setVersionIds(String versionIds) { this.versionIds = versionIds; }
+    public String getLatestAddedVersionIds() { return latestAddedVersionIds; }
+    public void setLatestAddedVersionIds(String latestAddedVersionIds) { this.latestAddedVersionIds = latestAddedVersionIds; }
     public LocalDateTime getSharedAt() { return sharedAt; }
     public void setSharedAt(LocalDateTime sharedAt) { this.sharedAt = sharedAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
     public String getCompanyName() { return companyName; }
     public void setCompanyName(String companyName) { this.companyName = companyName; }
     public String getPositionTitle() { return positionTitle; }

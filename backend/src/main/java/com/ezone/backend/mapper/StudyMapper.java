@@ -33,8 +33,19 @@ public interface StudyMapper {
     
     void insertSharedEssay(SharedEssayRow row);
     SharedEssayRow findSharedEssayById(@Param("id") String id);
+    SharedEssayRow findSharedEssayByStudyUserWorkspace(
+        @Param("studyId") String studyId,
+        @Param("userEmail") String userEmail,
+        @Param("workspaceId") String workspaceId
+    );
     List<SharedEssayRow> findSharedEssaysByStudyId(@Param("studyId") String studyId);
     List<com.ezone.backend.dto.study.SharedEssayItemDto> findEssayItemsByVersionIds(@Param("versionIds") List<String> versionIds);
+    void updateSharedEssayVersions(
+        @Param("id") String id,
+        @Param("versionIds") String versionIds,
+        @Param("latestAddedVersionIds") String latestAddedVersionIds,
+        @Param("updatedAt") java.time.LocalDateTime updatedAt
+    );
 
     void insertEssayFeedback(EssayFeedbackRow row);
     List<EssayFeedbackRow> findFeedbackBySharedEssayId(@Param("sharedEssayId") String sharedEssayId);
@@ -46,6 +57,8 @@ public interface StudyMapper {
     void insertEssayReadLog(StudyEssayReadLogRow row);
     @org.apache.ibatis.annotations.Select("SELECT COUNT(*) FROM study_essay_read_log WHERE essay_id = #{essayId} AND user_email = #{userEmail}")
     int countEssayReadLog(@Param("essayId") String essayId, @Param("userEmail") String userEmail);
+    @org.apache.ibatis.annotations.Delete("DELETE FROM study_essay_read_log WHERE essay_id = #{essayId} AND user_email <> #{userEmail}")
+    void deleteEssayReadLogsForEssayExceptUser(@Param("essayId") String essayId, @Param("userEmail") String userEmail);
 
     @org.apache.ibatis.annotations.Delete("DELETE FROM study_group WHERE id = #{studyId}")
     void deleteStudyGroup(@Param("studyId") String studyId);

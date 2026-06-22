@@ -143,6 +143,9 @@
                   <span>{{ sharedQuestionCount(essay) }}개 문항</span>
                   <span>마감일 {{ essay.deadlineLabel || '-' }}</span>
                 </div>
+                <p v-if="essay.latestAddedCount > 0" class="latest-added-note">
+                  {{ latestAddedLabel(essay) }}
+                </p>
                 <button class="text-button" @click="viewEssay(essay.id)">자세히 보기</button>
               </div>
             </div>
@@ -324,7 +327,17 @@
             <!-- 자소서 영역 -->
             <div class="essay-content-section">
               <div class="essay-meta">
-                <h3>{{ studyStore.currentSharedEssayDetail.companyName }} - {{ studyStore.currentSharedEssayDetail.positionTitle }}</h3>
+                <div class="essay-meta-header">
+                  <h3>{{ studyStore.currentSharedEssayDetail.companyName }} - {{ studyStore.currentSharedEssayDetail.positionTitle }}</h3>
+                  <button
+                    v-if="isCurrentSharedEssayMine"
+                    class="ghost-button small-button"
+                    type="button"
+                    @click="openAppendShareFromDetail"
+                  >
+                    문항 추가 공유하기
+                  </button>
+                </div>
                 <p>작성자: <strong>{{ studyStore.currentSharedEssayDetail.userEmail }}</strong> | 마감일: {{ studyStore.currentSharedEssayDetail.deadlineLabel }}</p>
               </div>
               <div class="essay-items">
@@ -534,6 +547,9 @@ const selectedShareVersionIds = computed(() => {
 const isDetailModalOpen = ref(false);
 const feedbackContent = ref('');
 const isSubmittingFeedback = ref(false);
+const isCurrentSharedEssayMine = computed(() => {
+  return studyStore.currentSharedEssayDetail?.userEmail === myEmail.value;
+});
 
 // 추천 공고 모달 상태
 const isRecommendModalOpen = ref(false);
@@ -704,6 +720,36 @@ async function selectWorkspace(basket) {
   }
 }
 
+async function openAppendShareFromDetail() {
+  const detail = studyStore.currentSharedEssayDetail;
+  if (!detail?.workspaceId) return;
+
+  isDetailModalOpen.value = false;
+  isShareModalOpen.value = true;
+  shareStep.value = 2;
+  selectedWorkspaceId.value = detail.workspaceId;
+  selectedWorkspaceName.value = `${detail.companyName || '회사명 정보 없음'} - ${detail.positionTitle || '직무 정보 없음'}`;
+  isLoadingWorkspaceData.value = true;
+
+  try {
+    const workspace = await workspaceApi.getWorkspace(detail.workspaceId);
+    workspaceQuestions.value = workspace.questions || [];
+    workspaceVersions.value = await workspaceApi.listVersions(detail.workspaceId);
+    selectedQuestionIds.value = {};
+    selectedVersions.value = {};
+    workspaceQuestions.value.forEach(q => {
+      const versions = getVersionsForQuestion(q.id);
+      selectedQuestionIds.value[q.id] = false;
+      selectedVersions.value[q.id] = versions.length === 1 ? versions[0].id : '';
+    });
+  } catch (e) {
+    alert('워크스페이스 정보를 불러오지 못했습니다.');
+    closeShareModal();
+  } finally {
+    isLoadingWorkspaceData.value = false;
+  }
+}
+
 function getVersionsForQuestion(questionId) {
   return workspaceVersions.value.filter(v => v.questionId === String(questionId));
 }
@@ -727,6 +773,16 @@ function sharedQuestionCount(essay) {
 
 function getUserLabel(email) {
   return email?.split('@')[0] || '팀원';
+}
+
+function latestAddedLabel(essay) {
+  const numbers = Array.isArray(essay.latestAddedQuestionNumbers)
+    ? essay.latestAddedQuestionNumbers.filter(Boolean)
+    : [];
+  if (numbers.length > 0) {
+    return `${numbers.map(number => `${number}번 문항`).join(', ')} 추가 공유됨`;
+  }
+  return `${essay.latestAddedCount || 0}개 문항 추가 공유됨`;
 }
 
 async function submitSharedEssay() {
@@ -1268,6 +1324,11 @@ const confirmDelete = async () => {
   font-size: 0.82rem;
   font-weight: 700;
 }
+.latest-added-note {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin: -4px 0 12px;
+}
 .question-share-list {
   display: flex;
   flex-direction: column;
@@ -1357,6 +1418,16 @@ const confirmDelete = async () => {
   margin-bottom: 24px;
   padding-bottom: 16px;
   border-bottom: 1px dashed var(--line-strong);
+}
+.essay-meta-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+.essay-meta-header h3 {
+  margin: 0;
 }
 .essay-item {
   margin-bottom: 32px;
