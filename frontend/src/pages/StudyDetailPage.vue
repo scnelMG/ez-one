@@ -132,14 +132,18 @@
             <div v-else class="shared-list">
               <div class="shared-card" v-for="essay in studyStore.sharedEssays" :key="essay.id">
                 <div class="shared-card-header">
-                  <p><strong>{{ essay.userEmail }}</strong>님의 자소서</p>
+                  <p><strong>{{ getUserLabel(essay.userEmail) }}</strong>님이 공유한 자소서</p>
                   <small>{{ new Date(essay.sharedAt).toLocaleString() }}</small>
                 </div>
-                <h3 style="display:flex; align-items:center; gap:8px;">
+                <h3 class="shared-essay-title">
                   {{ essay.companyName || '회사명 정보 없음' }} - {{ essay.positionTitle || '직무 정보 없음' }}
                   <span v-if="studySettings.showUnreadBadge && essay.isNew" class="badge new-badge">NEW</span>
                 </h3>
-                <p>마감일: {{ essay.deadlineLabel || '-' }}</p>
+                <div class="shared-essay-meta">
+                  <span>공고 단위 공유</span>
+                  <span>{{ sharedQuestionCount(essay) }}개 문항</span>
+                  <span>마감일 {{ essay.deadlineLabel || '-' }}</span>
+                </div>
                 <button class="text-button" @click="viewEssay(essay.id)">자세히 보기</button>
               </div>
             </div>
@@ -250,21 +254,41 @@
               </ul>
             </div>
 
-            <!-- Step 2: 문항별 버전 선택 -->
+            <!-- Step 2: 문항 선택 후 버전 선택 -->
             <div v-else-if="shareStep === 2">
-              <h3>2. 문항별 공유할 버전 선택</h3>
+              <h3>2. 공유할 문항과 버전 선택</h3>
               <p class="selected-workspace-title">{{ selectedWorkspaceName }}</p>
               
               <p v-if="isLoadingWorkspaceData">문항 및 버전을 불러오는 중...</p>
-              <div v-else class="question-list">
-                <div v-for="q in workspaceQuestions" :key="q.id" class="question-item">
-                  <p class="question-prompt"><strong>{{ q.prompt }}</strong></p>
-                  <label class="version-select-label">
-                    버전 선택:
-                    <select v-model="selectedVersions[q.id]">
-                      <option value="">-- 공유 안 함 --</option>
+              <div v-else-if="workspaceQuestions.length === 0" class="empty-state">
+                이 공고에 등록된 자소서 문항이 없습니다.
+              </div>
+              <div v-else class="question-share-list">
+                <div
+                  v-for="(q, index) in workspaceQuestions"
+                  :key="q.id"
+                  class="question-share-item"
+                  :class="{ selected: selectedQuestionIds[q.id] }"
+                >
+                  <label class="question-check-row">
+                    <input
+                      type="checkbox"
+                      v-model="selectedQuestionIds[q.id]"
+                      :disabled="getVersionsForQuestion(q.id).length === 0"
+                      @change="handleQuestionToggle(q.id)"
+                    />
+                    <span class="question-number">문항 {{ index + 1 }}</span>
+                    <strong>{{ q.prompt }}</strong>
+                  </label>
+                  <div v-if="getVersionsForQuestion(q.id).length === 0" class="no-version-note">
+                    저장된 버전이 없어 공유할 수 없습니다.
+                  </div>
+                  <label v-else class="version-select-label">
+                    <span>공유할 버전</span>
+                    <select v-model="selectedVersions[q.id]" :disabled="!selectedQuestionIds[q.id]">
+                      <option value="">버전을 선택하세요</option>
                       <option v-for="v in getVersionsForQuestion(q.id)" :key="v.id" :value="v.id">
-                        {{ v.versionName }} ({{ v.createdAt }})
+                        {{ v.versionName }} · {{ formatDateTime(v.createdAt) }}
                       </option>
                     </select>
                   </label>
@@ -275,8 +299,8 @@
 
           <footer class="modal-footer" v-if="shareStep === 2">
             <button class="ghost-button" @click="shareStep = 1">이전</button>
-            <button class="primary-button" @click="submitSharedEssay" :disabled="isSharing">
-              {{ isSharing ? '공유 중...' : '스터디에 공유하기' }}
+            <button class="primary-button" @click="submitSharedEssay" :disabled="isSharing || selectedShareVersionIds.length === 0">
+              {{ isSharing ? '공유 중...' : `${selectedShareVersionIds.length}개 문항 공유하기` }}
             </button>
           </footer>
         </div>
@@ -303,6 +327,7 @@
               <div class="essay-items">
                 <div v-for="item in studyStore.currentSharedEssayDetail.items" :key="item.versionId" class="essay-item">
                   <h4 class="question-title">Q. {{ item.questionText }}</h4>
+                  <p class="shared-version-name">{{ item.versionName }}</p>
                   <div class="essay-body">{{ item.body }}</div>
                 </div>
                 <div v-if="studyStore.currentSharedEssayDetail.items.length === 0" class="empty-state">
@@ -493,7 +518,14 @@ const selectedWorkspaceId = ref(null);
 const selectedWorkspaceName = ref('');
 const workspaceQuestions = ref([]);
 const workspaceVersions = ref([]);
+const selectedQuestionIds = ref({});
 const selectedVersions = ref({});
+const selectedShareVersionIds = computed(() => {
+  return Object.entries(selectedQuestionIds.value)
+    .filter(([, selected]) => selected)
+    .map(([questionId]) => selectedVersions.value[questionId])
+    .filter(Boolean);
+});
 
 // 상세 보기 모달 상태
 const isDetailModalOpen = ref(false);
@@ -638,6 +670,7 @@ function closeShareModal() {
   selectedWorkspaceId.value = null;
   workspaceQuestions.value = [];
   workspaceVersions.value = [];
+  selectedQuestionIds.value = {};
   selectedVersions.value = {};
 }
 
@@ -653,8 +686,10 @@ async function selectWorkspace(basket) {
     workspaceVersions.value = await workspaceApi.listVersions(basket.workspaceId);
     
     // 기본 선택값 초기화
+    selectedQuestionIds.value = {};
     selectedVersions.value = {};
     workspaceQuestions.value.forEach(q => {
+      selectedQuestionIds.value[q.id] = false;
       selectedVersions.value[q.id] = '';
     });
   } catch (e) {
@@ -669,10 +704,44 @@ function getVersionsForQuestion(questionId) {
   return workspaceVersions.value.filter(v => v.questionId === String(questionId));
 }
 
+function handleQuestionToggle(questionId) {
+  if (!selectedQuestionIds.value[questionId]) {
+    selectedVersions.value[questionId] = '';
+    return;
+  }
+
+  const versions = getVersionsForQuestion(questionId);
+  if (versions.length === 1) {
+    selectedVersions.value[questionId] = versions[0].id;
+  }
+}
+
+function formatDateTime(value) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString();
+}
+
+function sharedQuestionCount(essay) {
+  return Array.isArray(essay.versionIds) ? essay.versionIds.length : 0;
+}
+
+function getUserLabel(email) {
+  return email?.split('@')[0] || '팀원';
+}
+
 async function submitSharedEssay() {
-  const versionIds = Object.values(selectedVersions.value).filter(id => id !== '');
+  const versionIds = selectedShareVersionIds.value;
   if (versionIds.length === 0) {
-    alert('최소 1개 이상의 버전을 선택해야 합니다.');
+    alert('공유할 문항을 선택하고 버전을 지정해 주세요.');
+    return;
+  }
+
+  const missingVersion = Object.entries(selectedQuestionIds.value)
+    .some(([questionId, selected]) => selected && !selectedVersions.value[questionId]);
+  if (missingVersion) {
+    alert('선택한 문항마다 공유할 버전을 지정해 주세요.');
     return;
   }
   
@@ -1180,6 +1249,72 @@ const confirmDelete = async () => {
   justify-content: space-between;
   align-items: baseline;
 }
+.shared-essay-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0;
+}
+.shared-essay-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.shared-essay-meta span {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 5px 10px;
+  background: #f8fafc;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.question-share-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.question-share-item {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  background: white;
+}
+.question-share-item.selected {
+  border-color: #8b5cf6;
+  background: #faf5ff;
+}
+.question-check-row {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: start;
+  gap: 10px;
+  cursor: pointer;
+  line-height: 1.5;
+}
+.question-check-row input {
+  margin-top: 4px;
+}
+.question-number {
+  color: #4f46e5;
+  font-weight: 900;
+  white-space: nowrap;
+}
+.no-version-note {
+  margin-top: 10px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+.question-share-item .version-select-label {
+  margin-top: 14px;
+  justify-content: space-between;
+}
+.question-share-item .version-select-label span {
+  font-weight: 800;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
 
 /* Detail Modal Styles */
 .detail-modal {
@@ -1213,6 +1348,11 @@ const confirmDelete = async () => {
   border-radius: 8px;
   margin-bottom: 12px;
   line-height: 1.5;
+}
+.shared-version-name {
+  color: #4f46e5;
+  font-weight: 800;
+  margin-bottom: 8px;
 }
 .essay-body {
   padding: 12px;
