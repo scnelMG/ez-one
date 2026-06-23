@@ -54,7 +54,6 @@ function makeRouter() {
             { path: '/mypage', component: { template: '<div>mypage</div>' } },
             { path: '/mypage/notion', component: { template: '<div>notion</div>' } },
             { path: '/mypage/onboarding', component: { template: '<div>onboarding</div>' } },
-            { path: '/mypage/inquiry', component: { template: '<div>inquiry</div>' } },
             { path: '/mypage/terms', component: { template: '<div>terms</div>' } }
         ]
     });
@@ -129,16 +128,22 @@ describe('AppLayout', () => {
         const footerLinks = footer.findAll('a').map((link) => link.attributes('href'));
 
         expect(footer.text()).toContain('EZ-ONE');
-        expect(footer.text()).toContain('채용 공고, 작성 자료, 서류 정보를 한곳에서 관리하는 취업 준비 워크스페이스입니다.');
-        expect(footer.text()).toContain('support@ez-one.local');
-        expect(footer.text()).toContain('사업자 정보는 정식 출시 전 확정 예정입니다.');
+        expect(footer.text()).toContain('취업 준비 워크스페이스');
+        expect(footer.text()).toContain('qkralsrb4407@naver.com');
+        expect(footer.text()).toContain('eunjaelee058@gmail.com');
+        expect(footer.text()).toContain('채용공고 식별 목적');
         expect(footer.text()).toContain('제휴 또는 후원을 의미하지 않습니다.');
+        expect(footer.text()).toContain('2026 EZ-ONE');
+        expect(footer.text()).not.toContain('박민규');
+        expect(footer.text()).not.toContain('이은재');
+        expect(footer.text()).not.toContain('support@ez-one.local');
+        expect(footer.text()).not.toContain('사업자 정보는 정식 출시 전 확정 예정입니다.');
         expect(footer.text()).not.toContain('제휴' + ' 문의');
         expect(footerLinks).toEqual([
             '/mypage/terms',
             '/mypage/terms#privacy',
-            '/mypage/inquiry',
-            'mailto:support@ez-one.local'
+            'mailto:qkralsrb4407@naver.com',
+            'mailto:eunjaelee058@gmail.com'
         ]);
     });
 
@@ -153,7 +158,8 @@ describe('AppLayout', () => {
         expect(dropdown.text()).toContain('내 계정');
         expect(dropdown.text()).toContain('Notion 연동 관리');
         expect(dropdown.text()).toContain('온보딩 정보');
-        expect(dropdown.text()).toContain('1:1 문의');
+        expect(dropdown.text()).not.toContain('1:1 문의');
+        expect(dropdown.find('[data-testid="mypage-link-inquiry"]').exists()).toBe(false);
         expect(wrapper.get('[data-testid="mypage-link-notion"]').attributes('href')).toBe('/mypage/notion');
     });
 

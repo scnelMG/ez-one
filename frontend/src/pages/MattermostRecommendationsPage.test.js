@@ -121,7 +121,6 @@ async function mountPage() {
             { path: '/document-profile', component: { template: '<div>document profile</div>' } },
             { path: '/study', component: { template: '<div>study</div>' } },
             { path: '/history', component: { template: '<div>history</div>' } },
-            { path: '/mypage/inquiry', component: { template: '<div>inquiry</div>' } },
             { path: '/mypage/terms', component: { template: '<div>terms</div>' } },
             { path: '/workspaces/:workspaceId', component: { template: '<div>workspace</div>' } }
         ]

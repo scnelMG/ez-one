@@ -34,7 +34,6 @@ const makeRouter = () => createRouter({
         { path: '/document-profile', component: { template: '<div>document profile</div>' } },
         { path: '/mypage/notion', component: { template: '<div>notion</div>' } },
         { path: '/mypage/terms', component: { template: '<div>terms</div>' } },
-        { path: '/mypage/inquiry', component: { template: '<div>inquiry</div>' } },
         { path: '/mypage/partnership', component: { template: '<div>partnership</div>' } }
     ]
 });
@@ -224,10 +223,34 @@ describe('BasketPage', () => {
         expect(wrapper.get('[data-testid="source-101"]').text()).toBe('바로가기');
         expect(wrapper.find('[data-testid="basket-management-head"]').exists()).toBe(false);
         expect(wrapper.get('.basket-data-row').element.children.length).toBe(wrapper.get('.basket-data-head').element.children.length);
+        expect(wrapper.get('.basket-title-row').classes()).toContain('basket-section-heading');
+        expect(wrapper.findAll('.basket-data-head span').map((cell) => cell.text())).toEqual([
+            '관심',
+            '회사명',
+            '직무',
+            '상태',
+            '마감일',
+            '바로가기',
+            '최근 작업',
+            ''
+        ]);
+        expect(wrapper.get('.basket-data-head span:first-child').classes()).toContain('interest-head-cell');
+        expect(wrapper.get('.basket-data-row .company-cell').classes()).toContain('text-start-cell');
+        expect(wrapper.get('.basket-data-row .job-main-link:not(.company-cell):not(.deadline-cell)').classes()).toContain('text-start-cell');
+        expect(wrapper.get('.basket-data-row .status-menu').classes()).toContain('center-cell');
+        expect(wrapper.get('.basket-data-row .deadline-cell').classes()).toContain('deadline-align-cell');
+        expect(wrapper.get('.basket-data-row .deadline-cell').classes()).toContain('center-cell');
+        expect(wrapper.get('.basket-data-row .deadline-cell .deadline-pill').exists()).toBe(true);
+        expect(wrapper.get('.basket-data-row .deadline-cell').text()).toMatch(/D[+-]\d+|D-Day|오늘|마감/);
+        expect(wrapper.get('.basket-data-row .source-link').classes()).toContain('center-cell');
         expect(wrapper.get('[data-testid="recent-work-101"]').text()).toBe('이어가기');
         expect(wrapper.get('[data-testid="recent-work-link-101"]').attributes('href')).toBe('/workspaces/102');
         expect(wrapper.get('[data-testid="status-101"]').classes()).toEqual(expect.arrayContaining(['status-select', 'status-tag']));
         await wrapper.get('[data-testid="status-101"]').trigger('click');
+        expect([...wrapper.get('[data-testid="status-101"]').element.closest('.basket-data-row').classList]).toContain(
+            'status-menu-row-open'
+        );
+        expect(wrapper.get('[data-testid="status-101-option-COMPLETED"]').element.closest('.status-option-list')).toBeTruthy();
         expect(wrapper.findAll('[data-testid^="status-101-option-"]').map((option) => option.text())).toEqual([
             '지원 전',
             '미지원',
@@ -237,6 +260,7 @@ describe('BasketPage', () => {
 
         await wrapper.get('[data-testid="priority-101"]').trigger('click');
         expect(wrapper.get('[data-testid="priority-101"]').classes()).toContain('active');
+        expect(wrapper.get('[data-testid="priority-101"]').attributes('aria-pressed')).toBe('true');
 
         await wrapper.get('[data-testid="archive-101"]').trigger('click');
         await flushPromises();

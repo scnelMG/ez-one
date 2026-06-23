@@ -211,26 +211,43 @@ describe('MainPage', () => {
     expect(wrapper.get('[data-testid="basket-panel"]').classes()).toEqual(
       expect.arrayContaining(['full-width-panel', 'compact-basket-panel'])
     );
+    expect(wrapper.get('.main-section-heading.compact').classes()).toContain('basket-section-heading');
     expect(wrapper.findAll('.main-basket-head span').map((cell) => cell.text())).toEqual([
       '관심',
       '회사명',
       '직무',
-      '자소서 상태',
       '상태',
       '마감일',
       '바로가기',
       ''
     ]);
+    expect(wrapper.get('[data-testid="basket-panel"]').text()).not.toContain('자소서 상태');
     expect(wrapper.findAll('[data-testid="main-basket-preview-job"]')).toHaveLength(5);
     expect(wrapper.get('[data-testid="main-basket-company"]').text()).toContain('Naver');
     expect(wrapper.get('[data-testid="main-basket-apply-link"]').text()).toBe('공고 보기');
+    expect(wrapper.get('.main-basket-head span:first-child').classes()).toContain('interest-head-cell');
+    expect(wrapper.get('[data-testid="main-basket-company"]').classes()).toContain('company-cell');
+    expect(wrapper.get('.main-basket-position').classes()).toContain('text-start-cell');
+    expect(wrapper.get('.status-menu').classes()).toContain('center-cell');
+    expect(wrapper.get('.deadline-cell').classes()).toContain('deadline-align-cell');
+    expect(wrapper.get('.deadline-cell').classes()).toContain('center-cell');
+    expect(wrapper.get('.deadline-cell .deadline-pill').exists()).toBe(true);
+    expect(wrapper.get('.deadline-cell').text()).toMatch(/D[+-]\d+|D-Day|오늘|마감/);
+    expect(wrapper.get('[data-testid="main-basket-apply-link"]').classes()).toContain('center-cell');
+    expect(wrapper.get('[data-testid="main-priority-101"]').attributes('aria-pressed')).toBe('false');
+    await wrapper.get('[data-testid="main-priority-101"]').trigger('click');
+    expect(wrapper.get('[data-testid="main-priority-101"]').classes()).toContain('active');
+    expect(wrapper.get('[data-testid="main-priority-101"]').attributes('aria-pressed')).toBe('true');
   });
 
   it('uses rich CTA buttons and shows the honey guide inline', async () => {
     const wrapper = await mountMain();
 
     const basketCta = wrapper.get('[data-testid="hero-basket-link"]');
-    expect(basketCta.classes()).toContain('primary-gradient-action');
+    expect(basketCta.classes()).toEqual(expect.arrayContaining(['hero-side-cta', 'primary-gradient-action']));
+    expect(basketCta.classes()).not.toContain('basket-outline-action');
+    expect(wrapper.get('.main-metric-toolbar').text()).toContain('지원 현황 요약');
+    expect(wrapper.get('.main-metric-toolbar').text()).not.toContain('공고 장바구니 바로가기');
     expect(basketCta.text()).toContain('공고 장바구니 바로가기');
     expect(basketCta.text()).toContain('›');
     expect(wrapper.findAll('[data-testid="study-card-link"]')).toHaveLength(2);
@@ -281,7 +298,7 @@ describe('MainPage', () => {
     expect(wrapper.find('.honey-pot-details').exists()).toBe(false);
   });
 
-  it('shows a score summary in the graph-side panel when a scored day has no logs', async () => {
+  it('does not invent score-summary logs when a scored day has no activity logs', async () => {
     vi.mocked(dashboardApi.getActivityLogs).mockResolvedValueOnce([]);
 
     const wrapper = await mountMain();
@@ -295,14 +312,19 @@ describe('MainPage', () => {
 
     const sidePanel = wrapper.get('[data-testid="honey-log-side-panel"]');
     expect(sidePanel.text()).toContain('4방울을 받은 이유');
-    expect(sidePanel.text()).toContain('점수 요약');
-    expect(sidePanel.text()).toContain('상세 로그가 아직 비어 있어요');
+    expect(sidePanel.text()).not.toContain('점수 요약');
+    expect(sidePanel.text()).not.toContain('상세 로그가 아직 비어 있어요');
+    expect(sidePanel.text()).toContain('기록된 활동이 없어요');
   });
 
   it('JOB-010: updates status from the main application list', async () => {
     const wrapper = await mountMain();
 
     await wrapper.get('[data-testid="main-status-101"]').trigger('click');
+    expect([...wrapper.get('[data-testid="main-status-101"]').element.closest('.main-basket-row').classList]).toContain(
+      'status-menu-row-open'
+    );
+    expect(wrapper.get('[data-testid="main-status-101-option-COMPLETED"]').element.closest('.status-option-list')).toBeTruthy();
     await wrapper.get('[data-testid="main-status-101-option-COMPLETED"]').trigger('click');
     await flushPromises();
 

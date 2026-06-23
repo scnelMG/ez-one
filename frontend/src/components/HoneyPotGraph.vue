@@ -255,19 +255,7 @@ const selectedDayScore = computed(() => {
 });
 
 const displayedDateLogs = computed(() => {
-  if (selectedDateLogs.value.length > 0) {
-    return selectedDateLogs.value;
-  }
-  if (!selectedDate.value || selectedDayScore.value <= 0 || isLoadingLogs.value) {
-    return [];
-  }
-  return [
-    {
-      time: '점수 요약',
-      type: 'SUMMARY',
-      description: `${selectedDayScore.value}방울이 기록된 날이에요. 상세 로그가 아직 비어 있어요. 공고 스크랩, 자소서 작성, 참고자료 추가, 지원 상태 업데이트 활동으로 쌓인 점수입니다.`
-    }
-  ];
+  return selectedDateLogs.value;
 });
 
 const recentActivityMap = computed(() => {

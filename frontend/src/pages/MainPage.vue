@@ -6,6 +6,10 @@
           <h1>오늘의 지원 현황</h1>
           <p>매일 조금씩 준비하면, 좋은 결과로 이어져요.</p>
 
+          <div class="main-metric-toolbar">
+            <span>지원 현황 요약</span>
+          </div>
+
           <section class="main-metric-strip" aria-label="지원 현황 숫자 요약">
             <RouterLink
               v-for="metric in metricCards"
@@ -42,22 +46,22 @@
               </span>
             </RouterLink>
           </section>
-
-          <RouterLink
-            class="hero-basket-link primary-gradient-action"
-            data-testid="hero-basket-link"
-            to="/basket"
-          >
-            <span class="hero-basket-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24">
-                <path d="M5 7h14l-1.3 8.4A2 2 0 0 1 15.7 17H8.3a2 2 0 0 1-2-1.6L5 7Z" />
-                <path d="M8 7 10 3M16 7l-2-4M9 21h.01M15 21h.01" />
-              </svg>
-            </span>
-            공고 장바구니 바로가기
-            <span class="action-arrow" aria-hidden="true">›</span>
-          </RouterLink>
         </div>
+
+        <RouterLink
+          class="hero-basket-link hero-side-cta primary-gradient-action"
+          data-testid="hero-basket-link"
+          to="/basket"
+        >
+          <span class="hero-basket-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M5 7h14l-1.3 8.4A2 2 0 0 1 15.7 17H8.3a2 2 0 0 1-2-1.6L5 7Z" />
+              <path d="M8 7 10 3M16 7l-2-4M9 21h.01M15 21h.01" />
+            </svg>
+          </span>
+          공고 장바구니 바로가기
+          <span class="action-arrow" aria-hidden="true">›</span>
+        </RouterLink>
 
         <div class="main-hero-visual">
           <img
@@ -145,7 +149,7 @@
 
           <section class="main-panel basket-panel full-width-panel compact-basket-panel" data-testid="basket-panel" aria-label="공고 장바구니">
           <div class="basket-list-block">
-            <div class="main-section-heading compact">
+            <div class="main-section-heading compact basket-section-heading">
               <h2>공고 장바구니</h2>
               <RouterLink class="text-button" to="/basket?sort=deadline">전체 보기</RouterLink>
             </div>
@@ -165,19 +169,19 @@
             <div v-else-if="basketPreviewJobs.length > 0" class="main-basket-table">
               <p v-if="basketStore.status === 'loading'" class="basket-refreshing">공고 목록을 갱신하는 중입니다.</p>
               <div class="main-basket-head">
-                <span>관심</span>
-                <span>회사명</span>
-                <span>직무</span>
-                <span>자소서 상태</span>
-                <span>상태</span>
-                <span>마감일</span>
-                <span>바로가기</span>
+                <span class="interest-head-cell">관심</span>
+                <span class="text-start-cell">회사명</span>
+                <span class="text-start-cell">직무</span>
+                <span class="center-cell">상태</span>
+                <span class="deadline-align-cell">마감일</span>
+                <span class="center-cell">바로가기</span>
                 <span aria-label="삭제"></span>
               </div>
               <div
                 v-for="job in basketPreviewJobs"
                 :key="job.id"
                 class="main-basket-row"
+                :class="{ 'status-menu-row-open': openStatusJobId === job.id }"
                 data-testid="main-basket-preview-job"
               >
                 <button
@@ -185,6 +189,7 @@
                   type="button"
                   :class="{ active: isPriorityJob(job) }"
                   :aria-label="`${job.companyName} 관심 공고 표시`"
+                  :aria-pressed="isPriorityJob(job) ? 'true' : 'false'"
                   :data-testid="`main-priority-${job.id}`"
                   @click="togglePriority(job.id)"
                 >
@@ -210,15 +215,11 @@
                   <strong>{{ job.companyName }}</strong>
                 </RouterLink>
 
-                <RouterLink class="main-basket-position" :to="`/workspaces/${job.workspaceId}`">
+                <RouterLink class="main-basket-position text-start-cell" :to="`/workspaces/${job.workspaceId}`">
                   {{ job.positionTitle }}
                 </RouterLink>
 
-                <span class="draft-state-pill" :class="{ complete: job.status === 'COMPLETED' }">
-                  {{ draftStateLabel(job) }}
-                </span>
-
-                <div class="status-menu">
+                <div class="status-menu center-cell">
                   <button
                     class="status-select status-tag"
                     type="button"
@@ -252,7 +253,7 @@
                   </div>
                 </div>
 
-                <RouterLink class="deadline-cell" :to="`/workspaces/${job.workspaceId}`">
+                <RouterLink class="deadline-cell deadline-align-cell center-cell" :to="`/workspaces/${job.workspaceId}`">
                   <strong>{{ formatAbsoluteDeadline(job) }}</strong>
                   <span v-if="formatDDay(job)" class="deadline-pill" :class="{ urgent: job.deadlineSoon }">
                     {{ formatDDay(job) }}
@@ -260,7 +261,7 @@
                 </RouterLink>
 
                 <a
-                  class="main-apply-link"
+                  class="main-apply-link center-cell"
                   data-testid="main-basket-apply-link"
                   :href="normalizedSourceUrl(job.sourceUrl)"
                   target="_blank"
@@ -560,12 +561,12 @@ async function archiveJob(id) {
 
 .main-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.38fr) minmax(150px, 210px);
+  grid-template-columns: minmax(0, 1fr) minmax(170px, max-content) minmax(150px, 210px);
   align-items: center;
   gap: clamp(14px, 2.2vw, 28px);
   min-height: 196px;
   overflow: hidden;
-  background: linear-gradient(135deg, #fbf8ff 0%, #f8f5ff 100%);
+  background: #ffffff;
   padding: clamp(16px, 2.2vw, 22px) clamp(18px, 2.8vw, 28px);
 }
 
@@ -592,11 +593,26 @@ async function archiveJob(id) {
   font-weight: 600;
 }
 
+.main-metric-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0;
+  margin-top: 6px;
+}
+
+.main-metric-toolbar > span {
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
 .main-metric-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: clamp(10px, 1.1vw, 14px);
-  margin-top: 4px;
+  margin-top: 0;
   background: transparent;
 }
 
@@ -710,7 +726,7 @@ async function archiveJob(id) {
   display: block;
   color: #25206b;
   font-size: clamp(1.38rem, 1.8vw, 1.68rem);
-  font-weight: 850;
+  font-weight: 700;
   line-height: 0.95;
   letter-spacing: 0;
   white-space: nowrap;
@@ -731,9 +747,8 @@ async function archiveJob(id) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  justify-self: start;
   gap: 8px;
-  margin-top: 2px;
+  white-space: nowrap;
 }
 
 .hero-basket-icon {
@@ -775,7 +790,51 @@ async function archiveJob(id) {
     inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 
+.basket-outline-action {
+  min-height: 30px;
+  border: 0;
+  border-radius: 10px;
+  background: #5a35f0;
+  box-shadow:
+    0 12px 22px rgba(79, 70, 229, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 820;
+  line-height: 1;
+  padding: 0 11px;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.basket-outline-action:hover {
+  transform: translateY(-1px);
+  background: #4b2fd3;
+  box-shadow:
+    0 14px 26px rgba(79, 70, 229, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.hero-side-cta {
+  align-self: end;
+  justify-self: end;
+  min-height: 34px;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  padding-inline: 15px;
+  margin-bottom: 40px;
+}
+
+.hero-side-cta:hover {
+  transform: translateY(-2px);
+}
+
 .primary-gradient-action:focus-visible,
+.basket-outline-action:focus-visible,
 .main-metric-card:focus-visible,
 .active-detail-link:focus-visible,
 .text-button:focus-visible,
@@ -850,10 +909,6 @@ async function archiveJob(id) {
 
 .main-section-heading {
   justify-content: space-between;
-}
-
-.main-section-heading.compact {
-  align-items: flex-end;
 }
 
 .main-section-heading h2,
@@ -1006,7 +1061,7 @@ async function archiveJob(id) {
 
 .basket-list-block {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .basket-panel {
@@ -1018,28 +1073,43 @@ async function archiveJob(id) {
 }
 
 .compact-basket-panel {
-  padding: 14px 16px 10px;
+  padding: 12px 16px 10px;
+}
+
+.basket-section-heading {
+  min-height: 32px;
+  align-items: center;
+  padding: 0 2px;
+}
+
+.basket-section-heading h2 {
+  line-height: 1.2;
+}
+
+.basket-section-heading .text-button {
+  min-height: 30px;
+  border-radius: 8px;
+  padding: 0 12px;
 }
 
 .main-basket-table {
   display: grid;
-  overflow-x: hidden;
+  overflow: visible;
 }
 
 .main-basket-head,
 .main-basket-row {
   display: grid;
   grid-template-columns:
-    42px
-    minmax(150px, 1.2fr)
-    minmax(190px, 1.45fr)
-    minmax(96px, 0.72fr)
-    minmax(100px, 0.7fr)
-    minmax(150px, 0.95fr)
-    minmax(92px, 0.58fr)
-    34px;
+    44px
+    minmax(180px, 0.95fr)
+    minmax(260px, 1.55fr)
+    minmax(132px, 0.62fr)
+    minmax(238px, 1fr)
+    minmax(108px, 0.5fr)
+    38px;
   align-items: center;
-  gap: 10px;
+  column-gap: 14px;
   min-width: 0;
 }
 
@@ -1049,6 +1119,33 @@ async function archiveJob(id) {
   color: #596985;
   font-size: 0.72rem;
   font-weight: 850;
+}
+
+.main-basket-head span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.interest-head-cell {
+  justify-self: center;
+  text-align: center;
+}
+
+.text-start-cell {
+  justify-self: stretch;
+  text-align: left;
+}
+
+.center-cell {
+  justify-self: stretch;
+  text-align: center;
+}
+
+.deadline-align-cell {
+  justify-self: stretch;
+  text-align: center;
 }
 
 .main-basket-row {
@@ -1067,6 +1164,8 @@ async function archiveJob(id) {
 .delete-job-button {
   display: grid;
   place-items: center;
+  justify-self: center;
+  align-self: center;
   width: 30px;
   height: 30px;
   border: 0;
@@ -1081,11 +1180,21 @@ async function archiveJob(id) {
 }
 
 .priority-heart.active {
-  color: #5a35f0;
+  background: transparent;
+  color: #ef4444;
 }
 
 .priority-heart.active svg {
   fill: currentColor;
+}
+
+.priority-heart:hover {
+  background: #f8fafc;
+}
+
+.priority-heart.active:hover {
+  background: transparent;
+  color: #dc2626;
 }
 
 .company-cell {
@@ -1119,7 +1228,6 @@ async function archiveJob(id) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  justify-self: start;
   min-height: 24px;
   border-radius: 999px;
   font-size: 0.72rem;
@@ -1140,6 +1248,15 @@ async function archiveJob(id) {
 
 .status-menu {
   position: relative;
+  display: inline-flex;
+  justify-content: center;
+  min-width: 0;
+  width: 100%;
+  z-index: 2;
+}
+
+.status-menu-row-open {
+  z-index: 120;
 }
 
 .status-select {
@@ -1151,7 +1268,7 @@ async function archiveJob(id) {
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
-  z-index: 10;
+  z-index: 130;
   display: grid;
   gap: 6px;
   min-width: 118px;
@@ -1170,8 +1287,10 @@ async function archiveJob(id) {
 .deadline-cell {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   min-width: 0;
+  width: 100%;
 }
 
 .deadline-cell strong {
@@ -1197,10 +1316,15 @@ async function archiveJob(id) {
   border: 1px solid #e1e6f0;
   color: #334155;
   font-size: 0.72rem;
+  justify-self: center;
   padding: 0 10px;
+  width: fit-content;
 }
 
 .delete-job-button {
+  grid-column: auto;
+  grid-row: auto;
+  justify-self: center;
   color: #94a3b8;
 }
 
@@ -1340,6 +1464,21 @@ async function archiveJob(id) {
     padding: 16px;
   }
 
+  .main-metric-toolbar {
+    align-items: flex-start;
+  }
+
+  .hero-side-cta {
+    justify-self: start;
+    width: fit-content;
+    margin-bottom: 0;
+    transform: none;
+  }
+
+  .hero-side-cta:hover {
+    transform: translateY(-2px);
+  }
+
   .main-metric-strip {
     grid-template-columns: 1fr;
   }
@@ -1373,7 +1512,6 @@ async function archiveJob(id) {
   }
 
   .main-basket-position,
-  .draft-state-pill,
   .status-menu,
   .deadline-cell,
   .main-apply-link {

@@ -66,9 +66,6 @@
             <RouterLink data-testid="mypage-link-onboarding" role="menuitem" to="/mypage/onboarding" @click="isProfileMenuOpen = false">
               온보딩 정보
             </RouterLink>
-            <RouterLink data-testid="mypage-link-inquiry" role="menuitem" to="/mypage/inquiry" @click="isProfileMenuOpen = false">
-              1:1 문의
-            </RouterLink>
             <button type="button" role="menuitem" @click="logout">로그아웃</button>
           </div>
         </div>
@@ -90,21 +87,31 @@
     </main>
 
     <footer class="app-footer" aria-label="서비스 정보">
-      <div class="app-footer-brand">
-        <strong>EZ-ONE</strong>
-        <p data-testid="global-trademark-notice">
-          채용 공고, 작성 자료, 서류 정보를 한곳에서 관리하는 취업 준비 워크스페이스입니다.
-          표시되는 회사명과 로고는 채용공고 식별 목적으로만 사용되며, 각 상표와 로고는 해당 소유자의 자산입니다. EZ-ONE은 표시된 기업과 제휴 또는 후원을 의미하지 않습니다.
-        </p>
+      <div class="app-footer-main">
+        <div class="app-footer-brand">
+          <strong>EZ-ONE</strong>
+          <p>채용 공고 저장부터 지원 자료 관리까지 한곳에서 정리하는 취업 준비 워크스페이스입니다.</p>
+        </div>
+
+        <nav class="app-footer-links" aria-label="서비스 하단 링크">
+          <RouterLink to="/mypage/terms">이용약관</RouterLink>
+          <RouterLink :to="{ path: '/mypage/terms', hash: '#privacy' }">개인정보 처리 기준</RouterLink>
+        </nav>
+
+        <address class="app-footer-contact" aria-label="운영 문의">
+          <strong>운영 문의</strong>
+          <a href="mailto:qkralsrb4407@naver.com">qkralsrb4407@naver.com</a>
+          <a href="mailto:eunjaelee058@gmail.com">eunjaelee058@gmail.com</a>
+        </address>
       </div>
-      <nav class="app-footer-links" aria-label="서비스 하단 링크">
-        <RouterLink to="/mypage/terms">이용약관</RouterLink>
-        <RouterLink :to="{ path: '/mypage/terms', hash: '#privacy' }">개인정보 처리 기준</RouterLink>
-        <RouterLink to="/mypage/inquiry">고객지원</RouterLink>
-      </nav>
-      <p class="app-footer-meta">
-        운영 문의: <a href="mailto:support@ez-one.local">support@ez-one.local</a>
-        <span>사업자 정보는 정식 출시 전 확정 예정입니다.</span>
+
+      <p class="app-footer-disclaimer" data-testid="global-trademark-notice">
+        표시되는 회사명과 로고는 채용공고 식별 목적으로만 사용되며, 각 상표와 로고는 해당 소유자의 자산입니다.
+        EZ-ONE은 표시된 기업과 제휴 또는 후원을 의미하지 않습니다.
+      </p>
+
+      <p class="app-footer-bottom">
+        <span>© 2026 EZ-ONE. All rights reserved.</span>
       </p>
     </footer>
     <ToastNotification />

@@ -29,11 +29,11 @@ public interface ActivityMapper {
         SELECT 
             DATE_FORMAT(a.created_at, '%H:%i') as time,
             CASE
-                WHEN a.action_type = 'BASKET_ADD' THEN CONCAT('[', COALESCE(j.company_name, '회사'), '] 공고 장바구니에 담기')
-                WHEN a.action_type = 'STATUS_CHANGE' THEN CONCAT('[', COALESCE(j.company_name, '회사'), '] 지원 상태 변경')
-                WHEN a.action_type = 'DRAFT_UPDATE' THEN CONCAT('[', COALESCE(j.company_name, '회사'), '] 자소서 작성/수정')
-                WHEN a.action_type = 'REFERENCE_ADD' THEN CONCAT('[', COALESCE(j.company_name, '회사'), '] JD/참고 자료 추가')
-                ELSE a.action_type
+                WHEN a.action_type = 'BASKET_ADD' THEN CONCAT('[', COALESCE(j.company_name, '공고'), '] 공고 장바구니에 담기 · +', a.points, '방울')
+                WHEN a.action_type = 'STATUS_CHANGE' THEN CONCAT('[', COALESCE(j.company_name, '공고'), '] 지원 상태 변경 · +', a.points, '방울')
+                WHEN a.action_type = 'DRAFT_UPDATE' THEN CONCAT('[', COALESCE(j.company_name, '워크스페이스'), '] 자소서 작성/수정 · +', a.points, '방울')
+                WHEN a.action_type = 'REFERENCE_ADD' THEN CONCAT('[', COALESCE(j.company_name, '워크스페이스'), '] JD/참고 자료 추가 · +', a.points, '방울')
+                ELSE CONCAT(a.action_type, ' · +', a.points, '방울')
             END as description,
             CASE 
                 WHEN a.action_type IN ('BASKET_ADD', 'STATUS_CHANGE') THEN 'DOC'
