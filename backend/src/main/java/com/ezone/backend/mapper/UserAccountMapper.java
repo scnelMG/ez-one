@@ -20,6 +20,7 @@ public interface UserAccountMapper {
             email,
             name,
             nickname,
+            profile_image_url,
             profile_completed
         FROM users
         WHERE provider = 'GOOGLE'
@@ -32,6 +33,7 @@ public interface UserAccountMapper {
         @Arg(column = "email", javaType = String.class),
         @Arg(column = "name", javaType = String.class),
         @Arg(column = "nickname", javaType = String.class),
+        @Arg(column = "profile_image_url", javaType = String.class),
         @Arg(column = "profile_completed", javaType = boolean.class)
     })
     Optional<UserAccount> findByGoogleSubject(String googleSubject);
@@ -43,6 +45,7 @@ public interface UserAccountMapper {
             email,
             name,
             nickname,
+            profile_image_url,
             profile_completed
         FROM users
         WHERE email = #{email}
@@ -54,6 +57,7 @@ public interface UserAccountMapper {
         @Arg(column = "email", javaType = String.class),
         @Arg(column = "name", javaType = String.class),
         @Arg(column = "nickname", javaType = String.class),
+        @Arg(column = "profile_image_url", javaType = String.class),
         @Arg(column = "profile_completed", javaType = boolean.class)
     })
     Optional<UserAccount> findByEmail(String email);
@@ -74,6 +78,7 @@ public interface UserAccountMapper {
             email,
             name,
             nickname,
+            profile_image_url,
             profile_completed
         FROM users
         WHERE id = #{userId}
@@ -85,6 +90,7 @@ public interface UserAccountMapper {
         @Arg(column = "email", javaType = String.class),
         @Arg(column = "name", javaType = String.class),
         @Arg(column = "nickname", javaType = String.class),
+        @Arg(column = "profile_image_url", javaType = String.class),
         @Arg(column = "profile_completed", javaType = boolean.class)
     })
     Optional<UserAccount> findById(Long userId);
@@ -154,6 +160,14 @@ public interface UserAccountMapper {
           AND deleted_at IS NULL
         """)
     void updateNickname(@Param("userId") Long userId, @Param("nickname") String nickname);
+
+    @Update("""
+        UPDATE users
+        SET profile_image_url = #{profileImageUrl}
+        WHERE id = #{userId}
+          AND deleted_at IS NULL
+        """)
+    void updateProfileImageUrl(@Param("userId") Long userId, @Param("profileImageUrl") String profileImageUrl);
 
     @Update("""
         UPDATE users

@@ -180,8 +180,65 @@ describe('ExtensionConnectPage', () => {
         await new Promise((resolve) => setTimeout(resolve));
         expect(sendMessage).toHaveBeenCalledWith('extension-id', expect.objectContaining({
             type: 'EZONE_EXTENSION_AUTH_SESSION',
-            sourceTabId: 42
+            sourceTabId: 42,
+            sourceUrl: 'https://jasoseol.com/?campaignid=15830248521'
         }), expect.any(Function));
+    });
+    it('EXT-003: returns to sourceUrl when the extension cannot focus the original source tab', async () => {
+        vi.stubEnv('VITE_EXTENSION_ID', 'extension-id');
+        const replace = vi.fn();
+        vi.stubGlobal('location', { replace });
+        const sendMessage = vi.fn((_extensionId, _message, callback) => callback({
+            accepted: true,
+            returnedToSource: false
+        }));
+        vi.stubGlobal('chrome', {
+            runtime: {
+                sendMessage
+            }
+        });
+        localStorage.setItem('ezone.accessToken', 'access-token');
+        mocks.routeQuery = {
+            sourceUrl: 'https://jasoseol.com/?campaignid=15830248521',
+            sourceTabId: '42'
+        };
+
+        mount(ExtensionConnectPage, {
+            global: {
+                stubs: ['RouterLink']
+            }
+        });
+        await new Promise((resolve) => setTimeout(resolve));
+        expect(replace).toHaveBeenCalledWith('https://jasoseol.com/?campaignid=15830248521');
+    });
+    it('EXT-003: returns to sourceUrl when extension message delivery fails after login', async () => {
+        vi.stubEnv('VITE_EXTENSION_ID', 'extension-id');
+        const replace = vi.fn();
+        vi.stubGlobal('location', { replace });
+        const runtime = {
+            lastError: null,
+            sendMessage: vi.fn((_extensionId, _message, callback) => {
+                runtime.lastError = {
+                    message: 'Could not establish connection. Receiving end does not exist.'
+                };
+                callback(undefined);
+                runtime.lastError = null;
+            })
+        };
+        vi.stubGlobal('chrome', { runtime });
+        localStorage.setItem('ezone.accessToken', 'access-token');
+        mocks.routeQuery = {
+            sourceUrl: 'https://jasoseol.com/?campaignid=15830248521',
+            sourceTabId: '42'
+        };
+
+        mount(ExtensionConnectPage, {
+            global: {
+                stubs: ['RouterLink']
+            }
+        });
+        await new Promise((resolve) => setTimeout(resolve));
+        expect(replace).toHaveBeenCalledWith('https://jasoseol.com/?campaignid=15830248521');
     });
     it('EXT-003: asks the user to log in again when web tokens are missing', async () => {
         vi.stubEnv('VITE_EXTENSION_ID', 'extension-id');

@@ -209,10 +209,32 @@
               {{ row.positionTitle }}
             </RouterLink>
             <span>
-              <em class="status-tag" :class="statusClass(row.applicationStatus)">{{ statusLabel(row.applicationStatus) }}</em>
+              <select
+                v-model="row.applicationStatus"
+                class="history-label-select history-status-select"
+                :class="statusClass(row.applicationStatus)"
+                :data-testid="`history-status-edit-${row.id}`"
+                :aria-label="`${row.companyName} 상태 라벨 변경`"
+                @change="saveHistoryLabels(row)"
+              >
+                <option v-for="option in rowStatusOptions" :key="option.value" :value="option.value">
+                  {{ option.label }}
+                </option>
+              </select>
             </span>
             <span>
-              <em class="result-tag" :class="resultClass(row.resultStage)">{{ resultDisplayLabel(row) }}</em>
+              <select
+                v-model="row.resultStage"
+                class="history-label-select history-result-select"
+                :class="resultClass(row.resultStage)"
+                :data-testid="`history-result-edit-${row.id}`"
+                :aria-label="`${row.companyName} 지원 결과 라벨 변경`"
+                @change="saveHistoryLabels(row)"
+              >
+                <option v-for="option in resultStageOptions" :key="option.value" :value="option.value">
+                  {{ option.label }}
+                </option>
+              </select>
             </span>
             <RouterLink class="job-main-link deadline-cell" :to="`/workspaces/${row.workspaceId}`">
               <span>{{ row.deadlineLabel || '-' }}</span>
@@ -312,6 +334,14 @@ const applicationStatusOptions = [
     { value: 'COMPLETED', label: '지원완료' },
     { value: 'NOT_APPLIED', label: '미지원' }
 ];
+const rowStatusOptions = applicationStatusOptions.filter((option) => option.value);
+const resultStageOptions = [
+    { value: 'DOCUMENT_FAILED', label: '서류 탈락' },
+    { value: 'TEST_FAILED', label: '필기 탈락' },
+    { value: 'INTERVIEW_FAILED', label: '면접 탈락' },
+    { value: 'IN_PROGRESS', label: '진행 중' },
+    { value: 'NOT_APPLIED', label: '미지원' }
+];
 const hasClientFilters = computed(() => Boolean(
     selectedApplicationStatus.value ||
     selectedSort.value !== 'DEFAULT' ||
@@ -356,6 +386,27 @@ async function loadHistory() {
     } catch (error) {
         status.value = 'error';
         errorMessage.value = error instanceof Error ? error.message : '과거 지원 내역을 불러오지 못했습니다.';
+    }
+}
+
+async function saveHistoryLabels(row) {
+    const originalId = row.id;
+    try {
+        const updatedRow = await historyApi.updateApplicationLabels(originalId, {
+            applicationStatus: row.applicationStatus,
+            resultStage: row.resultStage
+        });
+        historyData.value = {
+            ...historyData.value,
+            rows: historyData.value.rows.map((item) => {
+                if (item.id === originalId || item.workspaceId === updatedRow.workspaceId) {
+                    return { ...item, ...updatedRow };
+                }
+                return item;
+            })
+        };
+    } catch (error) {
+        errorMessage.value = error instanceof Error ? error.message : '지원 이력 라벨을 저장하지 못했습니다.';
     }
 }
 

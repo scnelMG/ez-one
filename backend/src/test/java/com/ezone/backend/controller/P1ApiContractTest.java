@@ -20,10 +20,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.ezone.backend.config.SecurityConfig;
 import com.ezone.backend.domain.persistence.DocumentProfileSectionRow;
 import com.ezone.backend.domain.UserAccount;
+import com.ezone.backend.domain.persistence.UserProfileRow;
 import com.ezone.backend.dto.support.SupportRequestResponse;
 import com.ezone.backend.mapper.DocumentProfileMapper;
 import com.ezone.backend.mapper.SupportRequestMapper;
 import com.ezone.backend.mapper.UserAccountMapper;
+import com.ezone.backend.mapper.UserProfileMapper;
 import com.ezone.backend.mapper.UserSessionMapper;
 import com.ezone.backend.security.JwtAccessTokenVerifier;
 import com.ezone.backend.security.JwtAuthenticationFilter;
@@ -60,8 +62,7 @@ import org.springframework.test.web.servlet.MockMvc;
     CurrentUserController.class,
     SupportRequestController.class,
     NotionIntegrationController.class,
-    ExtensionJobController.class
-    ,
+    ExtensionJobController.class,
     HistoryController.class,
     MattermostIntegrationController.class,
     MattermostAdminController.class
@@ -103,6 +104,9 @@ class P1ApiContractTest {
     private DocumentProfileMapper documentProfileMapper;
 
     @MockitoBean
+    private UserProfileMapper userProfileMapper;
+
+    @MockitoBean
     private MattermostRecommendationService mattermostRecommendationService;
 
     @BeforeEach
@@ -122,6 +126,16 @@ class P1ApiContractTest {
             "2026-06-17T10:00:00"
         )));
         when(documentProfileMapper.findLastSavedAt(1L)).thenReturn(Optional.of("2026-06-17T10:00:00"));
+        when(userProfileMapper.findByUserId(1L)).thenReturn(Optional.of(new UserProfileRow(
+            1L,
+            "[\"Backend\"]",
+            "[\"Startup\"]",
+            "[\"IT\"]",
+            "[\"Seoul\"]",
+            "[\"Java\"]",
+            true,
+            true
+        )));
         when(mattermostRecommendationService.listOpenRecommendations(1L)).thenReturn(List.of());
     }
 
@@ -207,6 +221,29 @@ class P1ApiContractTest {
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data.summary.total").value(0))
             .andExpect(jsonPath("$.data.rows", hasSize(0)));
+    }
+
+    @Test
+    void historyApplicationLabelsCanBePersisted() throws Exception {
+        mockMvc.perform(patch("/api/history/applications/1/labels")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "applicationStatus": "IN_PROGRESS",
+                      "resultStage": "INTERVIEW_FAILED"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.id").value(1))
+            .andExpect(jsonPath("$.data.applicationStatus").value("IN_PROGRESS"))
+            .andExpect(jsonPath("$.data.resultStage").value("INTERVIEW_FAILED"));
+
+        mockMvc.perform(get("/api/history/applications?period=2025-H1&resultStage=INTERVIEW_FAILED"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.rows[0].id").value(1))
+            .andExpect(jsonPath("$.data.rows[0].applicationStatus").value("IN_PROGRESS"))
+            .andExpect(jsonPath("$.data.rows[0].resultStage").value("INTERVIEW_FAILED"));
     }
 
     @Test
@@ -643,6 +680,50 @@ class P1ApiContractTest {
     }
 
     @Test
+    void onboardingProfileUpdatePersistsPreferencesThroughUserProfileMapper() throws Exception {
+        when(userProfileMapper.findByUserId(1L)).thenReturn(Optional.of(new UserProfileRow(
+            1L,
+            "[\"SW 개발\",\"프론트엔드\",\"AI/데이터\",\"AI/ML\"]",
+            "[\"대기업\",\"스타트업\"]",
+            "[\"IT/플랫폼\",\"금융\"]",
+            "[\"서울\",\"원격\"]",
+            "[\"React\",\"SQL\"]",
+            false,
+            true
+        )));
+
+        mockMvc.perform(put("/api/me/profile")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "desiredRoles": ["SW 개발", "프론트엔드", "AI/데이터", "AI/ML"],
+                      "companyTypes": ["대기업", "스타트업"],
+                      "industries": ["IT/플랫폼", "금융"],
+                      "regions": ["서울", "원격"],
+                      "skills": ["React", "SQL"],
+                      "ssafy": false
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.desiredRoles[0]").value("SW 개발"))
+            .andExpect(jsonPath("$.data.desiredRoles[3]").value("AI/ML"))
+            .andExpect(jsonPath("$.data.skills[1]").value("SQL"))
+            .andExpect(jsonPath("$.data.completed").value(true));
+
+        verify(userProfileMapper).upsert(
+            eq(1L),
+            eq("[\"SW 개발\",\"프론트엔드\",\"AI/데이터\",\"AI/ML\"]"),
+            eq("[\"대기업\",\"스타트업\"]"),
+            eq("[\"IT/플랫폼\",\"금융\"]"),
+            eq("[\"서울\",\"원격\"]"),
+            eq("[\"React\",\"SQL\"]"),
+            eq(false)
+        );
+        verify(userAccountMapper).markProfileCompleted(1L);
+    }
+
+    @Test
     void savingBasketJobRecordsJobOnlyNotionSyncLogWhenEnabled() throws Exception {
         mockMvc.perform(post("/api/integrations/notion/connect")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -798,6 +879,33 @@ class P1ApiContractTest {
             .andExpect(jsonPath("$.data.name").value("Hong Gil Dong"));
 
         verify(userAccountMapper).updateNickname(1L, "길동");
+    }
+
+    @Test
+    void currentUserProfileImageCanBeUpdated() throws Exception {
+        when(userAccountMapper.findById(1L)).thenReturn(Optional.of(new UserAccount(
+            1L,
+            "google-subject",
+            "user@example.com",
+            "Hong Gil Dong",
+            "Gil Dong",
+            "data:image/png;base64,profile",
+            true
+        )));
+
+        mockMvc.perform(patch("/api/me")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "nickname": "Gil Dong",
+                      "profileImageUrl": "data:image/png;base64,profile"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.profileImageUrl").value("data:image/png;base64,profile"));
+
+        verify(userAccountMapper).updateProfileImageUrl(1L, "data:image/png;base64,profile");
     }
 
     @Test

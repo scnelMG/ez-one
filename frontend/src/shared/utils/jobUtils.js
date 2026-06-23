@@ -68,11 +68,16 @@ export function formatParticipantCount(value) {
 }
 
 export function formatDDay(job) {
-  if (/^D-\d+/i.test(job.deadlineLabel) || job.deadlineLabel === '오늘') {
-      return job.deadlineLabel;
+  const label = String(job.deadlineLabel ?? '').trim();
+  if (/^D[-+]\d+/i.test(label) || label === 'D-Day') {
+      return label;
   }
-  if (job.deadlineDate) {
-      const d = new Date(job.deadlineDate);
+  if (label.startsWith('오늘')) {
+      return '오늘';
+  }
+
+  const d = parseDeadlineDate(job);
+  if (d) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       d.setHours(0, 0, 0, 0);
@@ -82,6 +87,23 @@ export function formatDDay(job) {
       if (diffDays > 0) return `D-${diffDays}`;
       return `D+${-diffDays}`;
   }
+  return null;
+}
+
+function parseDeadlineDate(job) {
+  if (job.deadlineDate) {
+    const deadlineDate = new Date(job.deadlineDate);
+    if (!Number.isNaN(deadlineDate.getTime())) {
+      return deadlineDate;
+    }
+  }
+
+  const label = String(job.deadlineLabel ?? '').trim();
+  const dateMatch = label.match(/(20\d{2})\s*(?:[-.]|년\s*)(\d{1,2})\s*(?:[-.]|월\s*)(\d{1,2})/);
+  if (dateMatch) {
+    return new Date(Number(dateMatch[1]), Number(dateMatch[2]) - 1, Number(dateMatch[3]));
+  }
+
   return null;
 }
 

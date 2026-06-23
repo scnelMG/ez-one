@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "powershell -ExecutionPolicy Bypass -File ../tools/start-local-dev.ps1",
-    "dev:vite": "vite --host localhost",
+    "dev:vite": "vite --host ::1",
     "build": "vite build",
     "test": "vitest run --config vitest.config.js"
   },

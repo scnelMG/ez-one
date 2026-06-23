@@ -49,7 +49,7 @@
 | TC-ALERT-P2 | Alert | 알림 채널 |
 | TC-HISTORY-P2 | Past History | 기간별 통계/공고 |
 | TC-CALENDAR-P2 | Basket Calendar | 마감 캘린더/주간 일정 |
-| TC-SUPPORT-P2 | Support | 고객지원/문의/약관 |
+| TC-SUPPORT-P2 | Support | 운영 문의 화면 |
 | TC-REC-P2 | Recommendation | hover 기업 정보 |
 | TC-MM-ACTIVE | Mattermost | raw 저장, 후보 공고 생성, SSAFY 전용 추천 노출 |
 | TC-REF-AUTO-P2 | References | 자동 JD/news/DART/인재상 수집 |
@@ -117,11 +117,14 @@
 
 ## 2026-06-06 MVP MyPage Dropdown/Page Tests
 
-- `TC-MYPAGE-DROPDOWN-001`: Header profile trigger opens the mypage dropdown by hover/click and exposes links for account, Notion sync, onboarding, QnA, inquiry, and terms.
+- `TC-MYPAGE-DROPDOWN-001`: Header profile trigger opens the mypage dropdown by hover/click and exposes links for account, Notion sync, and onboarding. MyPage tabs expose QnA and terms.
 - `TC-MYPAGE-ACCOUNT-001`: Account page removes the old left board list and shows profile, Google login account, Notion account mismatch guidance, and account actions.
 - `TC-MYPAGE-NOTION-001`: Notion sync page removes the old left board list, separates Google and Notion accounts, and toggles auto sync items.
-- `TC-MYPAGE-ONBOARDING-001`: Onboarding page saves recommendation preferences from chip-style controls.
-- `TC-MYPAGE-SUPPORT-001`: QnA, 1:1 inquiry, and terms routes render as independent mypage support pages. QnA search uses a labeled search input and button filters.
+- `TC-MYPAGE-ONBOARDING-001`: Onboarding page and MyPage onboarding edit page share `PreferenceForm`, start without forced default preferences, and save broad role groups, detailed positions, company, industry, region, skills, and SSAFY values from chip-style controls.
+- `TC-MYPAGE-ONBOARDING-002`: `profileApi.test.js` verifies `/api/me/profile` load uses the shared auth client refresh path instead of bypassing token refresh with `skipAuthRefresh`.
+- `TC-MYPAGE-ONBOARDING-003`: `PreferenceForm.test.js` verifies broad role groups, conditional detailed positions, undecided-role clearing, and suggested skill chips.
+- `TC-MYPAGE-ONBOARDING-004`: `P1ApiContractTest.onboardingProfileUpdatePersistsPreferencesThroughUserProfileMapper` verifies onboarding preferences are persisted through `user_profiles` mapper upsert.
+- `TC-MYPAGE-SUPPORT-001`: QnA and terms routes render as independent mypage support pages. QnA search uses a labeled search input and button filters.
 - `TC-AUTH-SWITCH-ENTRY-001`: Default `/login` hides account switching, while `/login?switch=account` renders the account-switch callout and starts Google OAuth with `prompt=select_account`.
 - `TC-AUTH-OAUTH-STATE-001`: OAuth state is stored by nonce so parallel login tabs or retries do not overwrite each other.
 - `TC-AUTH-OAUTH-CANCEL-001`: Google OAuth error callbacks such as `access_denied` show a clear retry message without calling the backend token exchange.
@@ -144,6 +147,7 @@
 - `TC-HISTORY-011`: History row navigation opens the workspace while the original posting link remains a separate external link.
 - `TC-HISTORY-013`: Basket save prefers official company classification over job-board URL fallback when a company matches the official registry, and records provenance in `company_profile_sources`.
 - `TC-HISTORY-014`: Basket save attempts realtime official company enrichment for unknown companies, records official provenance on success, and still saves the job/workspace when the realtime provider fails.
+- `TC-HISTORY-015`: History label edits call `PATCH /api/history/applications/{historyApplicationId}/labels`, persist `applicationStatus` and `resultStage` server-side, and reload with the edited labels instead of relying on browser local storage.
 
 ## 2026-06-17 Study Security Regression Tests
 
@@ -155,9 +159,9 @@
 
 ## 2026-06-17 Service Trust Remediation Tests
 
-- `TC-LAYOUT-FOOTER-001`: `AppLayout.test.js` verifies P1-only global navigation, disabled alert affordance, and production-style footer links/copy.
+- `TC-LAYOUT-FOOTER-001`: `AppLayout.test.js` verifies P1-only global navigation, disabled alert affordance, and production-style footer links, 운영 문의 메일, 저작권 및 상표 고지.
 - `TC-AUTH-WITHDRAW-001`: `P1ApiContractTest.currentUserCanWithdrawAndRevokeSessions` verifies `DELETE /api/me` revokes sessions and anonymizes the user.
-- `TC-SUPPORT-REQUEST-001`: Backend contract tests and frontend `MyPage.test.js`/`supportApi.test.js` verify inquiry requests call `/api/support/requests`, while retired business-contact payloads are rejected.
+- `TC-SUPPORT-REQUEST-001`: Backend contract tests and frontend `supportApi.test.js` verify support request API behavior while the 1:1 inquiry page remains unavailable in the web UI.
 - `TC-STUDY-PERMISSION-UI-001`: `StudyDetailPage.test.js` verifies the page uses the authenticated session email instead of a hardcoded user fallback.
 
 ## 2026-06-19 DART GMS AI Analysis Tests

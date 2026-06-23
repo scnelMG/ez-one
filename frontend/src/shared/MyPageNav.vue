@@ -4,7 +4,6 @@
     <RouterLink to="/mypage/notion" :class="{ active: activeSection === 'notion' }">Notion 연동 관리</RouterLink>
     <RouterLink to="/mypage/onboarding" :class="{ active: activeSection === 'onboarding' }">온보딩 정보</RouterLink>
     <RouterLink to="/mypage/qna" :class="{ active: activeSection === 'qna' }">자주 묻는 질문</RouterLink>
-    <RouterLink to="/mypage/inquiry" :class="{ active: activeSection === 'inquiry' }">1:1 문의</RouterLink>
     <RouterLink to="/mypage/terms" :class="{ active: activeSection === 'terms' }">이용약관</RouterLink>
   </nav>
 </template>

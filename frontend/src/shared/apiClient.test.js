@@ -18,6 +18,39 @@ describe('apiClient', () => {
         expect(resolveApiBaseUrl('http://localhost:8080/api/')).toBe('http://localhost:8080');
         expect(resolveApiBaseUrl('http://localhost:8080')).toBe('http://localhost:8080');
     });
+    it('AUTH-003/AUTH-004: does not attach a stale access token to public auth requests', async () => {
+        localStorage.setItem('ezone.accessToken', 'stale-access-token');
+        const seenHeaders = [];
+        defaultHttpClient.defaults.adapter = async (config) => {
+            seenHeaders.push(config.headers);
+            return makeResponse(config, 200, {
+                success: true,
+                data: {
+                    accessToken: 'new-access-token',
+                    refreshToken: 'new-refresh-token',
+                    tokenType: 'Bearer',
+                    expiresIn: 1800,
+                    user: {
+                        id: 2,
+                        email: 'new-google-user@example.com',
+                        name: 'New Google User',
+                        nickname: 'New Google User',
+                        profileCompleted: false,
+                        onboardingRequired: true
+                    }
+                },
+                error: null
+            });
+        };
+
+        await defaultHttpClient.post('/api/auth/google', { authorizationCode: 'google-oauth-code' });
+        await defaultHttpClient.post('/api/auth/login', { email: 'local@example.com', password: 'password123!' });
+        await defaultHttpClient.post('/api/auth/signup', { email: 'local@example.com', password: 'password123!', name: 'Local User' });
+        await defaultHttpClient.post('/api/auth/refresh', { refreshToken: 'refresh-token' });
+        await defaultHttpClient.post('/api/auth/logout', { refreshToken: 'refresh-token' });
+
+        expect(seenHeaders.every((headers) => headers.Authorization === undefined)).toBe(true);
+    });
     it('AUTH-007: refreshes the access token once and retries the original request after a 401', async () => {
         saveAuthSession({
             accessToken: 'expired-access-token',

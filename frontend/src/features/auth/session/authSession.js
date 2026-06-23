@@ -8,11 +8,13 @@ export function saveAuthSession(response) {
 }
 export function saveCurrentUser(user) {
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+    window.dispatchEvent(new CustomEvent('ezone:current-user-updated', { detail: user }));
 }
 export function clearAuthSession() {
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(CURRENT_USER_KEY);
+    window.dispatchEvent(new CustomEvent('ezone:current-user-updated', { detail: null }));
 }
 export function getAccessToken() {
     return localStorage.getItem(ACCESS_TOKEN_KEY);

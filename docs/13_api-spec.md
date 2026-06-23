@@ -279,3 +279,9 @@ Requirement: `MM-001`, `MM-006`, `MM-007`, `MM-008`, `MM-009`, `REC-003`, `REC-0
 | POST | `/api/recommendations/jobs/{recommendationId}/save?source=mattermost` | Saves the selected Mattermost candidate through the normal basket/workspace flow. Missing AI score does not block save. |
 
 Mattermost recommendation rows may include `companyDomain`, `companyType`, `companyLogoUrl`, `postedAt`, `collectedAt`, `recommendationScore`, and `recommendationReason`. `recommendationScore` may be `null` while the stored score status is pending; clients should render this as a calculating state instead of hiding the job.
+
+## 2026-06-24 History Label Persistence API
+
+| Method | Path | Description |
+| --- | --- | --- |
+| PATCH | `/api/history/applications/{historyApplicationId}/labels` | Persists user-edited past application `applicationStatus` and `resultStage` labels for the authenticated user's history row, returning the updated row. Computed active-basket history rows are first snapshotted into `application_history` before the labels are saved. |

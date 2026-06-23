@@ -28,7 +28,6 @@ const makeRouter = () => createRouter({
         { path: '/history', component: { template: '<div>history</div>' } },
         { path: '/mypage', component: { template: '<div>mypage</div>' } },
         { path: '/mypage/terms', component: { template: '<div>terms</div>' } },
-        { path: '/mypage/inquiry', component: { template: '<div>inquiry</div>' } },
         { path: '/mypage/partnership', component: { template: '<div>partnership</div>' } },
     ]
 });
@@ -126,17 +125,16 @@ describe('DocumentProfilePage', () => {
         const wrapper = await mountPage();
 
         expect(wrapper.get('[data-testid="basic-info-application-career-type"]').exists()).toBe(true);
-        expect(wrapper.get('[data-testid="basic-info-application-source"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="basic-info-application-source"]').exists()).toBe(false);
 
         await wrapper.get('[data-testid="basic-info-application-career-type"]').setValue('신입');
-        await wrapper.get('[data-testid="basic-info-application-source"]').setValue('채용 사이트');
         await wrapper.get('[data-testid="save-document-profile"]').trigger('click');
         await flushPromises();
 
         expect(mocks.saveSection).toHaveBeenLastCalledWith('basicInfo', expect.objectContaining({
-            applicationCareerType: '신입',
-            applicationSource: '채용 사이트'
+            applicationCareerType: '신입'
         }));
+        expect(mocks.saveSection.mock.calls.at(-1)[1]).not.toHaveProperty('applicationSource');
     });
 
     it('PROFILE-001: exposes the same major setting sections from the PDF', async () => {
@@ -352,7 +350,6 @@ describe('DocumentProfilePage', () => {
             address: 'Seoul',
             addressDetail: 'Gangnam-gu',
             applicationCareerType: '',
-            applicationSource: '',
             profilePhoto: {
                 name: 'resume-photo.jpg',
                 type: 'image/jpeg',

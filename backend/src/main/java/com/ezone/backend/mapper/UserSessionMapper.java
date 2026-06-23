@@ -1,11 +1,11 @@
 package com.ezone.backend.mapper;
 
 import com.ezone.backend.domain.UserSession;
+import org.apache.ibatis.annotations.Arg;
+import org.apache.ibatis.annotations.ConstructorArgs;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Result;
-import org.apache.ibatis.annotations.Results;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 import java.util.Optional;
@@ -26,12 +26,12 @@ public interface UserSessionMapper {
           AND revoked_at IS NULL
           AND expires_at > CURRENT_TIMESTAMP
         """)
-    @Results(id = "userSessionResultMap", value = {
-        @Result(column = "id", property = "id"),
-        @Result(column = "user_id", property = "userId"),
-        @Result(column = "refresh_token_hash", property = "refreshTokenHash"),
-        @Result(column = "expires_at", property = "expiresAt"),
-        @Result(column = "revoked_at", property = "revokedAt")
+    @ConstructorArgs({
+        @Arg(column = "id", javaType = Long.class),
+        @Arg(column = "user_id", javaType = Long.class),
+        @Arg(column = "refresh_token_hash", javaType = String.class),
+        @Arg(column = "expires_at", javaType = java.time.Instant.class),
+        @Arg(column = "revoked_at", javaType = java.time.Instant.class)
     })
     Optional<UserSession> findActiveByHash(String refreshTokenHash);
 

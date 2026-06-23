@@ -40,6 +40,7 @@ onMounted(async () => {
         errorMessage.value = '로그인 세션을 찾지 못했습니다. 다시 로그인해 주세요.';
         return;
     }
+    let canReturnToSourceOnConnectFailure = false;
     try {
         const extensionSession = await authApi.issueExtensionSession();
         const authMessage = {
@@ -52,16 +53,28 @@ onMounted(async () => {
         if (sourceTabId !== null) {
             authMessage.sourceTabId = sourceTabId;
         }
+        const sourceUrl = parseSourceUrl(route.query.sourceUrl);
+        if (sourceUrl) {
+            authMessage.sourceUrl = sourceUrl;
+        }
+        canReturnToSourceOnConnectFailure = true;
         const response = await sendExtensionMessage(extensionId, authMessage);
         if (!response?.accepted) {
             throw new Error(response?.message ?? '확장프로그램이 로그인 세션을 받지 못했습니다.');
         }
         completed.value = true;
+        if (response.returnedToSource === false) {
+            returnToSourceUrl(route.query.sourceUrl);
+            return;
+        }
         if (sourceTabId === null) {
             returnToSourceUrl(route.query.sourceUrl);
         }
     }
     catch (error) {
+        if (canReturnToSourceOnConnectFailure && returnToSourceUrl(route.query.sourceUrl)) {
+            return;
+        }
         errorMessage.value = normalizeExtensionConnectError(error);
     }
 });
@@ -92,18 +105,12 @@ function sendExtensionMessage(extensionId, message) {
     });
 }
 function returnToSourceUrl(value) {
-    if (typeof value !== 'string') {
-        return;
+    const url = parseSourceUrl(value);
+    if (url) {
+        globalThis.location.replace(url);
+        return true;
     }
-    try {
-        const url = new URL(value);
-        if (url.protocol === 'http:' || url.protocol === 'https:') {
-            globalThis.location.replace(url.href);
-        }
-    }
-    catch {
-        // Ignore malformed redirect targets and leave the user on the connection result.
-    }
+    return false;
 }
 
 function parseSourceTabId(value) {
@@ -112,5 +119,21 @@ function parseSourceTabId(value) {
     }
     const parsed = Number(value);
     return parsed > 0 ? parsed : null;
+}
+
+function parseSourceUrl(value) {
+    if (typeof value !== 'string') {
+        return null;
+    }
+    try {
+        const url = new URL(value);
+        if (url.protocol === 'http:' || url.protocol === 'https:') {
+            return url.href;
+        }
+    }
+    catch {
+        // Ignore malformed redirect targets and leave the user on the connection result.
+    }
+    return null;
 }
 </script>

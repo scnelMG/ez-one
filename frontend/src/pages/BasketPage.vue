@@ -28,10 +28,8 @@
       </section>
 
       <section class="basket-list-panel" data-testid="basket-list-panel" aria-label="저장한 공고 목록">
-        <div class="basket-title-row">
-          <div style="display: flex; align-items: center;">
-            <h2 style="margin: 0;">공고 장바구니</h2>
-          </div>
+        <div class="basket-title-row basket-section-heading">
+          <h2>공고 장바구니</h2>
           <div class="basket-tools" aria-label="장바구니 관리">
             <RouterLink class="basket-history-link" data-testid="basket-history-link" to="/history">
               과거 지원 내역
@@ -85,22 +83,29 @@
             {{ basketStore.errorMessage }}
           </p>
           <div class="basket-data-head">
-            <span>중요</span>
-            <span>회사명</span>
-            <span>직무</span>
-            <span>상태</span>
-            <span>마감일</span>
-            <span>채용 사이트 링크</span>
-            <span>최근 작업</span>
+            <span class="interest-head-cell">관심</span>
+            <span class="text-start-cell">회사명</span>
+            <span class="text-start-cell">직무</span>
+            <span class="center-cell">상태</span>
+            <span class="deadline-align-cell">마감일</span>
+            <span class="center-cell">바로가기</span>
+            <span class="center-cell">최근 작업</span>
             <span aria-label="삭제"></span>
           </div>
 
-          <article v-for="job in pagedJobs" :key="job.id" class="basket-data-row" data-testid="basket-job-row">
+          <article
+            v-for="job in pagedJobs"
+            :key="job.id"
+            class="basket-data-row"
+            :class="{ 'status-menu-row-open': openStatusJobId === job.id }"
+            data-testid="basket-job-row"
+          >
             <button
               class="priority-heart"
               type="button"
               :class="{ active: isPriorityJob(job) }"
               :aria-label="`${job.companyName} 중요 공고 표시`"
+              :aria-pressed="isPriorityJob(job) ? 'true' : 'false'"
               :data-testid="`priority-${job.id}`"
               @click="togglePriority(job.id)"
             >
@@ -108,7 +113,7 @@
                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
               </svg>
             </button>
-            <RouterLink class="job-main-link company-cell" :to="`/workspaces/${job.workspaceId}`">
+            <RouterLink class="job-main-link company-cell text-start-cell" :to="`/workspaces/${job.workspaceId}`">
               <span class="company-logo-badge" aria-hidden="true">
                 <img
                   v-if="job.companyLogoUrl"
@@ -120,10 +125,10 @@
               </span>
               <strong data-testid="basket-row-company">{{ job.companyName }}</strong>
             </RouterLink>
-            <RouterLink class="job-main-link" :to="`/workspaces/${job.workspaceId}`">
+            <RouterLink class="job-main-link text-start-cell" :to="`/workspaces/${job.workspaceId}`">
               {{ job.positionTitle }}
             </RouterLink>
-            <div class="status-menu">
+            <div class="status-menu center-cell">
               <button
                 class="status-select status-tag"
                 type="button"
@@ -156,12 +161,12 @@
                 </button>
               </div>
             </div>
-            <RouterLink class="job-main-link deadline-cell" :to="`/workspaces/${job.workspaceId}`">
+            <RouterLink class="job-main-link deadline-cell deadline-align-cell center-cell" :to="`/workspaces/${job.workspaceId}`">
               <span>{{ formatAbsoluteDeadline(job) }}</span>
               <span v-if="formatDDay(job) || job.deadlineLabel?.startsWith('D-')" class="deadline-pill" :class="{ urgent: isDeadlineSoon(job) }">{{ formatDDay(job) || job.deadlineLabel }}</span>
             </RouterLink>
             <a
-              class="source-link"
+              class="source-link center-cell"
               :href="normalizedSourceUrl(job.sourceUrl)"
               target="_blank"
               rel="noreferrer"
@@ -169,7 +174,7 @@
             >
               바로가기
             </a>
-            <span class="recent-work-cell" :data-testid="`recent-work-${job.id}`">
+            <span class="recent-work-cell center-cell" :data-testid="`recent-work-${job.id}`">
               <RouterLink
                 v-if="isRecentWorkspace(job.workspaceId)"
                 class="recent-work-badge"

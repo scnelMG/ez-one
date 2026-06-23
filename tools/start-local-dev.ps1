@@ -25,6 +25,12 @@ function Require-Key($Values, $Key, $Source) {
     }
 }
 
+function Set-ProcessEnvironment($Values) {
+    foreach ($key in $Values.Keys) {
+        [Environment]::SetEnvironmentVariable($key, $Values[$key], "Process")
+    }
+}
+
 function Test-HttpReady($Uri) {
     try {
         $statusCode = & curl.exe -s -o NUL -w "%{http_code}" --max-time 2 $Uri
@@ -318,6 +324,8 @@ Require-Key $frontendEnv "VITE_API_BASE_URL" "frontend/.env"
 Require-Key $frontendEnv "VITE_GOOGLE_CLIENT_ID" "frontend/.env"
 Require-Key $frontendEnv "VITE_GOOGLE_REDIRECT_URI" "frontend/.env"
 
+Set-ProcessEnvironment $backendEnv
+
 $dbHost = $backendEnv["DB_HOST"]
 $dbPort = [int]$backendEnv["DB_PORT"]
 if (-not (Test-TcpReady $dbHost $dbPort 1500)) {
@@ -327,7 +335,7 @@ Write-Host "[ok] MySQL reachable at ${dbHost}:${dbPort}"
 
 $apiBase = $frontendEnv["VITE_API_BASE_URL"].TrimEnd("/")
 $backendHealth = $apiBase -replace "/api$", "/api/health"
-$frontendUrl = "http://localhost:5173"
+$frontendUrl = "http://[::1]:5173"
 
 if ($Restart) {
     Write-Host "[restart] stopping local dev ports"
@@ -365,7 +373,7 @@ if (Test-HttpReady $frontendUrl) {
     }
     $frontendProcess = Start-LoggedProcess `
         $nodeCommand `
-        @($viteEntry, "--host", "localhost", "--port", "5173") `
+        @($viteEntry, "--host", "::1", "--port", "5173") `
         $frontendDir `
         (Join-Path $frontendDir "frontend-server.log") `
         (Join-Path $frontendDir "frontend-server.err.log")

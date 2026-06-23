@@ -115,7 +115,7 @@ final class HistoryApplicationAssembler {
         return new HistoryDataQualityResponse(rows.size(), companyMaster, ruleBased, unknown);
     }
 
-    private static HistoryApplicationRowResponse rowResponse(HistoryApplicationRow row) {
+    static HistoryApplicationRowResponse rowResponse(HistoryApplicationRow row) {
         return new HistoryApplicationRowResponse(
             row.getId(),
             row.getWorkspaceId(),

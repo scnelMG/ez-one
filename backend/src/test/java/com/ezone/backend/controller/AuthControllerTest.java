@@ -115,6 +115,40 @@ class AuthControllerTest {
     }
 
     @Test
+    void googleLoginIgnoresStaleAuthorizationHeader() throws Exception {
+        when(authService.loginWithGoogle(any())).thenReturn(
+            new AuthTokenResponse(
+                "access-token",
+                "refresh-token",
+                "Bearer",
+                3600,
+                new CurrentUserResponse(
+                    1L,
+                    "new-google-user@example.com",
+                    "New Google User",
+                    "New Google User",
+                    false,
+                    true
+                )
+            )
+        );
+
+        mockMvc.perform(post("/api/auth/google")
+                .header("Authorization", "Bearer stale-or-invalid-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "authorizationCode": "google-oauth-code",
+                      "redirectUri": "http://localhost:5173/login/callback"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.accessToken").value("access-token"))
+            .andExpect(jsonPath("$.data.user.email").value("new-google-user@example.com"));
+    }
+
+    @Test
     void signupReturnsTokenEnvelope() throws Exception {
         when(authService.signup(any())).thenReturn(
             new AuthTokenResponse(
@@ -185,6 +219,40 @@ class AuthControllerTest {
             .andExpect(jsonPath("$.data.user.email").value("local@example.com"))
             .andExpect(jsonPath("$.data.user.profileCompleted").value(true))
             .andExpect(jsonPath("$.data.user.onboardingRequired").value(false));
+    }
+
+    @Test
+    void emailLoginIgnoresStaleAuthorizationHeader() throws Exception {
+        when(authService.loginWithEmail(any())).thenReturn(
+            new AuthTokenResponse(
+                "access-token",
+                "refresh-token",
+                "Bearer",
+                3600,
+                new CurrentUserResponse(
+                    2L,
+                    "local@example.com",
+                    "Local User",
+                    "Local User",
+                    true,
+                    false
+                )
+            )
+        );
+
+        mockMvc.perform(post("/api/auth/login")
+                .header("Authorization", "Bearer stale-or-invalid-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "email": "local@example.com",
+                      "password": "password123!"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.accessToken").value("access-token"))
+            .andExpect(jsonPath("$.data.user.email").value("local@example.com"));
     }
 
     @Test

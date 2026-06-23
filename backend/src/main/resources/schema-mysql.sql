@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(255) NOT NULL,
   name VARCHAR(255) NOT NULL,
   nickname VARCHAR(255) NOT NULL,
+  profile_image_url MEDIUMTEXT NULL,
   provider VARCHAR(32) NOT NULL,
   provider_id VARCHAR(255) NOT NULL,
   password_hash VARCHAR(255) NULL,
@@ -21,6 +22,19 @@ CREATE TABLE IF NOT EXISTS user_sessions (
   revoked_at TIMESTAMP NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_user_sessions_user FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS user_profiles (
+  user_id BIGINT PRIMARY KEY,
+  desired_roles TEXT NOT NULL,
+  company_types TEXT NOT NULL,
+  industries TEXT NOT NULL,
+  regions TEXT NOT NULL,
+  skills TEXT NOT NULL,
+  is_ssafy BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_user_profiles_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS companies (

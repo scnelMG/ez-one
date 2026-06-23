@@ -173,4 +173,26 @@
       )
     ORDER BY ah.period_year DESC, ah.period_half DESC, ah.deadline_date IS NULL, ah.deadline_date ASC, ah.id ASC
   </select>
+
+  <update id="updateApplicationLabels">
+    UPDATE application_history
+    SET application_status = #{applicationStatus},
+        result_stage = #{resultStage},
+        result_label = #{resultLabel},
+        raw_result = #{resultLabel},
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = #{historyApplicationId}
+      AND user_id = #{userId}
+  </update>
+
+  <update id="updateApplicationLabelsByWorkspaceId">
+    UPDATE application_history
+    SET application_status = #{applicationStatus},
+        result_stage = #{resultStage},
+        result_label = #{resultLabel},
+        raw_result = #{resultLabel},
+        updated_at = CURRENT_TIMESTAMP
+    WHERE workspace_id = #{workspaceId}
+      AND user_id = #{userId}
+  </update>
 </mapper>

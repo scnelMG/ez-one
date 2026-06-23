@@ -41,7 +41,6 @@ const makeRouter = () => createRouter({
         { path: '/history', component: { template: '<div>history</div>' } },
         { path: '/mypage/onboarding', component: { template: '<div>onboarding</div>' } },
         { path: '/mypage/qna', component: { template: '<div>qna</div>' } },
-        { path: '/mypage/inquiry', component: { template: '<div>inquiry</div>' } },
         { path: '/mypage/terms', component: { template: '<div>terms</div>' } }
     ]
 });
@@ -88,14 +87,31 @@ describe('NotionSettingsPage', () => {
         expect(mocks.getConnection).toHaveBeenCalled();
         expect(mocks.listSyncLogs).toHaveBeenCalled();
         expect(wrapper.find('[data-testid="mypage-left-board"]').exists()).toBe(false);
-        expect(wrapper.text()).toContain('마이페이지 · 노션 연동 관리');
-        expect(wrapper.text()).toContain('Notion 연동 상태');
-        expect(wrapper.text()).toContain('공고 자동 동기화 꺼짐');
-        expect(wrapper.text()).toContain('로그인 이메일과 노션 이메일이 서로 달라도 연동돼요.');
-        expect(wrapper.text()).toContain('hong.gildong@gmail.com');
-        expect(wrapper.text()).toContain('gildong.work@gmail.com');
-        expect(wrapper.text()).toContain('자소서 · 도화지');
-        expect(wrapper.text()).toContain('준비 중');
+        expect(wrapper.find('.page-header .eyebrow').exists()).toBe(false);
+        expect(wrapper.find('.page-header h1 + p').exists()).toBe(false);
+        expect(wrapper.text()).toContain('Notion 연동 관리');
+        expect(wrapper.text()).not.toContain('마이페이지 · 노션 연동 관리');
+        expect(wrapper.find('.mypage-summary-strip').exists()).toBe(false);
+        expect(wrapper.find('.notion-account-card').exists()).toBe(false);
+        expect(wrapper.find('.notion-settings-card').exists()).toBe(true);
+        expect(wrapper.findAll('.notion-settings-card .account-setting-row')).toHaveLength(4);
+        expect(wrapper.findAll('.notion-settings-card .account-setting-label').map((label) => label.text())).toEqual([
+            'Google 계정',
+            'Notion 계정',
+            '공고 자동 동기화',
+            '대상 위치'
+        ]);
+        const settingsCardText = wrapper.get('.notion-settings-card').text();
+        expect(settingsCardText).toContain('공고 자동 동기화 꺼짐');
+        expect(wrapper.text()).not.toContain('로그인 이메일과 노션 이메일이 서로 달라도 연동돼요.');
+        expect(settingsCardText).toContain('hong.gildong@gmail.com');
+        expect(settingsCardText).toContain('gildong.work@gmail.com');
+        expect(settingsCardText).not.toContain('자소서 · 도화지');
+        expect(settingsCardText).not.toContain('과거 지원 내역');
+        expect(settingsCardText).not.toContain('준비 중');
+        expect(settingsCardText).not.toContain('P1');
+        expect(settingsCardText).not.toContain('P2');
+        expect(settingsCardText).not.toContain('JOB_ONLY');
         expect(wrapper.text()).toContain('Synced');
 
         await wrapper.get('[data-testid="toggle-job-only-sync"]').trigger('click');
@@ -115,6 +131,7 @@ describe('NotionSettingsPage', () => {
         const wrapper = await mountPage();
 
         expect(wrapper.text()).toContain('연결된 계정 없음');
+        expect(wrapper.text()).toContain('연결 필요');
         await wrapper.get('[data-testid="connect-notion"]').trigger('click');
         await flushPromises();
         expect(mocks.connect).toHaveBeenCalled();
@@ -126,7 +143,8 @@ describe('NotionSettingsPage', () => {
         const wrapper = await mountPage();
 
         expect(wrapper.text()).toContain('아직 동기화된 공고가 없습니다.');
-        expect(wrapper.text()).toContain('장바구니에 공고를 저장하면 JOB_ONLY 범위로 기록됩니다.');
+        expect(wrapper.text()).toContain('공고를 저장하고 동기화를 켜면 Notion에 기록됩니다.');
+        expect(wrapper.text()).not.toContain('JOB_ONLY');
     });
 
     it('NOTION-001: shows an inline error when sync toggle fails', async () => {

@@ -370,7 +370,7 @@ function redirectToConfiguredLocalOAuthOrigin() {
     const redirectUri = getGoogleRedirectUri();
     const currentOrigin = new URL(window.location.origin);
     const redirectOrigin = new URL(redirectUri);
-    if (currentOrigin.hostname === redirectOrigin.hostname) {
+    if (currentOrigin.origin === redirectOrigin.origin) {
         return;
     }
     if (!isLocalHostname(currentOrigin.hostname) || !isLocalHostname(redirectOrigin.hostname)) {

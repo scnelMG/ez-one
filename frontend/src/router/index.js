@@ -117,12 +117,6 @@ export const router = createRouter({
             meta: { requiresAuth: true, mypageSection: 'qna' }
         },
         {
-            path: '/mypage/inquiry',
-            name: 'mypage-inquiry',
-            component: MyPage,
-            meta: { requiresAuth: true, mypageSection: 'inquiry' }
-        },
-        {
             path: '/mypage/terms',
             name: 'mypage-terms',
             component: MyPage,

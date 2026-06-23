@@ -61,7 +61,7 @@ flowchart LR
     MyPage --> Account[내 계정]
     MyPage --> NotionManage[노션 연동 관리]
     MyPage --> OnboardingInfo[온보딩 정보]
-    MyPage --> Support[고객지원]
+    MyPage --> Support[QnA / 약관]
 
     Alerts --> AlertDropdown[알림 드롭다운]
 
@@ -90,7 +90,7 @@ flowchart LR
 | 서류 입력 정보 | 서류 항목 입력, 커스텀 항목 추가 | P1 | 표준 섹션과 커스텀 항목 CRUD |
 | 과거 지원 내역 | 기간 선택, 결과 대시보드, 회고 메모, 지원 내역 목록 | P2/IA | MVP 이후 |
 | 마이페이지 | 내 계정, 노션 연동 관리, 온보딩 정보 | P1 보조 | 계정 확인, 온보딩 수정, Notion 설정 |
-| 마이페이지 | 고객지원 | P1 부분 제공/P2 확장 | 문의/FAQ/약관 |
+| 마이페이지 | QnA / 약관 | P1 부분 제공 | FAQ와 이용약관. 운영 문의는 공통 푸터 메일 링크로 안내 |
 | 알림 | 알림 드롭다운 | P2/IA | 마감, 상태 변경, 추천, 저장 알림 |
 | 확장 프로그램 | 공고 저장하기 | P1 | 감지, 직무 선택, 장바구니 저장 |
 | 확장 프로그램 | 서류 정보 입력하기 | P1 | 기본/문서/커스텀 항목 입력 보조, 자기소개서 제외, 실패/복사 후보 표시 |
@@ -182,9 +182,8 @@ flowchart TD
     MyPage[마이페이지] --> Account[내 계정]
     MyPage --> NotionManage[노션 연동 관리]
     MyPage --> OnbInfo[온보딩 정보]
-    MyPage --> Support[고객지원]
+    MyPage --> Support[QnA / 약관]
     Support --> Qna[QnA / FAQ]
-    Support --> OneToOne[1:1 문의]
     Support --> Terms[이용약관]
 
     Alert[알림] --> AlertDeadline[공고 마감]

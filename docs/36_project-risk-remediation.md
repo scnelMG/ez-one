@@ -80,7 +80,7 @@ Fix:
 
 Fixed:
 
-- Rebuilt the app footer with service identity, support/policy links, support mail, trademark notice, and explicit pre-launch business-information wording.
+- Rebuilt the app footer with service identity, policy links, named 운영 문의 mail links, copyright, and trademark notice without placeholder business information.
 - Removed Mattermost from the global P1 navigation while leaving its direct route available for product-scope review.
 - Restored the Study global navigation entry as `취업 스터디` by explicit product-owner request; the route remains active while Study scope is reviewed.
 - Rebuilt `MyPage.vue` and `MyPageNav.vue` with clean Korean copy.

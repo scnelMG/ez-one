@@ -6,12 +6,14 @@ import PastHistoryPage from './PastHistoryPage.vue';
 import { statusLabel } from '@/shared/utils/jobUtils';
 
 const mocks = vi.hoisted(() => ({
-    listApplications: vi.fn()
+    listApplications: vi.fn(),
+    updateApplicationLabels: vi.fn()
 }));
 
 vi.mock('@/features/history/api/historyApi', () => ({
     historyApi: {
-        listApplications: mocks.listApplications
+        listApplications: mocks.listApplications,
+        updateApplicationLabels: mocks.updateApplicationLabels
     }
 }));
 
@@ -109,7 +111,6 @@ const makeRouter = () => createRouter({
         { path: '/mypage/notion', component: { template: '<div>notion</div>' } },
         { path: '/mypage/onboarding', component: { template: '<div>onboarding</div>' } },
         { path: '/mypage/terms', component: { template: '<div>terms</div>' } },
-        { path: '/mypage/inquiry', component: { template: '<div>inquiry</div>' } },
         { path: '/mypage/partnership', component: { template: '<div>partnership</div>' } }
     ]
 });
@@ -118,7 +119,12 @@ describe('PastHistoryPage', () => {
     beforeEach(() => {
         localStorage.clear();
         mocks.listApplications.mockReset();
-        mocks.listApplications.mockResolvedValue(historyFixture);
+        mocks.updateApplicationLabels.mockReset();
+        mocks.listApplications.mockResolvedValue(cloneHistoryFixture());
+        mocks.updateApplicationLabels.mockImplementation((id, labels) => Promise.resolve({
+            ...cloneHistoryFixture().rows.find((row) => row.id === id),
+            ...labels
+        }));
     });
 
     it('HISTORY-003/HISTORY-006: renders past history as a basket-connected job list', async () => {
@@ -206,6 +212,39 @@ describe('PastHistoryPage', () => {
         expect(wrapper.find('[data-testid="history-workspace-1"]').exists()).toBe(false);
     });
 
+    it('HISTORY-001: lets users edit status and result labels in the history table', async () => {
+        const wrapper = await mountHistory('/history');
+
+        expect(wrapper.get('[data-testid="history-status-edit-1"]').element.value).toBe('COMPLETED');
+        expect(wrapper.get('[data-testid="history-result-edit-1"]').element.value).toBe('DOCUMENT_FAILED');
+        expect(wrapper.get('[data-testid="history-status-edit-1"]').classes()).toEqual(expect.arrayContaining([
+            'history-label-select',
+            'history-status-select',
+            'status-submitted'
+        ]));
+        expect(wrapper.get('[data-testid="history-status-edit-1"]').classes()).not.toContain('status-tag');
+        expect(wrapper.get('[data-testid="history-result-edit-1"]').classes()).toEqual(expect.arrayContaining([
+            'history-label-select',
+            'history-result-select',
+            'is-document-failed'
+        ]));
+        expect(wrapper.get('[data-testid="history-result-edit-1"]').classes()).not.toContain('result-tag');
+
+        await wrapper.get('[data-testid="history-status-edit-1"]').setValue('IN_PROGRESS');
+        await wrapper.get('[data-testid="history-result-edit-1"]').setValue('INTERVIEW_FAILED');
+
+        expect(wrapper.get('[data-testid="history-status-edit-1"]').element.value).toBe('IN_PROGRESS');
+        expect(wrapper.get('[data-testid="history-result-edit-1"]').element.value).toBe('INTERVIEW_FAILED');
+        expect(wrapper.get('[data-testid="history-status-edit-1"]').element.selectedOptions[0].textContent).toBe('진행 중');
+        expect(wrapper.get('[data-testid="history-result-edit-1"]').element.selectedOptions[0].textContent).toBe('면접 탈락');
+
+        expect(mocks.updateApplicationLabels).toHaveBeenLastCalledWith('1', {
+            applicationStatus: 'IN_PROGRESS',
+            resultStage: 'INTERVIEW_FAILED'
+        });
+        expect(localStorage.getItem('ezone.historyLabelOverrides')).toBeNull();
+    });
+
     it('filters the visible rows by search keyword without exposing raw result labels as searchable UI copy', async () => {
         const wrapper = await mountHistory('/history');
 
@@ -258,4 +297,8 @@ function rowCompanies(wrapper) {
 
 function flushPromises() {
     return new Promise((resolve) => setTimeout(resolve));
+}
+
+function cloneHistoryFixture() {
+    return JSON.parse(JSON.stringify(historyFixture));
 }

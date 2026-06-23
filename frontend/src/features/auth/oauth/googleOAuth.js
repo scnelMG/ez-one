@@ -1,5 +1,5 @@
 const OAUTH_STATE_KEY = 'ezone.oauthState';
-const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
+const OAUTH_STATE_TTL_MS = 30 * 60 * 1000;
 
 export function createOAuthState(redirectPath) {
     const nonce = crypto.randomUUID();
@@ -55,7 +55,14 @@ function normalizeRedirectPath(path) {
 }
 
 function loadOAuthStateStore() {
-    const rawState = sessionStorage.getItem(OAUTH_STATE_KEY);
+    return {
+        ...loadOAuthStateStoreFrom(localStorage),
+        ...loadOAuthStateStoreFrom(sessionStorage)
+    };
+}
+
+function loadOAuthStateStoreFrom(storage) {
+    const rawState = storage.getItem(OAUTH_STATE_KEY);
     if (!rawState) {
         return {};
     }
@@ -76,7 +83,7 @@ function loadOAuthStateStore() {
             })
         );
     } catch {
-        sessionStorage.removeItem(OAUTH_STATE_KEY);
+        storage.removeItem(OAUTH_STATE_KEY);
         return {};
     }
 }
@@ -84,7 +91,10 @@ function loadOAuthStateStore() {
 function saveOAuthStateStore(store) {
     if (Object.keys(store).length === 0) {
         sessionStorage.removeItem(OAUTH_STATE_KEY);
+        localStorage.removeItem(OAUTH_STATE_KEY);
         return;
     }
-    sessionStorage.setItem(OAUTH_STATE_KEY, JSON.stringify(store));
+    const serializedStore = JSON.stringify(store);
+    sessionStorage.setItem(OAUTH_STATE_KEY, serializedStore);
+    localStorage.setItem(OAUTH_STATE_KEY, serializedStore);
 }

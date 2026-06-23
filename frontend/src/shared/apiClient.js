@@ -11,7 +11,7 @@ export function setLoginRedirectHandler(handler) {
 
 defaultHttpClient.interceptors.request.use((config) => {
     const accessToken = getAccessToken();
-    if (accessToken) {
+    if (accessToken && shouldAttachAuthorization(config.url)) {
         config.headers.Authorization = `Bearer ${accessToken}`;
     }
     return config;
@@ -60,6 +60,12 @@ export function resolveApiBaseUrl(value) {
     return value.replace(/\/api\/?$/, '');
 }
 function isAuthRefreshExcludedEndpoint(url) {
+    return isPublicAuthEndpoint(url);
+}
+function shouldAttachAuthorization(url) {
+    return !isPublicAuthEndpoint(url);
+}
+function isPublicAuthEndpoint(url) {
     return Boolean(url?.startsWith('/api/auth/') && url !== '/api/auth/extension-session');
 }
 async function redirectToLogin() {
