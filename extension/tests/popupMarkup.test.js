@@ -85,9 +85,27 @@ describe('extension popup markup', () => {
         expect(markup).toContain('id="autofill-apply-button"');
         expect(markup).toContain('id="autofill-rescan-button"');
         expect(markup).toContain('다시 인식');
+        expect(markup).toContain('복사 필요');
+        expect(markup).toContain('자동 입력 시작');
+        expect(markup).not.toContain('복사 후보');
+        expect(markup).not.toContain('확인 후 자동 입력');
         expect(markup).toContain('data-tone="success"');
         expect(markup).toContain('data-tone="warning"');
         expect(markup).toContain('data-tone="neutral"');
+        expect(markup).toContain('activity-assist-section');
+        expect(markup).toContain('AI 활동 추천');
+        expect(markup).toContain('직무 적합도 순으로 정렬하고 글자수에 맞춘 붙여넣기 문장을 만듭니다.');
+        expect(markup).toContain('activity-assist-flow');
+        expect(markup).toContain('AI로 활동 추천 만들기');
+    });
+
+    it('EXT-022/EXT-023: places job-fit activity recommendations before copy-needed rows', () => {
+        const activityAssistIndex = markup.indexOf('id="activity-assist-section"');
+        const copyListIndex = markup.indexOf('id="autofill-copy-list"');
+
+        expect(activityAssistIndex).toBeGreaterThan(-1);
+        expect(copyListIndex).toBeGreaterThan(-1);
+        expect(activityAssistIndex).toBeLessThan(copyListIndex);
     });
 
     it('EXT-005: shows whether essay questions were collected for the selected role', () => {

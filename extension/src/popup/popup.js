@@ -57,8 +57,19 @@ const autofillFailedList = requireElement('autofill-failed-list');
 const autofillCopyList = requireElement('autofill-copy-list');
 const autofillApplyButton = requireElement('autofill-apply-button');
 const autofillRescanButton = requireElement('autofill-rescan-button');
+const activityAssistSection = requireElement('activity-assist-section');
+const activityAssistButton = requireElement('activity-assist-button');
+const activityAssistCaption = requireElement('activity-assist-caption');
+const activityAssistCountInput = requireElement('activity-assist-count-input');
+const activityAssistLimitInput = requireElement('activity-assist-limit-input');
+const activityAssistUnitSelect = requireElement('activity-assist-unit-select');
+const activityAssistStatus = requireElement('activity-assist-status');
+const activityAssistList = requireElement('activity-assist-list');
+const ACTIVITY_ASSIST_BUTTON_LABEL = 'AI로 활동 추천 만들기';
 let currentPosting = null;
 let pendingDocumentAutoFillProfile = null;
+let activityAssistContext = null;
+let activityAssistAutoRequestKey = null;
 let activeEssayRole = null;
 let essayQuestionRequestId = 0;
 let waitingForWebLogin = false;
@@ -106,23 +117,31 @@ loginButton.addEventListener('click', async () => {
     setStatus('Google 로그인을 완료하면 자동으로 이어집니다.');
 });
 jobSaveModeButton.addEventListener('click', () => {
-    void loadPreview({ showUnsupportedMessage: true });
+    void runAuthenticatedAction('jobPreview', () => loadPreview({ showUnsupportedMessage: true }));
 });
 documentInputModeButton.addEventListener('click', () => {
-    void previewDocumentAutoFill();
+    void runAuthenticatedAction('documentAutoFill', () => previewDocumentAutoFill());
 });
 autofillApplyButton.addEventListener('click', () => {
-    void applyDocumentAutoFill();
+    void runAuthenticatedAction('documentAutoFill', () => applyDocumentAutoFill());
 });
 autofillRescanButton.addEventListener('click', () => {
-    pendingDocumentAutoFillProfile = null;
-    void previewDocumentAutoFill();
+    void runAuthenticatedAction('documentAutoFill', () => {
+        pendingDocumentAutoFillProfile = null;
+        return previewDocumentAutoFill();
+    });
+});
+activityAssistButton.addEventListener('click', () => {
+    void runAuthenticatedAction('documentAutoFill', () => requestActivityAssist());
 });
 reloadPreviewButton.addEventListener('click', () => {
-    void loadPreview({ force: true, showUnsupportedMessage: true });
+    void runAuthenticatedAction('jobPreview', () => loadPreview({ force: true, showUnsupportedMessage: true }));
 });
 saveButton.addEventListener('click', async () => {
     if (!currentPosting) {
+        return;
+    }
+    if (!await ensureAuthenticatedExtensionSession('jobPreview')) {
         return;
     }
     const selectedRoles = Array.from(roleOptions.querySelectorAll('input:checked'))
@@ -170,7 +189,8 @@ startPostingChangeWatcher();
 
 async function init() {
     const session = await validateStoredSession(chrome.storage.local, {
-        apiBaseUrl
+        apiBaseUrl,
+        requireFreshSession: true
     });
     if (!session) {
         hasExtensionSession = false;
@@ -242,8 +262,29 @@ async function enterAuthenticatedExtensionSession() {
 
 async function readValidatedExtensionSession() {
     return await validateStoredSession(chrome.storage.local, {
-        apiBaseUrl
+        apiBaseUrl,
+        requireFreshSession: true
     });
+}
+
+async function runAuthenticatedAction(continuation, action) {
+    if (!await ensureAuthenticatedExtensionSession(continuation)) {
+        return;
+    }
+    await action();
+}
+
+async function ensureAuthenticatedExtensionSession(continuation = null) {
+    const session = await readValidatedExtensionSession();
+    if (session) {
+        hasExtensionSession = true;
+        return true;
+    }
+    await clearExtensionSession();
+    hasExtensionSession = false;
+    await rememberPendingLoginContinuation(continuation);
+    showPanel(loginPanel);
+    return false;
 }
 
 async function resumePendingExtensionAction() {
@@ -473,7 +514,7 @@ async function applyDocumentAutoFill() {
     }
     finally {
         autofillApplyButton.disabled = false;
-        autofillApplyButton.textContent = '확인 후 자동 입력';
+        autofillApplyButton.textContent = '자동 입력 시작';
     }
 }
 
@@ -896,35 +937,270 @@ function renderAutoFillResult(result) {
     const filled = Array.isArray(result?.filled) ? result.filled : [];
     const failed = Array.isArray(result?.failed) ? result.failed : [];
     const copyCandidates = Array.isArray(result?.copyCandidates) ? result.copyCandidates : [];
-    const primaryItems = uniqueAutoFillItems((isPreview ? planned : filled).filter(isUserVisibleAutoFillItem));
-    const primaryFieldKeys = new Set(primaryItems.map((item) => item?.fieldKey).filter(Boolean));
-    const visibleCopyCandidates = copyCandidates.filter((item) => shouldShowCopyCandidate(item, primaryFieldKeys));
-    const groupedCopyCandidates = groupActivityCopyCandidates(visibleCopyCandidates);
-    const manualReviewItems = buildManualReviewItems(failed, groupedCopyCandidates);
+    const primaryItems = sortByDisplayOrder(uniqueAutoFillItems((isPreview ? planned : filled).filter(isUserVisibleAutoFillItem)));
+    const primaryCoverage = createPrimaryAutoFillCoverage(primaryItems);
+    const visibleFailed = sortByDisplayOrder(failed.filter((item) => shouldShowManualReviewItem(item, primaryCoverage)));
+    const visibleCopyCandidates = copyCandidates.filter((item) => shouldShowCopyCandidate(item, primaryCoverage));
+    const groupedCopyCandidates = sortByDisplayOrder(groupActivityCopyCandidates(visibleCopyCandidates));
+    const manualReviewItems = sortByDisplayOrder(buildManualReviewItems(visibleFailed));
     documentResultTitle.textContent = isPreview ? '입력 전 확인' : '입력이 끝났습니다';
     autofillFilledLabel.textContent = isPreview ? '입력 예정' : '입력됨';
     autofillFilledHeading.textContent = isPreview ? '입력 예정' : '자동 입력됨';
-    autofillFilledCaption.textContent = '';
-    autofillFilledCaption.hidden = true;
+    autofillFilledCaption.textContent = isPreview
+        ? `${primaryItems.length}개 자동 입력 가능`
+        : `${primaryItems.length}개 자동 입력 완료`;
+    autofillFilledCaption.hidden = false;
     autofillApplyButton.hidden = !isPreview;
     if (autofillApplyButton.parentElement) {
         autofillApplyButton.parentElement.hidden = false;
     }
+    autofillApplyButton.textContent = '자동 입력 시작';
     autofillApplyButton.disabled = isPreview && primaryItems.length === 0;
     autofillFilledCount.textContent = String(primaryItems.length);
     autofillReviewCount.textContent = String(manualReviewItems.length);
     autofillCopyCount.textContent = String(groupedCopyCandidates.length);
     autofillSummary.textContent = isPreview
-        ? `${primaryItems.length}개 항목을 찾았습니다.`
-        : `${primaryItems.length}개 항목을 입력했습니다. 확인 필요 ${manualReviewItems.length}개.`;
-    renderResultList(autofillFilledList, primaryItems, (item) => getPrimaryAutoFillDisplay(item, isPreview), isPreview ? '입력 예정 항목이 없습니다.' : '자동 입력된 항목이 없습니다.');
+        ? `자동 입력 전 아래 항목을 확인해 주세요. 입력 예정 ${primaryItems.length}개, 확인 필요 ${manualReviewItems.length}개, 복사 필요 ${groupedCopyCandidates.length}개.`
+        : `${primaryItems.length}개 항목을 입력했습니다. 확인 필요 ${manualReviewItems.length}개, 복사 필요 ${groupedCopyCandidates.length}개.`;
+    renderPrimaryAutoFillList(autofillFilledList, primaryItems, isPreview);
     renderResultList(autofillFailedList, manualReviewItems, formatManualReviewDisplay, '확인 필요 항목이 없습니다.');
-    renderResultList(autofillCopyList, groupedCopyCandidates.slice(0, 12), formatCopyCandidateDisplay, '복사할 후보가 없습니다.');
+    renderResultList(autofillCopyList, groupedCopyCandidates, formatCopyCandidateDisplay, '복사할 항목이 없습니다.');
+    configureActivityAssist(manualReviewItems, groupedCopyCandidates);
 }
 
-function shouldShowCopyCandidate(item, primaryFieldKeys) {
-    if (!primaryFieldKeys.has(item?.key)) return true;
+function configureActivityAssist(manualReviewItems, copyCandidates) {
+    const shouldShow = shouldShowActivityAssist(manualReviewItems, copyCandidates);
+    activityAssistSection.hidden = !shouldShow;
+    if (!shouldShow) {
+        activityAssistContext = null;
+        activityAssistAutoRequestKey = null;
+        activityAssistStatus.hidden = true;
+        activityAssistList.replaceChildren();
+        return;
+    }
+
+    activityAssistContext = {
+        pageContext: manualReviewItems
+            .filter((item) => item?.reason === 'tailored_activity_required')
+            .map((item) => item?.label ?? item?.fieldKey)
+            .filter(Boolean)
+            .join(' '),
+        fieldLabels: copyCandidates
+            .map((item) => item?.title ?? item?.label)
+            .filter(Boolean)
+            .slice(0, 8)
+    };
+    activityAssistButton.textContent = ACTIVITY_ASSIST_BUTTON_LABEL;
+    activityAssistButton.disabled = false;
+    activityAssistCaption.textContent = '직무 적합도 순으로 정렬하고 글자수에 맞춘 붙여넣기 문장을 만듭니다.';
+    activityAssistStatus.hidden = true;
+    activityAssistList.replaceChildren();
+    scheduleAutomaticActivityAssistRequest();
+}
+
+function shouldShowActivityAssist(manualReviewItems, copyCandidates) {
+    return manualReviewItems.some((item) => item?.reason === 'tailored_activity_required')
+        || copyCandidates.some((item) => item?.isActivityGroup || /^activities\.\d+/.test(String(item?.key ?? '')));
+}
+
+function scheduleAutomaticActivityAssistRequest() {
+    const requestKey = getActivityAssistRequestKey();
+    if (!requestKey || activityAssistAutoRequestKey === requestKey) {
+        return;
+    }
+    activityAssistAutoRequestKey = requestKey;
+    const defer = typeof queueMicrotask === 'function'
+        ? queueMicrotask
+        : (callback) => setTimeout(callback, 0);
+    defer(() => {
+        if (activityAssistAutoRequestKey !== requestKey || getActivityAssistRequestKey() !== requestKey) {
+            return;
+        }
+        void runAuthenticatedAction('documentAutoFill', () => requestActivityAssist({ automatic: true }));
+    });
+}
+
+function getActivityAssistRequestKey() {
+    if (!activityAssistContext) {
+        return null;
+    }
+    return JSON.stringify({
+        companyName: currentPosting?.companyName ?? '',
+        positionTitle: currentPosting?.positionTitle ?? '',
+        pageContext: activityAssistContext.pageContext,
+        fieldLabels: activityAssistContext.fieldLabels,
+        maxItems: parsePositiveInt(activityAssistCountInput.value),
+        detailLimit: parsePositiveInt(activityAssistLimitInput.value),
+        detailLimitUnit: activityAssistUnitSelect.value === 'byte' ? 'byte' : 'char'
+    });
+}
+
+async function requestActivityAssist(options = {}) {
+    if (!activityAssistContext || activityAssistButton.disabled) return;
+    const isAutomatic = Boolean(options.automatic);
+    activityAssistButton.disabled = true;
+    activityAssistButton.textContent = 'AI 분석 중';
+    activityAssistStatus.hidden = false;
+    activityAssistStatus.textContent = isAutomatic
+        ? 'AI가 자동으로 활동을 직무 적합도 순서로 정렬하고 있습니다.'
+        : 'AI가 활동을 직무 적합도 순서로 정렬하고 있습니다.';
+    activityAssistList.replaceChildren();
+    try {
+        const result = await documentProfileApi.recommendActivities({
+            companyName: currentPosting?.companyName ?? '',
+            positionTitle: currentPosting?.positionTitle ?? '',
+            maxItems: parsePositiveInt(activityAssistCountInput.value),
+            detailLimit: parsePositiveInt(activityAssistLimitInput.value),
+            detailLimitUnit: activityAssistUnitSelect.value === 'byte' ? 'byte' : 'char',
+            pageContext: activityAssistContext.pageContext,
+            fieldLabels: activityAssistContext.fieldLabels
+        });
+        renderActivityAssistResult(result);
+    } catch {
+        activityAssistStatus.hidden = false;
+        activityAssistStatus.textContent = 'AI 추천을 만들지 못했습니다. 아래 복사 필요 항목은 계속 사용할 수 있어요.';
+    } finally {
+        activityAssistButton.disabled = false;
+        activityAssistButton.textContent = ACTIVITY_ASSIST_BUTTON_LABEL;
+    }
+}
+
+function renderActivityAssistResult(result) {
+    const warnings = Array.isArray(result?.warnings) ? result.warnings : [];
+    const recommendations = Array.isArray(result?.recommendations) ? result.recommendations : [];
+    activityAssistStatus.hidden = warnings.length === 0 && recommendations.length > 0;
+    activityAssistStatus.textContent = warnings[0] ?? (recommendations.length > 0 ? `AI가 ${recommendations.length}개 활동을 직무 적합도 순으로 정렬하고 글자수에 맞췄습니다.` : '추천 결과가 없습니다.');
+    if (recommendations.length === 0) {
+        const emptyItem = document.createElement('li');
+        emptyItem.className = 'is-empty';
+        emptyItem.textContent = '추천 결과가 없습니다.';
+        activityAssistList.replaceChildren(emptyItem);
+        return;
+    }
+    activityAssistList.replaceChildren(...recommendations.map(createActivityAssistItem));
+}
+
+function createActivityAssistItem(recommendation) {
+    const item = document.createElement('li');
+    const heading = document.createElement('div');
+    heading.className = 'activity-assist-heading';
+    const title = document.createElement('strong');
+    title.textContent = `${recommendation.rank ?? ''}. ${recommendation.title ?? '활동'}`.trim();
+    const score = document.createElement('em');
+    score.textContent = `AI 적합도 ${recommendation.fitScore ?? 0}`;
+    heading.append(title, score);
+    item.append(heading);
+    for (const draft of Array.isArray(recommendation.drafts) ? recommendation.drafts : []) {
+        item.append(createActivityAssistDraft(draft));
+    }
+    appendActivityAssistText(item, '채용담당자 관점', recommendation.recruiterView);
+    appendActivityAssistText(item, '현직자 관점', recommendation.practitionerView);
+    appendActivityAssistText(item, '어필 요소', (recommendation.appealPoints ?? []).join(' · '));
+    appendActivityAssistText(item, '주의', (recommendation.risks ?? []).join(' · '));
+    return item;
+}
+
+function appendActivityAssistText(parent, label, value) {
+    const text = normalizeInput(String(value ?? ''));
+    if (!text) return;
+    const row = document.createElement('p');
+    const labelElement = document.createElement('strong');
+    const valueElement = document.createElement('span');
+    labelElement.textContent = label;
+    valueElement.textContent = text;
+    row.append(labelElement, valueElement);
+    parent.append(row);
+}
+
+function createActivityAssistDraft(draft) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'activity-assist-draft';
+    const counter = document.createElement('span');
+    counter.textContent = `${draft.label ?? '글자수 맞춤'} · ${formatActivityAssistCounter(draft)}`;
+    if (isActivityAssistDraftOverLimit(draft)) {
+        counter.classList.add('is-over');
+    }
+    const text = document.createElement('p');
+    text.textContent = draft.text ?? '';
+    const copyButton = document.createElement('button');
+    copyButton.type = 'button';
+    copyButton.className = 'autofill-result-copy-button';
+    copyButton.textContent = '복사';
+    copyButton.addEventListener('click', async () => {
+        const copied = await copyTextToClipboard(draft.text);
+        copyButton.textContent = copied ? '복사됨' : '실패';
+        setTimeout(() => {
+            copyButton.textContent = '복사';
+        }, 1200);
+    });
+    wrapper.append(counter, text, copyButton);
+    return wrapper;
+}
+
+function formatActivityAssistCounter(draft) {
+    const unit = activityAssistUnitSelect.value === 'byte' ? 'byte' : 'char';
+    const limit = parsePositiveInt(activityAssistLimitInput.value);
+    const count = Number(unit === 'byte' ? draft?.byteCount ?? 0 : draft?.charCount ?? 0);
+    const unitLabel = unit === 'byte' ? 'byte' : '자';
+    return limit ? `${count} / ${limit}${unitLabel}${isActivityAssistDraftOverLimit(draft) ? ' 초과' : ''}` : `${count}${unitLabel}`;
+}
+
+function isActivityAssistDraftOverLimit(draft) {
+    const unit = activityAssistUnitSelect.value === 'byte' ? 'byte' : 'char';
+    const limit = parsePositiveInt(activityAssistLimitInput.value);
+    const count = Number(unit === 'byte' ? draft?.byteCount ?? 0 : draft?.charCount ?? 0);
+    return limit ? count > limit : Boolean(draft?.exceedsLimit);
+}
+
+function parsePositiveInt(value) {
+    const parsed = Number.parseInt(String(value ?? ''), 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function createPrimaryAutoFillCoverage(primaryItems) {
+    return {
+        fieldKeys: new Set(primaryItems.map((item) => item?.fieldKey).filter(Boolean)),
+        signatures: new Set(primaryItems.map(autoFillCoverageSignature).filter(Boolean))
+    };
+}
+
+function shouldShowManualReviewItem(item, primaryCoverage) {
+    return !isCoveredByPrimaryAutoFillItem(item, primaryCoverage);
+}
+
+function shouldShowCopyCandidate(item, primaryCoverage) {
+    if (!isCoveredByPrimaryAutoFillItem(item, primaryCoverage)) return true;
     return item?.key === 'basicInfo.address' || item?.key === 'basicInfo.addressDetail';
+}
+
+function isCoveredByPrimaryAutoFillItem(item, primaryCoverage) {
+    const key = item?.fieldKey ?? item?.key;
+    if (key && primaryCoverage.fieldKeys.has(key)) return true;
+    const signature = autoFillCoverageSignature(item);
+    return Boolean(signature && primaryCoverage.signatures.has(signature));
+}
+
+function autoFillCoverageSignature(item) {
+    const label = normalizeCoverageText(item?.label ?? item?.title ?? '');
+    const value = normalizeCoverageText(item?.value ?? item?.body ?? '');
+    return label && value ? `${label}|${value}` : null;
+}
+
+function normalizeCoverageText(value) {
+    return String(value ?? '').toLowerCase().replace(/\s+/g, '').trim() || null;
+}
+
+function sortByDisplayOrder(items) {
+    return [...items].sort((left, right) => {
+        const leftOrder = normalizedDisplayOrder(left);
+        const rightOrder = normalizedDisplayOrder(right);
+        if (leftOrder !== rightOrder) return leftOrder - rightOrder;
+        return 0;
+    });
+}
+
+function normalizedDisplayOrder(item) {
+    return Number.isFinite(item?.displayOrder) ? item.displayOrder : Number.POSITIVE_INFINITY;
 }
 
 function groupActivityCopyCandidates(candidates) {
@@ -951,6 +1227,10 @@ function groupActivityCopyCandidates(candidates) {
         const group = activityGroups.get(index);
         group.fields[field] = item.value;
         group.sourceItems.push(item);
+        const currentOrder = group.displayOrder;
+        if (Number.isFinite(item.displayOrder) && (!Number.isFinite(currentOrder) || item.displayOrder < currentOrder)) {
+            group.displayOrder = item.displayOrder;
+        }
     }
     return [
         ...grouped,
@@ -983,7 +1263,8 @@ function formatActivityCopyCandidate(group) {
         title,
         value: copyText,
         body,
-        isActivityGroup: true
+        isActivityGroup: true,
+        displayOrder: group?.displayOrder
     };
 }
 
@@ -999,47 +1280,26 @@ function formatCopyCandidateDisplay(item) {
     };
 }
 
-function buildManualReviewItems(failed, copyCandidates) {
+function buildManualReviewItems(failed) {
     const seenKeys = new Set();
     const reviewItems = [];
     for (const item of failed) {
         const key = item?.fieldKey ?? item?.key ?? item?.label;
         if (key) {
+            if (seenKeys.has(key)) {
+                continue;
+            }
             seenKeys.add(key);
         }
         reviewItems.push(item);
-    }
-    for (const item of copyCandidates) {
-        const key = item?.key ?? item?.fieldKey ?? item?.label;
-        if (!key || seenKeys.has(key)) {
-            continue;
-        }
-        seenKeys.add(key);
-        reviewItems.push({
-            ...item,
-            fieldKey: key,
-            reason: 'manual_copy_candidate'
-        });
     }
     return reviewItems;
 }
 
 function formatManualReviewDisplay(item) {
-    if (item?.reason === 'manual_copy_candidate') {
-        return formatManualCopyReviewDisplay(item);
-    }
     return {
         title: item.label ?? '알 수 없는 입력칸',
         ...getAutofillFailureDisplay(item)
-    };
-}
-
-function formatManualCopyReviewDisplay(item) {
-    const display = formatCopyCandidateDisplay(item);
-    return {
-        ...display,
-        badge: '직접 입력',
-        body: display.body || '자동 입력하지 않은 값입니다. 복사 후보에서 붙여넣거나 직접 입력해 주세요.'
     };
 }
 
@@ -1068,6 +1328,305 @@ function getPrimaryAutoFillDisplay(item, isPreview) {
     };
 }
 
+function renderPrimaryAutoFillList(list, items, isPreview) {
+    if (items.length === 0) {
+        const item = document.createElement('li');
+        item.className = 'is-empty';
+        item.textContent = isPreview ? '입력 예정 항목이 없습니다.' : '자동 입력된 항목이 없습니다.';
+        list.replaceChildren(item);
+        return;
+    }
+    const groupedItems = groupPrimaryAutoFillItems(items);
+    list.replaceChildren(...groupedItems.map((entry) => {
+        if (entry.type === 'education-group' || entry.type === 'certificate-group') {
+            return createAutoFillGroupCard(entry);
+        }
+        return createAutoFillResultListItem(entry.item, (item) => getPrimaryAutoFillDisplay(item, isPreview));
+    }));
+}
+
+function groupPrimaryAutoFillItems(items) {
+    const educationGroups = createEducationAutoFillGroups(items);
+    const certificateGroups = createCertificateAutoFillGroups(items);
+    const groupedItemSet = new Set([...educationGroups, ...certificateGroups].flatMap((group) => group.items));
+    return sortByDisplayOrder([
+        ...items
+            .filter((item) => !groupedItemSet.has(item))
+            .map((item) => ({ type: 'item', item, displayOrder: normalizedDisplayOrder(item) })),
+        ...educationGroups,
+        ...certificateGroups
+    ]);
+}
+
+function createEducationAutoFillGroups(items) {
+    const highSchoolItems = items.filter((item) => String(item?.fieldKey ?? '').startsWith('education.highSchool.'));
+    const universityItems = items.filter((item) => /^education\.universities\.\d+\./.test(String(item?.fieldKey ?? '')));
+    const universityBaseItems = universityItems.filter((item) => {
+        const fieldKey = String(item?.fieldKey ?? '');
+        return !fieldKey.includes('.majors.') && !isEducationGradeField(fieldKey);
+    });
+    const majorItems = universityItems.filter((item) => String(item?.fieldKey ?? '').includes('.majors.'));
+    const gradeItems = universityItems.filter((item) => isEducationGradeField(String(item?.fieldKey ?? '')));
+    return [
+        createEducationGroup('\uACE0\uB4F1\uD559\uAD50', highSchoolItems, createHighSchoolSummary(highSchoolItems)),
+        createEducationGroup('\uB300\uD559\uAD50', universityBaseItems, createUniversitySummary(universityBaseItems)),
+        createEducationGroup('\uC804\uACF5', majorItems, createMajorSummary(majorItems, universityItems)),
+        createEducationGroup('\uC131\uC801', gradeItems, createGradeSummary(gradeItems))
+    ].filter(Boolean);
+}
+
+function createEducationGroup(title, items, summaryLines) {
+    if (items.length === 0) return null;
+    return {
+        type: 'education-group',
+        title,
+        items,
+        summaryLines: summaryLines.length > 0 ? summaryLines : [`${items.length}개 항목`],
+        displayOrder: Math.min(...items.map(normalizedDisplayOrder))
+    };
+}
+
+function createCertificateAutoFillGroups(items) {
+    const certificateGroups = new Map();
+    const certificateItems = [];
+    for (const item of items) {
+        const match = String(item?.fieldKey ?? '').match(/^certificates\.certificates\.(\d+)\.(.+)$/);
+        if (!match) continue;
+        const [, index, field] = match;
+        if (!certificateGroups.has(index)) {
+            certificateGroups.set(index, { items: [], fields: {}, displayOrder: normalizedDisplayOrder(item) });
+        }
+        const group = certificateGroups.get(index);
+        group.items.push(item);
+        group.fields[field] = item.value;
+        group.displayOrder = Math.min(group.displayOrder, normalizedDisplayOrder(item));
+        certificateItems.push(item);
+    }
+    if (certificateItems.length === 0) {
+        return [];
+    }
+    const summaryLines = [...certificateGroups.entries()]
+        .sort(([left], [right]) => Number(left) - Number(right))
+        .map(([, group]) => createCertificateSummaryLine(group.fields))
+        .filter(Boolean);
+    return [{
+        type: 'certificate-group',
+        title: '\uC790\uACA9\uC99D',
+        items: certificateItems,
+        itemCount: certificateGroups.size,
+        summaryLines: summaryLines.length > 0 ? summaryLines : [`${certificateGroups.size}개 자격증`],
+        displayOrder: Math.min(...certificateItems.map(normalizedDisplayOrder))
+    }];
+}
+
+function createCertificateSummaryLine(fields) {
+    return joinAutoFillSummaryParts([
+        fields.certificateName,
+        fields.issuingOrganization,
+        fields.acquisitionDate,
+        fields.registrationNumber
+    ]);
+}
+
+function createHighSchoolSummary(items) {
+    return [
+        joinAutoFillSummaryParts([
+            labelValue('\uD559\uAD50\uBA85', getAutoFillValueByFieldKey(items, 'education.highSchool.schoolName')),
+            labelValue('\uC878\uC5C5', getAutoFillValueByFieldKey(items, 'education.highSchool.graduationStatus')),
+            labelValue('\uC18C\uC7AC\uC9C0', getAutoFillValueByFieldKey(items, 'education.highSchool.location')),
+            labelValue('\uACC4\uC5F4', getAutoFillValueByFieldKey(items, 'education.highSchool.track'))
+        ]),
+        formatAutoFillPeriod(
+            getAutoFillValueByFieldKey(items, 'education.highSchool.admissionDate'),
+            getAutoFillValueByFieldKey(items, 'education.highSchool.graduationDate')
+        )
+    ].filter(Boolean);
+}
+
+function createUniversitySummary(items) {
+    return [
+        joinAutoFillSummaryParts([
+            labelValue('\uD559\uAD50\uBA85', getAutoFillValueBySuffix(items, 'schoolName')),
+            getAutoFillValueBySuffix(items, 'degreeType'),
+            getAutoFillValueBySuffix(items, 'graduationStatus'),
+            getAutoFillValueBySuffix(items, 'campusType'),
+            labelValue('\uC18C\uC7AC\uC9C0', getAutoFillValueBySuffix(items, 'location'))
+        ]),
+        formatAutoFillPeriod(
+            getAutoFillValueBySuffix(items, 'admissionDate'),
+            getAutoFillValueBySuffix(items, 'graduationDate')
+        )
+    ].filter(Boolean);
+}
+
+function createMajorSummary(majorItems, universityItems) {
+    const majorGroups = new Map();
+    for (const item of majorItems) {
+        const match = String(item?.fieldKey ?? '').match(/^education\.universities\.\d+\.majors\.(\d+)\.(.+)$/);
+        if (!match) continue;
+        const [, index, field] = match;
+        if (!majorGroups.has(index)) {
+            majorGroups.set(index, {});
+        }
+        majorGroups.get(index)[field] = item.value;
+    }
+    const lines = [...majorGroups.entries()]
+        .sort(([left], [right]) => Number(left) - Number(right))
+        .map(([index, fields]) => joinAutoFillSummaryParts([
+            fields.majorName ? `${Number(index) + 1}\uC804\uACF5 ${fields.majorName}` : '',
+            fields.majorType,
+            fields.dayNight,
+            fields.majorCategory
+        ]))
+        .filter(Boolean);
+    const departmentCategory = getAutoFillValueByFieldKey(universityItems, 'education.universities.0.majorCategory');
+    if (departmentCategory) {
+        lines.push(labelValue('\uD559\uACFC\uACC4\uC5F4', departmentCategory));
+    }
+    return lines;
+}
+
+function createGradeSummary(items) {
+    const grade = getAutoFillValueBySuffix(items, 'grade');
+    const scale = getAutoFillValueBySuffix(items, 'gradeScale');
+    const credits = getAutoFillValueBySuffix(items, 'credits');
+    return [
+        joinAutoFillSummaryParts([
+            grade && scale ? `\uD3C9\uC810 ${grade} / ${scale}` : labelValue('\uD3C9\uC810', grade),
+            labelValue('\uC774\uC218\uD559\uC810', credits)
+        ])
+    ].filter(Boolean);
+}
+
+function isEducationGradeField(fieldKey) {
+    return /\.(grade|gradeScale|credits)$/.test(fieldKey);
+}
+
+function getAutoFillValueByFieldKey(items, fieldKey) {
+    return normalizeInput(String(items.find((item) => item?.fieldKey === fieldKey)?.value ?? ''));
+}
+
+function getAutoFillValueBySuffix(items, suffix) {
+    return normalizeInput(String(items.find((item) => String(item?.fieldKey ?? '').endsWith(`.${suffix}`))?.value ?? ''));
+}
+
+function labelValue(label, value) {
+    return value ? `${label} ${value}` : '';
+}
+
+function joinAutoFillSummaryParts(parts) {
+    return parts.filter(Boolean).join(' \u00B7 ');
+}
+
+function formatAutoFillPeriod(start, end) {
+    if (start && end) return `${start} ~ ${end}`;
+    return start || end || '';
+}
+
+function createAutoFillGroupCard(group) {
+    const item = document.createElement('li');
+    item.className = 'autofill-group-card';
+    const details = document.createElement('details');
+    const summary = document.createElement('summary');
+    summary.className = 'autofill-group-summary';
+    const titleRow = document.createElement('div');
+    titleRow.className = 'autofill-group-title-row';
+    const title = document.createElement('strong');
+    title.textContent = group.title;
+    const count = document.createElement('span');
+    count.className = 'autofill-group-meta';
+    count.textContent = `${group.itemCount ?? group.items.length}개`;
+    titleRow.append(title, count);
+    const summaryText = document.createElement('div');
+    summaryText.className = 'autofill-group-lines';
+    for (const line of group.summaryLines) {
+        const lineElement = document.createElement('span');
+        lineElement.textContent = line;
+        summaryText.append(lineElement);
+    }
+    summary.append(titleRow, summaryText);
+    const detailsList = document.createElement('div');
+    detailsList.className = 'autofill-group-details';
+    for (const source of group.items) {
+        const mapped = getPrimaryAutoFillDisplay(source, true);
+        const row = document.createElement('span');
+        row.className = 'autofill-group-detail-row';
+        const label = document.createElement('small');
+        label.textContent = mapped.title ?? '';
+        const value = document.createElement('em');
+        value.textContent = mapped.body ?? '';
+        row.append(label, value);
+        detailsList.append(row);
+    }
+    details.append(summary, detailsList);
+    item.append(details);
+    return item;
+}
+
+function createAutoFillResultListItem(source, mapper) {
+    const mapped = mapper(source);
+    const item = document.createElement('li');
+    if (mapped.variant) {
+        item.classList.add(`is-${mapped.variant}`);
+    }
+    const heading = document.createElement('div');
+    const title = document.createElement('strong');
+    heading.className = 'autofill-result-heading';
+    const body = document.createElement('span');
+    body.className = 'autofill-result-body';
+    if (mapped.preserveBodyLines) {
+        body.classList.add('is-multiline');
+    }
+    title.textContent = mapped.title ?? '';
+    heading.append(title);
+    if (mapped.badge) {
+        const badge = document.createElement('em');
+        badge.className = 'autofill-result-badge';
+        badge.textContent = mapped.badge;
+        heading.append(badge);
+    }
+    if (mapped.actionValue) {
+        const action = document.createElement('button');
+        action.className = 'autofill-result-copy-button';
+        action.type = 'button';
+        action.textContent = mapped.actionLabel ?? '\uBCF5\uC0AC';
+        action.setAttribute('aria-label', mapped.actionAriaLabel ?? action.textContent);
+        action.addEventListener('click', async () => {
+            const copied = await copyTextToClipboard(mapped.actionValue);
+            if (!copied) {
+                action.textContent = '\uC2E4\uD328';
+                return;
+            }
+            action.textContent = mapped.actionDoneLabel ?? '\uBCF5\uC0AC\uB428';
+            action.disabled = true;
+            setTimeout(() => {
+                action.textContent = mapped.actionLabel ?? '\uBCF5\uC0AC';
+                action.disabled = false;
+            }, 1200);
+        });
+        heading.append(action);
+    }
+    body.textContent = mapped.body ?? '';
+    item.append(heading, body);
+    if (mapped.value) {
+        const valueRow = document.createElement('span');
+        const valueLabel = document.createElement('small');
+        const valueText = document.createElement('code');
+        valueRow.className = 'autofill-result-value';
+        valueLabel.textContent = mapped.valueLabel ?? '\uAC12';
+        valueText.textContent = mapped.value;
+        valueRow.append(valueLabel, valueText);
+        item.append(valueRow);
+    }
+    if (mapped.note) {
+        const note = document.createElement('span');
+        note.className = 'autofill-result-note';
+        note.textContent = mapped.note;
+        item.append(note);
+    }
+    return item;
+}
+
 function isUserVisibleAutoFillItem(item) {
     return !isSectionOpenItem(item);
 }
@@ -1083,7 +1642,7 @@ function getAutofillFailureDisplay(item) {
         return {
             variant: 'action-needed',
             badge: '직무 맞춤 필요',
-            body: '아래 복사 후보에서 활동을 골라 지원 직무에 맞게 붙여넣어 주세요.'
+            body: '아래 복사 필요 항목에서 활동을 골라 지원 직무에 맞게 붙여넣어 주세요.'
         };
     }
     if (reason === 'missing_profile_value') {
@@ -1111,16 +1670,16 @@ function getAutofillFailureMessage(itemOrReason) {
         return '자기소개서 또는 장문 입력칸은 자동 입력하지 않았습니다. 직접 검토해 주세요.';
     }
     if (reason === 'manual_free_text') {
-        return '\uAE30\uC5C5/\uC9C1\uBB34\uC5D0 \uB9DE\uCDB0 \uC9C1\uC811 \uC791\uC131\uD558\uBA74 \uC88B\uC740 \uC7A5\uBB38 \uD56D\uBAA9\uC785\uB2C8\uB2E4. \uC790\uB3D9 \uC785\uB825\uC5D0\uC11C \uC81C\uC678\uD558\uACE0 \uD655\uC778 \uD544\uC694\uB85C \uD45C\uC2DC\uD588\uC2B5\uB2C8\uB2E4.';
+        return '기업/직무에 맞춰 직접 작성해 주세요.';
     }
     if (reason === 'manual_add_section') {
-        return '\uD544\uC694\uD558\uBA74 \uD654\uBA74\uC5D0\uC11C \uCD94\uAC00\uD558\uACE0 \uB0B4\uC6A9\uC744 \uC9C1\uC811 \uC791\uC131\uD574 \uC8FC\uC138\uC694.';
+        return '필요하면 화면에서 추가해 주세요.';
     }
     if (reason === 'select_option_not_found') {
         if (/^certificates\.certificates\.\d+\.certificateName$/.test(fieldKey)) {
-            return '자격증 검색 결과에서 같은 자격증명을 선택하지 못했습니다. 표기가 다를 수 있어 복사 후보를 확인해 주세요.';
+            return '자격증 검색 결과에서 같은 자격증명을 선택하지 못했습니다. 표기가 다를 수 있어 복사 필요 항목을 확인해 주세요.';
         }
-        return '선택 목록에서 일치하는 항목을 찾지 못했습니다. 복사 후보를 확인하거나 직접 선택해 주세요.';
+        return '선택 목록에서 일치하는 항목을 찾지 못했습니다. 복사 필요 항목을 확인하거나 직접 선택해 주세요.';
     }
     if (reason === 'control_not_ready') {
         return '\uC785\uB825\uCE78\uC774 \uC544\uC9C1 \uC5F4\uB9AC\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4. \uD56D\uBAA9\uC744 \uC5F0 \uB4A4 \uB2E4\uC2DC \uC778\uC2DD\uC744 \uB20C\uB7EC\uC8FC\uC138\uC694.';
@@ -1143,12 +1702,12 @@ function getAutofillFailureMessage(itemOrReason) {
     if (reason === 'disabled_control') {
         if (fieldKey.includes('address')) {
             return value
-                ? '주소 검색 후 복사 후보에서 붙여넣어 주세요.'
+                ? '주소 검색 후 복사 필요 항목에서 붙여넣어 주세요.'
                 : '지원서에서 직접 확인해 주세요.';
         }
         return '지원서에서 직접 확인해 주세요.';
     }
-    return '매칭되는 서류 정보를 찾지 못했습니다. 복사 후보에서 붙여넣어 주세요.';
+    return '매칭되는 서류 정보를 찾지 못했습니다. 복사 필요 항목에서 붙여넣어 주세요.';
 }
 
 function renderResultList(list, items, mapper, emptyText) {

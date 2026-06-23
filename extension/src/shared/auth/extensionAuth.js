@@ -96,6 +96,9 @@ async function refreshStoredSession(storage, session, options) {
                 await clearStoredSessionIfRefreshUnchanged(storage, session.refreshToken);
                 return null;
             }
+            if (options.requireFreshSession) {
+                return null;
+            }
             return session;
         }
         const envelope = await response.json();
@@ -104,16 +107,25 @@ async function refreshStoredSession(storage, session, options) {
                 await clearStoredSessionIfRefreshUnchanged(storage, session.refreshToken);
                 return null;
             }
+            if (options.requireFreshSession) {
+                return null;
+            }
             return session;
         }
         const refreshedSession = normalizeRefreshSession(envelope?.data);
         if (!refreshedSession) {
+            if (options.requireFreshSession) {
+                return null;
+            }
             return session;
         }
         await saveStoredSession(storage, refreshedSession);
         return refreshedSession;
     }
     catch {
+        if (options.requireFreshSession) {
+            return null;
+        }
         return session;
     }
 }

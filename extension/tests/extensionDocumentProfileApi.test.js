@@ -47,6 +47,42 @@ describe('extensionDocumentProfileApi', () => {
         }));
     });
 
+    it('exposes activity recommendation for job-fit manual activity fields', () => {
+        const api = createExtensionDocumentProfileApi({
+            apiBaseUrl: 'http://localhost:8080/api',
+            getAccessToken: async () => 'access-token'
+        });
+
+        expect(Object.keys(api)).toEqual(['getDocumentProfile', 'recommendActivities']);
+    });
+
+    it('posts activity recommendation requests with a longer AI timeout', async () => {
+        const fetcher = vi.fn(async () => ({
+            ok: true,
+            json: async () => ({
+                success: true,
+                data: { recommendations: [], warnings: [] },
+                error: null
+            })
+        }));
+        const api = createExtensionDocumentProfileApi({
+            apiBaseUrl: 'http://localhost:8080/api',
+            getAccessToken: async () => 'access-token',
+            fetcher
+        });
+
+        await api.recommendActivities({ maxItems: 2 });
+
+        expect(fetcher).toHaveBeenCalledWith('http://localhost:8080/api/extension/application-assist/activities', expect.objectContaining({
+            method: 'POST',
+            body: JSON.stringify({ maxItems: 2 }),
+            headers: {
+                Authorization: 'Bearer access-token',
+                'Content-Type': 'application/json'
+            }
+        }));
+    });
+
     it('clears the extension session when refresh fails after an invalid access token', async () => {
         const fetcher = vi.fn()
             .mockResolvedValueOnce({

@@ -199,6 +199,29 @@ describe('extensionAuth', () => {
         expect(storage.remove).not.toHaveBeenCalled();
         expect(storage.set).not.toHaveBeenCalled();
     });
+    it('EXT-003/AUTH-006: rejects a stored session on refresh network failure when a fresh session is required', async () => {
+        const storage = {
+            get: vi.fn(async () => ({
+                ezoneAccessToken: 'cached-access-token',
+                ezoneRefreshToken: 'cached-refresh-token'
+            })),
+            set: vi.fn(async () => undefined),
+            remove: vi.fn(async () => undefined)
+        };
+        const fetcher = vi.fn(async () => {
+            throw new Error('Failed to fetch');
+        });
+
+        const session = await validateStoredSession(storage, {
+            apiBaseUrl: 'http://localhost:8080/api',
+            fetcher,
+            requireFreshSession: true
+        });
+
+        expect(session).toBeNull();
+        expect(storage.remove).not.toHaveBeenCalled();
+        expect(storage.set).not.toHaveBeenCalled();
+    });
     it('EXT-003/AUTH-006: keeps a stored session when refresh returns a temporary server error', async () => {
         const storage = {
             get: vi.fn(async () => ({
@@ -224,6 +247,35 @@ describe('extensionAuth', () => {
         });
 
         expect(session?.accessToken).toBe('cached-access-token');
+        expect(storage.remove).not.toHaveBeenCalled();
+        expect(storage.set).not.toHaveBeenCalled();
+    });
+    it('EXT-003/AUTH-006: rejects a stored session on temporary server errors when a fresh session is required', async () => {
+        const storage = {
+            get: vi.fn(async () => ({
+                ezoneAccessToken: 'cached-access-token',
+                ezoneRefreshToken: 'cached-refresh-token'
+            })),
+            set: vi.fn(async () => undefined),
+            remove: vi.fn(async () => undefined)
+        };
+        const fetcher = vi.fn(async () => ({
+            ok: false,
+            status: 503,
+            json: async () => ({
+                success: false,
+                data: null,
+                error: { message: 'Service unavailable.' }
+            })
+        }));
+
+        const session = await validateStoredSession(storage, {
+            apiBaseUrl: 'http://localhost:8080/api',
+            fetcher,
+            requireFreshSession: true
+        });
+
+        expect(session).toBeNull();
         expect(storage.remove).not.toHaveBeenCalled();
         expect(storage.set).not.toHaveBeenCalled();
     });

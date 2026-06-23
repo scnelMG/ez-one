@@ -10,31 +10,40 @@ export function createExtensionDocumentProfileApi({
 }) {
     const client = { apiBaseUrl, getAccessToken, getRefreshToken, saveSession, clearSession, fetcher };
     return {
-        getDocumentProfile: () => request(client, '/extension/document-profile')
+        getDocumentProfile: () => request(client, '/extension/document-profile'),
+        recommendActivities: (payload) => request(client, '/extension/application-assist/activities', {
+            method: 'POST',
+            body: JSON.stringify(payload ?? {}),
+            timeoutMs: 20000
+        })
     };
 }
 
-async function request(client, path, retrying = false) {
+async function request(client, path, options = {}, retrying = false) {
     const token = await client.getAccessToken();
     if (!token) {
         throw new Error('로그인이 필요합니다.');
     }
     const response = await callFetch(client, `${client.apiBaseUrl.replace(/\/$/, '')}${path}`, {
-        method: 'GET',
+        method: options.method ?? 'GET',
         headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json'
-        }
+        },
+        ...(options.body ? { body: options.body } : {})
     });
     const envelope = await readEnvelope(response);
     if (response.status === 401 && !retrying) {
         const refreshed = await refreshExtensionSession(client);
         if (refreshed) {
-            return request(client, path, true);
+            return request(client, path, options, true);
         }
     }
     if (!response.ok || !envelope.success) {
         throw new Error(envelope.error?.message ?? '요청에 실패했습니다.');
+    }
+    if ((options.method ?? 'GET') !== 'GET') {
+        return envelope.data ?? {};
     }
     return {
         sections: envelope.data?.sections ?? {},
@@ -66,9 +75,10 @@ async function refreshExtensionSession(client) {
 function callFetch(client, url, init) {
     const fetcher = client.fetcher;
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const { timeoutMs = 5000, ...fetchInit } = init;
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     return fetcher(url, {
-        ...init,
+        ...fetchInit,
         signal: controller.signal
     })
         .catch((error) => {

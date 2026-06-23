@@ -276,7 +276,7 @@ describe('applicationAutoFill', () => {
         expect(doc.getElementById('gender-female').checked).toBe(false);
     });
 
-    it('EXT-027: exposes saved document values as fallback copy candidates', () => {
+    it('EXT-027: limits fallback copy candidates to fields visible on the current page', () => {
         const doc = document.implementation.createHTMLDocument('application');
         doc.body.innerHTML = `
       <form>
@@ -290,16 +290,64 @@ describe('applicationAutoFill', () => {
         expect(preview.planned).toEqual([
             expect.objectContaining({ fieldKey: 'basicInfo.email', value: 'hong@example.com' })
         ]);
-        expect(preview.copyCandidates).toEqual(expect.arrayContaining([
-            expect.objectContaining({ key: 'basicInfo.nameKo', value: 'Hong Gil Dong' }),
-            expect.objectContaining({ key: 'basicInfo.phone', value: '010-1234-5678' }),
-            expect.objectContaining({ key: 'basicInfo.birthdate', value: '1998-01-02' }),
-            expect.objectContaining({ key: 'customFields.1', value: 'https://portfolio.example.com' })
-        ]));
+        expect(preview.copyCandidates).toEqual([]);
         expect(preview.copyCandidates.map((item) => item.key)).not.toContain('basicInfo.email');
-        expect(result.copyCandidates).toEqual(expect.arrayContaining([
-            expect.objectContaining({ key: 'basicInfo.nameKo', value: 'Hong Gil Dong' }),
-            expect.objectContaining({ key: 'basicInfo.phone', value: '010-1234-5678' })
+        expect(result.copyCandidates).toEqual([]);
+    });
+
+    it('EXT-021/EXT-023: ignores controls inside hidden application sections', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section>
+          <label>생년월일<input placeholder="YYYY.MM.DD" /></label>
+        </section>
+        <section aria-hidden="true">
+          <label>자격증명<input placeholder="자격증명을 검색해주세요." /></label>
+          <label>등록번호<input /></label>
+          <label>취득일<input placeholder="취득일" /></label>
+        </section>
+        <section style="display: none;">
+          <label>공인외국어시험<input /></label>
+        </section>
+      </form>
+    `;
+        const scopedProfile = {
+            sections: {
+                basicInfo: { birthdate: '2001-03-28' },
+                certificates: {
+                    certificates: [
+                        {
+                            certificateName: '정보처리기사',
+                            registrationNumber: '24202030579W',
+                            acquiredDate: '2024-09-10'
+                        }
+                    ],
+                    languageTests: [
+                        { testName: 'OPIc(영어)', score: 'IM1', acquiredDate: '2025-04-21' }
+                    ]
+                }
+            },
+            customFields: []
+        };
+
+        const preview = previewAutoFillPlan(buildAutoFillPlan(doc, scopedProfile));
+        const plannedKeys = preview.planned.map((item) => item.fieldKey);
+        const failedKeys = preview.failed.map((item) => item.fieldKey);
+        const candidateKeys = preview.copyCandidates.map((item) => item.key);
+
+        expect(plannedKeys).toEqual(['basicInfo.birthdate']);
+        expect(failedKeys).not.toEqual(expect.arrayContaining([
+            'certificates.certificates.0.certificateName',
+            'certificates.certificates.0.registrationNumber',
+            'certificates.certificates.0.acquiredDate',
+            'certificates.languageTests.0.testName'
+        ]));
+        expect(candidateKeys).not.toEqual(expect.arrayContaining([
+            'certificates.certificates.0.certificateName',
+            'certificates.certificates.0.registrationNumber',
+            'certificates.certificates.0.acquiredDate',
+            'certificates.languageTests.0.testName'
         ]));
     });
 
@@ -462,8 +510,10 @@ describe('applicationAutoFill', () => {
             expect.objectContaining({ fieldKey: 'basicInfo.birthdate', value: '2001.03.28' }),
             expect.objectContaining({ fieldKey: 'basicInfo.gender', value: '\uB0A8' }),
             expect.objectContaining({ fieldKey: 'basicInfo.phone', value: '010-5464-9945' }),
-            expect.objectContaining({ fieldKey: 'basicInfo.email', value: 'qkralsrb4407@naver.com' }),
-            expect.objectContaining({ fieldKey: 'basicInfo.applicationSource', value: '\uB9C1\uCEE4\uB9AC\uC5B4 / \uCE90\uCE58 / \uC790\uC18C\uC124\uB2F7\uCEF4' })
+            expect.objectContaining({ fieldKey: 'basicInfo.email', value: 'qkralsrb4407@naver.com' })
+        ]));
+        expect(result.filled).not.toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'basicInfo.applicationSource' })
         ]));
         expect(doc.querySelector('[name="basicInfoGroupAnswers.name"]').value).toBe('\uBC15\uBBFC\uADDC');
         expect(doc.getElementById('birthdate').value).toBe('2001.03.28');
@@ -761,7 +811,7 @@ describe('applicationAutoFill', () => {
         ]));
     });
 
-    it('EXT-013: keeps application source copyable when site select options do not match profile value', () => {
+    it('EXT-013: does not autofill or copy application source', () => {
         const doc = document.implementation.createHTMLDocument('application');
         doc.body.innerHTML = `
       <form>
@@ -784,11 +834,14 @@ describe('applicationAutoFill', () => {
 
         const result = applyAutoFillPlan(buildAutoFillPlan(doc, sourceProfile));
 
-        expect(result.failed).toEqual(expect.arrayContaining([
-            expect.objectContaining({ fieldKey: 'basicInfo.applicationSource', reason: 'select_option_not_found' })
+        expect(result.filled).not.toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'basicInfo.applicationSource' })
         ]));
-        expect(result.copyCandidates).toEqual(expect.arrayContaining([
-            expect.objectContaining({ key: 'basicInfo.applicationSource', value: '\uCC44\uC6A9 \uC0AC\uC774\uD2B8' })
+        expect(result.failed).not.toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'basicInfo.applicationSource' })
+        ]));
+        expect(result.copyCandidates).not.toEqual(expect.arrayContaining([
+            expect.objectContaining({ key: 'basicInfo.applicationSource' })
         ]));
     });
 
@@ -5607,12 +5660,15 @@ describe('applicationAutoFill', () => {
             customFields: []
         };
 
+        const startedAt = Date.now();
         const result = await applyAutoFillPlanAsync(buildAutoFillPlan(doc, educationProfile));
+        const elapsedMs = Date.now() - startedAt;
 
         expect(result.failed).toEqual([]);
         expect(doc.getElementById('major-name-0').value).toBe('\uC0B0\uC5C5\uACF5\uD559\uACFC');
         expect(doc.getElementById('major-name-1').value).toBe('\uBE45\uB370\uC774\uD130\uC5F0\uACC4\uC804\uACF5');
         expect(clicked).toEqual(['0:\uC8FC\uC804\uACF5', '0:\uC8FC\uAC04', '1:\uC5F0\uACC4\uC804\uACF5', '1:\uC8FC\uAC04']);
+        expect(elapsedMs).toBeLessThan(1200);
     });
 
     it('EXT-031: opens a new row for the second major instead of overwriting the selected first row', () => {
@@ -6675,11 +6731,14 @@ describe('applicationAutoFill', () => {
             customFields: []
         };
 
+        const startedAt = Date.now();
         const result = await applyAutoFillPlanAsync(buildAutoFillPlan(doc, educationProfile));
+        const elapsedMs = Date.now() - startedAt;
 
         expect(result.failed).toEqual([]);
         expect(addClicks).toBe(1);
         expect(doc.getElementById('major-name-1').value).toBe('\uBE45\uB370\uC774\uD130');
+        expect(elapsedMs).toBeLessThan(1400);
     });
 
     it('EXT-031: opens an active row instead of waiting on a disabled Midas major placeholder', async () => {
@@ -9569,10 +9628,7 @@ describe('applicationAutoFill', () => {
         expect(result.failed).toEqual([
             expect.objectContaining({ label: '희망연봉', reason: 'unsupported_profile_field' })
         ]);
-        expect(result.copyCandidates).toEqual(expect.arrayContaining([
-            expect.objectContaining({ key: 'basicInfo.email', value: 'hong@example.com' }),
-            expect.objectContaining({ key: 'basicInfo.phone', value: '010-1234-5678' })
-        ]));
+        expect(result.copyCandidates).toEqual([]);
     });
 
     it('EXT-022: reports required application fields that still need manual input', () => {
@@ -9594,6 +9650,274 @@ describe('applicationAutoFill', () => {
         ]));
     });
 
+    it('EXT-022: does not plan section-scoped fields when only unrelated page navigation is visible', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uAE30\uBCF8\uC815\uBCF4">
+          <label>\uC774\uB984<input id="name" /></label>
+          <button type="button">\uC790\uACA9\uC99D</button>
+          <button type="button">\uC5B4\uD559</button>
+          <button type="button">\uC774\uBCD1</button>
+        </section>
+      </form>
+    `;
+        const broadProfile = {
+            sections: {
+                basicInfo: {
+                    nameKo: '\uD64D\uAE38\uB3D9'
+                },
+                military: {
+                    military: [{
+                        rank: '\uC774\uBCD1',
+                        dischargeType: '\uC18C\uC9D1\uD574\uC81C'
+                    }]
+                },
+                certificates: {
+                    languageTests: [{
+                        testName: 'OPIc(\uC601\uC5B4)',
+                        score: 'IM1',
+                        acquiredDate: '2025-04-21',
+                        registrationNumber: '2K0014711552'
+                    }],
+                    certificates: [{
+                        certificateName: 'ADsP(\uB370\uC774\uD130 \uBD84\uC11D \uC900\uC804\uBB38\uAC00)',
+                        issuer: '\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0',
+                        acquiredDate: '2026-06-05',
+                        registrationNumber: 'ADsP-049026379'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const plan = buildAutoFillPlan(doc, broadProfile);
+        const fieldKeys = plan.fillable.map((item) => item.fieldKey);
+
+        expect(fieldKeys).toContain('basicInfo.nameKo');
+        expect(fieldKeys.some((key) => key.startsWith('certificates.'))).toBe(false);
+        expect(fieldKeys.some((key) => key.startsWith('military.'))).toBe(false);
+    });
+
+    it('EXT-022: does not show certificate or language values on the education and career page when only navigation labels mention them', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <main>
+        <nav>
+          <button type="button">\uAE30\uBCF8\uC815\uBCF4</button>
+          <button type="button">\uD559\uB825 \uBC0F \uACBD\uB825</button>
+          <button type="button">\uC790\uACA9/\uAE30\uD0C0</button>
+          <button type="button">\uC790\uAE30\uC18C\uAC1C\uC11C</button>
+        </nav>
+        <section aria-label="\uD559\uB825\uC0AC\uD56D">
+          <h5>\uD559\uB825\uC0AC\uD56D</h5>
+          <label>\uD559\uAD50\uC815\uBCF4<input id="school" placeholder="\uD559\uAD50\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." /></label>
+          <button type="button">\uC878\uC5C5</button>
+          <button type="button">\uCD94\uAC00\uD558\uAE30</button>
+        </section>
+        <section aria-label="\uACBD\uB825\uC0AC\uD56D">
+          <h5>\uACBD\uB825\uC0AC\uD56D</h5>
+          <textarea name="portfolioGroupAnswer.experienceCareerDescription" placeholder="\uACBD\uD5D8 \uBC0F \uACBD\uB825\uAE30\uC220\uC11C"></textarea>
+          <button type="button">\uACBD\uB825\uAE30\uC220\uC11C \uCD94\uAC00\uD558\uAE30</button>
+          <button type="button">\uD3EC\uD2B8\uD3F4\uB9AC\uC624 \uCD94\uAC00\uD558\uAE30</button>
+        </section>
+        <aside>
+          <button type="button">\uC790\uACA9\uC99D</button>
+          <button type="button">\uACF5\uC778\uC678\uAD6D\uC5B4\uC2DC\uD5D8</button>
+        </aside>
+      </main>
+    `;
+        const mixedProfile = {
+            sections: {
+                education: {
+                    universities: [{
+                        schoolName: '\uBD80\uC0B0\uB300\uD559\uAD50'
+                    }]
+                },
+                certificates: {
+                    languageTests: [{
+                        testName: 'OPIc(\uC601\uC5B4)',
+                        score: 'IM1',
+                        acquiredDate: '2025-04-21',
+                        registrationNumber: '2K0014711552'
+                    }],
+                    certificates: [{
+                        certificateName: 'ADsP(\uB370\uC774\uD130 \uBD84\uC11D \uC900\uC804\uBB38\uAC00)',
+                        issuer: '\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0',
+                        acquiredDate: '2026-06-05',
+                        registrationNumber: 'ADsP-049026379'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const preview = previewAutoFillPlan(buildAutoFillPlan(doc, mixedProfile));
+        const shownKeys = [
+            ...preview.planned.map((item) => item.fieldKey),
+            ...preview.failed.map((item) => item.fieldKey),
+            ...preview.copyCandidates.map((item) => item.key)
+        ].filter(Boolean);
+
+        expect(shownKeys.some((key) => String(key).startsWith('certificates.'))).toBe(false);
+        expect(preview.failed).not.toEqual(expect.arrayContaining([
+            expect.objectContaining({ label: expect.stringContaining('\uC790\uACA9\uC99D') }),
+            expect.objectContaining({ label: expect.stringContaining('\uACF5\uC778\uC678\uAD6D\uC5B4') })
+        ]));
+    });
+
+    it('EXT-022: does not treat attachment upload controls as certificate sections', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <main>
+        <section aria-label="\uAE30\uBCF8\uC815\uBCF4">
+          <label>\uC774\uB984<input id="name" /></label>
+          <label>\uD734\uB300\uD3F0<input id="phone" /></label>
+          <label>\uC774\uBA54\uC77C<input id="email" /></label>
+        </section>
+        <section aria-label="\uC778\uC801\uC0AC\uD56D">
+          <button type="button">\uC8FC\uC18C\uC785\uB825</button>
+          <input name="addressGroupResumeItemAnswers.currentAddress.address" placeholder="\uC8FC\uC18C" disabled />
+          <input name="addressGroupResumeItemAnswers.currentAddress.detailAddress" placeholder="\uC0C1\uC138 \uC8FC\uC18C\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694." disabled />
+        </section>
+        <section aria-label="\uBCD1\uC5ED/\uCDE8\uC5C5\uC6B0\uB300">
+          <section>
+            <h5>\uBCD1\uC5ED</h5>
+            <button type="button">\uAD70\uD544</button>
+            <button type="button">\uACC4\uAE09\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</button>
+            <button type="button">\uC81C\uB300\uAD6C\uBD84\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</button>
+          </section>
+          <section>
+            <h5>\uC99D\uBE59\uC790\uB8CC \uCCA8\uBD80</h5>
+            <button type="button">\uCCA8\uBD80\uD30C\uC77C \uCD94\uAC00</button>
+            <input type="file" />
+          </section>
+        </section>
+      </main>
+      <aside>
+        <button type="button">\uAE30\uBCF8\uC815\uBCF4</button>
+        <button type="button">\uBCD1\uC5ED/\uCDE8\uC5C5\uC6B0\uB300</button>
+        <button type="button">\uBCD1\uC5ED\uC0AC\uD56D</button>
+        <button type="button">\uCDE8\uC5C5\uC6B0\uB300</button>
+        <button type="button">\uC790\uACA9/\uAE30\uD0C0</button>
+        <button type="button">\uC790\uACA9\uC99D</button>
+        <button type="button">\uACF5\uC778\uC678\uAD6D\uC5B4\uC2DC\uD5D8</button>
+      </aside>
+    `;
+        const broadProfile = {
+            sections: {
+                basicInfo: {
+                    nameKo: '\uBC15\uBBFC\uADDC',
+                    phone: '010-5464-9945',
+                    email: 'qkralsrb4407@naver.com',
+                    address: '\uD559\uD558\uC11C\uB85C 121\uBC88\uAE38 120',
+                    detailAddress: '\uC138\uC885\uBE4C\uB529 302\uD638'
+                },
+                military: {
+                    military: [{
+                        status: '\uAD70\uD544',
+                        rank: '\uC774\uBCD1',
+                        dischargeType: '\uC18C\uC9D1\uD574\uC81C'
+                    }]
+                },
+                certificates: {
+                    languageTests: [{
+                        testName: 'OPIc(\uC601\uC5B4)',
+                        score: 'IM1',
+                        acquiredDate: '2025-04-21',
+                        registrationNumber: '2K0014711552'
+                    }],
+                    certificates: [{
+                        certificateName: 'ADsP(\uB370\uC774\uD130 \uBD84\uC11D \uC900\uC804\uBB38\uAC00)',
+                        issuer: '\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0',
+                        acquiredDate: '2026-06-05',
+                        registrationNumber: 'ADsP-049026379'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const preview = previewAutoFillPlan(buildAutoFillPlan(doc, broadProfile));
+        const shownKeys = [
+            ...preview.planned.map((item) => item.fieldKey),
+            ...preview.copyCandidates.map((item) => item.fieldKey)
+        ].filter((key) => typeof key === 'string');
+
+        expect(shownKeys).toEqual(expect.arrayContaining([
+            'basicInfo.nameKo',
+            'basicInfo.phone',
+            'basicInfo.email'
+        ]));
+        expect(shownKeys.some((key) => key.startsWith('certificates.'))).toBe(false);
+    });
+
+    it('EXT-022: does not show fields that already contain the same site default value as copy candidates', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <label>\uC774\uB984<input id="name" value="\uBC15\uBBFC\uADDC" readonly /></label>
+        <label>\uD734\uB300\uD3F0<input id="phone" value="010-5464-9945" readonly /></label>
+        <label>\uC774\uBA54\uC77C<input id="email" value="qkralsrb4407@naver.com" readonly /></label>
+        <label>\uC0DD\uB144\uC6D4\uC77C<input id="birthdate" placeholder="YYYY.MM.DD" /></label>
+      </form>
+    `;
+        const basicProfile = {
+            sections: {
+                basicInfo: {
+                    nameKo: '\uBC15\uBBFC\uADDC',
+                    phone: '010-5464-9945',
+                    email: 'qkralsrb4407@naver.com',
+                    birthdate: '2001.03.28'
+                }
+            },
+            customFields: []
+        };
+
+        const preview = previewAutoFillPlan(buildAutoFillPlan(doc, basicProfile));
+        const copyCandidateKeys = preview.copyCandidates.map((item) => item.key);
+
+        expect(copyCandidateKeys).not.toEqual(expect.arrayContaining([
+            'basicInfo.nameKo',
+            'basicInfo.phone',
+            'basicInfo.email'
+        ]));
+        expect(preview.planned).toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'basicInfo.birthdate' })
+        ]));
+    });
+
+    it('EXT-022: annotates preview items and copy candidates with page display order', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <label>\uD734\uB300\uD3F0<input id="phone" /></label>
+        <label>\uC774\uB984<input id="name" /></label>
+        <label>\uC774\uBA54\uC77C<input id="email" /></label>
+      </form>
+    `;
+        const orderedProfile = {
+            sections: {
+                basicInfo: {
+                    nameKo: '\uD64D\uAE38\uB3D9',
+                    email: 'hong@example.com',
+                    phone: '010-1234-5678'
+                }
+            },
+            customFields: []
+        };
+
+        const preview = previewAutoFillPlan(buildAutoFillPlan(doc, orderedProfile));
+
+        expect(preview.planned.map((item) => item.fieldKey)).toEqual([
+            'basicInfo.phone',
+            'basicInfo.nameKo',
+            'basicInfo.email'
+        ]);
+        expect(preview.planned.map((item) => item.displayOrder)).toEqual([0, 1, 2]);
+        expect(preview.copyCandidates.every((item) => item.displayOrder === undefined || Number.isFinite(item.displayOrder))).toBe(true);
+    });
+
     it('EXT-013: fills common application defaults and reusable profile fields', () => {
         const doc = document.implementation.createHTMLDocument('application');
         doc.body.innerHTML = `
@@ -9602,7 +9926,6 @@ describe('applicationAutoFill', () => {
           <p>신입/경력</p>
           <button type="button" data-option="newcomer">신입</button>
           <button type="button" data-option="experienced">경력</button>
-          <label>지원경로<input id="application-source" /></label>
         </section>
         <section>
           <label>복무기간<select id="service-period"><option value="">선택</option><option value="21">21 개월</option></select></label>
@@ -9652,7 +9975,6 @@ describe('applicationAutoFill', () => {
 
         expect(result.filled).toEqual(expect.arrayContaining([
             expect.objectContaining({ fieldKey: 'basicInfo.applicationCareerType', value: '신입' }),
-            expect.objectContaining({ fieldKey: 'basicInfo.applicationSource', value: '채용 사이트' }),
             expect.objectContaining({ fieldKey: 'military.servicePeriod', value: '21 개월' }),
             expect.objectContaining({ fieldKey: 'military.disabilityRegistrationNumber', value: '12-3456789' }),
             expect.objectContaining({ fieldKey: 'military.disabilityType', value: '지체' }),
@@ -9661,8 +9983,10 @@ describe('applicationAutoFill', () => {
             expect.objectContaining({ fieldKey: 'education.universities.0.campusType', value: '본교' }),
             expect.objectContaining({ fieldKey: 'education.universities.0.majorCategory', value: '공학계열' })
         ]));
+        expect(result.filled).not.toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'basicInfo.applicationSource' })
+        ]));
         expect(clickedOptions).toEqual(['newcomer']);
-        expect(doc.getElementById('application-source').value).toBe('채용 사이트');
         expect(doc.getElementById('service-period').value).toBe('21');
         expect(doc.getElementById('disability-number').value).toBe('12-3456789');
         expect(doc.getElementById('disability-type').value).toBe('지체');

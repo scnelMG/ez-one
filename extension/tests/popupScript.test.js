@@ -56,9 +56,9 @@ describe('extension popup script', () => {
         expect(script).toContain("requireElement('autofill-apply-button')");
         expect(script).toContain("requireElement('autofill-rescan-button')");
         expect(script).toContain("documentInputModeButton.addEventListener('click', () => {");
-        expect(script).toContain('void previewDocumentAutoFill();');
+        expect(script).toContain("void runAuthenticatedAction('documentAutoFill', () => previewDocumentAutoFill());");
         expect(script).toContain("autofillApplyButton.addEventListener('click'");
-        expect(script).toContain('void applyDocumentAutoFill();');
+        expect(script).toContain("void runAuthenticatedAction('documentAutoFill', () => applyDocumentAutoFill());");
         expect(script).toContain("autofillRescanButton.addEventListener('click'");
         expect(script).toContain('pendingDocumentAutoFillProfile = null;');
         expect(script).toContain("type: 'EZONE_PREVIEW_APPLICATION_AUTOFILL'");
@@ -73,7 +73,7 @@ describe('extension popup script', () => {
         expect(script).not.toContain('scheduleDocumentAutoFillRefresh');
         expect(script).not.toContain('refreshDocumentAutoFillPreview');
         expect(script).toContain("autofillRescanButton.addEventListener('click'");
-        expect(script).toContain('void previewDocumentAutoFill();');
+        expect(script).toContain("void runAuthenticatedAction('documentAutoFill'");
     });
 
     it('explains address fields that require the site address-search flow', () => {
@@ -121,8 +121,8 @@ describe('extension popup script', () => {
     it('explains optional free-text and addable sections as manual review items', () => {
         expect(script).toContain("reason === 'manual_free_text'");
         expect(script).toContain("reason === 'manual_add_section'");
-        expect(script).toContain('\\uAE30\\uC5C5/\\uC9C1\\uBB34\\uC5D0 \\uB9DE\\uCDB0 \\uC9C1\\uC811 \\uC791\\uC131');
-        expect(script).toContain('\\uD544\\uC694\\uD558\\uBA74 \\uD654\\uBA74\\uC5D0\\uC11C \\uCD94\\uAC00');
+        expect(script).toContain('기업/직무에 맞춰 직접 작성해 주세요.');
+        expect(script).toContain('필요하면 화면에서 추가해 주세요.');
     });
 
     it('adds copy buttons to document autofill copy candidates', () => {
@@ -137,18 +137,75 @@ describe('extension popup script', () => {
     });
 
     it('removes planned or filled items from copy candidates while keeping manual review values copyable', () => {
-        expect(script).toContain('primaryFieldKeys');
+        expect(script).toContain('primaryCoverage');
+        expect(script).toContain('createPrimaryAutoFillCoverage(primaryItems)');
+        expect(script).toContain('visibleFailed');
         expect(script).toContain('visibleCopyCandidates');
         expect(script).toContain('groupActivityCopyCandidates');
-        expect(script).toContain('buildManualReviewItems(failed, groupedCopyCandidates)');
-        expect(script).toContain("reason: 'manual_copy_candidate'");
-        expect(script).toContain('formatManualCopyReviewDisplay(item)');
+        expect(script).toContain('buildManualReviewItems(visibleFailed)');
+        expect(script).not.toContain('buildManualReviewItems(visibleFailed, groupedCopyCandidates)');
+        expect(script).not.toContain("reason: 'manual_copy_candidate'");
+        expect(script).not.toContain('formatManualCopyReviewDisplay(item)');
         expect(script).toContain('확인 필요 항목이 없습니다.');
         expect(script).toContain('shouldShowCopyCandidate');
+        expect(script).toContain('isCoveredByPrimaryAutoFillItem');
+        expect(script).toContain('autoFillCoverageSignature');
         expect(script).toContain("item?.key === 'basicInfo.address' || item?.key === 'basicInfo.addressDetail'");
         expect(script).toContain('autofillCopyCount.textContent = String(groupedCopyCandidates.length)');
-        expect(script).toContain('groupedCopyCandidates.slice(0, 12)');
+        expect(script).toContain('renderResultList(autofillCopyList, groupedCopyCandidates, formatCopyCandidateDisplay');
+        expect(script).not.toContain('groupedCopyCandidates.slice(0, 12)');
         expect(script).toContain('formatActivityCopyCandidate');
+    });
+
+    it('uses clear document autofill status and action labels', () => {
+        expect(script).toContain('복사 필요');
+        expect(script).toContain('자동 입력 시작');
+        expect(script).not.toContain('확인 후 자동 입력');
+        expect(script).not.toContain('복사 후보');
+    });
+
+    it('keeps copy-needed items out of the manual review list', () => {
+        expect(script).toContain('function buildManualReviewItems(failed)');
+        expect(script).toContain('const seenKeys = new Set()');
+        expect(script).not.toContain('hasAddressSearchReview');
+        expect(script).not.toContain("key === 'basicInfo.addressDetail' && hasAddressSearchReview");
+    });
+
+    it('sorts autofill result sections by the source page display order', () => {
+        expect(script).toContain('sortByDisplayOrder');
+        expect(script).toContain('displayOrder');
+        expect(script).toContain('const primaryItems = sortByDisplayOrder');
+        expect(script).toContain('const visibleFailed = sortByDisplayOrder');
+        expect(script).toContain('const groupedCopyCandidates = sortByDisplayOrder');
+        expect(script).toContain('const manualReviewItems = sortByDisplayOrder');
+    });
+
+    it('groups education autofill items into compact profile-based summary cards', () => {
+        expect(script).toContain('renderPrimaryAutoFillList(autofillFilledList, primaryItems, isPreview)');
+        expect(script).toContain('function renderPrimaryAutoFillList');
+        expect(script).toContain('function groupPrimaryAutoFillItems');
+        expect(script).toContain('function createEducationAutoFillGroups');
+        expect(script).toContain('function createAutoFillGroupCard');
+        expect(script).toContain('autofill-group-card');
+        expect(script).toContain('autofill-group-summary');
+        expect(script).toContain('autofill-group-details');
+        expect(script).toContain("'\\uACE0\\uB4F1\\uD559\\uAD50'");
+        expect(script).toContain("'\\uB300\\uD559\\uAD50'");
+        expect(script).toContain("'\\uC804\\uACF5'");
+        expect(script).toContain("'\\uC131\\uC801'");
+        expect(script).toContain('education.highSchool.schoolName');
+        expect(script).toContain('^education\\.universities\\.\\d+\\.majors');
+        expect(script).toContain('function isEducationGradeField');
+    });
+
+    it('groups certificate autofill items into compact certificate summary cards', () => {
+        expect(script).toContain('function createCertificateAutoFillGroups');
+        expect(script).toContain('^certificates\\.certificates\\.(\\d+)\\.(.+)$');
+        expect(script).toContain("'\\uC790\\uACA9\\uC99D'");
+        expect(script).toContain('certificateName');
+        expect(script).toContain('issuingOrganization');
+        expect(script).toContain('registrationNumber');
+        expect(script).toContain('acquisitionDate');
     });
 
     it('groups activity copy candidates by activity instead of showing every field as a flat row', () => {
@@ -163,7 +220,25 @@ describe('extension popup script', () => {
     it('explains tailored activity fields as copy-assisted manual input', () => {
         expect(script).toContain("reason === 'tailored_activity_required'");
         expect(script).toContain('직무 맞춤 필요');
-        expect(script).toContain('아래 복사 후보에서 활동을 골라 지원 직무에 맞게 붙여넣어 주세요.');
+        expect(script).toContain('아래 복사 필요 항목에서 활동을 골라 지원 직무에 맞게 붙여넣어 주세요.');
+    });
+
+    it('shows job-fit activity recommendations in the document autofill result panel', () => {
+        expect(script).toContain("requireElement('activity-assist-section')");
+        expect(script).toContain("requireElement('activity-assist-button')");
+        expect(script).toContain('ACTIVITY_ASSIST_BUTTON_LABEL');
+        expect(script).toContain('AI로 활동 추천 만들기');
+        expect(script).toContain('AI가 활동을 직무 적합도 순서로 정렬하고 있습니다.');
+        expect(script).toContain('AI가 자동으로 활동을 직무 적합도 순서로 정렬하고 있습니다.');
+        expect(script).toContain('function scheduleAutomaticActivityAssistRequest');
+        expect(script).toContain('activityAssistAutoRequestKey');
+        expect(script).toContain('requestActivityAssist({ automatic: true })');
+        expect(script).toContain('AI 적합도');
+        expect(script).toContain('글자수 맞춤');
+        expect(script).toContain('documentProfileApi.recommendActivities');
+        expect(script).toContain('function shouldShowActivityAssist');
+        expect(script).toContain('function renderActivityAssistResult');
+        expect(script).toContain('function formatActivityAssistCounter');
     });
 
     it('hides internal section-opening steps from user-facing autofill results', () => {
@@ -202,10 +277,22 @@ describe('extension popup script', () => {
     it('EXT-003: validates stored extension sessions before showing feature selection', () => {
         expect(script).toContain('validateStoredSession');
         expect(script).toContain('const session = await validateStoredSession(chrome.storage.local');
+        expect(script).toContain('requireFreshSession: true');
         expect(script).not.toContain('const session = await getStoredSession(chrome.storage.local);');
         expect(script).toContain('hasExtensionSession = false;');
         expect(script).toContain('showPanel(loginPanel);');
         expect(script).not.toContain('hasExtensionSession = true;\\n    await resumePendingExtensionAction();');
+    });
+
+    it('EXT-003: revalidates the extension session before running feature actions', () => {
+        expect(script).toContain("void runAuthenticatedAction('jobPreview'");
+        expect(script).toContain("void runAuthenticatedAction('documentAutoFill'");
+        expect(script).toContain('async function runAuthenticatedAction(continuation, action)');
+        expect(script).toContain('async function ensureAuthenticatedExtensionSession(continuation = null)');
+        expect(script).toContain('const session = await readValidatedExtensionSession();');
+        expect(script).toContain('await clearExtensionSession();');
+        expect(script).toContain('await rememberPendingLoginContinuation(continuation);');
+        expect(script).toContain('showPanel(loginPanel);');
     });
 
     it('EXT-003: preserves the active tab and requested action before starting web login', () => {
@@ -322,6 +409,13 @@ describe('extension popup script', () => {
         expect(script).toContain('계약직');
     });
 
+    it('keeps manual autofill guidance short and action-oriented', () => {
+        expect(script).toContain('기업/직무에 맞춰 직접 작성해 주세요.');
+        expect(script).toContain('필요하면 화면에서 추가해 주세요.');
+        expect(script).not.toContain('기업/직무에 맞춰 직접 작성하면 좋은 장문 항목입니다.');
+        expect(script).not.toContain('필요하면 화면에서 추가하고 내용을 직접 작성해 주세요.');
+    });
+
     it('can read another posting without closing and reopening the extension panel', () => {
         expect(script).toContain("requireElement('reload-preview-button')");
         expect(script).not.toContain("requireElement('save-another-button')");
@@ -333,7 +427,7 @@ describe('extension popup script', () => {
         expect(script).toContain('async function refreshPreviewWhenPostingChanges');
         expect(script).toContain('currentUrl === lastObservedPostingUrl');
         expect(script).toContain("statusMessage: '새 공고를 읽고 있습니다.'");
-        expect(script).toContain("void loadPreview({ force: true, showUnsupportedMessage: true });");
+        expect(script).toContain("void runAuthenticatedAction('jobPreview', () => loadPreview({ force: true, showUnsupportedMessage: true }));");
         expect(script).toContain('essayQuestionRequestId += 1;');
         expect(script).toContain('(posting.essayQuestions ?? []).length > 0');
     });

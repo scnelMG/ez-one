@@ -98,7 +98,7 @@
           </div>
           <div class="autofill-summary-card" data-tone="neutral">
             <strong id="autofill-copy-count">0</strong>
-            <span>복사 후보</span>
+            <span>복사 필요</span>
           </div>
         </div>
         <section class="autofill-result-section" data-tone="success" aria-label="자동 입력된 항목">
@@ -111,20 +111,51 @@
         <section class="autofill-result-section" data-tone="warning" aria-label="입력 실패 항목">
           <div class="autofill-result-section-header">
             <h2>확인 필요</h2>
-            <span>자동 입력이 막힌 항목</span>
+            <span>자동 입력이 안된 항목</span>
           </div>
           <ul id="autofill-failed-list" class="autofill-result-list"></ul>
         </section>
-        <section class="autofill-result-section" data-tone="neutral" aria-label="복사 가능한 서류 정보">
+        <section class="autofill-result-section" data-tone="neutral" aria-label="복사해서 붙여넣을 서류 정보">
           <div class="autofill-result-section-header">
-            <h2>복사 후보</h2>
-            <span>필요할 때 붙여넣기</span>
+            <h2>복사 필요</h2>
+            <span>자동 입력 불가 항목</span>
           </div>
+          <section id="activity-assist-section" class="autofill-result-section activity-assist-section" data-tone="neutral" aria-label="AI 활동 추천" hidden>
+            <div class="autofill-result-section-header">
+              <h2>AI 활동 추천</h2>
+              <span id="activity-assist-caption">직무 적합도 순으로 정렬하고 글자수에 맞춘 붙여넣기 문장을 만듭니다.</span>
+            </div>
+            <ol class="activity-assist-flow" aria-label="AI 활동 추천 처리 순서">
+              <li class="activity-assist-flow-step">직무 분석</li>
+              <li class="activity-assist-flow-step">활동 우선순위</li>
+              <li class="activity-assist-flow-step">글자수 맞춤</li>
+            </ol>
+            <div class="activity-assist-controls">
+              <label>
+                <span>추천 개수</span>
+                <input id="activity-assist-count-input" type="number" min="1" max="5" inputmode="numeric" value="2" />
+              </label>
+              <label>
+                <span>글자수</span>
+                <input id="activity-assist-limit-input" type="number" min="1" max="3000" inputmode="numeric" value="500" />
+              </label>
+              <label>
+                <span>단위</span>
+                <select id="activity-assist-unit-select">
+                  <option value="char">자</option>
+                  <option value="byte">byte</option>
+                </select>
+              </label>
+            </div>
+            <button id="activity-assist-button" class="secondary-button activity-assist-button" type="button">AI로 활동 추천 만들기</button>
+            <p id="activity-assist-status" class="activity-assist-status activity-assist-result-summary" hidden></p>
+            <ul id="activity-assist-list" class="activity-assist-list"></ul>
+          </section>
           <ul id="autofill-copy-list" class="autofill-result-list"></ul>
         </section>
         <div class="action-stack document-autofill-actions">
           <button id="autofill-rescan-button" class="secondary-button" type="button">다시 인식</button>
-          <button id="autofill-apply-button" class="primary-button" type="button" hidden>확인 후 자동 입력</button>
+          <button id="autofill-apply-button" class="primary-button" type="button" hidden>자동 입력 시작</button>
         </div>
       </section>
     </main>
