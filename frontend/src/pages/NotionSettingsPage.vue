@@ -16,18 +16,18 @@
       />
 
       <section class="mypage-panel" aria-label="노션 연동 관리">
-        <article class="account-settings-card">
+        <article class="account-settings-card account-identity-card notion-settings-card">
           <div class="account-setting-row">
-            <div class="account-setting-main">
-              <span>Google 계정</span>
+            <span class="account-setting-label">Google 계정</span>
+            <div class="account-setting-value">
               <strong>{{ loginEmail }}</strong>
             </div>
             <span class="account-setting-note">로그인</span>
           </div>
 
           <div class="account-setting-row">
-            <div class="account-setting-main">
-              <span>Notion 계정</span>
+            <span class="account-setting-label">Notion 계정</span>
+            <div class="account-setting-value">
               <strong>{{ notionEmail }}</strong>
             </div>
             <button
@@ -52,8 +52,8 @@
           </div>
 
           <div class="account-setting-row">
-            <div class="account-setting-main">
-              <span>공고 자동 동기화</span>
+            <span class="account-setting-label">공고 자동 동기화</span>
+            <div class="account-setting-value">
               <strong>공고 자동 동기화 {{ notionStore.connection?.syncEnabled ? '켜짐' : '꺼짐' }}</strong>
             </div>
             <button
@@ -64,29 +64,13 @@
               data-testid="toggle-job-only-sync"
               @click="toggleSync"
             >
-              {{ notionStore.connection?.connected ? (notionStore.connection?.syncEnabled ? '켜짐' : '꺼짐') : '연결 후 사용' }}
+              {{ notionStore.connection?.connected ? (notionStore.connection?.syncEnabled ? '켜짐' : '꺼짐') : '연결 필요' }}
             </button>
           </div>
 
           <div class="account-setting-row">
-            <div class="account-setting-main">
-              <span>자소서 · 도화지</span>
-              <strong>준비 중</strong>
-            </div>
-            <span class="account-setting-note">P2</span>
-          </div>
-
-          <div class="account-setting-row">
-            <div class="account-setting-main">
-              <span>과거 지원 내역</span>
-              <strong>준비 중</strong>
-            </div>
-            <span class="account-setting-note">P2</span>
-          </div>
-
-          <div class="account-setting-row">
-            <div class="account-setting-main">
-              <span>대상 위치</span>
+            <span class="account-setting-label">대상 위치</span>
+            <div class="account-setting-value">
               <strong>취업 준비 (자동 생성)</strong>
             </div>
             <a class="account-setting-link" href="https://www.notion.so/" target="_blank" rel="noreferrer">열기</a>
@@ -97,8 +81,8 @@
         <section class="sync-log-card" aria-label="최근 동기화 기록">
           <strong class="compact-section-title">최근 동기화</strong>
           <p v-if="notionStore.status === 'loading'">Notion 설정을 불러오는 중입니다.</p>
-          <ul v-else-if="notionStore.syncLogs.length > 0" class="notion-log-list">
-            <li v-for="log in notionStore.syncLogs" :key="log.id" class="notion-log-row">
+          <ul v-else-if="visibleSyncLogs.length > 0" class="notion-log-list">
+            <li v-for="log in visibleSyncLogs" :key="log.id" class="notion-log-row">
               <div>
                 <strong>{{ formatSyncTarget(log.target) }} 동기화 {{ formatSyncStatus(log.status) }}</strong>
                 <p>{{ log.message }}</p>
@@ -108,7 +92,7 @@
           </ul>
           <div v-else class="mypage-empty-state">
             <strong>아직 동기화된 공고가 없습니다.</strong>
-            <p>장바구니에 공고를 저장하면 JOB_ONLY 범위로 기록됩니다.</p>
+            <p>공고를 저장하고 동기화를 켜면 Notion에 기록됩니다.</p>
           </div>
         </section>
       </section>
@@ -130,6 +114,7 @@ const notionStore = useNotionStore();
 const statusMessage = ref('');
 const loginEmail = computed(() => getCurrentUser()?.email ?? '로그인 정보 없음');
 const notionEmail = computed(() => notionStore.connection?.notionAccountEmail ?? '연결된 계정 없음');
+const visibleSyncLogs = computed(() => notionStore.syncLogs.filter((log) => log.target === 'JOB'));
 
 async function disconnectNotion() {
   if (window.confirm('Notion 연동을 해제하시겠습니까?')) {
@@ -181,8 +166,6 @@ async function connectNotion() {
 
 function formatSyncTarget(target) {
   if (target === 'JOB') return '공고';
-  if (target === 'ESSAY') return '자소서';
-  if (target === 'CANVAS') return '도화지';
   return target || '항목';
 }
 

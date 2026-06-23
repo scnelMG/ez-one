@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildGoogleOAuthUrl, consumeOAuthState, createOAuthState, getGoogleRedirectUri } from './googleOAuth';
 describe('googleOAuth', () => {
     beforeEach(() => {
+        vi.restoreAllMocks();
         sessionStorage.clear();
+        localStorage.clear();
         vi.spyOn(crypto, 'randomUUID').mockReturnValue('state-123');
     });
     it('AUTH-001: builds a Google OAuth authorization URL with state and redirect target', () => {
@@ -40,6 +42,21 @@ describe('googleOAuth', () => {
         const state = createOAuthState(redirectPath);
 
         expect(consumeOAuthState(state)).toBe(redirectPath);
+    });
+    it('AUTH-004: recovers OAuth state when a Google account handoff clears session storage', () => {
+        const state = createOAuthState('/basket');
+        sessionStorage.clear();
+
+        expect(consumeOAuthState(state)).toBe('/basket');
+    });
+    it('AUTH-004: keeps OAuth state long enough for slower new Google account verification', () => {
+        const startedAt = new Date('2026-06-23T00:00:00.000Z').getTime();
+        vi.spyOn(Date, 'now').mockReturnValue(startedAt);
+
+        const state = createOAuthState('/basket');
+
+        vi.mocked(Date.now).mockReturnValue(startedAt + 20 * 60 * 1000);
+        expect(consumeOAuthState(state)).toBe('/basket');
     });
     it('AUTH-004: asks Google to show account selection only for explicit account switching', () => {
         const url = buildGoogleOAuthUrl({

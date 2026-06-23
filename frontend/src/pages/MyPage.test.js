@@ -9,9 +9,7 @@ const mocks = vi.hoisted(() => ({
     withdrawCurrentUser: vi.fn(),
     logout: vi.fn(),
     getUserProfile: vi.fn(),
-    saveUserProfile: vi.fn(),
-    getMyRequests: vi.fn(),
-    createRequest: vi.fn()
+    saveUserProfile: vi.fn()
 }));
 
 vi.mock('@/features/auth/api/authApi', () => ({
@@ -29,18 +27,10 @@ vi.mock('@/features/profile/api/profileApi', () => ({
     }
 }));
 
-vi.mock('@/features/support/api/supportApi', () => ({
-    supportApi: {
-        getMyRequests: (...args) => mocks.getMyRequests(...args),
-        createRequest: (...args) => mocks.createRequest(...args)
-    }
-}));
-
 const myRoutes = [
     { path: '/mypage', name: 'mypage-account', component: MyPage, meta: { mypageSection: 'account' } },
     { path: '/mypage/onboarding', name: 'mypage-onboarding', component: MyPage, meta: { mypageSection: 'onboarding' } },
     { path: '/mypage/qna', name: 'mypage-qna', component: MyPage, meta: { mypageSection: 'qna' } },
-    { path: '/mypage/inquiry', name: 'mypage-inquiry', component: MyPage, meta: { mypageSection: 'inquiry' } },
     { path: '/mypage/terms', name: 'mypage-terms', component: MyPage, meta: { mypageSection: 'terms' } }
 ];
 
@@ -68,10 +58,8 @@ describe('MyPage', () => {
         mocks.logout.mockReset();
         mocks.getUserProfile.mockReset();
         mocks.saveUserProfile.mockReset();
-        mocks.getMyRequests.mockReset();
-        mocks.createRequest.mockReset();
         mocks.getUserProfile.mockResolvedValue({
-            desiredRoles: ['프론트엔드', '백엔드'],
+            desiredRoles: ['SW 개발', '프론트엔드', '백엔드'],
             companyTypes: ['중견기업', '스타트업'],
             industries: ['IT/플랫폼'],
             regions: ['서울', '경기', '원격'],
@@ -80,21 +68,13 @@ describe('MyPage', () => {
             completed: true
         });
         mocks.saveUserProfile.mockResolvedValue({
-            desiredRoles: ['AI/ML'],
+            desiredRoles: ['AI/데이터', 'AI/ML'],
             companyTypes: ['대기업'],
             industries: ['금융'],
             regions: ['서울'],
-            skills: ['Python'],
+            skills: ['Python', 'SQL'],
             ssafy: false,
             completed: true
-        });
-        mocks.getMyRequests.mockResolvedValue([
-            { id: 1, title: 'Notion 동기화 오류', status: 'RECEIVED' }
-        ]);
-        mocks.createRequest.mockResolvedValue({
-            id: 2,
-            title: '새 문의',
-            status: 'RECEIVED'
         });
         localStorage.setItem('ezone.currentUser', JSON.stringify({
             id: 1,
@@ -121,6 +101,13 @@ describe('MyPage', () => {
         expect(wrapper.text()).not.toContain('마이페이지 ·');
         expect(wrapper.find('[data-testid="mypage-left-board"]').exists()).toBe(false);
         const accountPanel = wrapper.get('[aria-label="내 계정"]');
+        expect(accountPanel.find('.account-identity-card').exists()).toBe(true);
+        expect(accountPanel.findAll('.account-setting-row')).toHaveLength(3);
+        expect(accountPanel.findAll('.account-setting-label').map((label) => label.text())).toEqual([
+            '프로필 사진',
+            '이름',
+            'Google 계정'
+        ]);
         expect(accountPanel.text()).toContain('Google 계정');
         expect(accountPanel.text()).toContain('비밀번호 없음');
         expect(accountPanel.text()).not.toContain('Notion');
@@ -140,6 +127,13 @@ describe('MyPage', () => {
     });
 
     it('MY-ACCOUNT: uploads a profile photo into the current account session', async () => {
+        mocks.updateCurrentUser.mockResolvedValue({
+            id: 1,
+            email: 'user@example.com',
+            name: '민구',
+            nickname: '민구',
+            profileImageUrl: 'data:image/png;base64,profile-photo'
+        });
         mockFileReader('data:image/png;base64,profile-photo');
         const wrapper = await mountPage('/mypage');
         const input = wrapper.get('[data-testid="profile-photo-input"]');
@@ -152,6 +146,10 @@ describe('MyPage', () => {
         await input.trigger('change');
         await flushPromises();
 
+        expect(mocks.updateCurrentUser).toHaveBeenCalledWith({
+            nickname: '길동',
+            profileImageUrl: 'data:image/png;base64,profile-photo'
+        });
         expect(wrapper.get('[data-testid="account-profile-photo"]').attributes('src')).toBe('data:image/png;base64,profile-photo');
         expect(JSON.parse(localStorage.getItem('ezone.currentUser') ?? '{}').profileImageUrl).toBe('data:image/png;base64,profile-photo');
         expect(wrapper.text()).toContain('프로필 사진이 저장되었습니다.');
@@ -185,15 +183,20 @@ describe('MyPage', () => {
 
         expect(wrapper.get('.page-header h1').text()).toBe('온보딩 정보');
         expect(wrapper.text()).not.toContain('마이페이지 · 온보딩 정보');
+        expect(wrapper.text()).toContain('관심 직무군');
+        expect(wrapper.text()).toContain('SW 개발');
         expect(wrapper.text()).toContain('프론트엔드');
+        expect(wrapper.text()).toContain('AI/데이터');
+        expect(wrapper.text()).toContain('클라우드/인프라');
         expect(wrapper.text()).toContain('계열 / 업종');
-        expect(wrapper.text()).toContain('SSAFY 여부는 지원 준비 정보로 저장돼요.');
+        expect(wrapper.text()).toContain('SSAFY 전용 공고와 추천 기준에 사용됩니다.');
+        expect(wrapper.find('.preference-form').exists()).toBe(true);
         expect(wrapper.find('.mypage-summary-strip').exists()).toBe(false);
         expect(wrapper.find('[aria-label="온보딩 정보"] > .section-heading').exists()).toBe(false);
 
-        await wrapper.get('[data-testid="profile-role-option-프론트엔드"]').trigger('click');
-        await wrapper.get('[data-testid="profile-role-option-백엔드"]').trigger('click');
-        await wrapper.get('[data-testid="profile-role-option-AI/ML"]').trigger('click');
+        await wrapper.get('[data-testid="profile-role-group-option-SW 개발"]').trigger('click');
+        await wrapper.get('[data-testid="profile-role-group-option-AI/데이터"]').trigger('click');
+        await wrapper.get('[data-testid="profile-role-detail-option-AI/ML"]').trigger('click');
         await wrapper.get('[data-testid="profile-company-option-중견기업"]').trigger('click');
         await wrapper.get('[data-testid="profile-company-option-스타트업"]').trigger('click');
         await wrapper.get('[data-testid="profile-company-option-대기업"]').trigger('click');
@@ -206,16 +209,17 @@ describe('MyPage', () => {
         await wrapper.get('[data-testid="profile-skill-remove-Node.js"]').trigger('click');
         await wrapper.get('[data-testid="profile-skill-input"]').setValue('Python');
         await wrapper.get('[data-testid="profile-skill-input"]').trigger('keyup.enter');
+        await wrapper.get('[data-testid="profile-skill-suggestion-SQL"]').trigger('click');
         await wrapper.get('[data-testid="profile-ssafy-false"]').trigger('click');
         await wrapper.get('[data-testid="save-onboarding-profile"]').trigger('click');
         await flushPromises();
 
         expect(mocks.saveUserProfile).toHaveBeenCalledWith({
-            desiredRoles: ['AI/ML'],
+            desiredRoles: ['AI/데이터', 'AI/ML'],
             companyTypes: ['대기업'],
             industries: ['금융'],
             regions: ['서울'],
-            skills: ['Python'],
+            skills: ['Python', 'SQL'],
             ssafy: false
         });
         expect(wrapper.text()).toContain('온보딩 정보가 저장되었습니다.');
@@ -224,8 +228,9 @@ describe('MyPage', () => {
     it('MY-ONBOARDING: cancels edits and restores the saved profile values', async () => {
         const wrapper = await mountPage('/mypage/onboarding');
 
-        await wrapper.get('[data-testid="profile-role-option-프론트엔드"]').trigger('click');
-        await wrapper.get('[data-testid="profile-role-option-AI/ML"]').trigger('click');
+        await wrapper.get('[data-testid="profile-role-detail-option-프론트엔드"]').trigger('click');
+        await wrapper.get('[data-testid="profile-role-group-option-AI/데이터"]').trigger('click');
+        await wrapper.get('[data-testid="profile-role-detail-option-AI/ML"]').trigger('click');
         await wrapper.get('[data-testid="profile-skill-input"]').setValue('Python');
         await wrapper.get('[data-testid="profile-skill-input"]').trigger('keyup.enter');
         expect(wrapper.text()).toContain('Python');
@@ -233,9 +238,11 @@ describe('MyPage', () => {
         await wrapper.get('[data-testid="cancel-onboarding-profile"]').trigger('click');
         await flushPromises();
 
-        expect(wrapper.get('[data-testid="profile-role-option-프론트엔드"]').classes()).toContain('active');
-        expect(wrapper.get('[data-testid="profile-role-option-AI/ML"]').classes()).not.toContain('active');
-        expect(wrapper.text()).not.toContain('Python');
+        expect(wrapper.get('[data-testid="profile-role-group-option-SW 개발"]').classes()).toContain('active');
+        expect(wrapper.get('[data-testid="profile-role-detail-option-프론트엔드"]').classes()).toContain('active');
+        expect(wrapper.get('[data-testid="profile-role-detail-option-백엔드"]').classes()).toContain('active');
+        expect(wrapper.get('[data-testid="profile-role-group-option-AI/데이터"]').classes()).not.toContain('active');
+        expect(wrapper.find('[data-testid="profile-skill-remove-Python"]').exists()).toBe(false);
         expect(wrapper.text()).toContain('저장된 온보딩 정보로 되돌렸습니다.');
     });
 
@@ -249,7 +256,11 @@ describe('MyPage', () => {
         expect(searchInput.attributes('aria-label')).toBe('FAQ 검색');
         expect(wrapper.find('[aria-label="자주 묻는 질문"] > .section-heading').exists()).toBe(false);
         expect(wrapper.findAll('[data-testid^="faq-filter-"]').every((filter) => filter.element.tagName === 'BUTTON')).toBe(true);
-        expect(wrapper.findAll('.faq-row').length).toBeGreaterThanOrEqual(12);
+        expect(wrapper.find('.faq-list').exists()).toBe(true);
+        expect(wrapper.findAll('.faq-row').length).toBeGreaterThanOrEqual(11);
+        expect(wrapper.text()).not.toContain('P1');
+        expect(wrapper.text()).not.toContain('P2');
+        expect(wrapper.text()).not.toContain('JOB_ONLY');
 
         await searchInput.setValue('Notion');
         expect(wrapper.text()).toContain('Notion 이메일이 로그인 이메일과 달라도 되나요?');
@@ -257,54 +268,41 @@ describe('MyPage', () => {
 
         await searchInput.setValue('없는 질문');
         expect(wrapper.text()).toContain('검색 결과가 없습니다.');
-    });
-
-    it('MY-SUPPORT: submits inquiry to the support API and renders persisted history', async () => {
-        const wrapper = await mountPage('/mypage/inquiry');
-
-        expect(mocks.getMyRequests).toHaveBeenCalled();
-        expect(wrapper.text()).toContain('Notion 동기화 오류');
-        expect(wrapper.find('[aria-label="1:1 문의"] > .section-heading').exists()).toBe(false);
-        expect(wrapper.text()).not.toContain('1:1 문의 작성');
-
-        await wrapper.find('input[required]').setValue('새 문의');
-        await wrapper.find('textarea').setValue('문의 내용입니다.');
-        await wrapper.find('form.support-form').trigger('submit.prevent');
-        await flushPromises();
-
-        expect(mocks.createRequest).toHaveBeenCalledWith({
-            requestType: 'INQUIRY',
-            category: 'ACCOUNT',
-            title: '새 문의',
-            body: '문의 내용입니다.'
-        });
-        expect(wrapper.text()).toContain('1:1 문의가 접수되었습니다.');
+        expect(wrapper.text()).not.toContain('1:1 문의');
     });
 
     it('SUPPORT-001: does not expose the retired business support surface', async () => {
-        const wrapper = await mountPage('/mypage/inquiry');
+        const wrapper = await mountPage('/mypage/qna');
         const retiredPath = ['/mypage', 'partner', 'ship'].join('/');
         const retiredLabel = '제휴' + ' 문의';
 
         expect(myRoutes.some((route) => route.path === retiredPath)).toBe(false);
+        expect(myRoutes.some((route) => route.path === '/mypage/inquiry')).toBe(false);
         expect(wrapper.text()).not.toContain(retiredLabel);
         expect(wrapper.find(`a[href="${retiredPath}"]`).exists()).toBe(false);
+        expect(wrapper.find('a[href="/mypage/inquiry"]').exists()).toBe(false);
     });
 
     it('MY-SUPPORT: renders QnA and terms pages as separate pages', async () => {
-        expect((await mountPage('/mypage/qna')).text()).toContain('공고별로 첨부 자료는 어디서 보나요?');
+        expect((await mountPage('/mypage/qna')).text()).toContain('공고별 첨부 자료는 어디서 보나요?');
         const terms = await mountPage('/mypage/terms');
         expect(terms.get('.page-header h1').text()).toBe('이용약관');
         expect(terms.find('.terms-tabs').exists()).toBe(false);
         expect(terms.find('[aria-label="이용약관"] > .section-heading').exists()).toBe(false);
-        expect(terms.text()).toContain('제1조 목적');
-        expect(terms.text()).toContain('제2조 정의');
+        expect(terms.text()).toContain('관련 기준');
+        expect(terms.text()).toContain('약관의 규제에 관한 법률');
+        expect(terms.text()).toContain('개인정보 보호법');
+        expect(terms.text()).toContain('제1조 목적 및 적용');
+        expect(terms.text()).toContain('제2조 용어의 정의');
+        expect(terms.text()).toContain('약관의 게시 및 변경');
         expect(terms.text()).toContain('계정 및 로그인');
         expect(terms.text()).toContain('공고와 기업 정보 표시');
         expect(terms.text()).toContain('외부 연동');
-        expect(terms.text()).toContain('문의 처리');
+        expect(terms.text()).toContain('탈퇴 및 이용 제한');
+        expect(terms.text()).not.toContain('1:1 문의');
         expect(terms.text()).toContain('서비스 변경 및 중단');
-        expect(terms.text()).toContain('책임 제한');
+        expect(terms.text()).toContain('손해배상 및 책임 제한');
+        expect(terms.text()).toContain('준거법 및 분쟁 해결');
         expect(terms.find('#privacy').exists()).toBe(true);
     });
 });

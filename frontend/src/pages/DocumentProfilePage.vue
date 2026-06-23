@@ -101,18 +101,6 @@
                   </select>
                 </label>
                 <label>
-                  지원경로
-                  <select
-                    v-model="basicInfoForm.applicationSource"
-                    data-testid="basic-info-application-source"
-                    @change="updateChoiceField(basicInfoForm, 'applicationSource', $event)"
-                  >
-                    <option v-for="option in selectOptions.applicationSource" :key="option.value" :value="option.value">
-                      {{ option.label }}
-                    </option>
-                  </select>
-                </label>
-                <label>
                   한글 이름
                   <input v-model="basicInfoForm.nameKo" placeholder="홍길동" data-testid="basic-info-name" />
                 </label>
@@ -616,7 +604,6 @@ const basicInfoForm = reactive({
   address: '',
   addressDetail: '',
   applicationCareerType: '',
-  applicationSource: '',
   profilePhoto: null
 });
 const activeSectionForm = reactive({});
@@ -680,15 +667,6 @@ const selectOptions = {
     { label: '경력', value: '경력' },
     { label: '신입/경력', value: '신입/경력' },
     { label: '인턴', value: '인턴' }
-  ],
-  applicationSource: [
-    { label: '선택', value: '' },
-    { label: '채용 사이트', value: '채용 사이트' },
-    { label: '회사 홈페이지', value: '회사 홈페이지' },
-    { label: '취업 포털', value: '취업 포털' },
-    { label: '학교/센터 추천', value: '학교/센터 추천' },
-    { label: '지인 추천', value: '지인 추천' },
-    { label: '기타', value: '기타' }
   ],
   servicePeriod: [
     { label: '선택', value: '' },

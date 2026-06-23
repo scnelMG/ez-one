@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(255) NOT NULL,
   name VARCHAR(255) NOT NULL,
   nickname VARCHAR(255) NOT NULL,
+  profile_image_url MEDIUMTEXT NULL,
   provider VARCHAR(32) NOT NULL,
   provider_id VARCHAR(255) NOT NULL,
   password_hash VARCHAR(255) NULL,

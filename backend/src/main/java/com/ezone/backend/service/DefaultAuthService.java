@@ -135,6 +135,7 @@ public class DefaultAuthService implements AuthService {
                 user.email(),
                 user.name(),
                 user.nickname(),
+                user.profileImageUrl(),
                 user.profileCompleted(),
                 onboardingRequired
             )

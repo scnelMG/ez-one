@@ -33,6 +33,9 @@ public class CurrentUserController {
     public ApiResponse<CurrentUserResponse> updateCurrentUser(@Valid @RequestBody UpdateCurrentUserRequest request) {
         Long userId = CurrentUserSupport.currentUserId();
         userAccountMapper.updateNickname(userId, request.nickname().trim());
+        if (request.profileImageUrl() != null) {
+            userAccountMapper.updateProfileImageUrl(userId, normalizeProfileImageUrl(request.profileImageUrl()));
+        }
 
         return ApiResponse.success(toResponse(loadCurrentUser()));
     }
@@ -56,8 +59,14 @@ public class CurrentUserController {
             user.email(),
             user.name(),
             user.nickname(),
+            user.profileImageUrl(),
             user.profileCompleted(),
             false
         );
+    }
+
+    private String normalizeProfileImageUrl(String profileImageUrl) {
+        String trimmed = profileImageUrl.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

@@ -19,7 +19,7 @@ describe('router', () => {
         expect(routeNames).toContain('mypage-notion');
         expect(routeNames).toContain('mypage-onboarding');
         expect(routeNames).toContain('mypage-qna');
-        expect(routeNames).toContain('mypage-inquiry');
+        expect(routeNames).not.toContain('mypage-inquiry');
         expect(routeNames).not.toContain(['mypage', 'partner', 'ship'].join('-'));
         expect(routeNames).toContain('mypage-terms');
     });
@@ -140,6 +140,7 @@ describe('router', () => {
         expect(routePaths).not.toContain('/alerts');
         expect(routePaths).not.toContain('/basket/calendar');
         expect(routePaths).not.toContain('/mypage/support');
+        expect(routePaths).not.toContain('/mypage/inquiry');
         expect(routePaths).not.toContain(['/mypage', 'partner', 'ship'].join('/'));
     });
 });

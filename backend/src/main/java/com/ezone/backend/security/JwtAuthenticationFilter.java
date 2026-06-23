@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -19,6 +20,16 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    private static final Set<String> PUBLIC_AUTH_PATHS = Set.of(
+        "/api/auth/signup",
+        "/api/auth/login",
+        "/api/auth/google",
+        "/api/auth/refresh",
+        "/api/auth/logout",
+        "/api/integrations/mattermost/webhook",
+        "/api/health"
+    );
 
     private final JwtAccessTokenVerifier tokenVerifier;
     private final ObjectMapper objectMapper;
@@ -54,6 +65,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return "OPTIONS".equalsIgnoreCase(request.getMethod())
+            || PUBLIC_AUTH_PATHS.contains(requestPath(request));
+    }
+
+    private String requestPath(HttpServletRequest request) {
+        String servletPath = request.getServletPath();
+        if (servletPath != null && !servletPath.isBlank()) {
+            return servletPath;
+        }
+        String contextPath = request.getContextPath();
+        String requestUri = request.getRequestURI();
+        if (contextPath != null && !contextPath.isBlank() && requestUri.startsWith(contextPath)) {
+            return requestUri.substring(contextPath.length());
+        }
+        return requestUri;
     }
 
     private JwtAuthenticatedUser verifiedUser(String token) {

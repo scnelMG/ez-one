@@ -14,7 +14,6 @@ const emptyBasicInfo = {
     address: '',
     addressDetail: '',
     applicationCareerType: '',
-    applicationSource: '',
     profilePhoto: null
 };
 
@@ -114,7 +113,6 @@ function normalizeBasicInfo(payload) {
         address: stringValue(record.address),
         addressDetail: stringValue(record.addressDetail),
         applicationCareerType: stringValue(record.applicationCareerType),
-        applicationSource: stringValue(record.applicationSource),
         profilePhoto: photoValue(record.profilePhoto)
     };
 }

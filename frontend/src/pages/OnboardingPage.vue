@@ -21,108 +21,11 @@
       </header>
 
       <div class="onboarding-modal-body">
-        <StatePanel
-          v-if="profileStore.status === 'error'"
-          id="onboarding-error"
-          tone="navy"
-          title="온보딩 오류"
-          :body="profileStore.errorMessage"
-        />
+        <p v-if="profileLoadNotice" id="onboarding-error" class="onboarding-soft-notice" role="status">
+          {{ profileLoadNotice }}
+        </p>
 
-        <section class="onboarding-field-group" aria-label="희망 직무">
-          <strong>희망 직무</strong>
-          <div class="onboarding-chip-list">
-            <button
-              v-for="role in roleOptions"
-              :key="role"
-              class="filter-chip"
-              :class="{ active: form.desiredRoles.includes(role) }"
-              type="button"
-              @click="toggleListValue(form.desiredRoles, role)"
-            >
-              {{ role }}
-            </button>
-          </div>
-        </section>
-
-        <section class="onboarding-field-group" aria-label="희망 기업 유형">
-          <strong>희망 기업 유형</strong>
-          <div class="onboarding-chip-list">
-            <button
-              v-for="companyType in companyTypeOptions"
-              :key="companyType"
-              class="filter-chip"
-              :class="{ active: form.companyTypes.includes(companyType) }"
-              type="button"
-              @click="toggleListValue(form.companyTypes, companyType)"
-            >
-              {{ companyType }}
-            </button>
-          </div>
-        </section>
-
-        <section class="onboarding-field-group" aria-label="계열 및 업종">
-          <strong>계열 / 업종</strong>
-          <div class="onboarding-chip-list">
-            <button
-              v-for="industry in industryOptions"
-              :key="industry"
-              class="filter-chip"
-              :class="{ active: form.industries.includes(industry) }"
-              type="button"
-              @click="toggleListValue(form.industries, industry)"
-            >
-              {{ industry }}
-            </button>
-          </div>
-        </section>
-
-        <section class="onboarding-field-group" aria-label="희망 근무 지역">
-          <strong>희망 근무 지역</strong>
-          <div class="onboarding-chip-list">
-            <button
-              v-for="region in regionOptions"
-              :key="region"
-              class="filter-chip"
-              :class="{ active: form.regions.includes(region) }"
-              type="button"
-              @click="toggleListValue(form.regions, region)"
-            >
-              {{ region }}
-            </button>
-          </div>
-        </section>
-
-        <section class="onboarding-field-group" aria-label="보유 스킬">
-          <strong>보유 스킬</strong>
-          <div class="skill-input-shell">
-            <span v-for="skill in form.skills" :key="skill" class="skill-token">
-              {{ skill }}
-              <button type="button" :aria-label="`${skill} 삭제`" @click="removeSkill(skill)">
-                <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </button>
-            </span>
-            <input
-              v-model="skillInput"
-              data-testid="onboarding-skill-input"
-              type="text"
-              placeholder="React, Java, Spring 입력 후 Enter"
-              @keyup.enter="addSkill"
-            />
-          </div>
-        </section>
-
-        <section class="onboarding-field-group" aria-label="SSAFY 교육생 여부">
-          <strong>SSAFY 교육생이신가요?</strong>
-          <div class="segmented-control">
-            <button type="button" :class="{ active: form.ssafy }" @click="form.ssafy = true">예</button>
-            <button type="button" :class="{ active: !form.ssafy }" @click="form.ssafy = false">아니오</button>
-          </div>
-          <p class="onboarding-helper">SSAFY 여부는 지원 준비 정보로 저장돼요.</p>
-        </section>
+        <PreferenceForm :form="form" test-prefix="onboarding" />
       </div>
 
       <footer class="onboarding-modal-actions">
@@ -145,7 +48,7 @@
 </template>
 
 <script setup>
-import StatePanel from '@/shared/StatePanel.vue';
+import PreferenceForm from '@/features/profile/components/PreferenceForm.vue';
 import { onMounted, reactive, ref } from 'vue';
 import { useProfileStore } from '@/stores/profileStore';
 import { useBasketStore } from '@/stores/basketStore';
@@ -153,59 +56,35 @@ import { useBasketStore } from '@/stores/basketStore';
 const emit = defineEmits(['completed']);
 const profileStore = useProfileStore();
 const basketStore = useBasketStore();
-const roleOptions = ['프론트엔드', '백엔드', '데이터 엔지니어', 'AI/ML', '모바일', 'DevOps', 'PM', '디자인', 'QA', '기타'];
-const companyTypeOptions = ['대기업', '공공기관', '중견기업', '중소기업', '스타트업', '기타'];
-const industryOptions = ['IT/플랫폼', '제조', '금융', '커머스', '게임', '바이오/헬스', '미디어', '기타'];
-const regionOptions = ['서울', '경기', '인천', '대전', '부산', '대구', '광주', '제주', '원격(재택)'];
+const profileLoadNotice = ref('');
 const form = reactive({
-    desiredRoles: [roleOptions[0]],
-    companyTypes: [companyTypeOptions[0]],
-    industries: [industryOptions[0]],
-    regions: [regionOptions[0]],
+    desiredRoles: [],
+    companyTypes: [],
+    industries: [],
+    regions: [],
     skills: [],
-    ssafy: true
+    ssafy: false
 });
-const skillInput = ref('');
 
 onMounted(async () => {
     await profileStore.loadProfile();
     if (profileStore.profile) {
         const profile = profileStore.profile;
-        form.desiredRoles = selectedOrDefault(profile.desiredRoles, roleOptions);
-        form.companyTypes = selectedOrDefault(profile.companyTypes, companyTypeOptions);
-        form.industries = selectedOrDefault(profile.industries, industryOptions);
-        form.regions = selectedOrDefault(profile.regions, regionOptions);
+        form.desiredRoles = copyList(profile.desiredRoles);
+        form.companyTypes = copyList(profile.companyTypes);
+        form.industries = copyList(profile.industries);
+        form.regions = copyList(profile.regions);
         form.skills = [...(profile.skills ?? [])];
         form.ssafy = profile.ssafy ?? false;
+        return;
+    }
+    if (profileStore.status === 'error') {
+        profileLoadNotice.value = '저장된 온보딩 정보를 불러오지 못해 새 정보로 시작합니다. 저장하면 최신 정보로 다시 반영됩니다.';
     }
 });
 
-function selectedOrDefault(values, options) {
-    return Array.isArray(values) && values.length > 0 ? [...values] : [options[0]];
-}
-
-function toggleListValue(values, value) {
-    const index = values.indexOf(value);
-    if (index >= 0) {
-        values.splice(index, 1);
-        return;
-    }
-    values.push(value);
-}
-
-function addSkill() {
-    const nextSkill = skillInput.value.trim();
-    if (nextSkill && !form.skills.includes(nextSkill)) {
-        form.skills.push(nextSkill);
-    }
-    skillInput.value = '';
-}
-
-function removeSkill(skill) {
-    const index = form.skills.indexOf(skill);
-    if (index >= 0) {
-        form.skills.splice(index, 1);
-    }
+function copyList(values) {
+    return Array.isArray(values) ? [...values] : [];
 }
 
 async function seedDummyJobs() {
