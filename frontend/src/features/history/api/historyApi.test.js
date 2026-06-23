@@ -51,4 +51,46 @@ describe('historyApi', () => {
             companyDataSource: 'RULE'
         });
     });
+
+    it('HISTORY-015: persists edited history labels through the history endpoint', async () => {
+        const patch = vi.fn().mockResolvedValue({
+            data: {
+                success: true,
+                data: {
+                    id: 1,
+                    workspaceId: 102,
+                    companyName: 'Dalpha',
+                    positionTitle: 'AI Engineer',
+                    applicationStatus: 'IN_PROGRESS',
+                    resultStage: 'INTERVIEW_FAILED',
+                    resultLabel: 'Interview failed',
+                    rawResult: 'Interview failed',
+                    deadlineLabel: '2025.03.23',
+                    sourceUrl: 'https://example.com',
+                    companyLogoUrl: 'https://logo.example.com/dalpha.png',
+                    companyType: 'Startup',
+                    companyIndustry: 'AI',
+                    companyDataSource: 'RULE'
+                }
+            }
+        });
+        const api = createHistoryApi({ patch });
+
+        const row = await api.updateApplicationLabels('1', {
+            applicationStatus: 'IN_PROGRESS',
+            resultStage: 'INTERVIEW_FAILED'
+        });
+
+        expect(patch).toHaveBeenCalledWith('/api/history/applications/1/labels', {
+            applicationStatus: 'IN_PROGRESS',
+            resultStage: 'INTERVIEW_FAILED'
+        });
+        expect(row).toMatchObject({
+            id: '1',
+            workspaceId: '102',
+            applicationStatus: 'IN_PROGRESS',
+            resultStage: 'INTERVIEW_FAILED',
+            resultLabel: 'Interview failed'
+        });
+    });
 });

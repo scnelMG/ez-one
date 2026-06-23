@@ -4,8 +4,11 @@ import com.ezone.backend.domain.ApplicationStatus;
 import com.ezone.backend.domain.HistoryResultStage;
 import com.ezone.backend.domain.persistence.HistoryApplicationRow;
 import com.ezone.backend.dto.history.HistoryApplicationResponse;
+import com.ezone.backend.dto.history.HistoryApplicationResponse.HistoryApplicationRowResponse;
+import com.ezone.backend.dto.history.UpdateHistoryApplicationLabelsRequest;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
@@ -31,6 +34,28 @@ public class InMemoryHistoryService implements HistoryService {
         return HistoryApplicationAssembler.toResponse(rows.stream()
             .filter(row -> row.getUserId().equals(userId))
             .toList(), period, resultStage);
+    }
+
+    @Override
+    public HistoryApplicationRowResponse updateApplicationLabels(
+        Long userId,
+        Long historyApplicationId,
+        UpdateHistoryApplicationLabelsRequest request
+    ) {
+        if (request == null || request.applicationStatus() == null || request.resultStage() == null) {
+            throw new IllegalArgumentException("History labels are required");
+        }
+        HistoryApplicationRow row = rows.stream()
+            .filter(candidate -> Objects.equals(candidate.getUserId(), userId))
+            .filter(candidate -> Objects.equals(candidate.getId(), historyApplicationId))
+            .findFirst()
+            .orElseThrow(() -> new IllegalArgumentException("History application not found"));
+        String resultLabel = resultLabel(request.resultStage());
+        row.setApplicationStatus(request.applicationStatus());
+        row.setResultStage(request.resultStage());
+        row.setResultLabel(resultLabel);
+        row.setRawResult(resultLabel);
+        return HistoryApplicationAssembler.rowResponse(row);
     }
 
     public void recordArchivedBasketJob(
@@ -115,6 +140,16 @@ public class InMemoryHistoryService implements HistoryService {
             return ApplicationStatus.NOT_APPLIED;
         }
         return ApplicationStatus.COMPLETED;
+    }
+
+    private static String resultLabel(HistoryResultStage resultStage) {
+        return switch (resultStage) {
+            case DOCUMENT_FAILED -> "서류 탈락";
+            case TEST_FAILED -> "인적성/과제 탈락";
+            case INTERVIEW_FAILED -> "면접 탈락";
+            case NOT_APPLIED -> "미지원";
+            case IN_PROGRESS -> "진행 중";
+        };
     }
 
     private static String resultLabel(ApplicationStatus status) {

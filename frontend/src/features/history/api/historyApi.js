@@ -10,6 +10,13 @@ export function createHistoryApi(httpClient = defaultHttpClient) {
                 }
             });
             return toHistory(unwrapApiData(response.data));
+        },
+        async updateApplicationLabels(historyApplicationId, { applicationStatus, resultStage }) {
+            const response = await httpClient.patch(`/api/history/applications/${historyApplicationId}/labels`, {
+                applicationStatus,
+                resultStage
+            });
+            return toHistoryRow(unwrapApiData(response.data));
         }
     };
 }
