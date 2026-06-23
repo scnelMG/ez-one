@@ -25,7 +25,7 @@ flowchart LR
 | 기능 | 입력 | 처리 | 출력 | 실패 처리 |
 | --- | --- | --- | --- | --- |
 | Google 로그인 | OAuth 인증 결과 | 사용자 조회/생성 후 JWT 발급 | access token, refresh token | OAuth 만료/거부 시 공통 오류 |
-| 온보딩 저장 | 희망 직무, 기업 유형, 산업, 지역, 기술스택, SSAFY 여부 | 사용자 프로필 저장 | 저장된 프로필 | 형식 오류 반환 |
+| 온보딩 저장 | 관심 직무군, 세부 포지션, 기업 유형, 산업, 지역, 기술/키워드, SSAFY 여부 | 사용자 프로필 저장 | 저장된 프로필 | 형식 오류 반환 |
 | 온보딩 건너뛰기 | 없음 | 빈 editable profile 상태 유지 | 기본 프로필 | 없음 |
 
 ## 대시보드 / 장바구니 / 추천
@@ -87,7 +87,7 @@ flowchart LR
 | 기능 | 상태 | 기준 |
 | --- | --- | --- |
 | 장바구니 캘린더/주간 일정 | P2 | P1 장바구니 목록/정렬 이후 마감 일정 표시로 검토 |
-| 고객지원 | P1 부분 제공/P2 확장 | FAQ, 1:1 문의, 이용약관은 마이페이지 하위 독립 페이지로 제공한다. |
+| 고객지원 | P1 부분 제공/P2 확장 | FAQ와 이용약관은 마이페이지 하위 독립 페이지로 제공한다. |
 | Mattermost 채용공고 수집 | SSAFY 전용 활성 | webhook 원문 raw 저장, 채용공고 후보 파싱, SSAFY 사용자에게만 추천 노출 |
 ## 2026-06-16 Past Application History
 
@@ -104,6 +104,7 @@ flowchart LR
 - Clicking a row opens `/workspaces/{workspaceId}`. The row also exposes separate `열기` and `원본 공고` links so workspace navigation and external posting navigation are distinct.
 - The basket page exposes a `과거 지원 내역` entry point to `/history`.
 - Changing a normal basket job away from `READY` snapshots it into `application_history`. Deleting a basket job only removes it from the active list and does not create history by itself.
+- Editing a past application row's status/result labels persists through the history API and updates `application_history`; active-basket computed rows are snapshotted before saving.
 - AI commentary and anonymous percentile comparison are excluded from this implementation.
 
 ## 2026-06-19 DART GMS AI Analysis
