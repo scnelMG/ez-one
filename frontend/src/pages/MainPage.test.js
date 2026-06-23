@@ -250,6 +250,35 @@ describe('MainPage', () => {
     expect(wrapper.findAll('.honey-pot-week').length).toBeLessThanOrEqual(27);
   });
 
+  it('shows honey score reason logs after clicking a honey day', async () => {
+    vi.mocked(dashboardApi.getActivityLogs).mockResolvedValueOnce([
+      {
+        time: '09:10',
+        type: 'BASKET_ADD',
+        description: 'KB국민은행 공고 장바구니에 담기'
+      },
+      {
+        time: '10:20',
+        type: 'STATUS_CHANGE',
+        description: 'KB국민은행 지원 상태 변경'
+      }
+    ]);
+
+    const wrapper = await mountMain();
+    const scoredDayButton = wrapper
+      .findAll('[data-testid="honey-day-button"]')
+      .find((button) => button.classes().includes('level-4') && !button.classes().includes('future'));
+
+    expect(scoredDayButton).toBeTruthy();
+    await scoredDayButton.trigger('click');
+    await flushPromises();
+
+    expect(dashboardApi.getActivityLogs).toHaveBeenCalledWith('2026-06-20');
+    expect(wrapper.get('[data-testid="honey-score-log"]').text()).toContain('4방울을 받은 이유');
+    expect(wrapper.text()).toContain('KB국민은행 공고 장바구니에 담기');
+    expect(wrapper.text()).toContain('KB국민은행 지원 상태 변경');
+  });
+
   it('JOB-010: updates status from the main application list', async () => {
     const wrapper = await mountMain();
 

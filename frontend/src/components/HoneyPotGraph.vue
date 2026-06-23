@@ -38,14 +38,18 @@
               </div>
               <div class="honey-pot-grid" role="grid" aria-label="꿀 수집 현황">
                 <div v-for="(week, weekIndex) in weeks" :key="weekIndex" class="honey-pot-week">
-                  <div
+                  <button
                     v-for="day in week"
                     :key="day.dateStr"
+                    type="button"
                     class="honey-pot-cell"
+                    data-testid="honey-day-button"
                     :class="['level-' + day.level, { future: day.isFuture, selected: day.dateStr === selectedDate }]"
                     :title="day.isFuture ? '' : `${formatDate(day.dateStr)}: ${day.score}방울`"
+                    :aria-label="day.isFuture ? `${formatDate(day.dateStr)} 예정일` : `${formatDate(day.dateStr)} ${day.score}방울 로그 보기`"
+                    :disabled="day.isFuture"
                     @click="selectDay(day)"
-                  ></div>
+                  ></button>
                 </div>
               </div>
             </div>
@@ -123,7 +127,10 @@
             <line x1="8" y1="2" x2="8" y2="6"></line>
             <line x1="3" y1="10" x2="21" y2="10"></line>
           </svg>
-          <h4>{{ formatDate(selectedDate) }} 활동 내역</h4>
+          <div class="details-title-copy" data-testid="honey-score-log">
+            <h4>{{ formatDate(selectedDate) }} 점수 로그</h4>
+            <p>{{ selectedDayScore }}방울을 받은 이유를 확인해요.</p>
+          </div>
         </div>
         <button class="close-details" type="button" aria-label="활동 내역 닫기" @click="selectedDate = null">
           ×
@@ -277,6 +284,11 @@ const activityMap = computed(() => {
     map[act.date] = Number(act.score || 0);
   }
   return map;
+});
+
+const selectedDayScore = computed(() => {
+  if (!selectedDate.value) return 0;
+  return activityMap.value[selectedDate.value] || 0;
 });
 
 const recentActivityMap = computed(() => {
@@ -503,6 +515,8 @@ function getMonthName(m) {
 
 .honey-pot-legend .honey-pot-cell {
   margin: 0 1px;
+  cursor: default;
+  pointer-events: none;
 }
 
 .honey-pot-grid-scroll {
@@ -556,10 +570,11 @@ function getMonthName(m) {
 .honey-pot-grid {
   display: flex;
   gap: 4px;
-  cursor: pointer;
+  cursor: default;
 }
 
-.honey-pot-grid:hover .honey-pot-cell:not(.future) {
+.honey-pot-grid:hover .honey-pot-cell:not(.future),
+.honey-pot-cell:not(.future):hover {
   opacity: 0.82;
 }
 
@@ -572,8 +587,25 @@ function getMonthName(m) {
 .honey-pot-cell {
   width: 12px;
   height: 12px;
+  border: 0;
   border-radius: 3px;
+  appearance: none;
   background-color: #ebedf0;
+  padding: 0;
+  cursor: pointer;
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease,
+    outline-color 0.16s ease;
+}
+
+.honey-pot-cell:not(.future):hover {
+  transform: translateY(-1px);
+}
+
+.honey-pot-cell:focus-visible {
+  outline: 2px solid #5a35f0;
+  outline-offset: 2px;
 }
 
 .honey-pot-cell.level-0 {
@@ -599,6 +631,11 @@ function getMonthName(m) {
 .honey-pot-cell.future {
   border: 1px solid #f1f5f9;
   background-color: transparent;
+  cursor: default;
+}
+
+.honey-pot-cell:disabled {
+  pointer-events: none;
 }
 
 .honey-pot-cell.selected {
@@ -619,7 +656,7 @@ function getMonthName(m) {
   z-index: 1;
   display: grid;
   gap: 10px;
-  padding-right: 66px;
+  padding-right: 84px;
 }
 
 .honey-status-panel h3,
@@ -661,10 +698,13 @@ function getMonthName(m) {
 
 .honey-status-character {
   position: absolute;
-  right: 6px;
-  bottom: -4px;
+  right: 8px;
+  bottom: 2px;
+  z-index: 2;
   width: 74px;
   height: 74px;
+  border-radius: 18px;
+  background: #ffffff;
   object-fit: contain;
   filter: none;
   pointer-events: none;
@@ -744,10 +784,22 @@ function getMonthName(m) {
   color: #111827;
 }
 
+.details-title-copy {
+  display: grid;
+  gap: 2px;
+}
+
 .details-title h4 {
   margin: 0;
   font-size: 0.95rem;
   font-weight: 800;
+}
+
+.details-title-copy p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 650;
 }
 
 .calendar-icon {
@@ -909,12 +961,13 @@ function getMonthName(m) {
   }
 
   .honey-status-copy {
-    padding-right: 58px;
+    padding-right: 74px;
   }
 
   .honey-status-character {
     width: 64px;
     height: 64px;
+    border-radius: 16px;
   }
 
   .honey-guide-list {
