@@ -55,16 +55,79 @@
             </div>
           </div>
           </div>
-          <div class="honey-log-character-slot" aria-hidden="true">
-            <img
-              class="honey-log-character"
-              data-testid="honey-log-character"
-              :src="logCharacterImage"
-              alt=""
-              width="512"
-              height="512"
-            />
-          </div>
+          <aside class="honey-log-side-panel" data-testid="honey-log-side-panel" aria-label="선택 날짜 점수 로그">
+            <div v-if="!selectedDate" class="log-panel-empty">
+              <strong>점수 로그</strong>
+              <p>날짜 칸을 누르면 왜 방울을 받았는지 여기에 표시돼요.</p>
+            </div>
+            <template v-else>
+              <div class="details-header compact">
+                <div class="details-title">
+                  <svg
+                    class="calendar-icon"
+                    viewBox="0 0 24 24"
+                    width="18"
+                    height="18"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    fill="none"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                  <div class="details-title-copy" data-testid="honey-score-log">
+                    <h4>{{ formatDate(selectedDate) }} 점수 로그</h4>
+                    <p>{{ selectedDayScore }}방울을 받은 이유를 확인해요.</p>
+                  </div>
+                </div>
+                <button class="close-details" type="button" aria-label="활동 내역 닫기" @click="selectedDate = null">
+                  ×
+                </button>
+              </div>
+
+              <div v-if="isLoadingLogs" class="loading-logs compact">
+                <div class="spinner"></div>
+                기록을 불러오는 중...
+              </div>
+              <div v-else-if="displayedDateLogs.length > 0" class="timeline-container compact">
+                <div v-for="(log, idx) in displayedDateLogs" :key="idx" class="timeline-item">
+                  <div class="timeline-marker">
+                    <div class="timeline-icon">
+                      <svg
+                        viewBox="0 0 24 24"
+                        width="14"
+                        height="14"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        fill="none"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                      </svg>
+                    </div>
+                    <div v-if="idx !== displayedDateLogs.length - 1" class="timeline-line"></div>
+                  </div>
+                  <div class="timeline-content">
+                    <span class="timeline-time">{{ log.time }}</span>
+                    <div class="timeline-card">
+                      <span class="timeline-desc">{{ log.description }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="empty-logs compact">
+                <p>이 날짜에는 기록된 활동이 없어요.</p>
+              </div>
+            </template>
+          </aside>
         </div>
       </section>
 
@@ -107,111 +170,11 @@
         </article>
       </div>
     </section>
-
-    <section v-if="selectedDate" class="honey-pot-details" aria-label="선택한 날짜 활동 내역">
-      <div class="details-header">
-        <div class="details-title">
-          <svg
-            class="calendar-icon"
-            viewBox="0 0 24 24"
-            width="18"
-            height="18"
-            stroke="currentColor"
-            stroke-width="2"
-            fill="none"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-            <line x1="16" y1="2" x2="16" y2="6"></line>
-            <line x1="8" y1="2" x2="8" y2="6"></line>
-            <line x1="3" y1="10" x2="21" y2="10"></line>
-          </svg>
-          <div class="details-title-copy" data-testid="honey-score-log">
-            <h4>{{ formatDate(selectedDate) }} 점수 로그</h4>
-            <p>{{ selectedDayScore }}방울을 받은 이유를 확인해요.</p>
-          </div>
-        </div>
-        <button class="close-details" type="button" aria-label="활동 내역 닫기" @click="selectedDate = null">
-          ×
-        </button>
-      </div>
-
-      <div v-if="isLoadingLogs" class="loading-logs">
-        <div class="spinner"></div>
-        기록을 불러오는 중...
-      </div>
-      <div v-else-if="selectedDateLogs.length > 0" class="timeline-container">
-        <div v-for="(log, idx) in selectedDateLogs" :key="idx" class="timeline-item">
-          <div class="timeline-marker">
-            <div class="timeline-icon">
-              <svg
-                v-if="log.type === 'COMMIT'"
-                viewBox="0 0 24 24"
-                width="14"
-                height="14"
-                stroke="currentColor"
-                stroke-width="2.5"
-                fill="none"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <circle cx="12" cy="12" r="3"></circle>
-                <line x1="3" y1="12" x2="9" y2="12"></line>
-                <line x1="15" y1="12" x2="21" y2="12"></line>
-              </svg>
-              <svg
-                v-else
-                viewBox="0 0 24 24"
-                width="14"
-                height="14"
-                stroke="currentColor"
-                stroke-width="2"
-                fill="none"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                <polyline points="14 2 14 8 20 8"></polyline>
-                <line x1="16" y1="13" x2="8" y2="13"></line>
-                <line x1="16" y1="17" x2="8" y2="17"></line>
-                <polyline points="10 9 9 9 8 9"></polyline>
-              </svg>
-            </div>
-            <div v-if="idx !== selectedDateLogs.length - 1" class="timeline-line"></div>
-          </div>
-          <div class="timeline-content">
-            <span class="timeline-time">{{ log.time }}</span>
-            <div class="timeline-card">
-              <span class="timeline-desc">{{ log.description }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div v-else class="empty-logs">
-        <svg
-          viewBox="0 0 24 24"
-          width="24"
-          height="24"
-          stroke="currentColor"
-          stroke-width="1.5"
-          fill="none"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <circle cx="12" cy="12" r="10"></circle>
-          <line x1="12" y1="8" x2="12" y2="12"></line>
-          <line x1="12" y1="16" x2="12.01" y2="16"></line>
-        </svg>
-        <p>기록된 활동이 없습니다.</p>
-      </div>
-    </section>
   </div>
 </template>
 
 <script setup>
 import { computed, ref } from 'vue';
-import logCharacterImage from '@/assets/bee-face-cutout.png';
 import honeyCharacterImage from '@/assets/bee-honey-jar-cutout.png';
 import { useDashboardStore } from '@/stores/dashboardStore';
 
@@ -289,6 +252,22 @@ const activityMap = computed(() => {
 const selectedDayScore = computed(() => {
   if (!selectedDate.value) return 0;
   return activityMap.value[selectedDate.value] || 0;
+});
+
+const displayedDateLogs = computed(() => {
+  if (selectedDateLogs.value.length > 0) {
+    return selectedDateLogs.value;
+  }
+  if (!selectedDate.value || selectedDayScore.value <= 0 || isLoadingLogs.value) {
+    return [];
+  }
+  return [
+    {
+      time: '점수 요약',
+      type: 'SUMMARY',
+      description: `${selectedDayScore.value}방울이 기록된 날이에요. 상세 로그가 아직 비어 있어요. 공고 스크랩, 자소서 작성, 참고자료 추가, 지원 상태 업데이트 활동으로 쌓인 점수입니다.`
+    }
+  ];
 });
 
 const recentActivityMap = computed(() => {
@@ -438,8 +417,7 @@ function getMonthName(m) {
 
 .honey-log-card,
 .honey-status-panel,
-.honey-guide-section,
-.honey-pot-details {
+.honey-guide-section {
   border: 1px solid #edf0f6;
   border-radius: 14px;
   background: #ffffff;
@@ -462,21 +440,40 @@ function getMonthName(m) {
   min-height: 126px;
 }
 
-.honey-log-character-slot {
-  display: grid;
-  place-items: center;
-  min-width: 0;
-  height: 100%;
+.honey-log-side-panel {
+  display: flex;
+  min-width: 240px;
+  max-width: 360px;
+  min-height: 142px;
+  max-height: 190px;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #eef2f7;
   border-radius: 14px;
-  background: transparent;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+  padding: 12px;
 }
 
-.honey-log-character {
-  display: block;
-  width: min(34vw, 116px);
-  max-height: 106px;
-  object-fit: contain;
-  filter: none;
+.log-panel-empty {
+  display: grid;
+  height: 100%;
+  align-content: center;
+  gap: 7px;
+  color: #64748b;
+}
+
+.log-panel-empty strong {
+  color: #111827;
+  font-size: 0.9rem;
+  font-weight: 850;
+}
+
+.log-panel-empty p {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 650;
+  line-height: 1.45;
+  word-break: keep-all;
 }
 
 .honey-pot-header {
@@ -763,10 +760,6 @@ function getMonthName(m) {
   word-break: keep-all;
 }
 
-.honey-pot-details {
-  padding: 16px;
-}
-
 .details-header {
   display: flex;
   align-items: center;
@@ -775,6 +768,12 @@ function getMonthName(m) {
   margin-bottom: 16px;
   border-bottom: 1px solid #edf0f6;
   padding-bottom: 10px;
+}
+
+.details-header.compact {
+  gap: 8px;
+  margin-bottom: 9px;
+  padding-bottom: 8px;
 }
 
 .details-title {
@@ -795,11 +794,19 @@ function getMonthName(m) {
   font-weight: 800;
 }
 
+.details-header.compact .details-title h4 {
+  font-size: 0.82rem;
+}
+
 .details-title-copy p {
   margin: 0;
   color: #64748b;
   font-size: 0.78rem;
   font-weight: 650;
+}
+
+.details-header.compact .details-title-copy p {
+  font-size: 0.7rem;
 }
 
 .calendar-icon {
@@ -831,10 +838,21 @@ function getMonthName(m) {
   padding-left: 8px;
 }
 
+.timeline-container.compact {
+  max-height: 118px;
+  overflow-y: auto;
+  padding-left: 3px;
+  padding-right: 2px;
+}
+
 .timeline-item {
   position: relative;
   display: flex;
   gap: 14px;
+}
+
+.timeline-container.compact .timeline-item {
+  gap: 9px;
 }
 
 .timeline-marker {
@@ -860,6 +878,11 @@ function getMonthName(m) {
   color: #16a34a;
 }
 
+.timeline-container.compact .timeline-icon {
+  width: 22px;
+  height: 22px;
+}
+
 .timeline-line {
   flex-grow: 1;
   width: 2px;
@@ -874,6 +897,10 @@ function getMonthName(m) {
   flex-direction: column;
   flex-grow: 1;
   padding-bottom: 20px;
+}
+
+.timeline-container.compact .timeline-content {
+  padding-bottom: 12px;
 }
 
 .timeline-item:last-child .timeline-content {
@@ -898,6 +925,11 @@ function getMonthName(m) {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+.timeline-container.compact .timeline-card {
+  border-radius: 10px;
+  padding: 8px 9px;
+}
+
 .timeline-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
@@ -909,6 +941,11 @@ function getMonthName(m) {
   font-weight: 650;
 }
 
+.timeline-container.compact .timeline-desc {
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
 .empty-logs,
 .loading-logs {
   display: flex;
@@ -918,6 +955,13 @@ function getMonthName(m) {
   gap: 12px;
   padding: 28px 0;
   color: #94a3b8;
+}
+
+.empty-logs.compact,
+.loading-logs.compact {
+  min-height: 88px;
+  padding: 10px 0;
+  text-align: center;
 }
 
 .empty-logs p {

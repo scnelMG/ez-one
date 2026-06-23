@@ -243,14 +243,14 @@ describe('MainPage', () => {
     expect(honeyPanel.text()).toContain('지원 상태 업데이트');
     expect(honeyPanel.text()).not.toContain('점수 기준표 보기');
     expect(wrapper.find('[data-testid="honey-character-strip"]').exists()).toBe(false);
-    const logCharacter = wrapper.get('[data-testid="honey-log-character"]');
-    expect(logCharacter.attributes('src')).toContain('bee-face-cutout');
+    expect(wrapper.find('[data-testid="honey-log-character"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="honey-log-side-panel"]').text()).toContain('날짜 칸을 누르면');
     const honeyCharacter = wrapper.get('[data-testid="honey-status-character"]');
     expect(honeyCharacter.attributes('src')).toContain('bee-honey-jar-cutout');
     expect(wrapper.findAll('.honey-pot-week').length).toBeLessThanOrEqual(27);
   });
 
-  it('shows honey score reason logs after clicking a honey day', async () => {
+  it('shows honey score reason logs in the graph-side panel after clicking a honey day', async () => {
     vi.mocked(dashboardApi.getActivityLogs).mockResolvedValueOnce([
       {
         time: '09:10',
@@ -274,9 +274,29 @@ describe('MainPage', () => {
     await flushPromises();
 
     expect(dashboardApi.getActivityLogs).toHaveBeenCalledWith('2026-06-20');
-    expect(wrapper.get('[data-testid="honey-score-log"]').text()).toContain('4방울을 받은 이유');
-    expect(wrapper.text()).toContain('KB국민은행 공고 장바구니에 담기');
-    expect(wrapper.text()).toContain('KB국민은행 지원 상태 변경');
+    const sidePanel = wrapper.get('[data-testid="honey-log-side-panel"]');
+    expect(sidePanel.get('[data-testid="honey-score-log"]').text()).toContain('4방울을 받은 이유');
+    expect(sidePanel.text()).toContain('KB국민은행 공고 장바구니에 담기');
+    expect(sidePanel.text()).toContain('KB국민은행 지원 상태 변경');
+    expect(wrapper.find('.honey-pot-details').exists()).toBe(false);
+  });
+
+  it('shows a score summary in the graph-side panel when a scored day has no logs', async () => {
+    vi.mocked(dashboardApi.getActivityLogs).mockResolvedValueOnce([]);
+
+    const wrapper = await mountMain();
+    const scoredDayButton = wrapper
+      .findAll('[data-testid="honey-day-button"]')
+      .find((button) => button.classes().includes('level-4') && !button.classes().includes('future'));
+
+    expect(scoredDayButton).toBeTruthy();
+    await scoredDayButton.trigger('click');
+    await flushPromises();
+
+    const sidePanel = wrapper.get('[data-testid="honey-log-side-panel"]');
+    expect(sidePanel.text()).toContain('4방울을 받은 이유');
+    expect(sidePanel.text()).toContain('점수 요약');
+    expect(sidePanel.text()).toContain('상세 로그가 아직 비어 있어요');
   });
 
   it('JOB-010: updates status from the main application list', async () => {

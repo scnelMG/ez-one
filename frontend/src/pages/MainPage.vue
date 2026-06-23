@@ -565,10 +565,7 @@ async function archiveJob(id) {
   gap: clamp(14px, 2.2vw, 28px);
   min-height: 196px;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 77% 52%, rgba(103, 76, 255, 0.16), transparent 9rem),
-    radial-gradient(circle at 82% 26%, rgba(109, 77, 255, 0.11), transparent 13rem),
-    linear-gradient(135deg, #fbf8ff 0%, #f6f1ff 100%);
+  background: linear-gradient(135deg, #fbf8ff 0%, #f8f5ff 100%);
   padding: clamp(16px, 2.2vw, 22px) clamp(18px, 2.8vw, 28px);
 }
 
@@ -810,9 +807,7 @@ async function archiveJob(id) {
   width: min(100%, 142px);
   max-height: 138px;
   object-fit: contain;
-  filter:
-    drop-shadow(0 18px 18px rgba(75, 45, 120, 0.15))
-    drop-shadow(0 0 24px rgba(105, 80, 255, 0.14));
+  filter: drop-shadow(0 14px 16px rgba(15, 23, 42, 0.08));
 }
 
 .hero-face-character {
