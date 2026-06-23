@@ -434,7 +434,7 @@
             <button class="icon-button" @click="closeLeaveModal">×</button>
           </header>
           <div class="modal-body">
-            <p v-if="amILeader && otherMembers.length > 0">
+            <p v-if="requiresLeaveDelegation">
               스터디장 권한을 위임할 팀원을 선택해야 탈퇴할 수 있습니다.
             </p>
             <p v-else>
@@ -443,7 +443,7 @@
                 마지막 남은 스터디장이므로, 탈퇴 시 스터디가 완전히 삭제됩니다.
               </span>
             </p>
-            <div class="form-group" v-if="amILeader && otherMembers.length > 0">
+            <div class="form-group" v-if="requiresLeaveDelegation">
               <label>권한 위임 대상</label>
               <select v-model="delegateEmail">
                 <option value="">-- 위임할 팀원 선택 --</option>
@@ -455,7 +455,7 @@
           </div>
           <footer class="modal-footer">
             <button class="ghost-button" @click="closeLeaveModal">취소</button>
-            <button class="danger-button" @click="confirmLeave" :disabled="isLeaving || (amILeader && otherMembers.length > 0 && !delegateEmail)">
+            <button class="danger-button" @click="confirmLeave" :disabled="isLeaving || (requiresLeaveDelegation && !delegateEmail)">
               {{ isLeaving ? '처리 중...' : '탈퇴하기' }}
             </button>
           </footer>
@@ -597,6 +597,7 @@ const amIMember = computed(() => !!myMemberInfo.value);
 const otherMembers = computed(() => {
   return studyStore.currentStudy?.members?.filter(m => m.userEmail !== myEmail.value) || [];
 });
+const requiresLeaveDelegation = computed(() => amILeader.value && otherMembers.value.length > 0);
 
 const toggleSettings = () => {
   isSettingsOpen.value = !isSettingsOpen.value;
@@ -885,6 +886,10 @@ const closeLeaveModal = () => {
   isLeaveModalOpen.value = false;
 };
 const confirmLeave = async () => {
+  if (requiresLeaveDelegation.value && !delegateEmail.value) {
+    alert('스터디장 권한을 위임할 팀원을 선택해 주세요.');
+    return;
+  }
   isLeaving.value = true;
   try {
     await studyStore.leaveStudy(studyId, delegateEmail.value);
@@ -925,9 +930,12 @@ const confirmDelete = async () => {
   padding: 40px;
   max-width: 1200px;
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 .study-top-link {
-  margin-bottom: 18px;
+  margin-bottom: 0;
 }
 .study-top-link a {
   color: var(--text-secondary);
@@ -938,12 +946,18 @@ const confirmDelete = async () => {
   color: var(--color-primary);
 }
 .study-header {
-  margin-bottom: 18px;
-  padding: 0;
+  margin-bottom: 0;
+  padding: 24px;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 24px;
+  position: relative;
+  z-index: 1;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.04);
 }
 .study-title-group {
   display: flex;
@@ -975,8 +989,11 @@ const confirmDelete = async () => {
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid var(--line);
-  margin-bottom: 22px;
+  margin-bottom: 0;
   background: #f8fafc;
+  position: relative;
+  z-index: 0;
+  flex: 0 0 auto;
 }
 .study-cover img {
   width: 100%;
@@ -1620,8 +1637,8 @@ const confirmDelete = async () => {
   color: white;
 }
 .member-grid {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 14px;
 }
 .member-card-new {
@@ -1631,6 +1648,7 @@ const confirmDelete = async () => {
   padding: 18px;
   display: grid;
   grid-template-columns: 1fr;
+  width: 100%;
   align-items: start;
   gap: 16px;
   transition: transform 0.2s, box-shadow 0.2s;
@@ -1755,6 +1773,7 @@ const confirmDelete = async () => {
   }
   .study-header {
     flex-direction: column;
+    padding: 20px;
   }
   .study-title-group {
     align-items: flex-start;

@@ -97,6 +97,54 @@ class StudyServiceAuthorizationTest {
         verify(studyMapper, never()).insertEssayFeedback(any());
     }
 
+    @Test
+    void leaderCanDeleteStudyWithCascadeCleanup() {
+        StudyService service = service();
+        when(studyMapper.findStudyGroupById("study-1")).thenReturn(study("study-1"));
+        when(studyMapper.findMembersByStudyId("study-1")).thenReturn(List.of(member("owner@example.com", "LEADER")));
+
+        service.deleteStudy("study-1", "owner@example.com");
+
+        verify(studyMapper).deleteStudyEssayReadLogsByStudyId("study-1");
+        verify(studyMapper).deleteEssayFeedbacksByStudyId("study-1");
+        verify(studyMapper).deleteSharedEssaysByStudyId("study-1");
+        verify(studyMapper).deleteSharedJobsByStudyId("study-1");
+        verify(studyMapper).deleteStudyInvitesByStudyId("study-1");
+        verify(studyMapper).deleteStudyMembersByStudyId("study-1");
+        verify(studyMapper).deleteStudyGroup("study-1");
+    }
+
+    @Test
+    void leaderCanLeaveAfterDelegatingToAnotherMember() {
+        StudyService service = service();
+        when(studyMapper.findStudyGroupById("study-1")).thenReturn(study("study-1"));
+        when(studyMapper.findMembersByStudyId("study-1")).thenReturn(List.of(
+            member("owner@example.com", "LEADER"),
+            member("member@example.com", "MEMBER")
+        ));
+
+        service.leaveStudy("study-1", "owner@example.com", "member@example.com");
+
+        verify(studyMapper).updateStudyMemberRole("study-1", "member@example.com", "LEADER");
+        verify(studyMapper).deleteStudyMember("study-1", "owner@example.com");
+    }
+
+    @Test
+    void rejectsLeaderLeaveDelegatingToSelf() {
+        StudyService service = service();
+        when(studyMapper.findStudyGroupById("study-1")).thenReturn(study("study-1"));
+        when(studyMapper.findMembersByStudyId("study-1")).thenReturn(List.of(
+            member("owner@example.com", "LEADER"),
+            member("member@example.com", "MEMBER")
+        ));
+
+        assertThatThrownBy(() -> service.leaveStudy("study-1", "owner@example.com", "owner@example.com"))
+            .isInstanceOf(IllegalArgumentException.class);
+
+        verify(studyMapper, never()).updateStudyMemberRole(any(), any(), any());
+        verify(studyMapper, never()).deleteStudyMember(any(), any());
+    }
+
     private StudyService service() {
         return new StudyService(studyMapper, userAccountMapper, emailService, p1WorkspaceService);
     }

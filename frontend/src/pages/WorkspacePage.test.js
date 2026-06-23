@@ -63,9 +63,11 @@ const makeRouter = () => createRouter({
 describe('WorkspacePage', () => {
     afterEach(() => {
         vi.useRealTimers();
+        vi.unstubAllGlobals();
     });
 
     beforeEach(() => {
+        vi.stubGlobal('alert', vi.fn());
         localStorage.clear();
         Object.values(mocks).forEach((mock) => mock.mockReset());
         mocks.getWorkspace.mockResolvedValue({
@@ -363,11 +365,17 @@ describe('WorkspacePage', () => {
         expect(wrapper.get('[data-testid="workspace-push-layout"]').classes()).toContain('drawer-open');
         await wrapper.get('[data-testid="panel-trigger-JD"]').trigger('click');
         expect(router.currentRoute.value.fullPath).toBe('/workspaces/102');
-        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('JD 게시판');
-        expect(wrapper.get('[data-testid="workspace-main-pane"]').attributes('style')).toContain('--drawer-width');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).not.toContain('JD 게시판');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('제목');
 
-        await wrapper.get('[data-testid="workspace-panel-divider"]').trigger('keydown', { key: 'ArrowLeft' });
-        expect(wrapper.get('[data-testid="workspace-main-pane"]').attributes('style')).toContain('464px');
+        await wrapper.get('.minimize-btn').trigger('click');
+        await flushPromises();
+        expect(wrapper.get('[data-testid="workspace-push-layout"]').classes()).not.toContain('drawer-open');
+        expect(document.querySelector('.bee-minimize-button')).not.toBeNull();
+
+        document.querySelector('.bee-minimize-button')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await flushPromises();
+        expect(wrapper.get('[data-testid="workspace-push-layout"]').classes()).toContain('drawer-open');
 
         await wrapper.get('[data-testid="board-full-view"]').trigger('click');
         await flushPromises();
@@ -379,16 +387,19 @@ describe('WorkspacePage', () => {
     it('REF-001: side panel supports the requested board types without page navigation', async () => {
         const wrapper = await mountWorkspace();
 
-        for (const [type, title] of [
-            ['NEWS', '뉴스기사 게시판'],
-            ['DART', 'DART 게시판'],
-            ['TALENT_PROFILE', '인재상 게시판'],
-            ['AWARDS_PROJECTS', '수상/프로젝트'],
-            ['PROMPT', '프롬프트 게시판'],
-            ['FREE_MEMO', '메모 게시판']
+        for (const [type, expectedText, removedTitle] of [
+            ['NEWS', '기사 제목', '뉴스기사 게시판'],
+            ['DART', '확인 경로', 'DART 게시판'],
+            ['TALENT_PROFILE', '핵심 가치 / 키워드', '인재상 게시판'],
+            ['AWARDS_PROJECTS', '프로젝트', null],
+            ['PROMPT', '+ 프롬프트 추가', '프롬프트 게시판'],
+            ['FREE_MEMO', '제목', '메모 게시판']
         ]) {
             await wrapper.get(`[data-testid="panel-trigger-${type}"]`).trigger('click');
-            expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain(title);
+            expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain(expectedText);
+            if (removedTitle) {
+                expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).not.toContain(removedTitle);
+            }
         }
     });
 
@@ -463,37 +474,16 @@ describe('WorkspacePage', () => {
         expect(wrapper.find('[data-testid="project-title-0"]').exists()).toBe(true);
     });
 
-    it('REF-003/JOB-018/REF-008/AI-004/AI-006: loads DART disclosures, renders AI evidence cards, and saves only after review', async () => {
+    it('REF-003: keeps the DART board focused on manual notes and source path', async () => {
         const wrapper = await mountWorkspace();
 
         await wrapper.get('[data-testid="panel-trigger-DART"]').trigger('click');
-        await wrapper.get('[data-testid="load-dart-disclosures"]').trigger('click');
-        await flushPromises();
-
-        expect(mocks.listDartDisclosures).toHaveBeenCalledWith('102');
-        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('사업보고서');
-
-        await wrapper.get('[data-testid="create-dart-analysis"]').trigger('click');
-        await flushPromises();
-
-        expect(mocks.createDartAnalysis).toHaveBeenCalledWith('102', {
-            rceptNo: '20260330000123',
-            reportName: '사업보고서',
-            companyName: 'Naver',
-            positionTitle: 'Backend Engineer',
-            essayQuestions: ['지원동기를 작성하세요.'],
-            documentText: ''
-        });
-        expect(wrapper.get('[data-testid="dart-analysis-result"]').text()).toContain('AI platform investment');
-        expect(wrapper.get('[data-testid="dart-analysis-result"]').text()).toContain('Business overview');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('확인 경로');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('DART 바로가기');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).not.toContain('확인 항목');
+        expect(wrapper.find('[data-testid="load-dart-disclosures"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="create-dart-analysis"]').exists()).toBe(false);
         expect(getDraftText(wrapper)).toBe('기존 초안');
-
-        await wrapper.get('[data-testid="save-dart-analysis-reference"]').trigger('click');
-        await flushPromises();
-
-        expect(mocks.saveDartAnalysisReference).toHaveBeenCalledWith('102', '901');
-        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('DART reference saved');
-        expect(wrapper.get('[data-testid="save-dart-analysis-reference"]').attributes('disabled')).toBeDefined();
     });
 
     it('REF-004/REF-005: saves JD notes into the local board list', async () => {
@@ -525,7 +515,7 @@ describe('WorkspacePage', () => {
 
         await wrapper.get('[data-testid="compare-versions"]').trigger('click');
         await flushPromises();
-        expect(mocks.compareVersions).toHaveBeenCalledWith('102', '501', '502', expect.any(String));
+        expect(mocks.compareVersions).toHaveBeenCalledWith('102', '501', '502');
         expect(wrapper.text()).toContain('초안 v1');
         expect(wrapper.text()).toContain('초안 v2');
         expect(wrapper.text()).toContain('AI가 변경점을 요약했습니다.');

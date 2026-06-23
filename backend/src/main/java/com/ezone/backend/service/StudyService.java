@@ -505,8 +505,11 @@ public class StudyService {
             if (delegateEmail == null || delegateEmail.trim().isEmpty()) {
                 throw new IllegalStateException("스터디장은 탈퇴 시 다른 멤버에게 권한을 위임해야 합니다.");
             }
+            if (userEmail.equals(delegateEmail)) {
+                throw new IllegalArgumentException("본인에게 스터디장 권한을 위임할 수 없습니다.");
+            }
             StudyMemberRow newLeader = members.stream()
-                .filter(m -> m.getUserEmail().equals(delegateEmail))
+                .filter(m -> m.getUserEmail().equals(delegateEmail) && !m.getUserEmail().equals(userEmail))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("위임할 멤버를 찾을 수 없습니다."));
             

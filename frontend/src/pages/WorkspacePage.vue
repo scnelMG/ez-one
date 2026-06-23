@@ -107,7 +107,7 @@
         :class="{ 'drawer-open': !isMinimized }"
         data-testid="workspace-push-layout"
       >
-        <main class="workspace-main-pane" :style="drawerStyle" data-testid="workspace-main-pane">
+        <main class="workspace-main-pane" data-testid="workspace-main-pane">
           <div class="workspace-bottom-tabs is-fixed" data-testid="workspace-bottom-tabs">
             <button
               class="tab-button"
@@ -384,19 +384,6 @@
                       <button v-if="selectedLeftVersionId && selectedRightVersionId" class="ghost-button" @click="compareVersions" :disabled="workspaceStore.isComparingVersions" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: #e0e7ff; color: #4f46e5; border: none; cursor: pointer; font-weight: 600;">
                         🔄 새로고침
                       </button>
-                      <button class="primary-button small-button" @click="isEditingPrompt = !isEditingPrompt" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: #8b5cf6; border: none; cursor: pointer;">
-                        {{ isEditingPrompt ? '커스텀 닫기' : '프롬프트 커스텀하기' }}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div v-if="isEditingPrompt" class="ai-prompt-editor" style="margin-bottom: 16px; padding: 12px; background: #fff; border-radius: 6px; border: 1px solid #cbd5e1;">
-                    <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 6px;">AI 요약 기준 (프롬프트 커스텀)</label>
-                    <textarea v-model="customAiPrompt" style="width: 100%; min-height: 60px; padding: 10px; font-size: 0.9rem; border: 1px solid #e2e8f0; border-radius: 6px; resize: vertical;" placeholder="AI가 요약할 때 집중할 부분을 적어주세요."></textarea>
-                    <div style="text-align: right; margin-top: 8px;">
-                      <button class="primary-button small-button" @click="compareVersions(); isEditingPrompt = false;" :disabled="workspaceStore.isComparingVersions" style="background: #4f46e5;">
-                        저장 후 요약하기
-                      </button>
                     </div>
                   </div>
 
@@ -421,7 +408,6 @@
             v-if="isMinimized"
             class="bee-minimize-button"
             :style="beeStyle"
-            @mousedown="startBeeDrag"
             @click="onBeeClick"
             title="참고자료 열기"
           >
@@ -432,61 +418,33 @@
         <aside
           v-show="!isMinimized"
           class="floating-side-panel"
-          :style="floatingPanelStyle"
           data-testid="workspace-side-drawer"
           data-panel-testid="workspace-floating-panel"
         >
-          <div
-            class="panel-resize-handle resize-left"
-            role="separator"
-            tabindex="0"
-            data-testid="workspace-panel-divider"
-            @mousedown.stop="startPanelResize('left', $event)"
-            @keydown.left.prevent="nudgeDrawerWidth(24)"
-            @keydown.right.prevent="nudgeDrawerWidth(-24)"
-          ></div>
-          <div class="panel-resize-handle resize-right" @mousedown.stop="startPanelResize('right', $event)"></div>
-          <div class="panel-resize-handle resize-top" @mousedown.stop="startPanelResize('top', $event)"></div>
-          <div class="panel-resize-handle resize-bottom" @mousedown.stop="startPanelResize('bottom', $event)"></div>
-          <div class="panel-resize-handle resize-top-left" @mousedown.stop="startPanelResize('top-left', $event)"></div>
-          <div class="panel-resize-handle resize-top-right" @mousedown.stop="startPanelResize('top-right', $event)"></div>
-          <div class="panel-resize-handle resize-bottom-left" @mousedown.stop="startPanelResize('bottom-left', $event)"></div>
-          <div class="panel-resize-handle resize-bottom-right" @mousedown.stop="startPanelResize('bottom-right', $event)"></div>
-
-          <div class="floating-drag-handle" @mousedown="startPanelDrag">
-            <span class="handle-title">참고자료 및 메모</span>
-            <button class="icon-button minimize-btn" @click.stop="isMinimized = true" aria-label="최소화">_</button>
-          </div>
+          <button class="icon-button minimize-btn" @click.stop="isMinimized = true" aria-label="최소화">_</button>
+          <nav class="workspace-side-rail" aria-label="참고자료 게시판">
+            <button
+              v-for="board in boards"
+              :key="board.type"
+              type="button"
+              :class="{ active: activeBoard === board.type }"
+              :data-testid="`panel-trigger-${board.type}`"
+              @click="openBoard(board.type)"
+            >
+              {{ board.shortLabel }}
+            </button>
+          </nav>
           <div class="floating-panel-body">
-            <nav class="workspace-side-rail" aria-label="참고자료 게시판">
-              <button
-                v-for="board in boards"
-                :key="board.type"
-                type="button"
-                :class="{ active: activeBoard === board.type }"
-                :data-testid="`panel-trigger-${board.type}`"
-                @click="openBoard(board.type)"
-              >
-                {{ board.shortLabel }}
-              </button>
-            </nav>
-
             <div class="workspace-drawer-content">
-              <header class="drawer-header">
-                <div>
-                  <p class="section-kicker">참고자료</p>
-                  <h2>{{ activeBoardTitle }}</h2>
-                </div>
-                <button
-                  class="drawer-expand-button"
-                  type="button"
-                  aria-label="게시판 전체 보기"
-                  data-testid="board-full-view"
-                  @click="openBoardFullView"
-                >
-                  ↗
-                </button>
-              </header>
+              <button
+                class="drawer-expand-button drawer-floating-expand"
+                type="button"
+                aria-label="게시판 전체 보기"
+                data-testid="board-full-view"
+                @click="openBoardFullView"
+              >
+                ↗
+              </button>
 
               <section v-if="showReferenceCreateButton" class="drawer-reference-list">
                 <button
@@ -639,8 +597,7 @@
 
 <script setup>
 import { computed, h, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
-import * as DiffPkg from 'diff';
-const diffLines = DiffPkg.diffLines || DiffPkg.default?.diffLines || DiffPkg;
+import { diffLines } from 'diff';
 import { useRoute } from 'vue-router';
 import { rememberRecentWorkspace } from '@/features/basket/recentWorkspaces';
 import { workspaceApi } from '@/features/workspace/api/workspaceApi';
@@ -658,8 +615,6 @@ const autoSaveStatus = ref('idle');
 const activeMode = ref('canvas');
 const activeBoard = ref('JD');
 const activeQuestionIndex = ref(0);
-const drawerOpen = ref(true);
-const drawerWidth = ref(440);
 const boardFullViewOpen = ref(false);
 const selectedLeftVersionId = ref('');
 const selectedRightVersionId = ref('');
@@ -671,153 +626,10 @@ let suppressNextDraftWatch = false;
 let syncActiveMarkdownEditor = () => {};
 
 const isMinimized = ref(false);
-const isEditingPrompt = ref(false);
-const customAiPrompt = ref('자소서 변경 전후의 뉘앙스 차이, 분량의 적절성, 어색한 표현 개선 여부를 중심으로 어떤 점이 나아졌는지, 그리고 어떤 부분이 부족한지 3~5문장으로 요약해줘.');
-const floatingPanelStyle = reactive({ top: '132px', right: '32px', width: '440px', height: 'calc(100vh - 160px)', left: 'auto' });
 const beeStyle = reactive({ top: 'auto', left: 'auto', bottom: '40px', right: '40px' });
 
-let isDraggingPanel = false;
-let dragStartX = 0;
-let dragStartY = 0;
-let panelInitialTop = 0;
-let panelInitialLeft = 0;
-
-function startPanelDrag(e) {
-  if (e.target.closest('button')) return;
-  isDraggingPanel = true;
-  dragStartX = e.clientX;
-  dragStartY = e.clientY;
-  const panel = document.querySelector('.floating-side-panel');
-  if (panel) {
-    const rect = panel.getBoundingClientRect();
-    panelInitialTop = rect.top;
-    panelInitialLeft = rect.left;
-    floatingPanelStyle.top = `${rect.top}px`;
-    floatingPanelStyle.left = `${rect.left}px`;
-    floatingPanelStyle.right = 'auto';
-  }
-  document.addEventListener('mousemove', onPanelDrag);
-  document.addEventListener('mouseup', stopPanelDrag);
-}
-
-function onPanelDrag(e) {
-  if (!isDraggingPanel) return;
-  const dx = e.clientX - dragStartX;
-  const dy = e.clientY - dragStartY;
-  floatingPanelStyle.left = `${panelInitialLeft + dx}px`;
-  floatingPanelStyle.top = `${panelInitialTop + dy}px`;
-}
-
-function stopPanelDrag() {
-  isDraggingPanel = false;
-  document.removeEventListener('mousemove', onPanelDrag);
-  document.removeEventListener('mouseup', stopPanelDrag);
-}
-
-let isDraggingBee = false;
-let hasDraggedBee = false;
-let beeDragStartX = 0;
-let beeDragStartY = 0;
-let beeInitialTop = 0;
-let beeInitialLeft = 0;
-
-function startBeeDrag(e) {
-  isDraggingBee = true;
-  hasDraggedBee = false;
-  beeDragStartX = e.clientX;
-  beeDragStartY = e.clientY;
-  const bee = document.querySelector('.bee-minimize-button');
-  if (bee) {
-    const rect = bee.getBoundingClientRect();
-    beeInitialTop = rect.top;
-    beeInitialLeft = rect.left;
-    beeStyle.top = `${rect.top}px`;
-    beeStyle.left = `${rect.left}px`;
-    beeStyle.bottom = 'auto';
-    beeStyle.right = 'auto';
-  }
-  document.addEventListener('mousemove', onBeeDrag);
-  document.addEventListener('mouseup', stopBeeDrag);
-}
-
-function onBeeDrag(e) {
-  if (!isDraggingBee) return;
-  hasDraggedBee = true;
-  const dx = e.clientX - beeDragStartX;
-  const dy = e.clientY - beeDragStartY;
-  beeStyle.left = `${beeInitialLeft + dx}px`;
-  beeStyle.top = `${beeInitialTop + dy}px`;
-}
-
-function stopBeeDrag() {
-  isDraggingBee = false;
-  document.removeEventListener('mousemove', onBeeDrag);
-  document.removeEventListener('mouseup', stopBeeDrag);
-}
-
 function onBeeClick() {
-  if (!hasDraggedBee) {
-    isMinimized.value = false;
-  }
-}
-
-let isResizingPanel = false;
-let resizeDirection = '';
-let panelInitialWidth = 0;
-let panelInitialHeight = 0;
-
-function startPanelResize(direction, e) {
-  isResizingPanel = true;
-  resizeDirection = direction;
-  dragStartX = e.clientX;
-  dragStartY = e.clientY;
-  const panel = document.querySelector('.floating-side-panel');
-  if (panel) {
-    const rect = panel.getBoundingClientRect();
-    panelInitialWidth = rect.width;
-    panelInitialHeight = rect.height;
-    panelInitialTop = rect.top;
-    panelInitialLeft = rect.left;
-    floatingPanelStyle.left = `${rect.left}px`;
-    floatingPanelStyle.top = `${rect.top}px`;
-    floatingPanelStyle.right = 'auto';
-  }
-  document.addEventListener('mousemove', onPanelResize);
-  document.addEventListener('mouseup', stopPanelResize);
-}
-
-function onPanelResize(e) {
-  if (!isResizingPanel) return;
-  e.preventDefault();
-  const dx = e.clientX - dragStartX;
-  const dy = e.clientY - dragStartY;
-
-  if (resizeDirection.includes('right')) {
-    floatingPanelStyle.width = `${Math.max(380, panelInitialWidth + dx)}px`;
-  }
-  if (resizeDirection.includes('left')) {
-    const newWidth = Math.max(380, panelInitialWidth - dx);
-    if (newWidth > 380) {
-      floatingPanelStyle.width = `${newWidth}px`;
-      floatingPanelStyle.left = `${panelInitialLeft + dx}px`;
-    }
-  }
-  if (resizeDirection.includes('bottom')) {
-    floatingPanelStyle.height = `${Math.max(400, panelInitialHeight + dy)}px`;
-  }
-  if (resizeDirection.includes('top')) {
-    const newHeight = Math.max(400, panelInitialHeight - dy);
-    if (newHeight > 400) {
-      floatingPanelStyle.height = `${newHeight}px`;
-      floatingPanelStyle.top = `${panelInitialTop + dy}px`;
-    }
-  }
-}
-
-function stopPanelResize() {
-  isResizingPanel = false;
-  document.removeEventListener('mousemove', onPanelResize);
-  document.removeEventListener('mouseup', stopPanelResize);
+  isMinimized.value = false;
 }
 
 const boards = [
@@ -864,7 +676,6 @@ const canvasQuestions = computed(() => {
   return [...merged, ...localQuestions.value.map((question) => applyLocalQuestionEdit(question))];
 });
 const currentQuestion = computed(() => canvasQuestions.value[activeQuestionIndex.value] ?? canvasQuestions.value[0] ?? null);
-const drawerStyle = computed(() => ({ '--drawer-width': `${drawerWidth.value}px` }));
 const activeBoardTitle = computed(() => boards.find((board) => board.type === activeBoard.value)?.title ?? '참고자료');
 const boardsWithInlineCreate = new Set(['JD', 'NEWS', 'DART', 'TALENT_PROFILE', 'AWARDS_PROJECTS', 'PROMPT', 'FREE_MEMO']);
 const showReferenceCreateButton = computed(() => !boardsWithInlineCreate.has(activeBoard.value));
@@ -1189,7 +1000,7 @@ async function compareVersions() {
   const left = selectedLeftVersion.value;
   const right = selectedRightVersion.value;
   if (!left || !right || left.id === right.id) return null;
-  return workspaceStore.compareVersions(workspaceId.value, left.id, right.id, customAiPrompt.value);
+  return workspaceStore.compareVersions(workspaceId.value, left.id, right.id);
 }
 
 function buildLineDiff(leftBody, rightBody) {
@@ -1289,33 +1100,6 @@ function closeBoardFullView() {
   boardFullViewOpen.value = false;
 }
 
-function startDrawerResize(event) {
-  resizeStartX = event.clientX;
-  resizeStartWidth = drawerWidth.value;
-  resizeLayoutWidth = event.currentTarget?.parentElement?.getBoundingClientRect?.().width ?? 0;
-  event.currentTarget?.setPointerCapture?.(event.pointerId);
-  window.addEventListener('pointermove', resizeDrawer);
-  window.addEventListener('pointerup', stopDrawerResize, { once: true });
-}
-
-function resizeDrawer(event) {
-  const nextWidth = resizeStartWidth - (event.clientX - resizeStartX);
-  drawerWidth.value = clampDrawerWidth(nextWidth, resizeLayoutWidth);
-}
-
-function stopDrawerResize() {
-  window.removeEventListener('pointermove', resizeDrawer);
-}
-
-function nudgeDrawerWidth(delta) {
-  drawerWidth.value = clampDrawerWidth(drawerWidth.value + delta);
-}
-
-function clampDrawerWidth(width, layoutWidth = null) {
-  const maxByLayout = layoutWidth ? Math.max(380, layoutWidth - 620) : 760;
-  return Math.min(900, maxByLayout, Math.max(380, Math.round(width)));
-}
-
 async function saveFinalEssay() {
   if (!canSaveFinalEssay.value) return;
   const previousNewestVersion = currentQuestionVersions.value[currentQuestionVersions.value.length - 1] ?? null;
@@ -1376,7 +1160,7 @@ function openReference(referenceId) {
   if (reference?.type) {
     activeBoard.value = reference.type;
   }
-  drawerOpen.value = true;
+  isMinimized.value = false;
   void workspaceStore.openReference(referenceId);
 }
 
@@ -1985,16 +1769,7 @@ const MarkdownBoard = {
             }
           })
         ]),
-        h('div', { class: 'prompt-board-tools' }, [
-          h('button', {
-            type: 'button',
-            class: 'ghost-button board-add-button',
-            onClick: () => {
-              draft.isAddingPrompt = true;
-            }
-          }, '+ 프롬프트 추가')
-        ]),
-        h('div', { class: 'prompt-card-list' }, visiblePrompts.length ? visiblePrompts.map((prompt) => h('article', { class: 'prompt-board-card', key: prompt.id }, [
+        visiblePrompts.length ? h('div', { class: 'prompt-card-list' }, visiblePrompts.map((prompt) => h('article', { class: 'prompt-board-card', key: prompt.id }, [
           h('header', [
             h('div', [
               h('strong', prompt.title),
@@ -2012,10 +1787,8 @@ const MarkdownBoard = {
                 .catch(() => alert('복사 실패'));
             }
           }, '복사')
-        ])) : [
-          h('p', { class: 'empty-board-message' }, '저장한 프롬프트가 없습니다.')
-        ]),
-        h('section', { class: 'prompt-add-form' }, [
+        ]))) : null,
+        draft.isAddingPrompt ? h('section', { class: 'prompt-add-form' }, [
           h('h3', '프롬프트 추가'),
           h('label', ['제목', h('input', {
             value: draft.newPrompt.title,
@@ -2050,6 +1823,16 @@ const MarkdownBoard = {
             } }, '취소'),
             h('button', { type: 'button', class: 'primary-button board-save-button', onClick: () => addPromptCard(draft) }, '저장')
           ])
+        ]) : null,
+        h('div', { class: 'prompt-board-bottom' }, [
+          !draft.isAddingPrompt ? h('button', {
+            type: 'button',
+            class: 'ghost-button board-add-button',
+            onClick: () => {
+              draft.isAddingPrompt = true;
+            }
+          }, '+ 프롬프트 추가') : null,
+          visiblePrompts.length ? null : h('p', { class: 'empty-board-message' }, '저장한 프롬프트가 없습니다.')
         ])
       ]);
     }
@@ -2068,13 +1851,13 @@ const MarkdownBoard = {
           })
         ]),
         h('div', { class: 'markdown-editor-wrap' }, [
-          isEmpty.value ? h('p', { class: 'markdown-placeholder' }, referenceTemplate('TALENT_PROFILE')?.placeholder ?? '메모를 붙여넣으세요.') : null,
           h('div', {
             ref: editorRef,
             class: 'markdown-empty-page',
             contenteditable: 'true',
             'aria-label': '인재상 게시판 편집 영역',
             'data-testid': 'markdown-editor',
+            'data-placeholder': '마크다운으로 입력하거나 이미지를 붙여넣으세요.',
             onInput: handleInput,
             onPaste: handlePaste,
             onDrop: handleDrop,
@@ -2210,16 +1993,10 @@ const MarkdownBoard = {
         ['notes', '기타 참고사항']
       ];
       return h('section', { class: 'drawer-board dart-board-page' }, [
-        renderDartAiPanel(draft),
         h('div', { class: 'board-source-path' }, [
-          h('p', '전자공시(DART)에서 타깃기업 정보를 가져와 자유롭게 정리'),
           h('div', { class: 'dart-route-box' }, [
             h('div', [h('b', '확인 경로'), h('span', '전자공시 · 정기공시 검색 › 사업보고서 · 반기/분기보고서 › II. 사업의 내용')]),
-            h('a', { href: 'https://dart.fss.or.kr/', target: '_blank', rel: 'noreferrer' }, 'DART 바로가기 ↗'),
-            h('div', [h('b', '확인 항목'), ...sectionMeta.map(([key, label]) => h('button', {
-              type: 'button',
-              class: ''
-            }, label))])
+            h('a', { href: 'https://dart.fss.or.kr/', target: '_blank', rel: 'noreferrer' }, 'DART 바로가기 ↗')
           ])
         ]),
         h('div', { class: 'board-title-field' }, [
@@ -2243,7 +2020,7 @@ const MarkdownBoard = {
             'onUpdate:modelValue': (value) => {
               draft.dartSections[key] = value;
             },
-            'data-placeholder': `${label} 내용을 마크다운으로 정리하세요.`,
+            'data-placeholder': '마크다운으로 입력하거나 이미지를 붙여넣으세요.',
             'aria-label': `${label} 내용`,
             'data-testid': `dart-section-${key}`
           })
@@ -2276,17 +2053,6 @@ const MarkdownBoard = {
 
     function renderNewsBoard(draft) {
       return h('section', { class: 'drawer-board news-board-page' }, [
-        h('div', { class: 'board-title-field' }, [
-          h('span', '제목'),
-          h('input', {
-            value: draft.title,
-            'data-testid': 'board-title-input',
-            placeholder: '뉴스 게시판 제목',
-            onInput: (event) => {
-              draft.title = event.target.value;
-            }
-          })
-        ]),
         h('form', {
           class: 'article-link-form',
           onSubmit: (event) => {
@@ -2319,7 +2085,7 @@ const MarkdownBoard = {
             'onUpdate:modelValue': (value) => {
               draft.articleBody = value;
             },
-            'data-placeholder': '기사에서 자소서에 활용할 내용을 마크다운으로 정리하세요.',
+            'data-placeholder': '마크다운으로 입력하거나 이미지를 붙여넣으세요.',
             'aria-label': '기사 내용',
             'data-testid': 'article-body-input'
           })
@@ -2365,13 +2131,13 @@ const MarkdownBoard = {
           })
         ]),
       h('div', { class: 'markdown-editor-wrap' }, [
-        isEmpty.value ? h('p', { class: 'markdown-placeholder' }, referenceTemplate(activeBoard.value)?.placeholder ?? '마크다운으로 입력하거나 이미지를 붙여넣으세요.') : null,
         h('div', {
           ref: editorRef,
           class: 'markdown-empty-page',
           contenteditable: 'true',
           'aria-label': '마크다운 게시판 편집 영역',
           'data-testid': 'markdown-editor',
+          'data-placeholder': '마크다운으로 입력하거나 이미지를 붙여넣으세요.',
           onInput: handleInput,
           onPaste: handlePaste,
           onDrop: handleDrop,
@@ -2550,7 +2316,7 @@ function markdownToHtml(markdown) {
 }
 
 function plainTextToEditorHtml(value) {
-  if (!value?.trim()) return '<p><br></p>';
+  if (!value?.trim()) return '';
   return markdownToHtml(value);
 }
 
@@ -2656,6 +2422,5 @@ onMounted(loadCurrentWorkspace);
 watch(workspaceId, loadCurrentWorkspace);
 onBeforeUnmount(() => {
   clearAutoSaveTimer();
-  window.removeEventListener('pointermove', resizeDrawer);
 });
 </script>

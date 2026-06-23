@@ -144,15 +144,12 @@ export function createWorkspaceApi(httpClient = defaultHttpClient) {
                 return mockVersionList(workspaceId).map((version) => ({ ...version }));
             }
         },
-        async compareVersions(workspaceId, leftVersionId, rightVersionId, customPrompt) {
+        async compareVersions(workspaceId, leftVersionId, rightVersionId) {
             try {
                 const payload = {
                     leftVersionId: Number(leftVersionId),
                     rightVersionId: Number(rightVersionId)
                 };
-                if (customPrompt?.trim()) {
-                    payload.customPrompt = customPrompt.trim();
-                }
                 const response = await httpClient.post(`/api/workspaces/${workspaceId}/versions/compare`, payload);
                 return toVersionComparison(unwrapApiData(response.data));
             }
@@ -177,7 +174,9 @@ export function createWorkspaceApi(httpClient = defaultHttpClient) {
                     leftBody: left.body,
                     rightBody: right.body,
                     changed: changed,
-                    aiSummary: changed ? `[테스트 요약] 변경된 내용은 다음과 같습니다.\n${customPrompt || ''}` : '변경된 내용이 없습니다.'
+                    aiSummary: changed
+                        ? '- 변경된 내용: 비교 버전의 표현과 강조점이 달라졌습니다.\n- 합격 가능성을 높이는 AI 피드백: 지원 기업과 직무에 맞춰 성과와 직무 키워드를 더 구체화하세요.'
+                        : '변경된 내용이 없습니다.'
                 };
             }
         },

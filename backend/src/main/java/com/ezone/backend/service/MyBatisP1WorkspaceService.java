@@ -535,7 +535,16 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         String aiSummary = null;
         if (changed) {
             try {
-                aiSummary = openAiClient.generateComparisonSummary(leftBody, rightBody, request.customPrompt());
+                WorkspaceRow workspace = mapper.findWorkspace(userId, workspaceId)
+                    .orElseThrow(() -> new IllegalArgumentException("Workspace not found"));
+                String jdContext = buildJdContext(workspaceId);
+                aiSummary = openAiClient.generateComparisonSummary(
+                    leftBody,
+                    rightBody,
+                    workspace.getCompanyName(),
+                    workspace.getPositionTitle(),
+                    jdContext
+                );
                 if (aiSummary == null || aiSummary.isBlank()) {
                     aiSummary = "AI 요약을 생성하지 못했습니다. GMS API 키, 비교 모델, 네트워크 설정을 확인해주세요.";
                 }
@@ -552,6 +561,27 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
             changed,
             aiSummary
         );
+    }
+
+    private String buildJdContext(Long workspaceId) {
+        return mapper.listReferences(workspaceId).stream()
+            .filter(reference -> reference.getReferenceType() == ReferenceType.JD)
+            .map(reference -> {
+                String title = reference.getTitle() != null ? reference.getTitle().trim() : "";
+                String body = reference.getBody() != null ? reference.getBody().trim() : "";
+                if (title.isBlank()) {
+                    return body;
+                }
+                if (body.isBlank()) {
+                    return title;
+                }
+                return title + "\n" + body;
+            })
+            .filter(text -> !text.isBlank())
+            .limit(5)
+            .reduce((left, right) -> left + "\n\n---\n\n" + right)
+            .map(text -> text.length() > 6000 ? text.substring(0, 6000) : text)
+            .orElse("");
     }
 
     @Override

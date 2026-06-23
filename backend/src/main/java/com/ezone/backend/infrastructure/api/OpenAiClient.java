@@ -36,22 +36,53 @@ public class OpenAiClient {
         this.compareModel = normalizeCompareModel(compareModel);
     }
 
-    public String generateComparisonSummary(String leftBody, String rightBody, String customPrompt) {
+    public String generateComparisonSummary(
+        String leftBody,
+        String rightBody,
+        String companyName,
+        String positionTitle,
+        String jdContext
+    ) {
         if (!StringUtils.hasText(apiKey)) {
             log.warn("GMS API key is missing. Skipping AI comparison summary.");
             return null;
         }
 
-        String basePrompt = (customPrompt != null && !customPrompt.isBlank())
-            ? customPrompt
-            : "You are an expert career consultant. The user has revised their self-introduction essay. " +
-              "I will provide the previous version (버전 1) and the revised version (버전 2).\n" +
-              "Please analyze the differences and write a brief summary (3~5 sentences in Korean) of what has improved or changed. " +
-              "Focus on the flow, specific additions or deletions, and how it aligns with typical essay improvements.";
+        String prompt = """
+            당신은 한국 채용 자기소개서를 첨삭하는 시니어 커리어 컨설턴트입니다.
+            사용자가 저장한 자기소개서의 이전 버전과 비교 버전을 비교하고, 지원 기업/직무/JD에 맞춘 피드백을 작성하세요.
 
-        String prompt = basePrompt + "\n\n" +
-                "=== 이전 버전 (버전 1) ===\n" + leftBody + "\n\n" +
-                "=== 비교 버전 (버전 2) ===\n" + rightBody;
+            출력 규칙:
+            - 반드시 한국어로 작성합니다.
+            - 문단형 긴 설명이 아니라 개조식 bullet로 작성합니다.
+            - 두 섹션만 작성합니다.
+              1. 변경된 내용
+              2. 합격 가능성을 높이는 AI 피드백
+            - "변경된 내용"에는 실제로 추가/삭제/강조가 달라진 사실만 씁니다.
+            - "합격 가능성을 높이는 AI 피드백"에는 지원 기업, 지원 직무, JD를 기준으로 서류 합격 가능성을 높이는 보완점을 씁니다.
+            - 근거 없는 경험이나 성과를 지어내지 말고, 사용자가 쓴 내용 안에서 강화할 방향을 제안합니다.
+            - 가능하면 직무 키워드, JD 요구사항, 성과 구체화, 기업 적합성 관점으로 피드백합니다.
+            - 각 섹션은 3~5개 bullet 이내로 간결하게 작성합니다.
+
+            === 지원 정보 ===
+            기업: %s
+            직무: %s
+
+            === 사용자가 입력한 JD 참고자료 ===
+            %s
+
+            === 이전 버전 ===
+            %s
+
+            === 비교 버전 ===
+            %s
+            """.formatted(
+                fallback(companyName, "미입력"),
+                fallback(positionTitle, "미입력"),
+                fallback(jdContext, "사용자가 입력한 JD 참고자료가 없습니다. 기업명과 직무명, 자기소개서 본문만 기준으로 피드백하세요."),
+                fallback(leftBody, ""),
+                fallback(rightBody, "")
+            );
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -60,11 +91,11 @@ public class OpenAiClient {
         Map<String, Object> requestBody = Map.of(
             "model", compareModel,
             "input", List.of(
-                Map.of("role", "system", "content", "You are a helpful assistant for Korean job applicants."),
+                Map.of("role", "system", "content", "You are a precise Korean career coach who compares essay versions using company, role, and JD context."),
                 Map.of("role", "user", "content", prompt)
             ),
-            "temperature", 0.7,
-            "max_output_tokens", 500
+            "temperature", 0.35,
+            "max_output_tokens", 800
         );
 
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
@@ -125,6 +156,10 @@ public class OpenAiClient {
             return DEFAULT_COMPARE_MODEL;
         }
         return trimmed;
+    }
+
+    private String fallback(String value, String fallback) {
+        return StringUtils.hasText(value) ? value.trim() : fallback;
     }
 
     private String trimTrailingSlash(String value) {

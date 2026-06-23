@@ -66,7 +66,7 @@ public interface StudyMapper {
     @org.apache.ibatis.annotations.Delete("DELETE FROM study_essay_read_log WHERE study_id = #{studyId}")
     void deleteStudyEssayReadLogsByStudyId(@Param("studyId") String studyId);
 
-    @org.apache.ibatis.annotations.Delete("DELETE ef FROM essay_feedback ef JOIN shared_essay se ON ef.shared_essay_id = se.id WHERE se.study_id = #{studyId}")
+    @org.apache.ibatis.annotations.Delete("DELETE FROM essay_feedback WHERE shared_essay_id IN (SELECT id FROM shared_essay WHERE study_id = #{studyId})")
     void deleteEssayFeedbacksByStudyId(@Param("studyId") String studyId);
 
     @org.apache.ibatis.annotations.Delete("DELETE FROM shared_essay WHERE study_id = #{studyId}")
