@@ -335,7 +335,7 @@ Write-Host "[ok] MySQL reachable at ${dbHost}:${dbPort}"
 
 $apiBase = $frontendEnv["VITE_API_BASE_URL"].TrimEnd("/")
 $backendHealth = $apiBase -replace "/api$", "/api/health"
-$frontendUrl = "http://localhost:5173"
+$frontendUrl = "http://[::1]:5173"
 
 if ($Restart) {
     Write-Host "[restart] stopping local dev ports"
@@ -373,7 +373,7 @@ if (Test-HttpReady $frontendUrl) {
     }
     $frontendProcess = Start-LoggedProcess `
         $nodeCommand `
-        @($viteEntry, "--host", "localhost", "--port", "5173") `
+        @($viteEntry, "--host", "::1", "--port", "5173") `
         $frontendDir `
         (Join-Path $frontendDir "frontend-server.log") `
         (Join-Path $frontendDir "frontend-server.err.log")
