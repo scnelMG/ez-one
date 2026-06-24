@@ -3,6 +3,7 @@ import { clearAuthSession, getAccessToken, getRefreshToken, saveAuthSession } fr
 export const defaultHttpClient = axios.create({
     baseURL: resolveApiBaseUrl(import.meta.env.VITE_API_BASE_URL)
 });
+const apiBaseUrlCandidates = resolveApiBaseUrlCandidates(import.meta.env.VITE_API_BASE_URL, import.meta.env.VITE_API_FALLBACK_BASE_URLS);
 let loginRedirectHandler = defaultLoginRedirectHandler;
 
 export function setLoginRedirectHandler(handler) {
@@ -17,6 +18,11 @@ defaultHttpClient.interceptors.request.use((config) => {
     return config;
 });
 defaultHttpClient.interceptors.response.use((response) => response, async (error) => {
+    const fallbackResponse = await retryWithFallbackApiBaseUrl(error);
+    if (fallbackResponse) {
+        return fallbackResponse;
+    }
+
     const originalRequest = error.config;
     if (error.response?.status !== 401 ||
         !originalRequest ||
@@ -58,6 +64,63 @@ export function resolveApiBaseUrl(value) {
         return undefined;
     }
     return value.replace(/\/api\/?$/, '');
+}
+
+export function resolveApiBaseUrlCandidates(primaryValue, fallbackValue = '') {
+    const candidates = [
+        resolveApiBaseUrl(primaryValue),
+        ...String(fallbackValue)
+            .split(',')
+            .map((value) => resolveApiBaseUrl(value.trim())),
+        ...localDevelopmentApiBaseUrls()
+    ].filter(Boolean);
+    return [...new Set(candidates)];
+}
+
+async function retryWithFallbackApiBaseUrl(error) {
+    if (error.response || !error.config) {
+        return null;
+    }
+
+    const currentBaseUrl = resolveApiBaseUrl(error.config.baseURL ?? defaultHttpClient.defaults.baseURL);
+    const nextBaseUrl = nextFallbackApiBaseUrl(currentBaseUrl, error.config._apiBaseFallbackIndex);
+    if (!nextBaseUrl) {
+        return null;
+    }
+
+    defaultHttpClient.defaults.baseURL = nextBaseUrl;
+    return defaultHttpClient.request({
+        ...error.config,
+        baseURL: nextBaseUrl,
+        _apiBaseFallbackIndex: apiBaseUrlCandidates.indexOf(nextBaseUrl)
+    });
+}
+
+function nextFallbackApiBaseUrl(currentBaseUrl, previousIndex) {
+    const startIndex = Number.isInteger(previousIndex)
+        ? previousIndex + 1
+        : Math.max(0, apiBaseUrlCandidates.indexOf(currentBaseUrl) + 1);
+    for (let index = startIndex; index < apiBaseUrlCandidates.length; index += 1) {
+        if (apiBaseUrlCandidates[index] !== currentBaseUrl) {
+            return apiBaseUrlCandidates[index];
+        }
+    }
+    return null;
+}
+
+function localDevelopmentApiBaseUrls() {
+    if (typeof window === 'undefined') {
+        return [];
+    }
+    const hostnames = new Set([
+        window.location.hostname,
+        '127.0.0.1',
+        'localhost'
+    ]);
+    return [...hostnames].flatMap((hostname) => [
+        `http://${hostname}:8080`,
+        `http://${hostname}:8081`
+    ]);
 }
 function isAuthRefreshExcludedEndpoint(url) {
     return isPublicAuthEndpoint(url);

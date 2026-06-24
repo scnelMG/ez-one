@@ -19,7 +19,7 @@ class GmsApplicationActivityAssistAiClientTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    void promptRanksActivitiesForJobFitAndConstrainsDraftLength() {
+    void promptRanksActivitiesWithSchemaAndTokenBudget() {
         RestTemplate restTemplate = mock(RestTemplate.class);
         ObjectMapper objectMapper = new ObjectMapper();
         GmsApplicationActivityAssistAiClient client = new GmsApplicationActivityAssistAiClient(
@@ -36,7 +36,7 @@ class GmsApplicationActivityAssistAiClientTest {
         )).thenReturn(Map.of(
             "output_text",
             """
-                {"recommendations":[{"rank":1,"title":"EZ-ONE","fitScore":92,"recruiterView":"직무 관련성이 높습니다.","practitionerView":"구현 경험이 구체적입니다.","appealPoints":["Chrome Extension"],"risks":[],"drafts":[{"label":"글자수 맞춤","text":"직무에 맞춘 경험입니다."}]}]}
+                {"recommendations":[{"rank":1,"title":"EZ-ONE","fitScore":92,"recruiterView":"직무 관련성이 높습니다.","practitionerView":"구현 경험이 구체적입니다.","appealPoints":["Chrome Extension"],"risks":[],"drafts":[{"label":"글자수 맞춤","text":"지원 직무에 맞춘 경험입니다."}]}]}
                 """
         ));
 
@@ -71,16 +71,21 @@ class GmsApplicationActivityAssistAiClientTest {
             captor.capture(),
             eq(Map.class)
         );
-        String prompt = String.valueOf(captor.getValue().getBody().get("input"));
+        Map<String, Object> body = captor.getValue().getBody();
+        String prompt = String.valueOf(body.get("input"));
+        Map<String, Object> text = (Map<String, Object>) body.get("text");
+        Map<String, Object> format = (Map<String, Object>) text.get("format");
 
-        assertThat(prompt).contains("Task: rank the candidate activities by job fit first");
-        assertThat(prompt).contains("Fit scoring rubric");
-        assertThat(prompt).contains("Draft-writing rules");
-        assertThat(prompt).contains("Use only facts present in Candidates JSON");
-        assertThat(prompt).contains("Each draft.text must be directly pasteable into the detected field");
-        assertThat(prompt).contains("Keep each draft.text within 500 char");
-        assertThat(prompt).contains("Return JSON only");
+        assertThat(body.get("max_output_tokens")).isEqualTo(900);
+        assertThat(prompt).contains("한국 IT 채용 담당자이자 실무 리뷰어");
+        assertThat(prompt).contains("제공된 후보 JSON의 사실만 사용");
+        assertThat(prompt).contains("붙여넣을 수 있는 한국어 문장");
+        assertThat(prompt).contains("500 char");
+        assertThat(prompt).contains("90%");
         assertThat(prompt).contains("Company: 카카오뱅크");
         assertThat(prompt).contains("Position: 데이터 엔지니어");
+        assertThat(format.get("type")).isEqualTo("json_schema");
+        assertThat(format.get("name")).isEqualTo("application_activity_recommendations");
+        assertThat(format.get("strict")).isEqualTo(true);
     }
 }

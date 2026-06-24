@@ -74,7 +74,7 @@ Fix:
 - Study remains outside the documented P1 product loop. Because active routes and APIs already exist, this remediation locks the feature down instead of deleting it. A later product decision should either promote Study with a requirement ID or hide it as a reserved/non-P1 surface.
 - Several legacy files still contain mojibake Korean text. This change avoids broad copy rewrites and records encoding cleanup as separate debt.
 - Development CORS configuration still allows broad Chrome extension origins. Before production, replace wildcard extension origins with the exact deployed extension ID and documented environment values.
-- Notion integration still needs a DB-backed service implementation and real Notion API token exchange/page creation. The schema exists, but `NotionIntegrationService` still uses in-memory state in the current code path.
+- Notion integration now persists connection metadata and encrypted access tokens through `notion_connections`; remaining live risk is provider-side OAuth app setup and real browser authorization verification.
 
 ## 2026-06-17 Service Trust Remediation Addendum
 

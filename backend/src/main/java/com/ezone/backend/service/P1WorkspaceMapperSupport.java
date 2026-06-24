@@ -30,7 +30,7 @@ public class P1WorkspaceMapperSupport {
         job.setCompanySize(official.isPresent() ? official.get().size() : defaults.size());
         applyLogo(job, domain, official.isPresent() ? official.get().homepageUrl() : candidate.getUrl());
         job.setPositionTitle(candidate.getTitle());
-        job.setDeadlineLabel(candidate.getDeadlineLabel());
+        job.setDeadlineLabel(displayDeadlineLabel(candidate));
         job.setSourceUrl(candidate.getUrl());
         job.setSource("MATTERMOST");
         mapper.upsertCompany(job);
@@ -73,5 +73,14 @@ public class P1WorkspaceMapperSupport {
         job.setCompanyLogoUrl("https://www.google.com/s2/favicons?domain=%s&sz=128".formatted(domain));
         job.setLogoSourceUrl(sourceUrl);
         job.setLogoStatus("DISCOVERED");
+    }
+
+    private String displayDeadlineLabel(MattermostParsedJobPostRow candidate) {
+        String normalized = candidate.getNormalizedDeadlineLabel();
+        String raw = candidate.getDeadlineLabel();
+        if (raw != null && raw.contains("채용 시 마감")) {
+            return "채용 시 마감";
+        }
+        return normalized == null || normalized.isBlank() ? raw : normalized;
     }
 }

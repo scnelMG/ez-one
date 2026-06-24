@@ -18,14 +18,6 @@
       <section class="mypage-panel" aria-label="노션 연동 관리">
         <article class="account-settings-card account-identity-card notion-settings-card">
           <div class="account-setting-row">
-            <span class="account-setting-label">Google 계정</span>
-            <div class="account-setting-value">
-              <strong>{{ loginEmail }}</strong>
-            </div>
-            <span class="account-setting-note">로그인</span>
-          </div>
-
-          <div class="account-setting-row">
             <span class="account-setting-label">Notion 계정</span>
             <div class="account-setting-value">
               <strong>{{ notionEmail }}</strong>
@@ -68,12 +60,11 @@
             </button>
           </div>
 
-          <div class="account-setting-row">
+          <div class="account-setting-row notion-target-location-row">
             <span class="account-setting-label">대상 위치</span>
             <div class="account-setting-value">
-              <strong>취업 준비 (자동 생성)</strong>
+              <strong>취업 준비</strong>
             </div>
-            <a class="account-setting-link" href="https://www.notion.so/" target="_blank" rel="noreferrer">열기</a>
           </div>
         </article>
         <p v-if="statusMessage" class="form-status" role="status">{{ statusMessage }}</p>
@@ -102,19 +93,42 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue';
-import { getCurrentUser } from '@/features/auth/session/authSession';
+import { useRoute, useRouter } from 'vue-router';
+import {
+  consumeNotionOAuthState,
+  createNotionOAuthState,
+  getNotionRedirectUri,
+  redirectToNotionOAuth
+} from '@/features/notion/oauth/notionOAuth';
 import { useNotionStore } from '@/stores/notionStore';
 import AppLayout from '@/shared/AppLayout.vue';
 import PageHeader from '@/shared/PageHeader.vue';
 import StatePanel from '@/shared/StatePanel.vue';
 import MyPageNav from '@/shared/MyPageNav.vue';
 import { showToast } from '@/shared/useToast';
+import { messageFromError } from '@/shared/errorMessage';
 
 const notionStore = useNotionStore();
+const route = useRoute();
+const router = useRouter();
 const statusMessage = ref('');
-const loginEmail = computed(() => getCurrentUser()?.email ?? '로그인 정보 없음');
 const notionEmail = computed(() => notionStore.connection?.notionAccountEmail ?? '연결된 계정 없음');
-const visibleSyncLogs = computed(() => notionStore.syncLogs.filter((log) => log.target === 'JOB'));
+const visibleSyncLogs = computed(() => {
+  const seenBasketJobIds = new Set();
+  return notionStore.syncLogs.filter((log) => {
+    if (log.target !== 'JOB') {
+      return false;
+    }
+    if (log.basketJobId == null) {
+      return true;
+    }
+    if (seenBasketJobIds.has(log.basketJobId)) {
+      return false;
+    }
+    seenBasketJobIds.add(log.basketJobId);
+    return true;
+  });
+});
 
 async function disconnectNotion() {
   if (window.confirm('Notion 연동을 해제하시겠습니까?')) {
@@ -135,7 +149,11 @@ const connectionLabel = computed(() => {
   return '연결하기';
 });
 
-onMounted(() => {
+onMounted(async () => {
+  if (route.query.code) {
+    await completeNotionConnection();
+    return;
+  }
   void notionStore.loadNotionSettings();
 });
 
@@ -154,7 +172,36 @@ async function toggleSync() {
 
 async function connectNotion() {
   statusMessage.value = '';
-  await notionStore.connectNotion();
+  const redirectUri = getNotionRedirectUri();
+  const state = createNotionOAuthState();
+  try {
+    const authorizationUrl = await notionStore.getNotionOAuthUrl({ redirectUri, state });
+    redirectToNotionOAuth(new URL(authorizationUrl));
+  } catch (error) {
+    statusMessage.value = messageFromError(error, 'Notion OAuth URL could not be created.');
+    showToast(statusMessage.value, { tone: 'red' });
+  }
+}
+
+async function completeNotionConnection() {
+  statusMessage.value = '';
+  try {
+    consumeNotionOAuthState(String(route.query.state ?? ''));
+    await notionStore.connectNotion({
+      authorizationCode: String(route.query.code),
+      redirectUri: getNotionRedirectUri()
+    });
+    await router.replace({ path: '/mypage/notion' });
+  } catch (error) {
+    if (isNotionOAuthStateError(error)) {
+      await router.replace({ path: '/mypage/notion' });
+      await notionStore.loadNotionSettings();
+      statusMessage.value = 'Notion 연결 상태를 다시 확인했습니다.';
+      return;
+    }
+    notionStore.status = 'error';
+    notionStore.errorMessage = error instanceof Error ? error.message : 'Notion OAuth failed.';
+  }
   if (notionStore.status === 'ready') {
     statusMessage.value = 'Notion 계정이 연결되었습니다.';
     showToast('Notion 계정이 연결되었습니다.');
@@ -164,6 +211,13 @@ async function connectNotion() {
   showToast(statusMessage.value, { tone: 'red' });
 }
 
+function isNotionOAuthStateError(error) {
+  return error instanceof Error && (
+    error.message === 'Notion OAuth state was not found.' ||
+    error.message === 'Notion OAuth state is invalid.'
+  );
+}
+
 function formatSyncTarget(target) {
   if (target === 'JOB') return '공고';
   return target || '항목';
@@ -171,7 +225,7 @@ function formatSyncTarget(target) {
 
 function formatSyncStatus(status) {
   if (status === 'SUCCESS') return '성공';
-  if (status === 'FAILED') return '실패';
+  if (status === 'FAILED' || status === 'FAILURE') return '실패';
   if (status === 'PENDING') return '대기';
   return status || '확인 중';
 }

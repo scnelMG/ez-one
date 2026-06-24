@@ -140,10 +140,11 @@
 - `TC-HISTORY-006`: Backend contract returns periods, summary, rows, result-stage filtering, and keeps `HISTORY_IMPORT` rows out of active basket listing.
 - `TC-HISTORY-007`: Migration contract verifies `application_history` schema and confirms personal email/data are not embedded in migration SQL.
 - `TC-HISTORY-008`: Basket page exposes a `과거 지원 내역` link to `/history`.
-- `TC-HISTORY-009`: History summary exposes the standard status counts 지원완료, 미지원, 진행 중, 지원 전.
+- `TC-HISTORY-009`: History summary exposes past-result metrics 전체 공고, 서류 탈락, 필기 탈락, 면접 탈락, 미지원 instead of active-progress labels.
+- `TC-HISTORY-009A`: History mapper contract includes current active basket `READY` jobs in `/api/history/applications` so 지원 전 counts reflect jobs still in the basket; past-deadline `READY` remains normalized to 미지원.
 - `TC-HISTORY-010`: History table search filters visible rows by keyword while explicit status filtering and sorting work independently, and reset clears search, filters, and custom sort.
 - `TC-HISTORY-010A`: History table rows display normalized 지원 결과 labels such as 서류 탈락, 필기 탈락, 면접 탈락, 진행 중, and 미지원 without exposing raw CSV result strings.
-- `TC-HISTORY-012`: History table sorts visible rows by deadline and company name without changing the loaded period/result-stage data.
+- `TC-HISTORY-012`: History table defaults to deadline latest order, parses Korean deadline labels, and still supports deadline ascending and company-name sorting without changing the loaded period/result-stage data.
 - `TC-HISTORY-011`: History row navigation opens the workspace while the original posting link remains a separate external link.
 - `TC-HISTORY-013`: Basket save prefers official company classification over job-board URL fallback when a company matches the official registry, and records provenance in `company_profile_sources`.
 - `TC-HISTORY-014`: Basket save attempts realtime official company enrichment for unknown companies, records official provenance on success, and still saves the job/workspace when the realtime provider fails.
@@ -184,6 +185,7 @@ Requirement: `DATA-002`, `DATA-004`, `JOB-016`, `WS-028`.
 
 - `TC-COMPANY-FINANCIAL-001`: `FinancialCommissionCompanyInfoProviderTest` verifies company-name exact match, field mapping, missing key, empty match, and non-blocking empty result.
 - `TC-COMPANY-OPENDART-001`: `OpenDartCompanyOverviewProviderTest` verifies `corpCode.xml` matching, `company.json` mapping, and most-specific bidirectional name selection.
+- `TC-COMPANY-BULK-SYNC-001`: `StartupSyncRunnerTest` and `CompanyDataSchedulerTest` verify startup and scheduled bulk company data sync are disabled by default and run only when explicitly enabled.
 
 ## 2026-06-20 Mattermost Recommendation Tests
 
@@ -193,8 +195,18 @@ Requirement: `MM-001`, `MM-006`, `MM-007`, `MM-008`, `MM-009`, `REC-003`, `REC-0
 - `TC-MM-REC-002`: `MattermostRecommendationServiceTest` verifies that listing Mattermost recommendations does not call the AI client synchronously.
 - `TC-MM-REC-003`: `MattermostRecommendationServiceTest` verifies stored `READY` scores, `PENDING` score display, and rule fallback scoring.
 - `TC-MM-REC-004`: `MattermostSchemaContractTest` verifies normalized deadline columns and durable `mm_recommendation_scores`.
-- `TC-MM-REC-FRONTEND-001`: `MattermostRecommendationsPage.test.js` verifies 전체 공고, AI 추천, 마감 임박 segments and deadline/score/recent sort controls.
+- `TC-MM-REC-FRONTEND-001`: `MattermostRecommendationsPage.test.js` verifies 전체 공고, 검토 추천, 마감 임박 segments and deadline/score/recent sort controls.
 - `TC-MM-REC-FRONTEND-002`: `recommendationApi.test.js` verifies source-scoped list and save API calls.
+
+## 2026-06-24 AI Prompt Quality Tests
+
+Requirement: `AI-003`, `AI-006`, `MM-009`.
+
+- `TC-AI-ACTIVITY-PROMPT-001`: `GmsApplicationActivityAssistAiClientTest` verifies the real activity-assist prompt, schema-constrained output request, token budget, fact-only instruction, and char/byte limit.
+- `TC-AI-ACTIVITY-FALLBACK-001`: `ApplicationActivityAssistServiceTest` verifies readable Korean fallback recommendations when GMS AI is unavailable.
+- `TC-AI-ACTIVITY-LENGTH-001`: `ApplicationActivityAssistServiceTest` verifies short AI activity drafts are expanded toward 90% of long character limits using saved activity facts without exceeding the limit.
+- `TC-AI-MM-PROMPT-001`: `GmsAiJobRecommendationClientTest` verifies Mattermost review-priority prompt wording, schema-constrained output request, token budget, and incomplete JSON fallback.
+- `TC-MM-REC-FRONTEND-003`: `MattermostRecommendationsPage.test.js` verifies readable Korean review-priority copy, pending state, and save actions.
 
 ## 2026-06-20 Company Enrichment Tests Continued
 

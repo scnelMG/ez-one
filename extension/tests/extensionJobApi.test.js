@@ -92,6 +92,37 @@ describe('extensionJobApi', () => {
             essayQuestions: [{ prompt: '지원동기를 작성해 주세요.', maxLength: 1000 }]
         });
     });
+    it('EXT-008: retries the local API fallback host when the primary save host is unavailable', async () => {
+        const fetcher = vi.fn()
+            .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+            .mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: async () => ({
+                    success: true,
+                    data: [{ basketJobId: 10, workspaceId: 20, companyName: 'Naver', positionTitle: 'Backend' }],
+                    error: null
+                })
+            });
+        const api = createExtensionJobApi({
+            apiBaseUrl: 'http://localhost:8080/api',
+            apiFallbackBaseUrls: ['http://127.0.0.1:8080/api'],
+            getAccessToken: async () => 'access-token',
+            fetcher
+        });
+
+        await expect(api.save({
+            companyName: 'Naver',
+            positionTitle: 'Backend Developer',
+            deadlineLabel: 'D-26',
+            sourceUrl: 'https://www.jasoseol.com/recruit/1',
+            selectedRoles: ['Backend'],
+            essayQuestions: []
+        })).resolves.toHaveLength(1);
+
+        expect(fetcher).toHaveBeenNthCalledWith(1, 'http://localhost:8080/api/extension/jobs/save', expect.any(Object));
+        expect(fetcher).toHaveBeenNthCalledWith(2, 'http://127.0.0.1:8080/api/extension/jobs/save', expect.any(Object));
+    });
     it('refreshes an invalid access token and retries the extension save request once', async () => {
         const savePayload = {
             companyName: 'Naver',

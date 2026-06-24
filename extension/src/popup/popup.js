@@ -12,6 +12,7 @@ import {
 import './popup.css';
 
 const apiBaseUrl = import.meta.env.VITE_EXTENSION_API_BASE_URL ?? 'http://localhost:8080/api';
+const apiFallbackBaseUrls = import.meta.env.VITE_EXTENSION_API_FALLBACK_BASE_URLS ?? 'http://127.0.0.1:8080/api';
 const webAppUrl = import.meta.env.VITE_EXTENSION_WEB_APP_URL ?? 'http://localhost:5173';
 const AUTH_EXPIRED_MESSAGE = '\uB85C\uADF8\uC778\uC774 \uB9CC\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4';
 const UNSUPPORTED_JOB_PAGE_MESSAGE = '채용공고 목록이나 캘린더에서는 저장할 공고를 정확히 찾을 수 없어요.';
@@ -38,6 +39,7 @@ const reloadPreviewButton = requireElement('reload-preview-button');
 const companyNameInput = requireElement('company-name-input');
 const positionTitleInput = requireElement('position-title-input');
 const deadlineLabelInput = requireElement('deadline-label-input');
+const essayFieldset = requireElement('essay-fieldset');
 const essayQuestionList = requireElement('essay-question-list');
 const essayQuestionStatus = requireElement('essay-question-status');
 const roleOptions = requireElement('role-options');
@@ -87,6 +89,7 @@ const contentScriptLoadPromises = new Map();
 
 const jobApi = createExtensionJobApi({
     apiBaseUrl,
+    apiFallbackBaseUrls,
     getAccessToken: getStoredAccessToken,
     getRefreshToken: getStoredRefreshToken,
     saveSession: saveRefreshedSession,
@@ -586,21 +589,18 @@ function renderPosting(posting) {
     companyNameInput.value = posting.companyName ?? '';
     positionTitleInput.value = posting.positionTitle ?? '';
     deadlineLabelInput.value = posting.deadlineLabel ?? '';
+    hideEssayQuestions();
     const roles = posting.roleOptions.length > 0
         ? posting.roleOptions
         : [posting.positionTitle ?? '선택 직무'];
     roleCount.textContent = `${roles.length}개`;
-    roleOptions.replaceChildren(...roles.map((role, index) => {
+    roleOptions.replaceChildren(...roles.map((role) => {
         const label = document.createElement('label');
         const input = document.createElement('input');
         const labelText = document.createElement('span');
         const parsedRole = parseDisplayRole(role);
         input.type = 'checkbox';
         input.value = role;
-        input.checked = index === 0;
-        if (input.checked) {
-            activeEssayRole = role;
-        }
         input.addEventListener('change', () => {
             updateEssayQuestionsForSelectedRoles(role);
             if (input.checked) {
@@ -710,6 +710,12 @@ function updateEssayQuestionsForSelectedRoles(changedRole = null) {
         return;
     }
     const selectedRoles = getSelectedRoles();
+    if (selectedRoles.length === 0) {
+        activeEssayRole = null;
+        hideEssayQuestions();
+        return;
+    }
+    showEssayQuestions();
     const roleQuestionMap = currentPosting.roleEssayQuestions ?? {};
     if (changedRole && selectedRoles.includes(changedRole)) {
         activeEssayRole = changedRole;
@@ -729,7 +735,21 @@ function updateEssayQuestionsForSelectedRoles(changedRole = null) {
     renderEssayQuestionStatus(matchedRole, questions, selectedRoles, hasNoEssayQuestions);
 }
 
+function hideEssayQuestions() {
+    essayFieldset.hidden = true;
+    essayQuestionStatus.textContent = '';
+    essayQuestionStatus.classList.remove('is-warning');
+    essayQuestionList.replaceChildren();
+    schedulePanelResize();
+}
+
+function showEssayQuestions() {
+    essayFieldset.hidden = false;
+    schedulePanelResize();
+}
+
 function renderEssayQuestionLoading(role) {
+    showEssayQuestions();
     essayQuestionList.replaceChildren();
     essayQuestionStatus.textContent = `"${role}" 자소서 문항을 확인하고 있습니다.`;
     essayQuestionStatus.classList.remove('is-warning');
@@ -1087,7 +1107,7 @@ function createActivityAssistItem(recommendation) {
     const title = document.createElement('strong');
     title.textContent = `${recommendation.rank ?? ''}. ${recommendation.title ?? '활동'}`.trim();
     const score = document.createElement('em');
-    score.textContent = `AI 적합도 ${recommendation.fitScore ?? 0}`;
+    score.textContent = `AI 추천도 ${recommendation.fitScore ?? 0}`;
     heading.append(title, score);
     item.append(heading);
     for (const draft of Array.isArray(recommendation.drafts) ? recommendation.drafts : []) {
@@ -1338,7 +1358,7 @@ function renderPrimaryAutoFillList(list, items, isPreview) {
     }
     const groupedItems = groupPrimaryAutoFillItems(items);
     list.replaceChildren(...groupedItems.map((entry) => {
-        if (entry.type === 'education-group' || entry.type === 'certificate-group') {
+        if (entry.type === 'basic-info-group' || entry.type === 'education-group' || entry.type === 'certificate-group' || entry.type === 'military-group' || entry.type === 'career-group' || entry.type === 'language-test-group') {
             return createAutoFillGroupCard(entry);
         }
         return createAutoFillResultListItem(entry.item, (item) => getPrimaryAutoFillDisplay(item, isPreview));
@@ -1346,16 +1366,71 @@ function renderPrimaryAutoFillList(list, items, isPreview) {
 }
 
 function groupPrimaryAutoFillItems(items) {
+    const basicInfoGroups = createBasicInfoAutoFillGroups(items);
     const educationGroups = createEducationAutoFillGroups(items);
     const certificateGroups = createCertificateAutoFillGroups(items);
-    const groupedItemSet = new Set([...educationGroups, ...certificateGroups].flatMap((group) => group.items));
+    const militaryGroups = createMilitaryAutoFillGroups(items);
+    const careerGroups = createCareerAutoFillGroups(items);
+    const languageTestGroups = createLanguageTestAutoFillGroups(items);
+    const groupedItemSet = new Set([
+        ...basicInfoGroups,
+        ...educationGroups,
+        ...certificateGroups,
+        ...militaryGroups,
+        ...careerGroups,
+        ...languageTestGroups
+    ].flatMap((group) => group.items));
     return sortByDisplayOrder([
         ...items
             .filter((item) => !groupedItemSet.has(item))
             .map((item) => ({ type: 'item', item, displayOrder: normalizedDisplayOrder(item) })),
+        ...basicInfoGroups,
         ...educationGroups,
-        ...certificateGroups
+        ...certificateGroups,
+        ...militaryGroups,
+        ...careerGroups,
+        ...languageTestGroups
     ]);
+}
+
+function createBasicInfoAutoFillGroups(items) {
+    const basicInfoItems = items.filter((item) => String(item?.fieldKey ?? '').startsWith('basicInfo.'));
+    if (basicInfoItems.length === 0) {
+        return [];
+    }
+    return [{
+        type: 'basic-info-group',
+        title: '\uAE30\uBCF8 \uC815\uBCF4',
+        items: basicInfoItems,
+        summaryLines: createBasicInfoSummary(basicInfoItems),
+        displayOrder: Math.min(...basicInfoItems.map(normalizedDisplayOrder))
+    }];
+}
+
+function createBasicInfoSummary(items) {
+    return [
+        joinAutoFillSummaryParts([
+            getAutoFillValueByFieldKey(items, 'basicInfo.nameKo'),
+            getAutoFillValueByFieldKey(items, 'basicInfo.nameEn')
+        ]),
+        joinAutoFillSummaryParts([
+            labelValue('\uC0DD\uB144\uC6D4\uC77C', getAutoFillValueByFieldKey(items, 'basicInfo.birthdate')),
+            getAutoFillValueByFieldKey(items, 'basicInfo.gender')
+        ]),
+        joinAutoFillSummaryParts([
+            getAutoFillValueByFieldKey(items, 'basicInfo.email'),
+            getAutoFillValueByFieldKey(items, 'basicInfo.phone')
+        ]),
+        joinAutoFillSummaryParts([
+            getAutoFillValueByFieldKey(items, 'basicInfo.address'),
+            getAutoFillValueByFieldKey(items, 'basicInfo.addressDetail')
+        ]),
+        joinAutoFillSummaryParts([
+            getAutoFillValueByFieldKey(items, 'basicInfo.applicationCareerType'),
+            getAutoFillValueByFieldKey(items, 'basicInfo.applicationSource'),
+            getAutoFillValueByFieldKey(items, 'basicInfo.profilePhoto')
+        ])
+    ].filter(Boolean);
 }
 
 function createEducationAutoFillGroups(items) {
@@ -1425,6 +1500,124 @@ function createCertificateSummaryLine(fields) {
         fields.issuingOrganization,
         fields.acquisitionDate,
         fields.registrationNumber
+    ]);
+}
+
+function createLanguageTestAutoFillGroups(items) {
+    const languageGroups = new Map();
+    const languageItems = [];
+    for (const item of items) {
+        const match = String(item?.fieldKey ?? '').match(/^certificates\.languageTests\.(\d+)\.(.+)$/);
+        if (!match) continue;
+        const [, index, field] = match;
+        if (!languageGroups.has(index)) {
+            languageGroups.set(index, { items: [], fields: {}, displayOrder: normalizedDisplayOrder(item) });
+        }
+        const group = languageGroups.get(index);
+        group.items.push(item);
+        group.fields[field] = item.value;
+        group.displayOrder = Math.min(group.displayOrder, normalizedDisplayOrder(item));
+        languageItems.push(item);
+    }
+    if (languageItems.length === 0) {
+        return [];
+    }
+    const summaryLines = [...languageGroups.entries()]
+        .sort(([left], [right]) => Number(left) - Number(right))
+        .map(([, group]) => createLanguageTestSummaryLine(group.fields))
+        .filter(Boolean);
+    return [{
+        type: 'language-test-group',
+        title: '\uC5B4\uD559',
+        items: languageItems,
+        itemCount: languageGroups.size,
+        summaryLines: summaryLines.length > 0 ? summaryLines : [`${languageGroups.size}媛??댄븰`],
+        displayOrder: Math.min(...languageItems.map(normalizedDisplayOrder))
+    }];
+}
+
+function createLanguageTestSummaryLine(fields) {
+    return joinAutoFillSummaryParts([
+        fields.testName,
+        fields.score,
+        fields.acquiredDate,
+        fields.registrationNumber
+    ]);
+}
+
+function createMilitaryAutoFillGroups(items) {
+    const militaryItems = items.filter((item) => String(item?.fieldKey ?? '').startsWith('military.'));
+    if (militaryItems.length === 0) {
+        return [];
+    }
+    return [{
+        type: 'military-group',
+        title: '\uBCD1\uC5ED',
+        items: militaryItems,
+        summaryLines: createMilitarySummary(militaryItems),
+        displayOrder: Math.min(...militaryItems.map(normalizedDisplayOrder))
+    }];
+}
+
+function createMilitarySummary(items) {
+    return [
+        joinAutoFillSummaryParts([
+            getAutoFillValueByFieldKey(items, 'military.status'),
+            labelValue('\uAD70\uBCC4', getAutoFillValueByFieldKey(items, 'military.branch')),
+            getAutoFillValueByFieldKey(items, 'military.rank'),
+            getAutoFillValueByFieldKey(items, 'military.dischargeType')
+        ]),
+        formatAutoFillPeriod(
+            getAutoFillValueByFieldKey(items, 'military.enlistmentDate'),
+            getAutoFillValueByFieldKey(items, 'military.dischargeDate')
+        ),
+        joinAutoFillSummaryParts([
+            labelValue('\uC7A5\uC560', getAutoFillValueByFieldKey(items, 'military.isDisabled')),
+            labelValue('\uBCF4\uD6C8', getAutoFillValueByFieldKey(items, 'military.isVeteran'))
+        ])
+    ].filter(Boolean);
+}
+
+function createCareerAutoFillGroups(items) {
+    const careerGroups = new Map();
+    const careerItems = [];
+    for (const item of items) {
+        const match = String(item?.fieldKey ?? '').match(/^career\.careers\.(\d+)\.(.+)$/);
+        if (!match) continue;
+        const [, index, field] = match;
+        if (!careerGroups.has(index)) {
+            careerGroups.set(index, { items: [], fields: {}, displayOrder: normalizedDisplayOrder(item) });
+        }
+        const group = careerGroups.get(index);
+        group.items.push(item);
+        group.fields[field] = item.value;
+        group.displayOrder = Math.min(group.displayOrder, normalizedDisplayOrder(item));
+        careerItems.push(item);
+    }
+    if (careerItems.length === 0) {
+        return [];
+    }
+    const summaryLines = [...careerGroups.entries()]
+        .sort(([left], [right]) => Number(left) - Number(right))
+        .map(([index, group]) => createCareerSummaryLine(group.fields, index))
+        .filter(Boolean);
+    return [{
+        type: 'career-group',
+        title: '\uACBD\uB825',
+        items: careerItems,
+        itemCount: careerGroups.size,
+        summaryLines: summaryLines.length > 0 ? summaryLines : [`${careerGroups.size}媛??쎈젰`],
+        displayOrder: Math.min(...careerItems.map(normalizedDisplayOrder))
+    }];
+}
+
+function createCareerSummaryLine(fields, index) {
+    return joinAutoFillSummaryParts([
+        fields.companyName ? `${Number(index) + 1}. ${fields.companyName}` : '',
+        fields.employmentType,
+        fields.roleName || fields.position,
+        formatAutoFillPeriod(fields.startDate, fields.endDate),
+        fields.isEmployed
     ]);
 }
 
@@ -1957,7 +2150,10 @@ function reportPanelHeight() {
     const bodyPadding = parsePixelValue(bodyStyle.paddingTop) + parsePixelValue(bodyStyle.paddingBottom);
     const shellGap = parsePixelValue(shellStyle.rowGap || shellStyle.gap);
     const headerHeight = header?.scrollHeight ?? header?.getBoundingClientRect().height ?? 0;
-    const panelHeight = measureIntrinsicPanelHeight(activePanel);
+    const measuredPanelHeight = measureIntrinsicPanelHeight(activePanel);
+    const panelHeight = activePanel === previewPanel
+        ? Math.max(measuredPanelHeight, activePanel.scrollHeight)
+        : measuredPanelHeight;
     const height = Math.ceil(bodyPadding + headerHeight + shellGap + panelHeight + 2);
     if (Math.abs(height - lastReportedPanelHeight) < PANEL_RESIZE_EPSILON_PX) {
         return;

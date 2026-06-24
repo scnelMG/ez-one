@@ -50,9 +50,9 @@ erDiagram
 | `document_profile_sections` | id, user_id, section_type, payload_json | 표준 서류 입력 정보 |
 | `document_custom_fields` | id, user_id, label, field_type, value | 사용자 커스텀 항목 |
 | `reference_materials` | id, workspace_id, board_name, reference_type, title, body, image_payload_json, url, display_mode | 수동 참고자료 |
-| `notion_connections` | user_id, notion_account_email, workspace_id, access_token_ref, status | Notion 연결 계정 |
-| `notion_sync_settings` | user_id, sync_enabled, sync_scope | P1 기본 scope는 `JOB_ONLY` |
-| `sync_logs` | id, user_id, target, status, message, created_at | 외부 연동 로그 |
+| `notion_connections` | user_id, notion_account_email, workspace_id, access_token_ciphertext, bot_id, connected_at, updated_at | Notion OAuth 연결 계정. access token은 AES-GCM ciphertext로만 저장한다. |
+| `notion_sync_settings` | user_id, database_id, data_source_id, root_page_id, enabled, sync_scope, updated_at | P1 기본 scope는 `JOB_ONLY`; OAuth 연결 시 생성한 EZ-ONE Notion DB와 row 생성 대상 data source를 저장한다. |
+| `sync_logs` | id, user_id, basket_job_id, sync_scope, target, status, message, notion_page_id, created_at | 외부 연동 로그 |
 
 ## P2 예약 테이블
 

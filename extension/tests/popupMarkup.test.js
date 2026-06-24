@@ -72,6 +72,7 @@ describe('extension popup markup', () => {
     it('EXT-022/EXT-023: renders document autofill result lists', () => {
         expect(markup).toContain('id="document-result-panel"');
         expect(markup).toContain('id="document-result-title"');
+        expect(markup).toContain('class="document-result-scroll"');
         expect(markup).toContain('class="autofill-summary-grid"');
         expect(markup).toContain('id="autofill-filled-count"');
         expect(markup).toContain('id="autofill-filled-label"');
@@ -84,6 +85,7 @@ describe('extension popup markup', () => {
         expect(markup).toContain('id="autofill-copy-list"');
         expect(markup).toContain('id="autofill-apply-button"');
         expect(markup).toContain('id="autofill-rescan-button"');
+        expect(markup.indexOf('class="document-result-scroll"')).toBeLessThan(markup.indexOf('class="action-stack document-autofill-actions"'));
         expect(markup).toContain('다시 인식');
         expect(markup).toContain('복사 필요');
         expect(markup).toContain('자동 입력 시작');

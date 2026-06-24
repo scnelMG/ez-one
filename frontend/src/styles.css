@@ -8309,6 +8309,10 @@ li {
   min-height: 72px;
 }
 
+.notion-settings-card .notion-target-location-row {
+  grid-template-columns: 140px minmax(0, 1fr);
+}
+
 .notion-settings-card .toggle-switch {
   min-width: 74px;
 }
@@ -9075,7 +9079,8 @@ li {
 }
 
 .deadline-cell {
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 76px;
   align-items: center;
   justify-content: center;
   gap: 8px;
@@ -9085,8 +9090,10 @@ li {
 }
 
 .deadline-cell > span:first-child {
+  justify-self: end;
   min-width: 0;
   overflow: hidden;
+  text-align: right;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -9256,8 +9263,21 @@ li {
   font-size: 0.78rem;
   font-weight: 850;
   white-space: nowrap;
-  min-width: max-content;
+  min-width: 68px;
   padding-inline: 14px;
+}
+
+.basket-data-row .deadline-pill {
+  justify-self: start;
+  border-color: #c9bfff;
+  background: #eef2ff;
+  color: #4f25e8;
+}
+
+.basket-data-row .deadline-pill.urgent {
+  border-color: rgba(220, 38, 38, 0.18);
+  background: #fff1f2;
+  color: #dc2626;
 }
 
 .inline-create-row {
@@ -10270,10 +10290,10 @@ button.history-metric:hover {
 .history-table-head,
 .history-row {
   display: grid;
-  grid-template-columns: minmax(190px, 1.05fr) minmax(240px, 1.26fr) 124px 132px minmax(136px, 0.68fr) minmax(132px, 0.56fr);
+  grid-template-columns: minmax(190px, 1.05fr) minmax(220px, 1.16fr) 124px minmax(152px, 0.74fr) minmax(176px, 0.78fr) minmax(132px, 0.56fr);
   gap: 12px;
   align-items: center;
-  min-width: 980px;
+  min-width: 1060px;
 }
 
 .history-table-head span:nth-child(3),
@@ -10289,8 +10309,14 @@ button.history-metric:hover {
 }
 
 .history-row .deadline-cell {
+  justify-self: stretch;
   justify-content: center;
+  padding-left: 8px;
   width: 100%;
+}
+
+.history-row > :nth-child(4) {
+  padding-right: 12px;
 }
 
 .history-row > :nth-child(3),
@@ -10375,7 +10401,7 @@ button.history-metric:hover {
 }
 
 .history-result-select {
-  max-width: 124px;
+  width: min(132px, 100%);
 }
 
 .result-tag.is-document-failed {

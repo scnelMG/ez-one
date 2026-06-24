@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { AxiosError } from 'axios';
 import { clearAuthSession, getAccessToken, getRefreshToken, saveAuthSession } from '@/features/auth/session/authSession';
-import { defaultHttpClient, resolveApiBaseUrl, setLoginRedirectHandler } from './apiClient';
+import { defaultHttpClient, resolveApiBaseUrl, resolveApiBaseUrlCandidates, setLoginRedirectHandler } from './apiClient';
 describe('apiClient', () => {
     const originalAdapter = defaultHttpClient.defaults.adapter;
     beforeEach(() => {
@@ -17,6 +17,41 @@ describe('apiClient', () => {
         expect(resolveApiBaseUrl('http://localhost:8080/api')).toBe('http://localhost:8080');
         expect(resolveApiBaseUrl('http://localhost:8080/api/')).toBe('http://localhost:8080');
         expect(resolveApiBaseUrl('http://localhost:8080')).toBe('http://localhost:8080');
+    });
+
+    it('normalizes configured fallback API base URLs and local development candidates', () => {
+        expect(resolveApiBaseUrlCandidates('http://localhost:8081/api', 'http://10.91.22.212:8080/api,http://localhost:8080/api'))
+            .toEqual(expect.arrayContaining([
+                'http://localhost:8081',
+                'http://10.91.22.212:8080',
+                'http://localhost:8080'
+            ]));
+    });
+
+    it('retries the next local API base URL when the configured backend is unreachable', async () => {
+        const seenBaseUrls = [];
+        defaultHttpClient.defaults.baseURL = 'http://localhost:8081';
+        defaultHttpClient.defaults.adapter = async (config) => {
+            seenBaseUrls.push(config.baseURL);
+            if (seenBaseUrls.length === 1) {
+                throw new AxiosError('Network Error', 'ERR_NETWORK', config);
+            }
+            return makeResponse(config, 200, {
+                success: true,
+                data: {
+                    id: 1,
+                    email: 'user@example.com'
+                },
+                error: null
+            });
+        };
+
+        const response = await defaultHttpClient.get('/api/me');
+
+        expect(response.data.data.email).toBe('user@example.com');
+        expect(seenBaseUrls.length).toBeGreaterThanOrEqual(2);
+        expect(seenBaseUrls[0]).toBe('http://localhost:8081');
+        expect(seenBaseUrls[1]).not.toBe('http://localhost:8081');
     });
     it('AUTH-003/AUTH-004: does not attach a stale access token to public auth requests', async () => {
         localStorage.setItem('ezone.accessToken', 'stale-access-token');

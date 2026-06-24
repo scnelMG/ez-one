@@ -12,6 +12,7 @@ public record DashboardJobResponse(
     String sourceUrl,
     Integer recommendationScore,
     String recommendationReason,
+    String recommendationStatus,
     String postedAt,
     String collectedAt
 ) {
@@ -24,7 +25,7 @@ public record DashboardJobResponse(
         String companyLogoUrl,
         String sourceUrl
     ) {
-        this(basketJobId, workspaceId, companyName, positionTitle, deadlineLabel, companyLogoUrl, null, null, sourceUrl, null, null, null, null);
+        this(basketJobId, workspaceId, companyName, positionTitle, deadlineLabel, companyLogoUrl, null, null, sourceUrl, null, null, null, null, null);
     }
 
     public DashboardJobResponse(
@@ -50,6 +51,7 @@ public record DashboardJobResponse(
             sourceUrl,
             recommendationScore,
             recommendationReason,
+            null,
             null,
             null
         );
@@ -79,6 +81,7 @@ public record DashboardJobResponse(
             sourceUrl,
             recommendationScore,
             recommendationReason,
+            null,
             null,
             collectedAt
         );

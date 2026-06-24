@@ -9,9 +9,17 @@ export function createNotionApi(httpClient = defaultHttpClient) {
                 return { connected: false, syncEnabled: false, syncScope: 'JOB_ONLY', accountName: '' };
             }
         },
-        async connect() {
+        async getOAuthUrl({ redirectUri, state }) {
+            const response = await httpClient.get('/api/integrations/notion/oauth-url', {
+                ...readConfig(httpClient),
+                params: { redirectUri, state }
+            });
+            return unwrapApiData(response.data).authorizationUrl;
+        },
+        async connect({ authorizationCode, redirectUri }) {
             const response = await httpClient.post('/api/integrations/notion/connect', {
-                authorizationCode: 'local-mvp-connect'
+                authorizationCode,
+                redirectUri
             });
             return unwrapApiData(response.data);
         },
@@ -20,6 +28,10 @@ export function createNotionApi(httpClient = defaultHttpClient) {
                 syncEnabled,
                 syncScope: 'JOB_ONLY'
             });
+            return unwrapApiData(response.data);
+        },
+        async syncNow() {
+            const response = await httpClient.post('/api/integrations/notion/sync-now', {});
             return unwrapApiData(response.data);
         },
         async disconnect() {
@@ -44,5 +56,3 @@ function readConfig(httpClient) {
     return httpClient === defaultHttpClient ? { skipAuthRefresh: true } : {};
 }
 export const notionApi = createNotionApi();
-
-

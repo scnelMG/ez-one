@@ -208,6 +208,52 @@ describe('extension popup script', () => {
         expect(script).toContain('acquisitionDate');
     });
 
+    it('groups basic info autofill items into one compact basic info summary card', () => {
+        expect(script).toContain('function createBasicInfoAutoFillGroups');
+        expect(script).toContain("type: 'basic-info-group'");
+        expect(script).toContain("'\\uAE30\\uBCF8 \\uC815\\uBCF4'");
+        expect(script).toContain('basicInfo.nameKo');
+        expect(script).toContain('basicInfo.birthdate');
+        expect(script).toContain('basicInfo.gender');
+        expect(script).toContain('basicInfo.email');
+        expect(script).toContain('basicInfo.phone');
+        expect(script).toContain('createBasicInfoSummary');
+    });
+
+    it('groups military autofill items into one compact military summary card', () => {
+        expect(script).toContain('function createMilitaryAutoFillGroups');
+        expect(script).toContain("type: 'military-group'");
+        expect(script).toContain("'\\uBCD1\\uC5ED'");
+        expect(script).toContain('military.status');
+        expect(script).toContain('military.branch');
+        expect(script).toContain('military.enlistmentDate');
+        expect(script).toContain('military.dischargeDate');
+        expect(script).toContain('military.rank');
+        expect(script).toContain('military.dischargeType');
+        expect(script).toContain('createMilitarySummary');
+    });
+
+    it('groups career autofill items into compact career summary cards', () => {
+        expect(script).toContain('function createCareerAutoFillGroups');
+        expect(script).toContain("type: 'career-group'");
+        expect(script).toContain("'\\uACBD\\uB825'");
+        expect(script).toContain('^career\\.careers\\.(\\d+)\\.(.+)$');
+        expect(script).toContain('companyName');
+        expect(script).toContain('employmentType');
+        expect(script).toContain('roleName');
+        expect(script).toContain('createCareerSummaryLine');
+    });
+
+    it('groups language test autofill items into compact language summary cards', () => {
+        expect(script).toContain('function createLanguageTestAutoFillGroups');
+        expect(script).toContain("type: 'language-test-group'");
+        expect(script).toContain("'\\uC5B4\\uD559'");
+        expect(script).toContain('^certificates\\.languageTests\\.(\\d+)\\.(.+)$');
+        expect(script).toContain('testName');
+        expect(script).toContain('score');
+        expect(script).toContain('createLanguageTestSummaryLine');
+    });
+
     it('groups activity copy candidates by activity instead of showing every field as a flat row', () => {
         expect(script).toContain('function groupActivityCopyCandidates');
         expect(script).toContain('/^activities\\.(\\d+)\\.(.+)$/');
@@ -233,7 +279,7 @@ describe('extension popup script', () => {
         expect(script).toContain('function scheduleAutomaticActivityAssistRequest');
         expect(script).toContain('activityAssistAutoRequestKey');
         expect(script).toContain('requestActivityAssist({ automatic: true })');
-        expect(script).toContain('AI 적합도');
+        expect(script).toContain('AI 추천도');
         expect(script).toContain('글자수 맞춤');
         expect(script).toContain('documentProfileApi.recommendActivities');
         expect(script).toContain('function shouldShowActivityAssist');
@@ -353,7 +399,9 @@ describe('extension popup script', () => {
         expect(script).toContain('let lastReportedPanelHeight = 0');
         expect(script).toContain("document.querySelector('.popup-header')");
         expect(script).toContain('].filter(Boolean).forEach((item) => observer.observe(item));');
-        expect(script).toContain('const panelHeight = measureIntrinsicPanelHeight(activePanel)');
+        expect(script).toContain('const measuredPanelHeight = measureIntrinsicPanelHeight(activePanel)');
+        expect(script).toContain('activePanel === previewPanel');
+        expect(script).toContain('Math.max(measuredPanelHeight, activePanel.scrollHeight)');
         expect(script).toContain('function measureIntrinsicPanelHeight');
         expect(script).toContain('child.getBoundingClientRect()');
         expect(script).toContain('Math.abs(height - lastReportedPanelHeight) < PANEL_RESIZE_EPSILON_PX');
@@ -407,6 +455,24 @@ describe('extension popup script', () => {
         expect(script).toContain('role-title');
         expect(script).toContain('role-option-text');
         expect(script).toContain('계약직');
+    });
+
+    it('EXT-017: does not preselect the first role option in the save preview', () => {
+        expect(script).toContain("const selectedRoles = Array.from(roleOptions.querySelectorAll('input:checked'))");
+        expect(script).toContain('if (selectedRoles.length === 0)');
+        expect(script).not.toContain('input.checked = index === 0');
+    });
+
+    it('EXT-017: hides essay questions until a role is selected, then shows the role questions', () => {
+        expect(script).toContain("const essayFieldset = requireElement('essay-fieldset');");
+        expect(script).toContain('hideEssayQuestions();');
+        expect(script).toContain('function hideEssayQuestions()');
+        expect(script).toContain('essayFieldset.hidden = true;');
+        expect(script).toContain('if (selectedRoles.length === 0) {');
+        expect(script).toContain('showEssayQuestions();');
+        expect(script).toContain('function showEssayQuestions()');
+        expect(script).toContain('essayFieldset.hidden = false;');
+        expect(script).not.toContain('const ESSAY_QUESTION_PREVIEW_ENABLED = false;');
     });
 
     it('keeps manual autofill guidance short and action-oriented', () => {

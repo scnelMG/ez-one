@@ -59,12 +59,57 @@ describe('notionApi', () => {
             }
         });
         const api = createNotionApi({ get: vi.fn(), post, put: vi.fn() });
-        const connection = await api.connect();
+        const connection = await api.connect({
+            authorizationCode: 'notion-oauth-code',
+            redirectUri: 'http://localhost:5173/mypage/notion'
+        });
         expect(post).toHaveBeenCalledWith('/api/integrations/notion/connect', {
-            authorizationCode: 'local-mvp-connect'
+            authorizationCode: 'notion-oauth-code',
+            redirectUri: 'http://localhost:5173/mypage/notion'
         });
         expect(connection.connected).toBe(true);
         expect(connection.syncScope).toBe('JOB_ONLY');
+    });
+    it('NOTION-001: requests immediate sync for the current basket jobs', async () => {
+        const post = vi.fn().mockResolvedValue({
+            data: {
+                success: true,
+                data: {
+                    connected: true,
+                    notionAccountEmail: 'notion@example.com',
+                    syncEnabled: true,
+                    syncScope: 'JOB_ONLY'
+                },
+                error: null
+            }
+        });
+        const api = createNotionApi({ get: vi.fn(), post, put: vi.fn() });
+        const connection = await api.syncNow();
+        expect(post).toHaveBeenCalledWith('/api/integrations/notion/sync-now', {});
+        expect(connection.connected).toBe(true);
+    });
+    it('NOTION-001: loads the server-built Notion OAuth URL', async () => {
+        const get = vi.fn().mockResolvedValue({
+            data: {
+                success: true,
+                data: {
+                    authorizationUrl: 'https://api.notion.com/v1/oauth/authorize?client_id=notion-client-id'
+                },
+                error: null
+            }
+        });
+        const api = createNotionApi({ get, post: vi.fn(), put: vi.fn() });
+        const authorizationUrl = await api.getOAuthUrl({
+            redirectUri: 'http://localhost:5173/mypage/notion',
+            state: 'notion-state'
+        });
+        expect(get).toHaveBeenCalledWith('/api/integrations/notion/oauth-url', {
+            params: {
+                redirectUri: 'http://localhost:5173/mypage/notion',
+                state: 'notion-state'
+            }
+        });
+        expect(authorizationUrl).toBe('https://api.notion.com/v1/oauth/authorize?client_id=notion-client-id');
     });
     it('NOTION-JOB-001: loads sync logs', async () => {
         const get = vi.fn().mockResolvedValue({

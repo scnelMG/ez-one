@@ -3,6 +3,8 @@ spring:
     import: optional:file:.env[.properties]
   application:
     name: ez-one-backend
+  main:
+    keep-alive: true
   profiles:
     active: mysql
   servlet:
@@ -54,6 +56,12 @@ company-enrichment:
   middle-market:
     url: ${MIDDLE_MARKET_API_URL:}
 
+company-data:
+  startup-sync:
+    enabled: ${COMPANY_DATA_STARTUP_SYNC_ENABLED:false}
+  batch-sync:
+    enabled: ${COMPANY_DATA_BATCH_SYNC_ENABLED:false}
+
 mybatis:
   mapper-locations: classpath:mapper/**/*.xml
 
@@ -62,11 +70,11 @@ opendart:
 
 server:
   port: ${SERVER_PORT:8080}
-  address: ${SERVER_ADDRESS:::1}
+  address: ${SERVER_ADDRESS:127.0.0.1}
 
 app:
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,chrome-extension://*}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://[::1]:5173,chrome-extension://*}
 
 mattermost:
   webhook:
@@ -74,6 +82,16 @@ mattermost:
     secrets: ${MATTERMOST_WEBHOOK_SECRETS:}
   backfill:
     year: ${MATTERMOST_BACKFILL_YEAR:0}
+
+notion:
+  client-id: ${NOTION_CLIENT_ID:}
+  client-secret: ${NOTION_CLIENT_SECRET:}
+  authorization-uri: ${NOTION_AUTHORIZATION_URI:https://api.notion.com/v1/oauth/authorize}
+  token-uri: ${NOTION_TOKEN_URI:https://api.notion.com/v1/oauth/token}
+  pages-uri: ${NOTION_PAGES_URI:https://api.notion.com/v1/pages}
+  databases-uri: ${NOTION_DATABASES_URI:https://api.notion.com/v1/databases}
+  version: ${NOTION_VERSION:2022-06-28}
+  token-encryption-key: ${NOTION_TOKEN_ENCRYPTION_KEY:}
 
 gms:
   ai:

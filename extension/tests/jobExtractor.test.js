@@ -1485,6 +1485,39 @@ describe('extractJobPosting', () => {
             roleOptions: ['인턴 · 재무지원팀 - 회계']
         });
     });
+    it('EXT-004: stores the external recruiting site URL from the Jasoseol 채용 사이트 button', () => {
+        const doc = document.implementation.createHTMLDocument('jasoseol-recruit-source-url');
+        doc.body.innerHTML = `
+      <main>
+        <article>
+          <strong>Naver</strong>
+          <h2>Backend Developer</h2>
+          <p>2026.06.01 ~ 2026.06.30 23:59</p>
+          <a href="https://recruit.navercorp.com/rcrt/view.do?annoId=12345">
+            \uCC44\uC6A9 \uC0AC\uC774\uD2B8
+          </a>
+          <section aria-label="\uBAA8\uC9D1 \uC9C1\uBB34">
+            <table>
+              <tbody>
+                <tr>
+                  <td>\uC2E0\uC785</td>
+                  <td>Backend</td>
+                  <td>3\uBA85 \uC791\uC131</td>
+                  <td><button>\uC790\uAE30\uC18C\uAC1C\uC11C \uC5F4\uAE30</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+        </article>
+      </main>
+    `;
+
+        expect(extractJobPosting(doc, 'https://jasoseol.com/recruit?ec=104470')).toMatchObject({
+            companyName: 'Naver',
+            positionTitle: 'Backend Developer',
+            sourceUrl: 'https://recruit.navercorp.com/rcrt/view.do?annoId=12345'
+        });
+    });
     it('extracts only the selected Jasoseol recruit detail from a noisy recruit listing page', () => {
         const doc = document.implementation.createHTMLDocument('jasoseol-recruit-selected');
         doc.body.innerHTML = `

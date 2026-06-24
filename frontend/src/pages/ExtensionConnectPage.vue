@@ -2,7 +2,6 @@
   <main class="auth-page">
     <section class="auth-panel" aria-labelledby="extension-connect-title">
       <img class="auth-logo" src="../assets/ez-one-logo-final.png" alt="EZ-ONE" />
-      <p class="section-kicker">Chrome 확장 연결</p>
       <h1 id="extension-connect-title">확장프로그램 연결</h1>
       <p>{{ statusMessage }}</p>
       <RouterLink v-if="hasError" class="primary-button" to="/login">다시 로그인하기</RouterLink>
@@ -31,8 +30,8 @@ const statusMessage = computed(() => {
         : '로그인 세션을 확장프로그램에 연결하고 있습니다.';
 });
 onMounted(async () => {
-    const extensionId = import.meta.env.VITE_EXTENSION_ID || DEFAULT_LOCAL_EXTENSION_ID;
-    if (!extensionId) {
+    const extensionIds = extensionIdCandidates(import.meta.env.VITE_EXTENSION_ID);
+    if (extensionIds.length === 0) {
         errorMessage.value = '확장프로그램 ID가 설정되지 않았습니다. VITE_EXTENSION_ID를 설정해 주세요.';
         return;
     }
@@ -58,7 +57,7 @@ onMounted(async () => {
             authMessage.sourceUrl = sourceUrl;
         }
         canReturnToSourceOnConnectFailure = true;
-        const response = await sendExtensionMessage(extensionId, authMessage);
+        const response = await sendExtensionMessageToAvailableExtension(extensionIds, authMessage);
         if (!response?.accepted) {
             throw new Error(response?.message ?? '확장프로그램이 로그인 세션을 받지 못했습니다.');
         }
@@ -87,6 +86,22 @@ function normalizeExtensionConnectError(error) {
     return message || '확장프로그램 연결에 실패했습니다.';
 }
 
+async function sendExtensionMessageToAvailableExtension(extensionIds, message) {
+    let lastDeliveryError = null;
+    for (const extensionId of extensionIds) {
+        try {
+            return await sendExtensionMessage(extensionId, message);
+        }
+        catch (error) {
+            if (!isExtensionMessageDeliveryError(error)) {
+                throw error;
+            }
+            lastDeliveryError = error;
+        }
+    }
+    throw lastDeliveryError ?? new Error('확장프로그램 연결에 실패했습니다.');
+}
+
 function sendExtensionMessage(extensionId, message) {
     return new Promise((resolve, reject) => {
         const runtime = window.chrome?.runtime;
@@ -104,6 +119,19 @@ function sendExtensionMessage(extensionId, message) {
         });
     });
 }
+
+function extensionIdCandidates(configuredId) {
+    const candidates = [configuredId, DEFAULT_LOCAL_EXTENSION_ID]
+        .map((value) => String(value ?? '').trim())
+        .filter(Boolean);
+    return [...new Set(candidates)];
+}
+
+function isExtensionMessageDeliveryError(error) {
+    const message = error instanceof Error ? error.message : String(error ?? '');
+    return /could not establish connection|receiving end does not exist|invalid extension id|chrome .*?환경/i.test(message);
+}
+
 function returnToSourceUrl(value) {
     const url = parseSourceUrl(value);
     if (url) {

@@ -473,7 +473,7 @@ frontend/src/
 
 - `/history` is now an active authenticated route rendered by `PastHistoryPage`.
 - The page follows the uploaded wireframe structure: period select, summary dashboard, company-type distribution, and table rows.
-- The summary dashboard exposes the standard status metrics 지원완료, 미지원, 진행 중, 지원 전, plus a compact result-stage chart.
+- The summary dashboard exposes past-result metrics 전체 공고, 서류 탈락, 필기 탈락, 면접 탈락, 미지원, plus a compact result-stage chart.
 - The history table shows a row-level 지원 결과 column using the same normalized labels as the chart: 서류 탈락, 필기 탈락, 면접 탈락, 진행 중, 미지원.
 - Table search filters the loaded rows by company, position, normalized result, deadline, or source URL, and the table toolbar provides status filtering plus sorting.
 - Each table row opens `/workspaces/{workspaceId}` so past applications reuse the existing workspace reading/editing surface. A separate 원본 공고 link opens the imported source URL.
@@ -492,8 +492,8 @@ frontend/src/
 - Requirement: `MM-001`, `MM-006`, `MM-007`, `MM-008`, `MM-009`, `REC-003`, `REC-004`.
 - `/recommendations/mattermost` is an active authenticated route for SSAFY users.
 - The first view is the full Mattermost job feed, not a marketing or empty placeholder page.
-- The toolbar provides three segments: 전체 공고, AI 추천, and 마감 임박.
-- The sort control supports 마감 기한순, AI 추천 점수순, and 최근 게시순.
+- The toolbar provides three segments: 전체 공고, 검토 추천, and 마감 임박.
+- The sort control supports 마감 기한순, 검토 추천도순, and 최근 게시순.
 - Cards separate company type, official company site domain, original posted time, Mattermost source, deadline, score or calculating state, and save/workspace actions.
 
 ## 2026-06-20 Workspace Company Snapshot Status

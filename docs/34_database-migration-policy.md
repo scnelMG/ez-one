@@ -41,17 +41,17 @@ REFERENCES command denied to user 'ezone_dev'@'localhost' for table 'ez_one.user
 
 ## Required database privilege
 
-For local development, grant the application migration account the minimum extra privilege needed by the current migrations:
+For local development, grant the application migration account the minimum extra privileges needed by the current migrations:
 
 ```sql
-GRANT REFERENCES ON ez_one.* TO 'ezone_dev'@'localhost';
+GRANT REFERENCES, INDEX ON ez_one.* TO 'ezone_dev'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
 If the MySQL account is configured as `%` instead of `localhost`, use:
 
 ```sql
-GRANT REFERENCES ON ez_one.* TO 'ezone_dev'@'%';
+GRANT REFERENCES, INDEX ON ez_one.* TO 'ezone_dev'@'%';
 FLUSH PRIVILEGES;
 ```
 

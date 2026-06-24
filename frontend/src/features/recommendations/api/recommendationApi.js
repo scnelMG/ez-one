@@ -3,10 +3,12 @@ import { defaultHttpClient, unwrapApiData } from '@/shared/apiClient';
 
 export function createRecommendationApi(httpClient = defaultHttpClient) {
     return {
-        async listMattermostJobs() {
+        async listMattermostJobs(options = {}) {
             const response = await httpClient.get('/api/recommendations/jobs', {
-                params: { source: 'mattermost' },
-                skipAuthRefresh: true
+                params: {
+                    source: 'mattermost',
+                    deadlineMode: options.deadlineMode ?? 'exact'
+                }
             });
             return unwrapApiData(response.data).map(toRecommendationJob);
         },
@@ -32,6 +34,7 @@ function toRecommendationJob(dto) {
         sourceUrl: dto.sourceUrl ?? '',
         recommendationScore: dto.recommendationScore ?? null,
         recommendationReason: dto.recommendationReason ?? '',
+        recommendationStatus: dto.recommendationStatus ?? '',
         postedAt: dto.postedAt ?? '',
         collectedAt: dto.collectedAt ?? ''
     };

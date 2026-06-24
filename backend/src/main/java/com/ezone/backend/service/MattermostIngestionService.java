@@ -9,7 +9,9 @@ import com.ezone.backend.mapper.MattermostMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.MonthDay;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -31,7 +33,11 @@ public class MattermostIngestionService {
 
     private static final Pattern URL_PATTERN = Pattern.compile("(?i)(?:https?://)?(?:[a-z0-9-]+\\.)+[a-z]{2,}[^\\s\\])>,]*");
     private static final DateTimeFormatter POSTED_AT_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+    private static final DateTimeFormatter KOREAN_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy.MM.dd");
     private static final Pattern BRACKET_COMPANY_PATTERN = Pattern.compile("^\\[([^\\]]+)]\\s*(.+)$");
+    private static final Pattern D_DAY_LABEL_PATTERN = Pattern.compile("^D-(\\d+)$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern FULL_DATE_LABEL_PATTERN = Pattern.compile("^(\\d{4})\\.(\\d{1,2})\\.(\\d{1,2})$");
+    private static final Pattern MONTH_DAY_LABEL_PATTERN = Pattern.compile("^(\\d{1,2})/(\\d{1,2})(?:\\([^)]*\\))?.*$");
     private static final Pattern DEADLINE_PATTERN = Pattern.compile(
         "(D-\\d+|\\d{4}\\.\\d{2}\\.\\d{2}|\\d{1,2}/\\d{1,2}\\([^)]+\\)|상시/수시/채용 시 마감 공고)"
     );
@@ -87,6 +93,7 @@ public class MattermostIngestionService {
             candidate.setTitle(parsedCandidate.title());
             candidate.setUrl(parsedCandidate.url());
             candidate.setDeadlineLabel(parsedCandidate.deadlineLabel());
+            applyDeadlineFields(candidate, parsedCandidate.deadlineLabel(), LocalDate.now());
             candidate.setReviewStatus("NEEDS_REVIEW");
             insertParsedJobPost(candidate);
             if (firstCandidate == null) {
@@ -232,6 +239,73 @@ public class MattermostIngestionService {
 
     private String normalizeDeadline(String value) {
         return value.replaceFirst("^-\\s*", "").trim();
+    }
+
+    private void applyDeadlineFields(MattermostParsedJobPostRow row, String deadlineLabel, LocalDate today) {
+        DeadlineInfo deadline = normalizeDeadlineInfo(deadlineLabel, today);
+        row.setDeadlineType(deadline.type());
+        row.setDeadlineDate(deadline.date());
+        row.setNormalizedDeadlineLabel(deadline.label());
+    }
+
+    private DeadlineInfo normalizeDeadlineInfo(String deadlineLabel, LocalDate today) {
+        String label = safeText(deadlineLabel);
+        if (label.isBlank() || label.equals("미정")) {
+            return new DeadlineInfo("UNKNOWN", null, "마감일 미확인");
+        }
+        if (label.contains("채용 시 마감")) {
+            return new DeadlineInfo("OPEN", null, "채용 시 마감");
+        }
+        if (label.contains("상시")) {
+            return new DeadlineInfo("OPEN", null, "상시 채용");
+        }
+        if (label.contains("수시")) {
+            return new DeadlineInfo("OPEN", null, "수시 채용");
+        }
+
+        Matcher dDayMatcher = D_DAY_LABEL_PATTERN.matcher(label);
+        if (dDayMatcher.matches()) {
+            int days = Integer.parseInt(dDayMatcher.group(1));
+            LocalDate deadlineDate = today.plusDays(days);
+            return new DeadlineInfo("D_DAY", deadlineDate.toString(), days == 0 ? "오늘 마감" : "D-" + days);
+        }
+
+        Optional<LocalDate> fullDate = parseFullDate(label);
+        if (fullDate.isPresent()) {
+            LocalDate date = fullDate.get();
+            return new DeadlineInfo("DATE", date.toString(), KOREAN_DATE_FORMAT.format(date));
+        }
+
+        Matcher monthDayMatcher = MONTH_DAY_LABEL_PATTERN.matcher(label);
+        if (monthDayMatcher.matches()) {
+            try {
+                MonthDay monthDay = MonthDay.of(
+                    Integer.parseInt(monthDayMatcher.group(1)),
+                    Integer.parseInt(monthDayMatcher.group(2))
+                );
+                LocalDate date = monthDay.atYear(today.getYear());
+                return new DeadlineInfo("DATE", date.toString(), KOREAN_DATE_FORMAT.format(date));
+            } catch (RuntimeException ignored) {
+                return new DeadlineInfo("UNKNOWN", null, "마감일 미확인");
+            }
+        }
+        return new DeadlineInfo("UNKNOWN", null, "마감일 미확인");
+    }
+
+    private Optional<LocalDate> parseFullDate(String label) {
+        Matcher matcher = FULL_DATE_LABEL_PATTERN.matcher(label);
+        if (!matcher.matches()) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(LocalDate.of(
+                Integer.parseInt(matcher.group(1)),
+                Integer.parseInt(matcher.group(2)),
+                Integer.parseInt(matcher.group(3))
+            ));
+        } catch (RuntimeException ignored) {
+            return Optional.empty();
+        }
     }
 
     private boolean isJobRelatedNotice(String text, String lower) {
@@ -434,6 +508,13 @@ public class MattermostIngestionService {
         String title,
         String url,
         String deadlineLabel
+    ) {
+    }
+
+    private record DeadlineInfo(
+        String type,
+        String date,
+        String label
     ) {
     }
 }

@@ -24,6 +24,14 @@ describe('OnboardingPage', () => {
         expect(source).not.toContain("router.push('/onboarding')");
     });
 
+    it('ONBOARD-003: saves only onboarding preferences without creating basket jobs', () => {
+        expect(source).not.toContain("from '@/stores/basketStore'");
+        expect(source).not.toContain('useBasketStore');
+        expect(source).not.toContain('seedDummyJobs');
+        expect(source).not.toContain('createJob');
+        expect(source).not.toContain('/api/basket/jobs');
+    });
+
     it('ONB-001: does not expose raw API failures inside the first onboarding modal', () => {
         expect(source).toContain('profileLoadNotice');
         expect(source).toContain('저장된 온보딩 정보를 불러오지 못해 새 정보로 시작합니다.');

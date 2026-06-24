@@ -72,7 +72,8 @@ public interface MattermostMapper {
                review_status AS reviewStatus,
                reviewer_user_id AS reviewerUserId, promoted_job_id AS promotedJobId,
                NULL AS postedAt, NULL AS receivedAt,
-               NULL AS recommendationScore, NULL AS recommendationReason, NULL AS recommendationStatus
+               NULL AS recommendationScore, NULL AS recommendationReason, NULL AS recommendationStatus,
+               NULL AS recommendationModelVersion
         FROM mm_parsed_job_posts
         WHERE id = #{id}
         LIMIT 1
@@ -87,7 +88,8 @@ public interface MattermostMapper {
                review_status AS reviewStatus,
                reviewer_user_id AS reviewerUserId, promoted_job_id AS promotedJobId,
                NULL AS postedAt, NULL AS receivedAt,
-               NULL AS recommendationScore, NULL AS recommendationReason, NULL AS recommendationStatus
+               NULL AS recommendationScore, NULL AS recommendationReason, NULL AS recommendationStatus,
+               NULL AS recommendationModelVersion
         FROM mm_parsed_job_posts
         WHERE review_status = #{reviewStatus}
         ORDER BY id DESC
@@ -105,7 +107,8 @@ public interface MattermostMapper {
                DATE_FORMAT(m.received_at, '%Y-%m-%dT%H:%i:%s') AS receivedAt,
                s.score AS recommendationScore,
                s.reason AS recommendationReason,
-               s.status AS recommendationStatus
+               s.status AS recommendationStatus,
+               s.model_version AS recommendationModelVersion
         FROM mm_parsed_job_posts p
         JOIN mm_messages m ON m.id = p.mm_message_id
         LEFT JOIN mm_recommendation_scores s
@@ -115,6 +118,56 @@ public interface MattermostMapper {
         ORDER BY p.id DESC
         """)
     List<MattermostParsedJobPostRow> listRecommendationCandidates(@Param("userId") Long userId);
+
+    @Insert("""
+        INSERT INTO mm_recommendation_scores (
+          user_id, candidate_id, status, model_version, created_at, updated_at
+        )
+        VALUES (
+          #{userId}, #{candidateId}, 'PENDING', #{modelVersion}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        )
+        ON DUPLICATE KEY UPDATE
+          status = 'PENDING',
+          score = NULL,
+          recommended = NULL,
+          reason = NULL,
+          evidence_json = NULL,
+          model_version = VALUES(model_version),
+          updated_at = CURRENT_TIMESTAMP
+        """)
+    void insertPendingRecommendationScoreIfAbsent(
+        @Param("userId") Long userId,
+        @Param("candidateId") Long candidateId,
+        @Param("modelVersion") String modelVersion
+    );
+
+    @Insert("""
+        INSERT INTO mm_recommendation_scores (
+          user_id, candidate_id, score, recommended, reason, evidence_json, model_version, status, created_at, updated_at
+        )
+        VALUES (
+          #{userId}, #{candidateId}, #{score}, #{recommended}, #{reason}, #{evidenceJson},
+          #{modelVersion}, #{status}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        )
+        ON DUPLICATE KEY UPDATE
+          score = VALUES(score),
+          recommended = VALUES(recommended),
+          reason = VALUES(reason),
+          evidence_json = VALUES(evidence_json),
+          model_version = VALUES(model_version),
+          status = VALUES(status),
+          updated_at = CURRENT_TIMESTAMP
+        """)
+    void upsertRecommendationScore(
+        @Param("userId") Long userId,
+        @Param("candidateId") Long candidateId,
+        @Param("score") Integer score,
+        @Param("recommended") boolean recommended,
+        @Param("reason") String reason,
+        @Param("evidenceJson") String evidenceJson,
+        @Param("modelVersion") String modelVersion,
+        @Param("status") String status
+    );
 
     @Update("""
         UPDATE mm_parsed_job_posts

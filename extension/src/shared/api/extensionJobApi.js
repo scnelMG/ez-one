@@ -2,13 +2,22 @@ const SERVER_UNAVAILABLE_MESSAGE = '\uC11C\uBC84\uC5D0 \uC5F0\uACB0\uD558\uC9C0 
 
 export function createExtensionJobApi({
     apiBaseUrl,
+    apiFallbackBaseUrls = [],
     getAccessToken,
     getRefreshToken,
     saveSession,
     clearSession,
     fetcher = (...args) => fetch(...args)
 }) {
-    const client = { apiBaseUrl, getAccessToken, getRefreshToken, saveSession, clearSession, fetcher };
+    const client = {
+        apiBaseUrl,
+        apiBaseUrls: resolveApiBaseUrlCandidates(apiBaseUrl, apiFallbackBaseUrls),
+        getAccessToken,
+        getRefreshToken,
+        saveSession,
+        clearSession,
+        fetcher
+    };
     return {
         preview: (payload) => request(client, '/extension/jobs/preview', payload),
         save: (payload) => request(client, '/extension/jobs/save', payload)
@@ -19,7 +28,7 @@ async function request(client, path, payload, retrying = false) {
     if (!token) {
         throw new Error('로그인이 필요합니다.');
     }
-    const response = await callFetch(client, `${client.apiBaseUrl.replace(/\/$/, '')}${path}`, {
+    const { response, envelope, apiBaseUrl } = await callApiWithFallback(client, path, {
         method: 'POST',
         headers: {
             Authorization: `Bearer ${token}`,
@@ -27,9 +36,8 @@ async function request(client, path, payload, retrying = false) {
         },
         body: JSON.stringify(payload)
     });
-    const envelope = await readEnvelope(response);
     if (response.status === 401 && !retrying) {
-        const refreshed = await refreshExtensionSession(client);
+        const refreshed = await refreshExtensionSession(client, apiBaseUrl);
         if (refreshed) {
             return request(client, path, payload, true);
         }
@@ -39,13 +47,13 @@ async function request(client, path, payload, retrying = false) {
     }
     return envelope.data;
 }
-async function refreshExtensionSession(client) {
+async function refreshExtensionSession(client, apiBaseUrl = client.apiBaseUrl) {
     const refreshToken = await client.getRefreshToken?.();
     if (!refreshToken) {
         await client.clearSession?.();
         throw new Error('로그인이 만료되었습니다. 다시 로그인해 주세요.');
     }
-    const response = await callFetch(client, `${client.apiBaseUrl.replace(/\/$/, '')}/auth/refresh`, {
+    const response = await callFetch(client, `${apiBaseUrl.replace(/\/$/, '')}/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken })
@@ -58,6 +66,25 @@ async function refreshExtensionSession(client) {
     await client.saveSession?.(envelope.data);
     return true;
 }
+
+async function callApiWithFallback(client, path, init) {
+    let lastError = null;
+    for (const apiBaseUrl of client.apiBaseUrls) {
+        try {
+            const response = await callFetch(client, `${apiBaseUrl.replace(/\/$/, '')}${path}`, init);
+            const envelope = await readEnvelope(response);
+            return { response, envelope, apiBaseUrl };
+        }
+        catch (error) {
+            if (!isNetworkUnavailableError(error)) {
+                throw error;
+            }
+            lastError = error;
+        }
+    }
+    throw lastError ?? new Error(SERVER_UNAVAILABLE_MESSAGE);
+}
+
 function callFetch(client, url, init) {
     const fetcher = client.fetcher;
     const controller = new AbortController();
@@ -82,4 +109,22 @@ async function readEnvelope(response) {
     catch {
         throw new Error(SERVER_UNAVAILABLE_MESSAGE);
     }
+}
+
+function resolveApiBaseUrlCandidates(apiBaseUrl, fallbackBaseUrls) {
+    const candidates = [
+        apiBaseUrl,
+        ...(Array.isArray(fallbackBaseUrls) ? fallbackBaseUrls : String(fallbackBaseUrls).split(','))
+    ]
+        .map((value) => String(value ?? '').trim())
+        .filter(Boolean);
+    return [...new Set(candidates)];
+}
+
+function isNetworkUnavailableError(error) {
+    const message = error instanceof Error ? error.message : String(error ?? '');
+    return message === SERVER_UNAVAILABLE_MESSAGE ||
+        message.includes('Failed to fetch') ||
+        message.includes('서버') ||
+        message.includes('쒕쾭');
 }

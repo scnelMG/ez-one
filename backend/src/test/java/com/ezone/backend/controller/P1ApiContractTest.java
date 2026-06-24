@@ -4,8 +4,10 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -34,12 +36,26 @@ import com.ezone.backend.service.InMemoryP1WorkspaceService;
 import com.ezone.backend.service.InMemoryProfileService;
 import com.ezone.backend.service.MattermostIngestionService;
 import com.ezone.backend.service.MattermostRecommendationService;
+import com.ezone.backend.service.NotionClient;
+import com.ezone.backend.service.NotionJobPageRequest;
+import com.ezone.backend.service.NotionJobSyncRecordRow;
+import com.ezone.backend.service.NotionConnectionRow;
+import com.ezone.backend.service.NotionDatabaseResult;
+import com.ezone.backend.service.NotionIntegrationRepository;
+import com.ezone.backend.service.NotionOAuthToken;
+import com.ezone.backend.service.NotionOAuthUrlService;
+import com.ezone.backend.service.NotionPageResult;
 import com.ezone.backend.service.NotionIntegrationService;
+import com.ezone.backend.service.NotionSyncSettingsRow;
+import com.ezone.backend.service.NotionTokenCipher;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.ArrayList;
+import java.util.Map;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -109,8 +125,29 @@ class P1ApiContractTest {
     @MockitoBean
     private MattermostRecommendationService mattermostRecommendationService;
 
+    @MockitoBean
+    private NotionClient notionClient;
+
+    @MockitoBean
+    private NotionOAuthUrlService notionOAuthUrlService;
+
+    @MockitoBean
+    private NotionIntegrationRepository notionIntegrationRepository;
+
+    @MockitoBean
+    private NotionTokenCipher notionTokenCipher;
+
+    private final Map<Long, NotionConnectionRow> notionConnections = new ConcurrentHashMap<>();
+    private final Map<Long, NotionSyncSettingsRow> notionSettings = new ConcurrentHashMap<>();
+    private final Map<Long, List<com.ezone.backend.service.StoredSyncLogRow>> notionSyncLogs = new ConcurrentHashMap<>();
+    private final Map<Long, NotionJobSyncRecordRow> notionJobSyncRecords = new ConcurrentHashMap<>();
+
     @BeforeEach
     void setUp() {
+        notionConnections.clear();
+        notionSettings.clear();
+        notionSyncLogs.clear();
+        notionJobSyncRecords.clear();
         when(userAccountMapper.findById(1L)).thenReturn(Optional.of(new UserAccount(
             1L,
             "google-subject",
@@ -136,7 +173,83 @@ class P1ApiContractTest {
             true,
             true
         )));
-        when(mattermostRecommendationService.listOpenRecommendations(1L)).thenReturn(List.of());
+        when(mattermostRecommendationService.listRecommendations(1L, "open")).thenReturn(List.of());
+        when(notionClient.exchangeAuthorizationCode(anyString(), any())).thenReturn(new NotionOAuthToken(
+            "notion-access-token",
+            "workspace-1",
+            "bot-1",
+            "notion@example.com"
+        ));
+        when(notionClient.createJobsDatabase(anyString())).thenReturn(new NotionDatabaseResult(
+            "root-page-1",
+            "database-1",
+            "data-source-1"
+        ));
+        when(notionClient.createJobPage(anyString(), anyString(), any(NotionJobPageRequest.class))).thenReturn(new NotionPageResult(
+            "notion-page-1",
+            "https://notion.so/notion-page-1"
+        ));
+        when(notionTokenCipher.encrypt(anyString())).thenReturn("cipher:notion-access-token");
+        when(notionTokenCipher.decrypt(anyString())).thenReturn("notion-access-token");
+        when(notionIntegrationRepository.findConnection(any())).thenAnswer(invocation -> Optional.ofNullable(
+            notionConnections.get(invocation.getArgument(0, Long.class))
+        ));
+        when(notionIntegrationRepository.findSettings(any())).thenAnswer(invocation -> Optional.ofNullable(
+            notionSettings.get(invocation.getArgument(0, Long.class))
+        ));
+        when(notionIntegrationRepository.listSyncLogs(any())).thenAnswer(invocation -> List.copyOf(
+            notionSyncLogs.getOrDefault(invocation.getArgument(0, Long.class), List.of())
+        ));
+        when(notionIntegrationRepository.findJobSyncRecord(any(), any())).thenAnswer(invocation -> {
+            Long userId = invocation.getArgument(0, Long.class);
+            Long basketJobId = invocation.getArgument(1, Long.class);
+            NotionJobSyncRecordRow row = notionJobSyncRecords.get(basketJobId);
+            return row == null || !row.userId().equals(userId) ? Optional.empty() : Optional.of(row);
+        });
+        doAnswer(invocation -> {
+            NotionConnectionRow row = invocation.getArgument(0, NotionConnectionRow.class);
+            notionConnections.put(row.userId(), row);
+            return null;
+        }).when(notionIntegrationRepository).upsertConnection(any(NotionConnectionRow.class));
+        doAnswer(invocation -> {
+            Long userId = invocation.getArgument(0, Long.class);
+            notionConnections.remove(userId);
+            return null;
+        }).when(notionIntegrationRepository).deleteConnection(any());
+        doAnswer(invocation -> {
+            NotionSyncSettingsRow row = invocation.getArgument(0, NotionSyncSettingsRow.class);
+            notionSettings.put(row.userId(), row);
+            return null;
+        }).when(notionIntegrationRepository).upsertSettings(any(NotionSyncSettingsRow.class));
+        doAnswer(invocation -> {
+            com.ezone.backend.service.StoredSyncLogRow row = invocation.getArgument(
+                0,
+                com.ezone.backend.service.StoredSyncLogRow.class
+            );
+            List<com.ezone.backend.service.StoredSyncLogRow> logs = notionSyncLogs.computeIfAbsent(
+                row.userId(),
+                ignored -> new ArrayList<>()
+            );
+            logs.add(0, new com.ezone.backend.service.StoredSyncLogRow(
+                (long) logs.size() + 1,
+                row.userId(),
+                row.basketJobId(),
+                row.syncScope(),
+                row.target(),
+                row.status(),
+                row.message(),
+                row.notionPageId()
+            ));
+            return null;
+        }).when(notionIntegrationRepository).insertSyncLog(any(com.ezone.backend.service.StoredSyncLogRow.class));
+        doAnswer(invocation -> {
+            NotionJobSyncRecordRow row = invocation.getArgument(0, NotionJobSyncRecordRow.class);
+            notionJobSyncRecords.put(row.basketJobId(), row);
+            return null;
+        }).when(notionIntegrationRepository).upsertJobSyncRecord(any(NotionJobSyncRecordRow.class));
+        when(notionOAuthUrlService.buildAuthorizationUrl(anyString(), anyString())).thenReturn(
+            "https://api.notion.com/v1/oauth/authorize?client_id=notion-client-id&response_type=code&owner=user&state=notion-state"
+        );
     }
 
     @Test
@@ -187,6 +300,29 @@ class P1ApiContractTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data[0].deadlineLabel").value("오늘 18:00"))
             .andExpect(jsonPath("$.data[1].deadlineLabel").value("D-1"));
+    }
+
+    @Test
+    void dashboardActivitySummaryHasMatchingDailyLogs() throws Exception {
+        String activityDate = objectMapper.readTree(mockMvc.perform(get("/api/dashboard/activities"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data[0].date", notNullValue()))
+                .andExpect(jsonPath("$.data[0].score").value(2))
+                .andReturn()
+                .getResponse()
+                .getContentAsString())
+            .path("data")
+            .path(0)
+            .path("date")
+            .asText();
+
+        mockMvc.perform(get("/api/dashboard/activities/logs").param("date", activityDate))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data", hasSize(1)))
+            .andExpect(jsonPath("$.data[0].time").value("14:20"))
+            .andExpect(jsonPath("$.data[0].description").value("지원 상태를 진행 중으로 변경 +2방울"));
     }
 
     @Test
@@ -725,6 +861,14 @@ class P1ApiContractTest {
 
     @Test
     void savingBasketJobRecordsJobOnlyNotionSyncLogWhenEnabled() throws Exception {
+        mockMvc.perform(get("/api/integrations/notion/oauth-url")
+                .param("redirectUri", "http://localhost:5173/mypage/notion")
+                .param("state", "notion-state"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.authorizationUrl").value(
+                "https://api.notion.com/v1/oauth/authorize?client_id=notion-client-id&response_type=code&owner=user&state=notion-state"
+            ));
+
         mockMvc.perform(post("/api/integrations/notion/connect")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -749,9 +893,12 @@ class P1ApiContractTest {
 
         mockMvc.perform(get("/api/integrations/notion/sync-logs"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data[0].target").value("BASKET_JOB"))
+            .andExpect(jsonPath("$.data[0].target").value("JOB"))
+            .andExpect(jsonPath("$.data[0].basketJobId").exists())
             .andExpect(jsonPath("$.data[0].status").value("SUCCESS"))
-            .andExpect(jsonPath("$.data[0].message").value("JOB_ONLY synced: Notion Sync Company / Backend Developer"));
+            .andExpect(jsonPath("$.data[0].message").value(
+                "JOB_ONLY synced: Notion Sync Company / Backend Developer -> notion-page-1"
+            ));
     }
 
     @Test
@@ -1280,6 +1427,17 @@ class P1ApiContractTest {
             .andExpect(status().isForbidden())
             .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.error.code").value("FORBIDDEN"));
+    }
+
+    @Test
+    void mattermostRecommendationsPassDeadlineModeToService() throws Exception {
+        when(mattermostRecommendationService.listRecommendations(1L, "exact")).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/recommendations/jobs?source=mattermost&deadlineMode=exact"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true));
+
+        verify(mattermostRecommendationService).listRecommendations(1L, "exact");
     }
 
     private void createDashboardJob(String companyName, String deadlineLabel) throws Exception {

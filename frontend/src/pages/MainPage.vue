@@ -125,7 +125,6 @@
                 <div class="active-progress-track" aria-hidden="true">
                   <span :style="{ width: `${activeApplication.progressPercent}%` }"></span>
                 </div>
-                <strong>{{ activeApplication.progressPercent }}%</strong>
               </div>
             </div>
 
@@ -295,48 +294,31 @@
         </div>
 
         <aside class="main-panel study-panel" data-testid="study-panel" aria-label="취업 스터디">
-          <div class="main-heading-title">
-            <span class="section-icon study-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24">
-                <path d="M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM16 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
-                <path d="M3.5 19c.5-3.4 2.4-5.2 4.5-5.2s4 1.8 4.5 5.2M11.5 19c.5-3.4 2.4-5.2 4.5-5.2s4 1.8 4.5 5.2" />
-              </svg>
-            </span>
-            <h2>취업 스터디</h2>
+          <div class="main-heading-title study-panel-heading">
+            <div class="study-panel-title">
+              <span class="section-icon study-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM16 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+                  <path d="M3.5 19c.5-3.4 2.4-5.2 4.5-5.2s4 1.8 4.5 5.2M11.5 19c.5-3.4 2.4-5.2 4.5-5.2s4 1.8 4.5 5.2" />
+                </svg>
+              </span>
+              <h2>취업 스터디</h2>
+            </div>
+            <RouterLink class="study-more-link" data-testid="study-more-link" to="/study">더보기</RouterLink>
           </div>
 
-          <article class="study-card">
+          <article v-for="study in featuredStudies" :key="study.id" class="study-card">
             <div>
-              <strong>데이터 취준 스터디</strong>
-              <div class="study-tag-list" aria-label="데이터 취준 스터디 요약">
-                <span class="study-stat-tag" data-testid="study-stat-tag">공유 자소서 4개</span>
-                <span class="study-stat-tag" data-testid="study-stat-tag">추천 공고 2개</span>
-                <span class="study-stat-tag" data-testid="study-stat-tag">새 피드백 3개</span>
+              <strong>{{ study.name }}</strong>
+              <div class="study-tag-list" :aria-label="`${study.name} 요약`">
+                <span v-for="tag in study.stats" :key="tag" class="study-stat-tag" data-testid="study-stat-tag">{{ tag }}</span>
               </div>
             </div>
             <RouterLink
               class="primary-gradient-action compact-action"
               data-testid="study-card-link"
-              to="/study"
-              aria-label="데이터 취준 스터디 이어서 하기"
-            >
-              <span class="action-arrow" aria-hidden="true">›</span>
-            </RouterLink>
-          </article>
-
-          <article class="study-card">
-            <div>
-              <strong>서비스기획 면접 스터디</strong>
-              <div class="study-tag-list" aria-label="서비스기획 면접 스터디 요약">
-                <span class="study-stat-tag" data-testid="study-stat-tag">진행중 공고 7개</span>
-                <span class="study-stat-tag" data-testid="study-stat-tag">새 피드백 1개</span>
-              </div>
-            </div>
-            <RouterLink
-              class="primary-gradient-action compact-action"
-              data-testid="study-card-link"
-              to="/study"
-              aria-label="서비스기획 면접 스터디 이어서 하기"
+              :to="`/study/${study.id}`"
+              :aria-label="`${study.name} 이어서 하기`"
             >
               <span class="action-arrow" aria-hidden="true">›</span>
             </RouterLink>
@@ -381,6 +363,18 @@ const showOnboardingModal = ref(requiresOnboarding());
 const failedLogos = ref(new Set());
 const openStatusJobId = ref(null);
 const activities = ref([]);
+const featuredStudies = [
+  {
+    id: 'data-job-prep',
+    name: '데이터 취준 스터디',
+    stats: ['공유 자소서 4개', '추천 공고 2개', '새 피드백 3개']
+  },
+  {
+    id: 'service-interview',
+    name: '서비스기획 면접 스터디',
+    stats: ['진행중 공고 7개', '새 피드백 1개']
+  }
+];
 
 const statusOptions = [
   { value: 'READY', label: '지원 전' },
@@ -1015,9 +1009,8 @@ async function archiveJob(id) {
 
 .active-progress-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 48px;
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
-  gap: 12px;
 }
 
 .active-progress-track {
@@ -1032,13 +1025,6 @@ async function archiveJob(id) {
   height: 100%;
   border-radius: inherit;
   background: #5a35f0;
-}
-
-.active-progress-row strong {
-  color: #111827;
-  font-size: 0.88rem;
-  font-weight: 850;
-  text-align: right;
 }
 
 .active-detail-link,
@@ -1337,6 +1323,29 @@ async function archiveJob(id) {
   align-content: stretch;
   background:
     linear-gradient(180deg, #ffffff 0%, #fbfaff 100%);
+}
+
+.study-panel-heading {
+  justify-content: space-between;
+}
+
+.study-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.study-more-link {
+  color: #5a35f0;
+  font-size: 0.76rem;
+  font-weight: 820;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.study-more-link:hover {
+  text-decoration: underline;
 }
 
 .study-card {

@@ -14,6 +14,7 @@ import com.ezone.backend.domain.persistence.JobRow;
 import com.ezone.backend.domain.persistence.WorkspaceRow;
 import com.ezone.backend.dto.basket.CreateBasketJobRequest;
 import com.ezone.backend.dto.dashboard.DashboardJobResponse;
+import com.ezone.backend.infrastructure.api.OpenAiClient;
 import com.ezone.backend.mapper.ActivityMapper;
 import com.ezone.backend.mapper.P1WorkspaceMapper;
 import java.util.List;
@@ -35,6 +36,12 @@ class MyBatisP1WorkspaceServiceTest {
 
     @Mock
     private RealtimeCompanyEnrichmentService realtimeCompanyEnrichmentService;
+
+    @Mock
+    private CompanyDataSyncService companyDataSyncService;
+
+    @Mock
+    private OpenAiClient openAiClient;
 
     @InjectMocks
     private MyBatisP1WorkspaceService service;

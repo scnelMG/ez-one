@@ -69,7 +69,11 @@ flowchart LR
 | --- | --- | --- | --- | --- |
 | Notion 연결 | OAuth 결과 | 연결 계정과 workspace 저장 | connection status | OAuth 만료/거부 |
 | 동기화 설정 저장 | syncEnabled, syncScope | P1은 `JOB_ONLY`만 저장 | sync setting | invalid scope 거부 |
-| 공고 자동 동기화 | basket job event | 저장 공고만 Notion에 동기화 | sync log | 실패 로그 기록, core save 유지 |
+| 공고 자동 동기화 | basket job event 또는 sync-now | 저장 공고와 현재 장바구니 공고만 Notion에 동기화하고, 행 생성 전 대상 Notion database schema를 최신 장바구니 필드로 보강 | sync log | 실패 로그 기록, core save 유지 |
+
+Notion 연결 시 자동 생성되는 대상 위치의 페이지명은 설정 화면에 표시되는 값과 동일하게 `취업 준비`로 생성한다.
+
+JOB_ONLY Notion rows mirror the basket page with Korean property names and native property types where possible: `직무` title, `회사명` rich text, `상태` select with `지원 전/진행 중/지원완료/미지원`, `마감일` date when parseable, `마감 표시` rich text, `마감 임박` checkbox, `바로가기` URL, `회사 로고` external file, `메모` rich text, plus backend trace fields `공고 ID`, `워크스페이스 ID`, and `동기화 범위`.
 
 ## Chrome Extension
 
@@ -132,6 +136,17 @@ Requirement: `MM-001`, `MM-006`, `MM-007`, `MM-008`, `MM-009`, `REC-003`, `REC-0
 | Stored scoring display | candidate, user score row | Use `READY` score/reason when present; show calculating for `PENDING`; otherwise deterministic fallback | `recommendationScore`, `recommendationReason` | failed/missing AI result does not hide or block the job |
 | Deadline normalization | raw `deadline_label` plus normalized columns | Prefer stored normalized label and filter expired candidates | 마감 전 feed, 마감 임박 segment, deadline sorting | unknown deadline remains visible as 마감일 미확인 |
 | Mattermost save | candidate id | Promote candidate if needed, then reuse basket/workspace save flow | `basketJobId`, `workspaceId` | missing AI score does not block save; duplicate handling stays in basket flow |
+
+## 2026-06-24 AI Prompt Quality Cleanup
+
+Requirement: `AI-003`, `AI-006`, `MM-009`.
+
+| Feature | Input | Processing | Output | Failure handling |
+| --- | --- | --- | --- | --- |
+| Extension activity assist | application page context, field labels, saved document activities | Send compact activity candidates to GMS with a schema-constrained prompt that forbids invented facts, respects char/byte limits, and targets 90-100% of long limits; post-process short AI drafts with saved activity facts only | ranked activity recommendations, user-facing reasons, risks, and paste-ready drafts | if GMS is unavailable, return deterministic fallback recommendations and a warning |
+| Mattermost review-priority scoring | parsed Mattermost company, title, deadline, URL | Score review priority through stored AI results or deterministic fallback; list API never calls AI synchronously | `recommendationScore`, `recommendationReason`, pending state | missing or pending AI score keeps the job visible |
+
+AI output remains user-reviewed. It is not automatically saved into external application forms, basket jobs, or essay drafts.
 
 ## 2026-06-20 Company Snapshot Enrichment
 
