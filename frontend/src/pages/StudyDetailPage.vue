@@ -60,16 +60,16 @@
             <template v-else>
               <!-- 팀원 진척도 차트 섹션 -->
               <div v-if="studySettings.showTeamComparison" class="dashboard-section chart-section">
-                <h2>팀원 진척도 비교 <span class="subtitle">(진행중인 공고 수 기준)</span></h2>
+                <h2>팀원 진척도 비교 <span class="subtitle">(최근 2주 지원완료 기준)</span></h2>
                 <div class="chart-container">
                   <div class="chart-bar-row" v-for="member in studyStore.currentStudy?.members || []" :key="'chart-'+member.id">
                     <div class="chart-label">
-                      <div class="member-avatar-small">{{ (member.userName || member.userEmail).charAt(0).toUpperCase() }}</div>
-                      <span class="member-name" :title="member.userName || member.userEmail.split('@')[0]">{{ member.userName || member.userEmail.split('@')[0] }}</span>
+                      <div class="member-avatar-small">{{ memberAvatarLabel(member) }}</div>
+                      <span class="member-name" :title="memberDisplayName(member)">{{ memberDisplayName(member) }}</span>
                     </div>
                     <div class="chart-track">
-                      <div class="chart-fill" :style="{ width: Math.min((member.activeJobCount || 0) * 10, 100) + '%' }">
-                        <span class="chart-value" v-if="(member.activeJobCount || 0) > 0">{{ member.activeJobCount }}</span>
+                      <div class="chart-fill" :style="{ width: progressWidth(member) }">
+                        <span class="chart-value" v-if="recentCompletedCount(member) > 0">{{ recentCompletedCount(member) }}</span>
                       </div>
                     </div>
                   </div>
@@ -82,10 +82,10 @@
                 <div class="member-grid">
                   <div class="member-card-new" v-for="member in studyStore.currentStudy?.members || []" :key="member.id">
                     <div class="member-card-header">
-                      <div class="member-avatar-large">{{ (member.userName || member.userEmail).charAt(0).toUpperCase() }}</div>
+                      <div class="member-avatar-large">{{ memberAvatarLabel(member) }}</div>
                       <div class="member-info-new">
                         <div style="display: flex; align-items: center; gap: 8px;">
-                          <strong>{{ member.userName || member.userEmail.split('@')[0] }}</strong>
+                          <strong>{{ memberDisplayName(member) }}</strong>
                           <span v-if="hasUnreadEssays(member.userEmail)" class="new-badge">NEW!</span>
                         </div>
                         <span class="text-secondary text-sm" style="word-break: break-all;">{{ member.userEmail }}</span>
@@ -103,12 +103,12 @@
                         <strong class="stat-value">{{ member.notStartedCount || 0 }}</strong>
                       </div>
                       <div class="stat-box-new bg-green-light">
-                        <span class="stat-label">이번주</span>
-                        <strong class="stat-value text-green">{{ member.appsThisWeekCount || 0 }}</strong>
+                        <span class="stat-label">최근 2주 완료</span>
+                        <strong class="stat-value text-green">{{ recentCompletedCount(member) }}</strong>
                       </div>
                       <div class="stat-box-new bg-purple-light">
-                        <span class="stat-label">이번달</span>
-                        <strong class="stat-value text-purple">{{ member.appsThisMonthCount || 0 }}</strong>
+                        <span class="stat-label">누적 완료</span>
+                        <strong class="stat-value text-purple">{{ member.completedJobCount ?? member.appsThisMonthCount ?? 0 }}</strong>
                       </div>
                     </div>
                     <div v-else class="member-stats-basic">
@@ -608,6 +608,33 @@ const hasUnreadEssays = (memberEmail) => {
   if (memberEmail === myEmail.value) return false;
   return studyStore.sharedEssays?.some(e => e.userEmail === memberEmail && e.isNew);
 };
+
+const maxRecentCompletedCount = computed(() => {
+  const counts = studyStore.currentStudy?.members?.map(recentCompletedCount) || [];
+  return Math.max(...counts, 1);
+});
+
+function memberDisplayName(member) {
+  return member?.userName || member?.userNickname || member?.userEmail?.split('@')[0] || '팀원';
+}
+
+function memberAvatarLabel(member) {
+  const name = memberDisplayName(member).trim();
+  if (!name) return '팀';
+  if (/^[가-힣]+$/.test(name) && name.length >= 2) {
+    return name.slice(-2);
+  }
+  return name.length <= 2 ? name : name.charAt(0).toUpperCase();
+}
+
+function recentCompletedCount(member) {
+  return member?.appsLastTwoWeeksCount ?? member?.completedLastTwoWeeksCount ?? member?.appsThisWeekCount ?? 0;
+}
+
+function progressWidth(member) {
+  const ratio = recentCompletedCount(member) / maxRecentCompletedCount.value;
+  return `${Math.max(Math.round(ratio * 100), recentCompletedCount(member) > 0 ? 12 : 0)}%`;
+}
 
 watch(activeTab, () => {
   loadData();

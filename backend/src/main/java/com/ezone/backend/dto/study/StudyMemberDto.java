@@ -11,6 +11,8 @@ public class StudyMemberDto {
     private int notStartedCount;
     private int appsThisMonthCount;
     private int appsThisWeekCount;
+    private int completedJobCount;
+    private int appsLastTwoWeeksCount;
     private String userName;
     private String userNickname;
 
@@ -30,6 +32,10 @@ public class StudyMemberDto {
     public void setAppsThisMonthCount(int appsThisMonthCount) { this.appsThisMonthCount = appsThisMonthCount; }
     public int getAppsThisWeekCount() { return appsThisWeekCount; }
     public void setAppsThisWeekCount(int appsThisWeekCount) { this.appsThisWeekCount = appsThisWeekCount; }
+    public int getCompletedJobCount() { return completedJobCount; }
+    public void setCompletedJobCount(int completedJobCount) { this.completedJobCount = completedJobCount; }
+    public int getAppsLastTwoWeeksCount() { return appsLastTwoWeeksCount; }
+    public void setAppsLastTwoWeeksCount(int appsLastTwoWeeksCount) { this.appsLastTwoWeeksCount = appsLastTwoWeeksCount; }
     public String getUserName() { return userName; }
     public void setUserName(String userName) { this.userName = userName; }
     public String getUserNickname() { return userNickname; }

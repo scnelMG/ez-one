@@ -111,6 +111,8 @@ public class StudyService {
                 int notStartedCount = studyMapper.countNotStartedJobsByUserEmail(m.getUserEmail());
                 int appsThisMonthCount = studyMapper.countJobsThisMonthByUserEmail(m.getUserEmail());
                 int appsThisWeekCount = studyMapper.countJobsThisWeekByUserEmail(m.getUserEmail());
+                int completedJobCount = studyMapper.countCompletedJobsByUserEmail(m.getUserEmail());
+                int appsLastTwoWeeksCount = studyMapper.countCompletedJobsLastTwoWeeksByUserEmail(m.getUserEmail());
 
                 StudyMemberDto mDto = new StudyMemberDto();
                 mDto.setId(m.getId());
@@ -121,6 +123,8 @@ public class StudyService {
                 mDto.setNotStartedCount(notStartedCount);
                 mDto.setAppsThisMonthCount(appsThisMonthCount);
                 mDto.setAppsThisWeekCount(appsThisWeekCount);
+                mDto.setCompletedJobCount(completedJobCount);
+                mDto.setAppsLastTwoWeeksCount(appsLastTwoWeeksCount);
                 mDto.setUserName(m.getUserName());
                 mDto.setUserNickname(m.getUserNickname());
                 return mDto;

@@ -14,17 +14,23 @@ public interface StudyMapper {
     void insertStudyMember(StudyMemberRow row);
     List<StudyMemberRow> findMembersByStudyId(@Param("studyId") String studyId);
 
-    @org.apache.ibatis.annotations.Select("SELECT COUNT(*) FROM basket_jobs bj JOIN users u ON bj.user_id = u.id WHERE u.email = #{userEmail} AND bj.application_status = 'PROGRESS' AND bj.deleted_at IS NULL")
+    @org.apache.ibatis.annotations.Select("SELECT COUNT(*) FROM basket_jobs bj JOIN users u ON bj.user_id = u.id WHERE u.email = #{userEmail} AND bj.application_status = 'IN_PROGRESS' AND bj.deleted_at IS NULL")
     int countActiveJobsByUserEmail(@Param("userEmail") String userEmail);
 
     @org.apache.ibatis.annotations.Select("SELECT COUNT(*) FROM basket_jobs bj JOIN users u ON bj.user_id = u.id WHERE u.email = #{userEmail} AND bj.application_status IN ('READY', 'NOT_APPLIED') AND bj.deleted_at IS NULL")
     int countNotStartedJobsByUserEmail(@Param("userEmail") String userEmail);
 
-    @org.apache.ibatis.annotations.Select("SELECT COUNT(*) FROM basket_jobs bj JOIN users u ON bj.user_id = u.id WHERE u.email = #{userEmail} AND bj.created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH) AND bj.deleted_at IS NULL")
+    @org.apache.ibatis.annotations.Select("SELECT COUNT(*) FROM basket_jobs bj JOIN users u ON bj.user_id = u.id WHERE u.email = #{userEmail} AND bj.application_status = 'COMPLETED' AND bj.status_updated_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH) AND bj.deleted_at IS NULL")
     int countJobsThisMonthByUserEmail(@Param("userEmail") String userEmail);
 
-    @org.apache.ibatis.annotations.Select("SELECT COUNT(*) FROM basket_jobs bj JOIN users u ON bj.user_id = u.id WHERE u.email = #{userEmail} AND bj.created_at >= DATE_SUB(NOW(), INTERVAL 1 WEEK) AND bj.deleted_at IS NULL")
+    @org.apache.ibatis.annotations.Select("SELECT COUNT(*) FROM basket_jobs bj JOIN users u ON bj.user_id = u.id WHERE u.email = #{userEmail} AND bj.application_status = 'COMPLETED' AND bj.status_updated_at >= DATE_SUB(NOW(), INTERVAL 1 WEEK) AND bj.deleted_at IS NULL")
     int countJobsThisWeekByUserEmail(@Param("userEmail") String userEmail);
+
+    @org.apache.ibatis.annotations.Select("SELECT COUNT(*) FROM basket_jobs bj JOIN users u ON bj.user_id = u.id WHERE u.email = #{userEmail} AND bj.application_status = 'COMPLETED' AND bj.deleted_at IS NULL")
+    int countCompletedJobsByUserEmail(@Param("userEmail") String userEmail);
+
+    @org.apache.ibatis.annotations.Select("SELECT COUNT(*) FROM basket_jobs bj JOIN users u ON bj.user_id = u.id WHERE u.email = #{userEmail} AND bj.application_status = 'COMPLETED' AND bj.status_updated_at >= DATE_SUB(NOW(), INTERVAL 14 DAY) AND bj.deleted_at IS NULL")
+    int countCompletedJobsLastTwoWeeksByUserEmail(@Param("userEmail") String userEmail);
 
     void insertStudyInvite(StudyInviteRow row);
     List<StudyInviteRow> findInvitesByInviteeEmail(@Param("inviteeEmail") String inviteeEmail);

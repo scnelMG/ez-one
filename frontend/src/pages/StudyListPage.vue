@@ -151,7 +151,7 @@
             <div class="preview-stats">
               <div class="stat-box">진행중<br/><strong>3</strong></div>
               <div class="stat-box">지원전<br/><strong>1</strong></div>
-              <div class="stat-box">이번달<br/><strong>5</strong></div>
+              <div class="stat-box">최근 2주<br/><strong>5</strong></div>
             </div>
           </div>
           <div class="preview-section" v-if="createForm.settings.showTeamComparison">
@@ -273,6 +273,15 @@ function getMemberLabel(member) {
   return member?.userName || member?.userNickname || member?.userEmail?.split('@')[0] || '팀원';
 }
 
+function getMemberAvatarLabel(member) {
+  const label = getMemberLabel(member).trim();
+  if (!label) return '팀';
+  if (/^[가-힣]+$/.test(label) && label.length >= 2) {
+    return label.slice(-2);
+  }
+  return label.length <= 2 ? label : label.charAt(0).toUpperCase();
+}
+
 function memberPreview(study) {
   const members = Array.isArray(study.members) ? study.members : [];
   if (members.length > 0) {
@@ -281,7 +290,7 @@ function memberPreview(study) {
       return {
         key: member.id || member.userEmail || `${study.id}-${index}`,
         label,
-        initial: label.charAt(0).toUpperCase()
+        initial: getMemberAvatarLabel(member)
       };
     });
   }
@@ -289,8 +298,8 @@ function memberPreview(study) {
   const count = Math.max(study.memberCount || 1, 1);
   return Array.from({ length: Math.min(count, 4) }, (_, index) => ({
     key: `${study.id}-placeholder-${index}`,
-    label: `팀원 ${index + 1}`,
-    initial: index === 0 ? '나' : String(index + 1)
+    label: index === 0 ? '나' : '팀원',
+    initial: index === 0 ? '나' : '팀'
   }));
 }
 
