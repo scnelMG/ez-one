@@ -383,9 +383,19 @@
                     <h3 class="version-section-title">
                       AI 변경점 요약
                     </h3>
-                    <div style="display: flex; gap: 8px;">
-                      <button v-if="selectedLeftVersionId && selectedRightVersionId" class="ghost-button" @click="compareVersions" :disabled="workspaceStore.isComparingVersions" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: #e0e7ff; color: #4f46e5; border: none; cursor: pointer; font-weight: 600;">
-                        🔄 새로고침
+                    <div class="ai-summary-actions">
+                      <button
+                        v-if="selectedLeftVersionId && selectedRightVersionId"
+                        class="ai-summary-refresh-button"
+                        type="button"
+                        @click="compareVersions"
+                        :disabled="workspaceStore.isComparingVersions"
+                      >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M20 12a8 8 0 0 1-13.66 5.66M4 12A8 8 0 0 1 17.66 6.34" />
+                          <path d="M20 5v5h-5M4 19v-5h5" />
+                        </svg>
+                        <span>새로고침</span>
                       </button>
                     </div>
                   </div>
@@ -1032,17 +1042,14 @@ async function compareVersions() {
 }
 
 function buildLineDiff(leftBody, rightBody) {
-  const formatToSentenceLines = (text) => text ? text.replace(/([.?!])\s+/g, '$1\n') : '';
-
   let diffs = [];
   try {
-    diffs = diffLines(formatToSentenceLines(leftBody), formatToSentenceLines(rightBody));
+    diffs = diffLines(normalizeDiffText(leftBody), normalizeDiffText(rightBody), { newlineIsToken: false });
   } catch (error) {
     console.error('Diff calculation failed:', error);
-    // Fallback if diff fails
     return {
-      leftRows: [{ type: 'same', content: leftBody }],
-      rightRows: [{ type: 'same', content: rightBody }]
+      leftRows: [{ type: 'same', content: normalizeDiffText(leftBody) }],
+      rightRows: [{ type: 'same', content: normalizeDiffText(rightBody) }]
     };
   }
 
@@ -1112,6 +1119,23 @@ function buildLineDiff(leftBody, rightBody) {
 function splitLines(body) {
   if (!body) return [];
   return body.replace(/\r\n/g, '\n').split('\n');
+}
+
+function normalizeDiffText(body) {
+  const raw = String(body || '');
+  if (!raw) return '';
+  const htmlLike = /<[^>]+>/.test(raw);
+  if (!htmlLike || typeof document === 'undefined') {
+    return raw.replace(/\r\n/g, '\n').trimEnd();
+  }
+  const container = document.createElement('div');
+  container.innerHTML = raw
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|li|h[1-6]|blockquote|pre|summary|details|figure)>/gi, '\n');
+  return (container.innerText || container.textContent || '')
+    .replace(/\u00A0/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trimEnd();
 }
 
 function openBoard(type) {

@@ -528,6 +528,8 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
             .orElseThrow(() -> new IllegalArgumentException("Version not found"));
         EssayVersionRow right = mapper.findVersion(userId, workspaceId, request.rightVersionId())
             .orElseThrow(() -> new IllegalArgumentException("Version not found"));
+        EssayQuestionRow question = mapper.findQuestion(workspaceId, left.getQuestionId())
+            .orElseThrow(() -> new IllegalArgumentException("Question not found"));
         String leftBody = left.getBody() != null ? left.getBody() : "";
         String rightBody = right.getBody() != null ? right.getBody() : "";
         boolean changed = !leftBody.equals(rightBody);
@@ -541,6 +543,9 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
                 aiSummary = openAiClient.generateComparisonSummary(
                     leftBody,
                     rightBody,
+                    left.getVersionName(),
+                    right.getVersionName(),
+                    question.getPrompt(),
                     workspace.getCompanyName(),
                     workspace.getPositionTitle(),
                     jdContext
@@ -556,6 +561,9 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         return new CompareEssayVersionsResponse(
             left.getId(),
             right.getId(),
+            left.getVersionName(),
+            right.getVersionName(),
+            question.getPrompt(),
             leftBody,
             rightBody,
             changed,

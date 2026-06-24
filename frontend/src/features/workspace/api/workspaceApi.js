@@ -161,6 +161,9 @@ export function createWorkspaceApi(httpClient = defaultHttpClient) {
                     return {
                         leftVersionId: String(leftVersionId),
                         rightVersionId: String(rightVersionId),
+                        leftVersionName: left?.versionName ?? '이전 저장본',
+                        rightVersionName: right?.versionName ?? '비교 저장본',
+                        questionPrompt: '',
                         leftBody: left ? left.body : '불러올 수 없음',
                         rightBody: right ? right.body : '불러올 수 없음',
                         changed: true,
@@ -171,11 +174,14 @@ export function createWorkspaceApi(httpClient = defaultHttpClient) {
                 return {
                     leftVersionId: left.id,
                     rightVersionId: right.id,
+                    leftVersionName: left.versionName,
+                    rightVersionName: right.versionName,
+                    questionPrompt: '',
                     leftBody: left.body,
                     rightBody: right.body,
                     changed: changed,
                     aiSummary: changed
-                        ? '- 변경된 내용: 비교 버전의 표현과 강조점이 달라졌습니다.\n- 합격 가능성을 높이는 AI 피드백: 지원 기업과 직무에 맞춰 성과와 직무 키워드를 더 구체화하세요.'
+                        ? `1. 변경된 내용\n- ${left.versionName}에서 ${right.versionName}로 바뀌며 표현과 강조점이 달라졌습니다.\n\n2. 채용담당자 관점 피드백\n- 지원 기업과 직무에 맞춰 성과와 직무 키워드를 더 구체화하세요.`
                         : '변경된 내용이 없습니다.'
                 };
             }
@@ -257,6 +263,9 @@ function toVersionComparison(data) {
     return {
         leftVersionId: String(data.leftVersionId),
         rightVersionId: String(data.rightVersionId),
+        leftVersionName: data.leftVersionName ?? '',
+        rightVersionName: data.rightVersionName ?? '',
+        questionPrompt: data.questionPrompt ?? '',
         leftBody: data.leftBody ?? '',
         rightBody: data.rightBody ?? '',
         changed: data.changed ?? false,

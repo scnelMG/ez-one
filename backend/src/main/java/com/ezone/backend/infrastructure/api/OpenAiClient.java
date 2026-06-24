@@ -39,6 +39,9 @@ public class OpenAiClient {
     public String generateComparisonSummary(
         String leftBody,
         String rightBody,
+        String leftVersionName,
+        String rightVersionName,
+        String questionPrompt,
         String companyName,
         String positionTitle,
         String jdContext
@@ -49,38 +52,49 @@ public class OpenAiClient {
         }
 
         String prompt = """
-            당신은 한국 채용 자기소개서를 첨삭하는 시니어 커리어 컨설턴트입니다.
-            사용자가 저장한 자기소개서의 이전 버전과 비교 버전을 비교하고, 지원 기업/직무/JD에 맞춘 피드백을 작성하세요.
+            당신은 한국 대기업/중견기업 서류 전형을 많이 검토해 본 채용담당자이자 자기소개서 첨삭 전문가입니다.
+            사용자가 저장한 두 자기소개서 버전을 비교하고, 지원 기업/직무/JD/작성 문항을 논리적으로 함께 고려해 피드백하세요.
 
             출력 규칙:
             - 반드시 한국어로 작성합니다.
-            - 문단형 긴 설명이 아니라 개조식 bullet로 작성합니다.
-            - 두 섹션만 작성합니다.
+            - 문단형 긴 설명이 아니라 개조식 bullet로만 작성합니다.
+            - "버전 1", "버전 2", "이전 버전", "비교 버전"이라는 표현을 쓰지 말고 반드시 실제 버전명 "%s", "%s"를 사용합니다.
+            - 아래 두 섹션 제목만 사용합니다.
               1. 변경된 내용
-              2. 합격 가능성을 높이는 AI 피드백
-            - "변경된 내용"에는 실제로 추가/삭제/강조가 달라진 사실만 씁니다.
-            - "합격 가능성을 높이는 AI 피드백"에는 지원 기업, 지원 직무, JD를 기준으로 서류 합격 가능성을 높이는 보완점을 씁니다.
+              2. 채용담당자 관점 피드백
+            - "변경된 내용"에는 "%s"에서 "%s"로 바뀌며 실제로 추가/삭제/강조가 달라진 사실만 씁니다.
+            - "채용담당자 관점 피드백"에는 지원 기업, 지원 직무, JD, 작성 문항에 비추어 서류 합격 가능성을 높이는 보완점을 씁니다.
             - 근거 없는 경험이나 성과를 지어내지 말고, 사용자가 쓴 내용 안에서 강화할 방향을 제안합니다.
-            - 가능하면 직무 키워드, JD 요구사항, 성과 구체화, 기업 적합성 관점으로 피드백합니다.
+            - 직무 적합성, JD 요구역량, 문항 의도, 기업/직무 연결성, 경험의 구체성, 성과/수치/행동의 선명도를 기준으로 평가합니다.
+            - 사용자가 지원하는 직무와 JD에서 중요한 키워드가 자기소개서에 어떻게 반영됐는지 반드시 언급합니다.
             - 각 섹션은 3~5개 bullet 이내로 간결하게 작성합니다.
+            - 각 bullet은 "- "로 시작합니다.
 
             === 지원 정보 ===
             기업: %s
             직무: %s
+            작성 문항: %s
 
             === 사용자가 입력한 JD 참고자료 ===
             %s
 
-            === 이전 버전 ===
+            === %s ===
             %s
 
-            === 비교 버전 ===
+            === %s ===
             %s
             """.formatted(
+                fallback(leftVersionName, "이전 저장본"),
+                fallback(rightVersionName, "비교 저장본"),
+                fallback(leftVersionName, "이전 저장본"),
+                fallback(rightVersionName, "비교 저장본"),
                 fallback(companyName, "미입력"),
                 fallback(positionTitle, "미입력"),
+                fallback(questionPrompt, "문항 정보가 없습니다."),
                 fallback(jdContext, "사용자가 입력한 JD 참고자료가 없습니다. 기업명과 직무명, 자기소개서 본문만 기준으로 피드백하세요."),
+                fallback(leftVersionName, "이전 저장본"),
                 fallback(leftBody, ""),
+                fallback(rightVersionName, "비교 저장본"),
                 fallback(rightBody, "")
             );
 
@@ -91,7 +105,7 @@ public class OpenAiClient {
         Map<String, Object> requestBody = Map.of(
             "model", compareModel,
             "input", List.of(
-                Map.of("role", "system", "content", "You are a precise Korean career coach who compares essay versions using company, role, and JD context."),
+                Map.of("role", "system", "content", "You are a precise Korean recruiter and career coach. Compare essay versions using the actual version names, company, role, JD, and question intent. Respond only in concise Korean bullets."),
                 Map.of("role", "user", "content", prompt)
             ),
             "temperature", 0.35,
