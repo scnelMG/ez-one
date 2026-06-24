@@ -124,7 +124,7 @@ function Ensure-BackendJar($BackendDir) {
     }
     Push-Location $BackendDir
     try {
-        $buildOutput = & $mavenCommand "-Dmaven.repo.local=$env:USERPROFILE\.m2\repository" "-DskipTests" "package" 2>&1
+        $buildOutput = & $mavenCommand "-Dmaven.repo.local=$env:USERPROFILE\.m2\repository" "-Dmaven.test.skip=true" "package" 2>&1
         $buildExitCode = $LASTEXITCODE
         $buildOutput | ForEach-Object { Write-Host $_ }
         if ($buildExitCode -ne 0) {
@@ -335,7 +335,7 @@ Write-Host "[ok] MySQL reachable at ${dbHost}:${dbPort}"
 
 $apiBase = $frontendEnv["VITE_API_BASE_URL"].TrimEnd("/")
 $backendHealth = $apiBase -replace "/api$", "/api/health"
-$frontendUrl = "http://[::1]:5173"
+$frontendUrl = "http://localhost:5173"
 
 if ($Restart) {
     Write-Host "[restart] stopping local dev ports"
@@ -373,7 +373,7 @@ if (Test-HttpReady $frontendUrl) {
     }
     $frontendProcess = Start-LoggedProcess `
         $nodeCommand `
-        @($viteEntry, "--host", "::1", "--port", "5173") `
+        @($viteEntry, "--host", "localhost", "--port", "5173") `
         $frontendDir `
         (Join-Path $frontendDir "frontend-server.log") `
         (Join-Path $frontendDir "frontend-server.err.log")

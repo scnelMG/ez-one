@@ -60,9 +60,9 @@
 | --- | --- | --- |
 | `HISTORY-001` | `/history` route and nav entry; rows link to `/workspaces/{workspaceId}` | `router/index.test.js`, `AppLayout.test.js`, `PastHistoryPage.test.js` |
 | `HISTORY-002` | Basket page exposes a `과거 지원 내역` link to `/history` | `BasketPage.test.js` |
-| `HISTORY-003` | `GET /api/history/applications` and `PastHistoryPage` default full list with search and sorting on the loaded rows; archived basket jobs are snapshotted into history | `historyApi.test.js`, `PastHistoryPage.test.js`, `P1ApiContractTest` |
+| `HISTORY-003` | `GET /api/history/applications` and `PastHistoryPage` default full list with search and sorting on the loaded rows; archived basket jobs are snapshotted into history and current active basket jobs, including `READY`, are recognized as history-visible rows | `historyApi.test.js`, `PastHistoryPage.test.js`, `P1ApiContractTest`, `HistorySchemaContractTest` |
 | `HISTORY-004`/`HISTORY-005` | `ALL` and `YYYY-H1`/`YYYY-H2` period options | `PastHistoryPage.test.js`, `P1ApiContractTest` |
-| `HISTORY-006`/`HISTORY-007` | selected-period summary metrics use the standard status counts 지원완료, 미지원, 진행 중, 지원 전 | `PastHistoryPage.test.js`, `HistoryApplicationAssemblerTest`, `P1ApiContractTest` |
+| `HISTORY-006`/`HISTORY-007` | selected-period summary metrics use past-result counts 전체 공고, 서류 탈락, 필기 탈락, 면접 탈락, 미지원; current active basket `READY` rows remain available in the history data contract but are not promoted into the top summary cards | `PastHistoryPage.test.js`, `HistoryApplicationAssemblerTest`, `P1ApiContractTest`, `HistorySchemaContractTest` |
 | `HISTORY-008` | company-type aggregation and table filters use explicit company/status/result labels | `PastHistoryPage.test.js`, `HistoryApplicationAssemblerTest`, `P1ApiContractTest` |
 | `HISTORY-009`/`HISTORY-010` | intentionally not implemented | Out of scope |
 
@@ -105,10 +105,12 @@ Study still needs a formal requirement ID if it remains an active product surfac
 | --- | --- | --- |
 | `MM-001`, `MM-006`, `MM-007`, `MM-008` | Mattermost webhook/backfill persists raw messages and parsed job candidates. Parsed candidates now carry normalized deadline fields for recommendation listing. | `MattermostIngestionServiceTest`, `MattermostSchemaContractTest` |
 | `MM-009`, `REC-003`, `REC-004` | SSAFY-only Mattermost recommendation listing returns all open parsed candidates with stored AI score, pending state, or rule fallback without a synchronous AI call. | `MattermostRecommendationServiceTest`, `recommendationApi.test.js` |
-| Mattermost recommendation UI | `/recommendations/mattermost` shows all jobs by default, with segments for 전체 공고, AI 추천, 마감 임박 and sort modes for deadline, score, and recent post time. | `MattermostRecommendationsPage.test.js` |
+| Mattermost recommendation UI | `/recommendations/mattermost` shows all jobs by default, with segments for 전체 공고, 검토 추천, 마감 임박 and sort modes for deadline, score, and recent post time. | `MattermostRecommendationsPage.test.js` |
+| `AI-003`, `AI-006`, `MM-009` | Extension activity assist and Mattermost scoring use real service prompts with schema-constrained JSON requests, compact inputs, low output-token budgets, readable Korean fallback copy, and user-reviewed output only. | `GmsApplicationActivityAssistAiClientTest`, `ApplicationActivityAssistServiceTest`, `GmsAiJobRecommendationClientTest`, `MattermostRecommendationServiceTest`, `MattermostRecommendationsPage.test.js` |
 
 ## 2026-06-20 Company Enrichment Traceability Update
 
 | Requirement | Implementation | Verification |
 | --- | --- | --- |
 | `DATA-002`, `DATA-004`, `JOB-016`, `WS-028` | Basket/recommendation/extension saves run a provider chain ordered as 금융위원회 기업기본정보, OpenDART 기업개황, then legacy registry/defaults. Provider failures remain non-blocking. Workspace company details include source status and source names. | `FinancialCommissionCompanyInfoProviderTest`, `OpenDartCompanyOverviewProviderTest`, `MyBatisP1WorkspaceServiceTest`, `WorkspacePage.test.js`, `workspaceApi.test.js` |
+| `DATA-002`, `JOB-016` | Startup and scheduled bulk company data sync are opt-in through `COMPANY_DATA_STARTUP_SYNC_ENABLED` and `COMPANY_DATA_BATCH_SYNC_ENABLED`; default backend restart does not call public company APIs. | `StartupSyncRunnerTest`, `CompanyDataSchedulerTest`, `LocalConfigurationContractTest` |

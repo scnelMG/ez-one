@@ -118,9 +118,14 @@ Mattermost webhook secret은 단일 채널이면 `MATTERMOST_WEBHOOK_SECRET`, �
 | --- | --- | --- |
 | GET | `/api/integrations/notion` | 연결 상태와 계정 정보 조회 |
 | POST | `/api/integrations/notion/connect` | Notion OAuth 연결 시작/완료 |
+| POST | `/api/integrations/notion/sync-now` | 현재 장바구니 공고를 연결된 Notion JOB_ONLY 데이터베이스에 즉시 동기화 |
 | DELETE | `/api/integrations/notion` | Notion 연결 해제 |
 | PUT | `/api/integrations/notion/sync-settings` | 자동 동기화 설정 저장. P1 scope는 `JOB_ONLY` |
 | GET | `/api/integrations/notion/sync-logs` | 동기화 이력/실패 로그 조회 |
+
+`GET /api/integrations/notion/sync-logs` 응답의 각 로그는 `id`, `basketJobId`, `target`, `status`, `message`를 포함한다. `basketJobId`는 같은 공고의 과거 실패와 최신 성공을 구분해 화면에서 최신 상태만 표시하는 데 사용한다.
+
+Notion JOB_ONLY sync ensures the target database uses Korean basket-page properties before page creation/update: `직무`, `회사명`, `상태`, `마감일`, `마감 표시`, `마감 임박`, `바로가기`, `회사 로고`, `메모`, `공고 ID`, `워크스페이스 ID`, and `동기화 범위`. `상태` uses the basket labels `지원 전`, `진행 중`, `지원완료`, and `미지원`; `마감 임박` uses checkbox, `회사 로고` uses an external file property, and `바로가기` uses a URL property.
 
 ## Chrome Extension
 
@@ -155,7 +160,7 @@ Mattermost webhook secret은 단일 채널이면 `MATTERMOST_WEBHOOK_SECRET`, �
 | --- | --- | --- |
 | GET | `/api/history/applications?period=ALL&resultStage=` | Returns past application periods, selected-period summary, company-type counts, and rows with `workspaceId` links plus `companyLogoUrl` when stored company logo metadata exists. `period` uses `ALL` or `YYYY-H1`/`YYYY-H2`. `resultStage` is optional and may be `DOCUMENT_FAILED`, `TEST_FAILED`, `INTERVIEW_FAILED`, `NOT_APPLIED`, or `IN_PROGRESS`. |
 
-History rows are stored in `application_history`. The import process creates linked `basket_jobs` and `workspaces` for workspace navigation, but `basket_jobs.saved_source = 'HISTORY_IMPORT'` is excluded from the active basket list. Normal basket jobs are copied into `application_history` when their status changes away from `READY`. The history query also includes existing active basket jobs whose status is already `COMPLETED`, `IN_PROGRESS`, `NOT_APPLIED`, or past-deadline `READY`, so previously saved application progress remains visible without requiring delete/archive. Delete alone is treated as removing a mistaken basket entry, not as evidence of a past application.
+History rows are stored in `application_history`. The import process creates linked `basket_jobs` and `workspaces` for workspace navigation, but `basket_jobs.saved_source = 'HISTORY_IMPORT'` is excluded from the active basket list. Normal basket jobs are copied into `application_history` when their status changes away from `READY`. The history query also includes existing active basket jobs whose status is `READY`, `COMPLETED`, `IN_PROGRESS`, or `NOT_APPLIED`, so the summary can count current basket jobs that are still 지원 전 while previously saved application progress remains visible without requiring delete/archive. Past-deadline `READY` jobs are normalized to `NOT_APPLIED` by the deadline rule. Delete alone is treated as removing a mistaken basket entry, not as evidence of a past application.
 
 ## 2026-06-17 Study API Authorization Addendum
 
@@ -267,7 +272,8 @@ Requirement: `DATA-002`, `DATA-004`, `JOB-016`, `WS-028`.
 - 기업 보강 우선순위는 `FINANCIAL_COMMISSION_COMPANY_BASIC` -> `OPENDART_COMPANY_OVERVIEW` -> 기존 공식 registry/내부 기본값이다. OpenDART는 금융위 결과의 누락 필드를 보강한다.
 - `GET /api/workspaces/{workspaceId}`의 `companyDetails`는 기존 필드를 유지하고 `sourceStatus`, `sourceNames`, `lastUpdatedAt`을 추가로 내려줄 수 있다.
 - `sourceStatus`는 `OFFICIAL`, `PARTIAL`, `UNVERIFIED` 중 하나다. 공식 출처에서 유효 필드가 2개 이상이면 `OFFICIAL`, 출처는 있으나 핵심 필드가 부족하면 `PARTIAL`, 공식 API 매칭이 없으면 `UNVERIFIED`다.
-- Runtime configuration: `PUBLIC_DATA_API_KEY`, `FINANCIAL_COMPANY_BASIC_INFO_URL`, `OPENDART_API_KEY`, `COMPANY_ENRICHMENT_REALTIME_ENABLED`.
+- Runtime configuration: `PUBLIC_DATA_API_KEY`, `FINANCIAL_COMPANY_BASIC_INFO_URL`, `OPENDART_API_KEY`, `COMPANY_ENRICHMENT_REALTIME_ENABLED`, `COMPANY_DATA_STARTUP_SYNC_ENABLED`, `COMPANY_DATA_BATCH_SYNC_ENABLED`.
+- Bulk company sync is disabled by default. Set `COMPANY_DATA_STARTUP_SYNC_ENABLED=true` only when an operator intentionally wants to backfill company data during backend startup, and set `COMPANY_DATA_BATCH_SYNC_ENABLED=true` only when an operator intentionally wants the scheduled public API batch. External public API failures must remain non-blocking.
 
 ## 2026-06-20 Mattermost Recommendation API
 
@@ -279,6 +285,18 @@ Requirement: `MM-001`, `MM-006`, `MM-007`, `MM-008`, `MM-009`, `REC-003`, `REC-0
 | POST | `/api/recommendations/jobs/{recommendationId}/save?source=mattermost` | Saves the selected Mattermost candidate through the normal basket/workspace flow. Missing AI score does not block save. |
 
 Mattermost recommendation rows may include `companyDomain`, `companyType`, `companyLogoUrl`, `postedAt`, `collectedAt`, `recommendationScore`, and `recommendationReason`. `recommendationScore` may be `null` while the stored score status is pending; clients should render this as a calculating state instead of hiding the job.
+
+## 2026-06-24 Extension Activity Assist AI
+
+Requirement: `AI-003`, `AI-006`.
+
+| Method | Path | Description |
+| --- | --- | --- |
+| POST | `/api/extension/application-assist/activities` | Returns user-reviewed activity recommendations for extension application fields. The request includes company/job context, field labels, max items, and char/byte limit. |
+
+The endpoint uses the authenticated user's saved document profile and never writes to the external application form automatically. AI output is returned as recommendations with score, recruiter/practitioner views, appeal points, risks, and paste-ready drafts. If GMS AI is unavailable, the backend returns deterministic fallback recommendations from saved activities with a warning instead of failing the extension flow.
+
+Both extension activity assist and Mattermost job scoring use schema-constrained JSON prompts when supported by the GMS OpenAI-compatible Responses API, keep low-temperature deterministic settings, and preserve JSON parsing fallback for proxy compatibility.
 
 ## 2026-06-24 History Label Persistence API
 

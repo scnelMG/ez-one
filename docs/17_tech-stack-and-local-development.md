@@ -72,6 +72,8 @@
 
 Local Chrome extension testing uses the fixed unpacked extension ID `ikpeibohnopmikegoogggmdipmhmiadi`, derived from `extension/public/manifest.json` `key`. `frontend/.env.example` includes the same value, and `/extension/connect` falls back to it when `VITE_EXTENSION_ID` is not provided.
 
+Notion OAuth stores access tokens only as AES-GCM ciphertext. `NOTION_TOKEN_ENCRYPTION_KEY` must be a Base64-encoded 32-byte key in backend environment configuration and must not be committed.
+
 ## 초기 명령어 기준
 
 앱 scaffolding 이후 각 앱 README에 실제 명령어를 확정한다.
