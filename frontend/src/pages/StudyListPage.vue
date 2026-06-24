@@ -25,7 +25,6 @@
                 팀원별 지원 현황을 보고, 공유한 자소서에 피드백을 남기고,
                 각자 발견한 좋은 공고를 추천하면서 준비 흐름을 놓치지 않게 도와줘요.
               </p>
-              <button class="primary-button" type="button" @click="openCreateModal">스터디 만들기</button>
             </div>
             <div class="feature-preview-grid" aria-label="취업스터디 기능 예시">
               <article class="feature-preview dashboard-preview">

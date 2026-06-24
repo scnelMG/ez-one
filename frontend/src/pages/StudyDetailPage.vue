@@ -62,13 +62,13 @@
               <div v-if="studySettings.showTeamComparison" class="dashboard-section chart-section">
                 <h2>팀원 진척도 비교 <span class="subtitle">(최근 2주 지원완료 기준)</span></h2>
                 <div class="chart-container">
-                  <div class="chart-bar-row" v-for="member in studyStore.currentStudy?.members || []" :key="'chart-'+member.id">
+                  <div class="chart-bar-row" v-for="(member, index) in studyStore.currentStudy?.members || []" :key="'chart-'+member.id">
                     <div class="chart-label">
                       <div class="member-avatar-small">{{ memberAvatarLabel(member) }}</div>
                       <span class="member-name" :title="memberDisplayName(member)">{{ memberDisplayName(member) }}</span>
                     </div>
                     <div class="chart-track">
-                      <div class="chart-fill" :style="{ width: progressWidth(member) }">
+                      <div class="chart-fill" :style="chartFillStyle(member, index)">
                         <span class="chart-value" v-if="recentCompletedCount(member) > 0">{{ recentCompletedCount(member) }}</span>
                       </div>
                     </div>
@@ -613,6 +613,13 @@ const maxRecentCompletedCount = computed(() => {
   const counts = studyStore.currentStudy?.members?.map(recentCompletedCount) || [];
   return Math.max(...counts, 1);
 });
+const chartColors = [
+  ['#4f46e5', '#22c7d9'],
+  ['#f59e0b', '#f97316'],
+  ['#10b981', '#34d399'],
+  ['#ec4899', '#a855f7'],
+  ['#2563eb', '#60a5fa']
+];
 
 function memberDisplayName(member) {
   return member?.userName || member?.userNickname || member?.userEmail?.split('@')[0] || '팀원';
@@ -634,6 +641,14 @@ function recentCompletedCount(member) {
 function progressWidth(member) {
   const ratio = recentCompletedCount(member) / maxRecentCompletedCount.value;
   return `${Math.max(Math.round(ratio * 100), recentCompletedCount(member) > 0 ? 12 : 0)}%`;
+}
+
+function chartFillStyle(member, index) {
+  const [from, to] = chartColors[index % chartColors.length];
+  return {
+    width: progressWidth(member),
+    background: `linear-gradient(90deg, ${from} 0%, ${to} 100%)`
+  };
 }
 
 watch(activeTab, () => {
@@ -1622,13 +1637,19 @@ const confirmDelete = async () => {
   flex-direction: column;
   gap: 16px;
 }
+.chart-container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+}
 .chart-bar-container {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 .chart-label {
-  width: 130px;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1640,17 +1661,18 @@ const confirmDelete = async () => {
   flex-shrink: 0;
 }
 .chart-bar-bg, .chart-track {
-  flex-grow: 1;
-  background: var(--surface-hover);
-  height: 24px;
-  border-radius: 12px;
+  width: 100%;
+  min-width: 180px;
+  background: #eef2f7;
+  height: 28px;
+  border-radius: 999px;
   overflow: hidden;
   position: relative;
 }
 .chart-bar-fill, .chart-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--color-primary) 0%, #a78bfa 100%);
-  border-radius: 12px;
+  min-width: 0;
+  border-radius: 999px;
   transition: width 0.5s ease-out;
   display: flex;
   align-items: center;
@@ -1790,9 +1812,11 @@ const confirmDelete = async () => {
   color: var(--color-primary);
 }
 .chart-bar-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(150px, 220px) minmax(0, 1fr);
   align-items: center;
-  gap: 12px;
+  gap: 16px;
+  width: 100%;
 }
 @media (max-width: 860px) {
   .study-detail-page {
