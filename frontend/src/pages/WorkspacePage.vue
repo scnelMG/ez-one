@@ -169,14 +169,24 @@
                   <div class="question-title-editor">
                     <p class="section-kicker">초안 작성</p>
                     <label class="question-field">
-                      <input
+                      <textarea
                         v-model="editQuestion.prompt"
                         data-testid="edit-question-prompt"
                         aria-label="문항 제목"
+                        rows="2"
                         @blur="saveQuestionSettings"
                         @keydown.enter.prevent="saveQuestionSettings"
                       />
                     </label>
+                  </div>
+                  <div class="editor-status-column">
+                    <span
+                      class="auto-save-badge"
+                      data-testid="auto-save-status"
+                      :data-save-state="autoSaveStatus"
+                    >
+                      {{ editorStatusLabel }}
+                    </span>
                     <label class="question-limit-field">
                       <span>글자수</span>
                       <input
@@ -189,13 +199,6 @@
                       />
                     </label>
                   </div>
-                  <span
-                    class="auto-save-badge"
-                    data-testid="auto-save-status"
-                    :data-save-state="autoSaveStatus"
-                  >
-                    {{ editorStatusLabel }}
-                  </span>
                 </div>
                 <MarkdownDraftEditor
                   v-model="draftBody"
