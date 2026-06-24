@@ -1957,6 +1957,7 @@ const MarkdownBoard = {
       if (!editor) return;
       const draft = ensureBoardDraft();
       editor.innerHTML = plainTextToEditorHtml(draft.body);
+      wrapLooseEditorImages(editor);
       updateEmptyState();
     }
 
@@ -1969,7 +1970,10 @@ const MarkdownBoard = {
       const imageItem = items.find((item) => item.type.startsWith('image/'));
       if (imageItem) {
         event.preventDefault();
-        insertImageFile(imageItem.getAsFile(), updateEmptyState);
+        insertImageFile(imageItem.getAsFile(), () => {
+          ensureBoardDraft().body = editorToPlainText(editorRef.value);
+          updateEmptyState();
+        });
         return;
       }
 
@@ -2711,6 +2715,7 @@ const MarkdownDraftEditor = {
     onMounted(() => {
       if (editorRef.value) {
         editorRef.value.innerHTML = plainTextToEditorHtml(props.modelValue);
+        wrapLooseEditorImages(editorRef.value);
       }
     });
 
@@ -2719,6 +2724,7 @@ const MarkdownDraftEditor = {
       if (!editor || document.activeElement === editor) return;
       syncingFromModel = true;
       editor.innerHTML = plainTextToEditorHtml(value);
+      wrapLooseEditorImages(editor);
       syncingFromModel = false;
     }, { immediate: true });
 
@@ -2899,7 +2905,7 @@ function markdownToHtml(markdown) {
 
 function plainTextToEditorHtml(value) {
   if (!value?.trim()) return '';
-  if (/<(?:p|div|br|span|font|b|strong|i|em|u|ul|ol|li|h[1-6]|blockquote|details|pre|img)\b/i.test(value)) {
+  if (/<(?:p|div|figure|br|span|font|b|strong|i|em|u|ul|ol|li|h[1-6]|blockquote|details|pre|img)\b/i.test(value)) {
     return value;
   }
   return markdownToHtml(value);
@@ -2907,7 +2913,7 @@ function plainTextToEditorHtml(value) {
 
 function savedEntryBodyHtml(value) {
   const raw = String(value || '');
-  const html = /<(?:p|div|br|span|font|b|strong|i|em|u|s|strike|ul|ol|li|h[1-6]|blockquote|details|pre|img)\b/i.test(raw)
+  const html = /<(?:p|div|figure|br|span|font|b|strong|i|em|u|s|strike|ul|ol|li|h[1-6]|blockquote|details|pre|img)\b/i.test(raw)
     ? raw
     : markdownToHtml(raw);
   return sanitizeSavedRichContent(html);
@@ -2922,7 +2928,7 @@ function sanitizeSavedRichContent(html) {
 
 function editorToPlainText(editor) {
   const html = editor?.innerHTML ?? '';
-  if (/<(?:span|font|b|strong|i|em|u|strike|ul|ol|li|h[1-6]|blockquote|details|pre|img)\b/i.test(html)) {
+  if (/<(?:figure|span|font|b|strong|i|em|u|strike|ul|ol|li|h[1-6]|blockquote|details|pre|img)\b/i.test(html)) {
     return html.trim();
   }
   const text = editor?.innerText ?? editor?.textContent ?? '';
@@ -2935,7 +2941,7 @@ function editorToPlainText(editor) {
 
 function inlineMarkdown(value) {
   return escapeHtml(value)
-    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img class="markdown-pasted-image" alt="$1" src="$2">')
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<figure class="resizable-image-frame" contenteditable="false"><img class="markdown-pasted-image" alt="$1" src="$2"></figure>')
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/\*([^*]+)\*/g, '<em>$1</em>')
@@ -2971,15 +2977,30 @@ function insertImageFile(file, afterInsert = () => {}) {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = () => {
+    const frame = document.createElement('figure');
+    frame.className = 'resizable-image-frame';
+    frame.contentEditable = 'false';
     const image = document.createElement('img');
     image.src = String(reader.result);
     image.alt = file.name || '붙여넣은 이미지';
     image.className = 'markdown-pasted-image';
-    insertNodeAtCursor(image);
+    frame.appendChild(image);
+    insertNodeAtCursor(frame);
     insertNodeAtCursor(document.createElement('p'));
     afterInsert();
   };
   reader.readAsDataURL(file);
+}
+
+function wrapLooseEditorImages(editor) {
+  editor?.querySelectorAll?.('img.markdown-pasted-image')?.forEach((image) => {
+    if (image.closest('.resizable-image-frame')) return;
+    const frame = document.createElement('figure');
+    frame.className = 'resizable-image-frame';
+    frame.contentEditable = 'false';
+    image.replaceWith(frame);
+    frame.appendChild(image);
+  });
 }
 
 function currentEditableBlock() {

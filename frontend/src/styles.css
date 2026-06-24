@@ -6102,12 +6102,42 @@ li {
   margin: 10px 0 0;
 }
 
-.draft-markdown-editor .markdown-pasted-image {
+.draft-markdown-editor .resizable-image-frame,
+.resizable-image-frame {
   display: block;
+  width: min(100%, 520px);
+  min-width: 180px;
+  min-height: 120px;
   max-width: 100%;
-  margin: 10px 0 16px;
-  border: 1px solid var(--color-border);
+  resize: both;
+  overflow: auto;
+  border: 1px solid #d9e0ea;
   border-radius: 8px;
+  background: #fff;
+  margin: 10px 0 16px;
+  padding: 6px;
+  cursor: nwse-resize;
+}
+
+.draft-markdown-editor .resizable-image-frame:focus,
+.resizable-image-frame:focus,
+.resizable-image-frame:hover {
+  border-color: rgba(109, 77, 255, 0.5);
+  box-shadow: 0 0 0 3px rgba(109, 77, 255, 0.08);
+}
+
+.draft-markdown-editor .resizable-image-frame .markdown-pasted-image,
+.resizable-image-frame .markdown-pasted-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: none;
+  border: 0;
+  border-radius: 6px;
+  margin: 0;
+  object-fit: contain;
+  pointer-events: none;
 }
 
 .editor-toolbar,
@@ -6381,7 +6411,7 @@ li {
 .markdown-pasted-image {
   display: block;
   max-width: 100%;
-  max-height: 340px;
+  max-height: none;
   border: 1px solid #d9e0ea;
   border-radius: 8px;
   margin: 12px 0;
@@ -7813,11 +7843,26 @@ li {
 .board-entry-body .markdown-pasted-image {
   display: block;
   max-width: 100%;
-  max-height: 260px;
+  max-height: none;
   border: 1px solid #d9e0ea;
   border-radius: 8px;
   margin: 10px 0;
   object-fit: contain;
+}
+
+.board-entry-body .resizable-image-frame {
+  resize: none;
+  cursor: default;
+  width: min(100%, 680px);
+}
+
+.board-entry-body .resizable-image-frame .markdown-pasted-image {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  border: 0;
+  border-radius: 6px;
+  margin: 0;
 }
 
 .board-entry-body:empty {
