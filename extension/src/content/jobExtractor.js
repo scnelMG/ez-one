@@ -23,11 +23,12 @@ export function extractJobPosting(documentRef = document, sourceUrl = documentRe
         cleanText(postingRoot.querySelector('h1')?.textContent) ||
         cleanText(postingRoot.querySelector('h2')?.textContent) ||
         null;
+    const resolvedSourceUrl = extractRecruitingSiteUrl(postingRoot, documentRef, sourceUrl) ?? sourceUrl;
     return {
         companyName: extractCompanyName(postingRoot, jasoseolData),
         positionTitle: title,
         deadlineLabel: extractDeadlineLabel(postingRoot, jasoseolData),
-        sourceUrl,
+        sourceUrl: resolvedSourceUrl,
         logoUrl: extractLogoUrl(postingRoot, sourceUrl) || extractLogoUrl(documentRef, sourceUrl),
         roleOptions,
         essayQuestions,
@@ -447,6 +448,74 @@ function absoluteHttpUrl(value, sourceUrl) {
     catch {
         return null;
     }
+}
+
+function extractRecruitingSiteUrl(postingRoot, documentRef, sourceUrl) {
+    return findRecruitingSiteUrlInRoot(postingRoot, sourceUrl) ??
+        findRecruitingSiteUrlInRoot(documentRef, sourceUrl) ??
+        null;
+}
+
+function findRecruitingSiteUrlInRoot(root, sourceUrl) {
+    if (!root?.querySelectorAll) return null;
+    const candidates = Array.from(root.querySelectorAll('a[href], button, [role="button"], [data-url], [data-href], [data-link], [data-external-url]'));
+    for (const candidate of candidates) {
+        if (!isRecruitingSiteLinkCandidate(candidate)) continue;
+        const url = recruitingSiteUrlFromElement(candidate, sourceUrl);
+        if (url && !isJasoseolUrl(url)) return url;
+    }
+    return null;
+}
+
+function isRecruitingSiteLinkCandidate(element) {
+    const text = normalizeLinkText([
+        element?.textContent,
+        element?.getAttribute?.('aria-label'),
+        element?.getAttribute?.('title'),
+        element?.getAttribute?.('value')
+    ].map((value) => cleanText(value)).filter(Boolean).join(' '));
+    return text.includes(normalizeLinkText('\uCC44\uC6A9 \uC0AC\uC774\uD2B8')) ||
+        text.includes(normalizeLinkText('\uCC44\uC6A9\uC0AC\uC774\uD2B8')) ||
+        text.includes(normalizeLinkText('\uC9C0\uC6D0\uD558\uAE30')) ||
+        text.includes('apply');
+}
+
+function recruitingSiteUrlFromElement(element, sourceUrl) {
+    const linkElement = element?.closest?.('a[href]') ?? element;
+    const values = [
+        linkElement?.getAttribute?.('href'),
+        element?.getAttribute?.('data-external-url'),
+        element?.getAttribute?.('data-url'),
+        element?.getAttribute?.('data-href'),
+        element?.getAttribute?.('data-link'),
+        element?.getAttribute?.('formaction'),
+        extractUrlFromInlineHandler(element?.getAttribute?.('onclick'))
+    ];
+    return values
+        .map((value) => absoluteHttpUrl(value, sourceUrl))
+        .find(Boolean) ?? null;
+}
+
+function extractUrlFromInlineHandler(value) {
+    const text = cleanText(value);
+    if (!text) return null;
+    const match = text.match(/https?:\/\/[^'")\s]+/i) ??
+        text.match(/(?:location\.href|window\.location|open)\s*\(\s*['"]([^'"]+)['"]/i) ??
+        text.match(/(?:location\.href|window\.location)\s*=\s*['"]([^'"]+)['"]/i);
+    return match?.[1] ?? match?.[0] ?? null;
+}
+
+function isJasoseolUrl(value) {
+    try {
+        return new URL(value).hostname.endsWith('jasoseol.com');
+    }
+    catch {
+        return false;
+    }
+}
+
+function normalizeLinkText(value) {
+    return (value ?? '').toString().toLowerCase().replace(/\s+/g, '');
 }
 
 function findSection(documentRef, labels) {

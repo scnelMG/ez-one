@@ -1602,6 +1602,78 @@ describe('applicationAutoFill', () => {
         expect(doc.getElementById('major-name-0').value).toBe('\uC0B0\uC5C5\uACF5\uD559\uACFC');
     });
 
+    it('EXT-031: fills university dates before majors and immediately selects the second major type', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        const events = [];
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uB300\uD559\uAD50">
+          <label>\uD559\uAD50\uC815\uBCF4<input id="university-name" placeholder="\uD559\uAD50\uBA85" /></label>
+          <label>\uC785\uD559\uC77C<input id="university-start" placeholder="\uC785\uD559\uC77C" /></label>
+          <label>\uC878\uC5C5\uC77C<input id="university-end" placeholder="\uC878\uC5C5\uC77C" /></label>
+          <p>\uC804\uACF5 *</p>
+          <button id="add-major" type="button"><p>\uCD94\uAC00\uD558\uAE30</p></button>
+          <div id="major-container"></div>
+        </section>
+      </form>
+    `;
+        doc.getElementById('university-start').addEventListener('input', () => events.push('start-date'));
+        doc.getElementById('university-end').addEventListener('input', () => events.push('end-date'));
+        doc.getElementById('add-major').addEventListener('click', () => {
+            const majorIndex = doc.querySelectorAll('.major-row').length;
+            const row = doc.createElement('div');
+            row.className = 'major-row';
+            row.innerHTML = `
+          <label>\uC804\uACF5\uBA85<input id="major-name-${majorIndex}" placeholder="\uC804\uACF5\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." /></label>
+          <div class="major-type-group">
+            <button id="major-${majorIndex}-primary" type="button">\uC8FC\uC804\uACF5</button>
+            <button id="major-${majorIndex}-double" type="button">\uBCF5\uC218\uC804\uACF5</button>
+            <button id="major-${majorIndex}-minor" type="button">\uBD80\uC804\uACF5</button>
+            <button id="major-${majorIndex}-linked" type="button">\uC5F0\uACC4\uC804\uACF5</button>
+            <button id="major-${majorIndex}-converged" type="button">\uC735\uD569\uC804\uACF5</button>
+          </div>
+        `;
+            doc.getElementById('major-container').append(row);
+            row.querySelector('input').addEventListener('input', () => events.push(`major-${majorIndex}-name`));
+            row.querySelectorAll('button').forEach((button) => {
+                button.addEventListener('click', () => {
+                    events.push(`${button.id}-click`);
+                    button.setAttribute('aria-pressed', 'true');
+                });
+                button.addEventListener('mousedown', () => {
+                    events.push(`${button.id}-mousedown`);
+                    button.setAttribute('aria-pressed', 'true');
+                });
+            });
+        });
+        const educationProfile = {
+            sections: {
+                education: {
+                    universities: [{
+                        schoolName: '\uBD80\uC0B0\uB300\uD559\uAD50',
+                        admissionDate: '2020-03-02',
+                        graduationDate: '2026-02-20',
+                        majors: [
+                            { major: '\uCEF4\uD4E8\uD130\uACF5\uD559', majorType: '\uC8FC\uC804\uACF5' },
+                            { major: '\uBE45\uB370\uC774\uD130', majorType: '\uBCF5\uC218\uC804\uACF5' }
+                        ]
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = await applyAutoFillPlanFastAsync(buildAutoFillPlan(doc, educationProfile));
+
+        expect(result.failed).toEqual([]);
+        expect(events.indexOf('start-date')).toBeLessThan(events.indexOf('major-0-name'));
+        expect(events.indexOf('end-date')).toBeLessThan(events.indexOf('major-0-name'));
+        expect(doc.getElementById('major-name-0').value).toBe('\uCEF4\uD4E8\uD130\uACF5\uD559');
+        expect(doc.getElementById('major-name-1').value).toBe('\uBE45\uB370\uC774\uD130');
+        expect(doc.getElementById('major-1-double').getAttribute('aria-pressed')).toBe('true');
+        expect(events).toContain('major-1-double-mousedown');
+    });
+
     it('EXT-031: selects school autocomplete options for fields created by section openers', async () => {
         const doc = document.implementation.createHTMLDocument('application');
         doc.body.innerHTML = `
@@ -3447,6 +3519,94 @@ describe('applicationAutoFill', () => {
         expect(doc.getElementById('major-name-1').value).toBe('\uBE45\uB370\uC774\uD130');
         expect(doc.getElementById('major-category-1').textContent).toContain('\uACF5\uD559\uACC4\uC5F4(\uCEF4\uD4E8\uD130\u00B7\uD1B5\uC2E0)');
         expect(selectedTypes[1]).toBe('\uC5F0\uACC4\uC804\uACF5');
+    });
+
+    it('EXT-031: maps an explicitly numbered university major-name label to the matching major row', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uB300\uD559\uAD50">
+          <h3>\uB300\uD559\uAD50</h3>
+          <div class="major-row">
+            <label>\uB300\uD559\uAD50 \uC804\uACF5 2 \uC804\uACF5\uBA85
+              <input id="university-major-2-name" />
+            </label>
+          </div>
+        </section>
+      </form>
+    `;
+        const educationProfile = {
+            sections: {
+                education: {
+                    universities: [{
+                        majors: [{
+                            major: '\uC0B0\uC5C5\uACF5\uD559\uACFC',
+                            majorType: '\uC8FC\uC804\uACF5'
+                        }, {
+                            major: '\uBE45\uB370\uC774\uD130',
+                            majorType: '\uBCF5\uC218\uC804\uACF5'
+                        }]
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const plan = buildAutoFillPlan(doc, educationProfile);
+        const result = applyAutoFillPlan(plan);
+
+        expect(plan.fillable).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                fieldKey: 'education.universities.0.majors.1.majorName',
+                value: '\uBE45\uB370\uC774\uD130'
+            })
+        ]));
+        expect(result.failed).toEqual([]);
+        expect(doc.getElementById('university-major-2-name').value).toBe('\uBE45\uB370\uC774\uD130');
+    });
+
+    it('EXT-031: preserves the current scroll position while filling education autocomplete inputs', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uB300\uD559\uAD50">
+          <h3>\uB300\uD559\uAD50</h3>
+          <div id="scroll-container">
+            <label>\uB300\uD559\uAD50 \uC804\uACF5 2 \uC804\uACF5\uBA85
+              <input id="university-major-2-name" placeholder="\uC804\uACF5\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." />
+            </label>
+          </div>
+        </section>
+      </form>
+    `;
+        const scrollContainer = doc.getElementById('scroll-container');
+        const input = doc.getElementById('university-major-2-name');
+        scrollContainer.scrollTop = 140;
+        input.addEventListener('click', () => {
+            scrollContainer.scrollTop = 900;
+        });
+        input.focus = vi.fn();
+        const educationProfile = {
+            sections: {
+                education: {
+                    universities: [{
+                        majors: [{
+                            major: '\uC0B0\uC5C5\uACF5\uD559\uACFC',
+                            majorType: '\uC8FC\uC804\uACF5'
+                        }, {
+                            major: '\uBE45\uB370\uC774\uD130',
+                            majorType: '\uBCF5\uC218\uC804\uACF5'
+                        }]
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        applyAutoFillPlan(buildAutoFillPlan(doc, educationProfile));
+
+        expect(input.focus).toHaveBeenCalled();
+        expect(scrollContainer.scrollTop).toBe(140);
     });
 
     it('EXT-031: clicks a plain add button below existing Midas major rows', async () => {

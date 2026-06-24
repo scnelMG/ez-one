@@ -135,6 +135,12 @@ a {
   padding: 16px 20px 18px 16px;
 }
 
+.preview-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
 .status-panel {
   display: grid;
   grid-template-columns: 34px minmax(0, 1fr);
@@ -983,40 +989,34 @@ legend {
   box-shadow: 0 -10px 24px rgba(16, 24, 40, 0.08);
 }
 
-.document-autofill-actions {
-  position: fixed;
-  left: 32px;
-  right: 32px;
-  bottom: 0;
-  z-index: 30;
-  gap: 8px;
-  grid-auto-rows: 44px;
-  align-self: stretch;
-  isolation: isolate;
-  margin: 0;
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-bottom: 0;
-  border-radius: 8px 8px 0 0;
-  background: #ffffff;
-  padding: 10px 12px 14px;
-  backdrop-filter: none;
-  box-shadow: 0 -12px 20px rgba(16, 24, 40, 0.08);
+.preview-panel .action-stack {
+  margin-top: auto;
 }
 
-.document-autofill-actions::before {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
+.document-autofill-actions {
+  position: relative;
+  z-index: 4;
+  gap: 8px;
+  grid-auto-rows: 46px;
+  align-self: stretch;
+  isolation: isolate;
+  margin: 0 20px 0 16px;
+  border-top: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+  border-radius: 0 0 var(--radius-control) var(--radius-control);
   background: #ffffff;
-  content: "";
+  padding: 12px;
+  backdrop-filter: none;
+  box-shadow: 0 -8px 20px rgba(16, 24, 40, 0.06);
 }
 
 .document-autofill-actions .primary-button,
 .document-autofill-actions .secondary-button {
-  height: 44px;
-  min-height: 44px;
-  max-height: 44px;
+  height: 46px;
+  min-height: 46px;
+  max-height: 46px;
   font-size: 0.84rem;
   line-height: 1;
   padding: 0 12px;
@@ -1109,14 +1109,25 @@ legend {
 }
 
 .document-result-panel {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
   text-align: left;
-  gap: 16px;
-  padding-bottom: 154px;
-  scroll-padding-bottom: 144px;
+  gap: 0;
+  overflow: hidden;
+  padding: 0 0 12px;
 }
 
-.document-result-panel > :last-child {
-  scroll-margin-bottom: 144px;
+.document-result-scroll {
+  display: grid;
+  gap: 16px;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 16px 20px 28px 16px;
+  scroll-padding-bottom: 36px;
+  scrollbar-color: rgba(91, 69, 240, 0.12) transparent;
+  scrollbar-gutter: stable both-edges;
+  scrollbar-width: thin;
 }
 
 .autofill-summary-grid {
@@ -1279,11 +1290,11 @@ legend {
 
 .autofill-result-list li.is-action-needed {
   margin: 0 0 4px;
-  border: 0;
-  border-left: 3px solid #f59e0b;
-  border-radius: 0;
+  border: 1px solid rgba(245, 158, 11, 0.16);
+  border-left: 4px solid #f59e0b;
+  border-radius: 0 8px 8px 0;
   background: #fffbeb;
-  padding: 9px 0 9px 10px;
+  padding: 12px 12px 14px 18px;
 }
 
 .autofill-result-list li.is-profile-missing {
@@ -1413,7 +1424,7 @@ legend {
 
 .autofill-result-heading {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 64px;
+  grid-template-columns: minmax(0, 1fr) max-content;
   align-items: start;
   gap: 8px;
   min-width: 0;
@@ -1435,6 +1446,8 @@ legend {
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
+  justify-self: end;
+  max-width: 100%;
   min-height: 18px;
   border: 1px solid rgba(180, 83, 9, 0.18);
   border-radius: 6px;

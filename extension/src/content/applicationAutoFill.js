@@ -666,6 +666,9 @@ async function setControlValueFastAsync(control, value, item = {}, deadlineAt = 
         shouldForceAutocompleteSearchControl(control, item.fieldKey)) {
         return await setAutocompleteSearchValueAsync(control, fillValue, item, deadlineAt);
     }
+    if (isChoiceButtonCandidate(control) && choiceControlMatchesValue(control, fillValue)) {
+        return setControlValue(control, fillValue, { ...item, customSelectControl: false, choiceControl: true });
+    }
     if (item.customSelectControl || isDeferredLanguageScoreSelectControl(control, item)) {
         return await setCustomSelectValueFastAsync(control, fillValue, item);
     }
@@ -673,10 +676,12 @@ async function setControlValueFastAsync(control, value, item = {}, deadlineAt = 
 }
 
 function setAutocompleteSearchValueFast(control, value, item = {}) {
-    control.click();
-    control.focus?.();
-    setNativeControlValue(control, value);
-    dispatchInputEvents(control);
+    withPreservedScrollPosition(control, () => {
+        control.click();
+        focusControlWithoutScroll(control);
+        setNativeControlValue(control, value);
+        dispatchInputEvents(control);
+    });
     const option = findMatchingAutocompleteOptionForValues(
         control.ownerDocument,
         autocompleteCandidateValues(value, item),
@@ -904,7 +909,7 @@ function educationAutoFillFieldPriority(fieldKey) {
     const field = key.match(/\.([^.]+)$/)?.[1] ?? '';
     if (!key.startsWith('education.')) return null;
     const majorOpenMatch = key.match(/\.majors\.(\d+)\.majorName\.open$/);
-    if (majorOpenMatch) return 405 + (Number(majorOpenMatch[1]) * 40);
+    if (majorOpenMatch) return 386 + (Number(majorOpenMatch[1]) * 40);
     if (field === 'open') return 300;
     if (field === 'schoolName') return 310;
     const majorMatch = key.match(/\.majors\.(\d+)\.([^.]+)$/);
@@ -918,10 +923,10 @@ function educationAutoFillFieldPriority(fieldKey) {
         };
         const majorField = majorMatch[2];
         return Object.prototype.hasOwnProperty.call(majorFieldOrder, majorField)
-            ? 410 + (majorIndex * 40) + majorFieldOrder[majorField]
+            ? 390 + (majorIndex * 40) + majorFieldOrder[majorField]
             : null;
     }
-    if (field === 'majorName') return 410;
+    if (field === 'majorName') return 390;
     const fieldOrder = {
         degreeType: 320,
         graduationStatus: 330,
@@ -930,7 +935,7 @@ function educationAutoFillFieldPriority(fieldKey) {
         track: 360,
         campusType: 370,
         admissionDate: 380,
-        graduationDate: 390,
+        graduationDate: 385,
         majorType: 420,
         majorCategory: 430,
         dayNight: 440,
@@ -2006,6 +2011,8 @@ function directEducationFieldKeyForControl(control, signature) {
     if (midasNameKey) return midasNameKey;
     const group = educationGroupFromContext([signature, sectionContext].join(' '));
     if (!group) return null;
+    const explicitMajorKey = explicitEducationMajorFieldKey(group, signature);
+    if (explicitMajorKey) return explicitMajorKey;
     const majorChoiceKey = directEducationMajorChoiceFieldKey(control, group);
     if (majorChoiceKey) return majorChoiceKey;
     const optionText = normalize(choiceCandidateText(control) || choiceElementText(control));
@@ -2151,6 +2158,34 @@ function siblingDateControlsForPeriod(control, section) {
 
 function educationFieldKey(group, field) {
     return group === 'highSchool' ? `education.highSchool.${field}` : `education.${group}.*.${field}`;
+}
+
+function explicitEducationMajorFieldKey(group, signature) {
+    if (!['universities', 'graduateSchools'].includes(group)) return null;
+    const majorIndex = explicitEducationMajorIndexFromSignature(signature);
+    if (majorIndex == null) return null;
+    const field = explicitEducationMajorFieldFromSignature(signature);
+    return field ? `education.${group}.0.majors.${majorIndex}.${field}` : null;
+}
+
+function explicitEducationMajorIndexFromSignature(signature) {
+    const normalized = normalize(signature);
+    const matches = [
+        normalized.match(/(?:\uc804\uacf5|major)(\d+)/),
+        normalized.match(/(\d+)(?:\uc804\uacf5|major)/)
+    ].filter(Boolean);
+    const value = Number(matches[0]?.[1]);
+    if (!Number.isInteger(value) || value < 1 || value > 20) return null;
+    return value - 1;
+}
+
+function explicitEducationMajorFieldFromSignature(signature) {
+    const normalized = normalize(signature);
+    if (normalized.includes(normalize('\uc804\uacf5\uba85')) || normalized.includes('majorname') || /major\d+name/.test(normalized)) return 'majorName';
+    if (normalized.includes(normalize('\uc804\uacf5\uad6c\ubd84')) || normalized.includes('majortype') || /major\d+type/.test(normalized)) return 'majorType';
+    if (normalized.includes(normalize('\uc804\uacf5\uacc4\uc5f4')) || normalized.includes('majorcategory') || /major\d+category/.test(normalized)) return 'majorCategory';
+    if (normalized.includes(normalize('\uc8fc\uac04')) || normalized.includes(normalize('\uc57c\uac04')) || normalized.includes('daynight')) return 'dayNight';
+    return null;
 }
 
 function certificateSectionContextText(control) {
@@ -2919,6 +2954,13 @@ function findDirectValueMatch(values, key, context = {}, control = null) {
 
 function indexedEducationMatchForControl(values, match, control, context = '') {
     if (!match?.key || !control || match.copyOnly) return null;
+    const explicitMajorIndex = explicitEducationMajorIndexFromSignature(context);
+    const nestedMajor = parseNestedEducationMajorFieldKey(match.key);
+    if (nestedMajor && explicitMajorIndex != null) {
+        if (nestedMajor.majorIndex === explicitMajorIndex) return null;
+        const explicitKey = `education.${nestedMajor.group}.${nestedMajor.educationIndex}.majors.${explicitMajorIndex}.${nestedMajor.field}`;
+        return values.find((value) => value.key === explicitKey && !value.copyOnly) ?? null;
+    }
     const fieldMatch = match.key.match(/\.([^.]+)$/);
     if (!fieldMatch) return null;
     const indexedKey = indexedEducationWildcardFieldKeyForControl(control, fieldMatch[1], context);
@@ -3057,12 +3099,12 @@ function setControlValue(control, value, item = {}) {
         displayValue = result.value;
     }
     else if (item.choiceControl || isButtonLikeChoiceControl(control)) {
-        control.click();
+        clickElementWithoutScroll(control);
         setChoiceState(control);
         displayValue = choiceElementText(control) || value;
     }
     else if (control.tagName.toLowerCase() === 'input' && ['radio', 'checkbox'].includes((control.getAttribute('type') ?? '').toLowerCase())) {
-        control.click();
+        clickElementWithoutScroll(control);
         control.checked = true;
         displayValue = cleanText(labelText(control)) || cleanText(control.getAttribute('value')) || value;
     }
@@ -3395,11 +3437,101 @@ function educationMajorNameInputControlCount(documentRef) {
         .length;
 }
 
+function clickElementWithoutScroll(element) {
+    if (!element) return undefined;
+    return withPreservedScrollPosition(element, () => {
+        const eventWindow = element.ownerDocument?.defaultView ?? window;
+        const pointerEvent = eventWindow.PointerEvent ?? eventWindow.MouseEvent;
+        for (const type of ['pointerdown', 'pointerup']) {
+            element.dispatchEvent(new pointerEvent(type, { bubbles: true, cancelable: true }));
+        }
+        for (const type of ['mousedown', 'mouseup', 'click']) {
+            element.dispatchEvent(new eventWindow.MouseEvent(type, { bubbles: true, cancelable: true }));
+        }
+        return undefined;
+    });
+}
+
+function focusControlWithoutScroll(control) {
+    if (typeof control?.focus !== 'function') return;
+    const snapshot = captureScrollPositionSnapshot(control);
+    try {
+        control.focus({ preventScroll: true });
+    }
+    catch {
+        control.focus();
+    }
+    finally {
+        restoreScrollPositionSnapshot(snapshot);
+    }
+}
+
+function withPreservedScrollPosition(element, callback) {
+    const snapshot = captureScrollPositionSnapshot(element);
+    try {
+        return callback();
+    }
+    finally {
+        restoreScrollPositionSnapshot(snapshot);
+    }
+}
+
+function captureScrollPositionSnapshot(element) {
+    const documentRef = element?.ownerDocument;
+    const positions = [];
+    const seen = new Set();
+    const remember = (node) => {
+        if (!node || seen.has(node)) return;
+        seen.add(node);
+        if (typeof node.scrollTop === 'number' || typeof node.scrollLeft === 'number') {
+            positions.push({
+                node,
+                scrollTop: node.scrollTop || 0,
+                scrollLeft: node.scrollLeft || 0
+            });
+        }
+    };
+    remember(documentRef?.scrollingElement);
+    remember(documentRef?.documentElement);
+    remember(documentRef?.body);
+    let current = element?.parentElement;
+    while (current && current !== documentRef?.body) {
+        remember(current);
+        current = current.parentElement;
+    }
+    const view = documentRef?.defaultView;
+    const windowPosition = view
+        ? { view, scrollX: view.scrollX || 0, scrollY: view.scrollY || 0 }
+        : null;
+    return { positions, windowPosition };
+}
+
+function restoreScrollPositionSnapshot(snapshot) {
+    for (const position of snapshot?.positions ?? []) {
+        try {
+            position.node.scrollTop = position.scrollTop;
+            position.node.scrollLeft = position.scrollLeft;
+        }
+        catch {
+            // Some host controls expose read-only scroll state.
+        }
+    }
+    const windowPosition = snapshot?.windowPosition;
+    if (windowPosition?.view && typeof windowPosition.view.scrollTo === 'function') {
+        try {
+            windowPosition.view.scrollTo(windowPosition.scrollX, windowPosition.scrollY);
+        }
+        catch {
+            // jsdom and some embedded frames may not implement scrollTo.
+        }
+    }
+}
+
 function activateSectionOpenButton(element) {
     invalidateApplicationFormElementCache(element?.ownerDocument);
     focusAndScrollIntoView(element);
     if (typeof element?.click === 'function') {
-        element.click();
+        withPreservedScrollPosition(element, () => element.click());
     }
     else {
         activateElement(element);
@@ -3408,13 +3540,7 @@ function activateSectionOpenButton(element) {
 }
 
 function focusAndScrollIntoView(element) {
-    try {
-        element?.scrollIntoView?.({ block: 'center', inline: 'nearest' });
-    }
-    catch {
-        element?.scrollIntoView?.();
-    }
-    element?.focus?.({ preventScroll: true });
+    focusControlWithoutScroll(element);
 }
 
 function shouldForceAutocompleteSearchControl(control, fieldKey) {
@@ -3703,10 +3829,12 @@ function stripRemovableChipSuffix(text) {
 async function fillCustomSelectSearchInput(control, value, options = {}) {
     const searchInput = findCustomSelectSearchInput(control.ownerDocument, control, options);
     if (!searchInput) return false;
-    searchInput.click();
-    searchInput.focus?.();
-    setNativeControlValue(searchInput, value);
-    dispatchInputEvents(searchInput);
+    withPreservedScrollPosition(searchInput, () => {
+        searchInput.click();
+        focusControlWithoutScroll(searchInput);
+        setNativeControlValue(searchInput, value);
+        dispatchInputEvents(searchInput);
+    });
     return true;
 }
 
@@ -3728,10 +3856,12 @@ function customSelectSearchInputs(documentRef) {
 async function setAutocompleteSearchValueAsync(control, value, item = {}, deadlineAt = Number.POSITIVE_INFINITY) {
     let option = null;
     for (const searchValue of autocompleteSearchInputValues(value, item)) {
-        control.click();
-        control.focus?.();
-        setNativeControlValue(control, searchValue);
-        dispatchInputEvents(control);
+        withPreservedScrollPosition(control, () => {
+            control.click();
+            focusControlWithoutScroll(control);
+            setNativeControlValue(control, searchValue);
+            dispatchInputEvents(control);
+        });
         if (control.hasAttribute('aria-expanded')) control.setAttribute('aria-expanded', 'true');
         if (isCertificatePrimaryFieldKey(item.fieldKey) &&
             !isCertificateNameFieldKey(item.fieldKey) &&
@@ -4034,8 +4164,10 @@ function isCertificateSelectionDependentValue(value) {
 
 async function dispatchAutocompleteKeyboardCommit(control, deadlineAt = Number.POSITIVE_INFINITY) {
     const eventWindow = control.ownerDocument?.defaultView ?? window;
-    control.click?.();
-    control.focus?.();
+    withPreservedScrollPosition(control, () => {
+        control.click?.();
+        focusControlWithoutScroll(control);
+    });
     dispatchKeyboardEvent(control, eventWindow, 'ArrowDown');
     await sleep(boundedAutoFillWaitMs(AUTOFILL_ASYNC_WAIT_INTERVAL_MS, deadlineAt));
     dispatchKeyboardEvent(control, eventWindow, 'Enter');
@@ -4321,12 +4453,14 @@ function activateElement(element) {
     invalidateApplicationFormElementCache(element?.ownerDocument);
     const eventWindow = element.ownerDocument?.defaultView ?? window;
     const pointerEvent = eventWindow.PointerEvent ?? eventWindow.MouseEvent;
-    for (const type of ['pointerdown', 'pointerup']) {
-        element.dispatchEvent(new pointerEvent(type, { bubbles: true, cancelable: true }));
-    }
-    for (const type of ['mousedown', 'mouseup', 'click']) {
-        element.dispatchEvent(new eventWindow.MouseEvent(type, { bubbles: true, cancelable: true }));
-    }
+    withPreservedScrollPosition(element, () => {
+        for (const type of ['pointerdown', 'pointerup']) {
+            element.dispatchEvent(new pointerEvent(type, { bubbles: true, cancelable: true }));
+        }
+        for (const type of ['mousedown', 'mouseup', 'click']) {
+            element.dispatchEvent(new eventWindow.MouseEvent(type, { bubbles: true, cancelable: true }));
+        }
+    });
     invalidateApplicationFormElementCache(element?.ownerDocument);
 }
 

@@ -199,7 +199,7 @@ describe('extensionAuth', () => {
         expect(storage.remove).not.toHaveBeenCalled();
         expect(storage.set).not.toHaveBeenCalled();
     });
-    it('EXT-003/AUTH-006: rejects a stored session on refresh network failure when a fresh session is required', async () => {
+    it('EXT-003/AUTH-006: keeps a stored session on refresh network failure when a fresh session is required', async () => {
         const storage = {
             get: vi.fn(async () => ({
                 ezoneAccessToken: 'cached-access-token',
@@ -218,7 +218,8 @@ describe('extensionAuth', () => {
             requireFreshSession: true
         });
 
-        expect(session).toBeNull();
+        expect(session?.accessToken).toBe('cached-access-token');
+        expect(session?.refreshToken).toBe('cached-refresh-token');
         expect(storage.remove).not.toHaveBeenCalled();
         expect(storage.set).not.toHaveBeenCalled();
     });
@@ -250,7 +251,7 @@ describe('extensionAuth', () => {
         expect(storage.remove).not.toHaveBeenCalled();
         expect(storage.set).not.toHaveBeenCalled();
     });
-    it('EXT-003/AUTH-006: rejects a stored session on temporary server errors when a fresh session is required', async () => {
+    it('EXT-003/AUTH-006: keeps a stored session on temporary server errors when a fresh session is required', async () => {
         const storage = {
             get: vi.fn(async () => ({
                 ezoneAccessToken: 'cached-access-token',
@@ -275,7 +276,7 @@ describe('extensionAuth', () => {
             requireFreshSession: true
         });
 
-        expect(session).toBeNull();
+        expect(session?.accessToken).toBe('cached-access-token');
         expect(storage.remove).not.toHaveBeenCalled();
         expect(storage.set).not.toHaveBeenCalled();
     });

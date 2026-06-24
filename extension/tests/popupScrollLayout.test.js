@@ -4,6 +4,10 @@ import { describe, expect, it } from 'vitest';
 
 describe('extension popup scroll layout', () => {
     const css = readFileSync(resolve(__dirname, '../src/popup/popup.css'), 'utf-8');
+    const ruleFor = (selector) => {
+        const match = css.match(new RegExp(`${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{[\\s\\S]*?\\}`));
+        return match?.[0] ?? '';
+    };
 
     it('keeps the brand header visible while the popup content scrolls', () => {
         expect(css).toContain('height: 100%;');
@@ -18,6 +22,16 @@ describe('extension popup scroll layout', () => {
         expect(css).toContain('.action-stack');
         expect(css).toContain('padding: 14px 20px 14px 16px;');
         expect(css).toContain('box-shadow: 0 -10px 24px rgba(16, 24, 40, 0.08);');
+    });
+
+    it('keeps preview actions anchored to the bottom when the side panel is resized taller', () => {
+        expect(css).toContain('.preview-panel {');
+        expect(css).toContain('display: flex;');
+        expect(css).toContain('flex-direction: column;');
+        expect(css).toContain('min-height: 100%;');
+        expect(css).toContain('.preview-panel .action-stack {');
+        expect(css).toContain('margin-top: auto;');
+        expect(css).not.toContain('align-content: stretch;');
     });
 
     it('makes long role lists visibly scrollable and keeps employment badges secondary to role names', () => {
@@ -70,26 +84,33 @@ describe('extension popup scroll layout', () => {
         expect(css).toContain('grid-template-columns: repeat(3, minmax(0, 1fr));');
         expect(css).toContain('.autofill-summary-card');
         expect(css).toContain('.document-result-panel');
-        expect(css).toContain('scroll-padding-bottom: 144px;');
+        expect(ruleFor('.document-result-panel')).toContain('display: grid;');
+        expect(ruleFor('.document-result-panel')).toContain('grid-template-rows: minmax(0, 1fr) auto;');
+        expect(ruleFor('.document-result-panel')).toContain('overflow: hidden;');
+        expect(ruleFor('.document-result-panel')).toContain('padding: 0 0 12px;');
+        expect(css).toContain('.document-result-scroll');
+        expect(ruleFor('.document-result-scroll')).toContain('overflow-y: auto;');
+        expect(ruleFor('.document-result-scroll')).toContain('scroll-padding-bottom: 36px;');
         expect(css).toContain('.document-autofill-actions');
-        expect(css).toContain('position: fixed;');
-        expect(css).toContain('bottom: 0;');
-        expect(css).toContain('left: 32px;');
-        expect(css).toContain('right: 32px;');
-        expect(css).toContain('background: #ffffff;');
-        expect(css).toContain('box-shadow: 0 -12px 20px rgba(16, 24, 40, 0.08);');
-        expect(css).toContain('grid-auto-rows: 44px;');
-        expect(css).toContain('margin: 0;');
-        expect(css).toContain('overflow: hidden;');
-        expect(css).toContain('.document-autofill-actions::before');
-        expect(css).toContain('inset: 0;');
-        expect(css).toContain('z-index: -1;');
-        expect(css).toContain('scroll-margin-bottom: 144px;');
+        expect(ruleFor('.document-autofill-actions')).toContain('position: relative;');
+        expect(ruleFor('.document-autofill-actions')).toContain('background: #ffffff;');
+        expect(ruleFor('.document-autofill-actions')).toContain('box-shadow: 0 -8px 20px rgba(16, 24, 40, 0.06);');
+        expect(ruleFor('.document-autofill-actions')).toContain('grid-auto-rows: 46px;');
+        expect(ruleFor('.document-autofill-actions')).toContain('margin: 0 20px 0 16px;');
+        expect(ruleFor('.document-autofill-actions')).toContain('border-top: 1px solid var(--line);');
+        expect(ruleFor('.document-autofill-actions')).toContain('border-bottom: 1px solid var(--line);');
+        expect(ruleFor('.document-autofill-actions')).toContain('border-radius: 0 0 var(--radius-control) var(--radius-control);');
+        expect(ruleFor('.document-autofill-actions')).not.toContain('position: sticky;');
+        expect(ruleFor('.document-autofill-actions')).not.toContain('position: fixed;');
+        expect(ruleFor('.document-autofill-actions')).not.toMatch(/(^|\n)\s*bottom:/);
+        expect(css).not.toContain('left: 32px;');
+        expect(css).not.toContain('right: 32px;');
+        expect(css).not.toContain('.document-autofill-actions::before');
         expect(css).toContain('.document-autofill-actions .primary-button,');
         expect(css).toContain('.document-autofill-actions .secondary-button');
-        expect(css).toContain('min-height: 44px;');
-        expect(css).toContain('height: 44px;');
-        expect(css).toContain('max-height: 44px;');
+        expect(css).toContain('min-height: 46px;');
+        expect(css).toContain('height: 46px;');
+        expect(css).toContain('max-height: 46px;');
         expect(css).toContain('.autofill-result-section[data-tone="success"]');
         expect(css).toContain('.autofill-result-section[data-tone="warning"]');
         expect(css).toContain('.autofill-result-section[data-tone="neutral"]');
@@ -99,9 +120,10 @@ describe('extension popup scroll layout', () => {
         expect(css).toContain('background: linear-gradient(180deg, #fbfcfe 0%, rgba(255, 255, 255, 0) 58px);');
         expect(css).toContain('.autofill-result-section[data-tone="warning"]::before');
         expect(css).toContain('.autofill-result-heading');
-        expect(css).toContain('grid-template-columns: minmax(0, 1fr) 64px;');
+        expect(css).toContain('grid-template-columns: minmax(0, 1fr) max-content;');
         expect(css).toContain('align-items: start;');
         expect(css).toContain('justify-self: end;');
+        expect(css).toContain('max-width: 100%;');
         expect(css).not.toContain('flex-wrap: wrap;');
         expect(css).toContain('.autofill-result-list');
         expect(css).toContain('.autofill-result-list li.is-empty');
@@ -128,6 +150,8 @@ describe('extension popup scroll layout', () => {
         expect(css).toContain('overflow-y: visible;');
         expect(css).toContain('border-top: 1px solid var(--line);');
         expect(css).toContain('border-bottom: 1px solid var(--line);');
+        expect(css).toContain('border-left: 4px solid #f59e0b;');
+        expect(css).toContain('border-radius: 0 8px 8px 0;');
         expect(css).toContain('overflow-wrap: anywhere;');
     });
 });
