@@ -235,7 +235,39 @@ describe('WorkspacePage', () => {
                 appealPoints: ['Connect platform investment to backend reliability experience.'],
                 suggestedSentences: ['I can contribute to reliable AI platform operations.'],
                 cautions: ['Do not describe this as investment advice.'],
-                missingInfo: []
+                missingInfo: [],
+                mainProductsAndServices: {
+                    sectionTitle: '주요 제품 및 서비스',
+                    coreSummary: 'AI 플랫폼 투자를 통해 검색과 추천 서비스 경쟁력을 강화하고 있습니다.',
+                    evidencePoints: ['사업보고서의 사업 개요에서 AI 플랫폼 투자가 확인됩니다.'],
+                    jobFitPoints: ['Backend Engineer 직무에서는 안정적인 플랫폼 운영 경험과 연결할 수 있습니다.'],
+                    resumeUsePoints: [
+                        { useCase: '지원동기', recommendation: 'AI 플랫폼 방향을 직무 관심도와 연결합니다.' }
+                    ],
+                    sentenceCandidates: ['AI 플랫폼 고도화 흐름 속에서 안정적인 백엔드 운영 경험으로 기여하겠습니다.'],
+                    cautionPoints: ['투자 성과를 확정적으로 표현하지 않습니다.'],
+                    rawText: 'AI platform investment'
+                },
+                contractsAndRAndD: {
+                    sectionTitle: '주요 계약 및 연구 개발 활동',
+                    coreSummary: '연구개발 흐름은 직무 역량 문항의 기술 이해 근거로 활용할 수 있습니다.',
+                    evidencePoints: [],
+                    jobFitPoints: [],
+                    resumeUsePoints: [],
+                    sentenceCandidates: [],
+                    cautionPoints: [],
+                    rawText: ''
+                },
+                otherNotes: {
+                    sectionTitle: '기타 참고사항',
+                    coreSummary: '기타 참고사항은 보조 근거로만 짧게 활용하는 편이 좋습니다.',
+                    evidencePoints: [],
+                    jobFitPoints: [],
+                    resumeUsePoints: [],
+                    sentenceCandidates: [],
+                    cautionPoints: [],
+                    rawText: ''
+                }
             },
             errorMessage: null
         });
@@ -448,7 +480,21 @@ describe('WorkspacePage', () => {
 
         await wrapper.get('[data-testid="panel-trigger-DART"]').trigger('click');
         expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('확인 경로');
-        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('주요 계약 및 연구 개발 활동');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('계약/R&D');
+        await flushPromises();
+        expect(mocks.listDartDisclosures).toHaveBeenCalledWith('102');
+        expect(mocks.createDartAnalysis).toHaveBeenCalledWith('102', expect.objectContaining({
+            rceptNo: '20260330000123',
+            companyName: 'Naver',
+            positionTitle: 'Backend Engineer'
+        }));
+        expect(wrapper.get('[data-testid="dart-auto-fill-status"]').text()).toContain('문항별 활용 추천을 생성했습니다');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('AI 플랫폼 투자를 통해');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('자소서 활용 DART 포인트');
+        expect(wrapper.get('[data-testid="dart-essay-guide"]').text()).toContain('자소서에 활용하기 좋은 DART 포인트');
+        expect(wrapper.get('[data-testid="dart-essay-guide"]').text()).toContain('문항별 추천');
+        expect(wrapper.get('[data-testid="dart-essay-guide"]').text()).toContain('Naver');
+        expect(wrapper.get('[data-testid="dart-essay-guide"]').text()).toContain('Backend Engineer');
         await wrapper.get('[data-testid="save-dart-entry"]').trigger('click');
         expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('저장한 DART 메모');
 

@@ -160,12 +160,35 @@ public class DefaultDartAnalysisService implements DartAnalysisService {
         builder.append("- Company: ").append(defaultText(analysis.companyName())).append('\n');
         builder.append("- Report: ").append(defaultText(analysis.reportName())).append('\n');
         builder.append("- Receipt no: ").append(defaultText(analysis.rceptNo())).append("\n\n");
+        appendSectionAnalysis(builder, analysis.result().mainProductsAndServices());
+        appendSectionAnalysis(builder, analysis.result().contractsAndRAndD());
+        appendSectionAnalysis(builder, analysis.result().otherNotes());
         appendEvidenceCards(builder, analysis.result().evidenceCards());
         appendList(builder, "Appeal points", analysis.result().appealPoints());
         appendList(builder, "Suggested sentences", analysis.result().suggestedSentences());
         appendList(builder, "Cautions", analysis.result().cautions());
         appendList(builder, "Missing info", analysis.result().missingInfo());
         return builder.toString().trim();
+    }
+
+    private void appendSectionAnalysis(StringBuilder builder, DartAnalysisContentResponse.DartSectionAnalysis section) {
+        if (section == null || !StringUtils.hasText(section.coreSummary())) {
+            return;
+        }
+        builder.append("## ").append(defaultText(section.sectionTitle())).append('\n');
+        builder.append(section.coreSummary()).append("\n\n");
+        appendList(builder, "DART evidence", section.evidencePoints());
+        appendList(builder, "Job fit", section.jobFitPoints());
+        if (section.resumeUsePoints() != null && !section.resumeUsePoints().isEmpty()) {
+            builder.append("### Essay use points\n");
+            for (DartAnalysisContentResponse.ResumeUsePoint point : section.resumeUsePoints()) {
+                builder.append("- ").append(defaultText(point.useCase()))
+                    .append(": ").append(defaultText(point.recommendation())).append('\n');
+            }
+            builder.append('\n');
+        }
+        appendList(builder, "Sentence candidates", section.sentenceCandidates());
+        appendList(builder, "Cautions", section.cautionPoints());
     }
 
     private void appendEvidenceCards(StringBuilder builder, List<DartAnalysisContentResponse.EvidenceCard> cards) {

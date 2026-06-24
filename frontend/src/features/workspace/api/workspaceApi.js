@@ -285,6 +285,7 @@ function toDartDisclosure(disclosure) {
     };
 }
 function toDartAnalysis(analysis) {
+    const result = analysis.result ?? {};
     return {
         id: String(analysis.id),
         workspaceId: String(analysis.workspaceId),
@@ -294,12 +295,15 @@ function toDartAnalysis(analysis) {
         status: analysis.status,
         model: analysis.model,
         sourceUrl: analysis.sourceUrl,
-        result: analysis.result ?? {
-            evidenceCards: [],
-            appealPoints: [],
-            suggestedSentences: [],
-            cautions: [],
-            missingInfo: []
+        result: {
+            evidenceCards: result.evidenceCards ?? [],
+            appealPoints: result.appealPoints ?? [],
+            suggestedSentences: result.suggestedSentences ?? [],
+            cautions: result.cautions ?? [],
+            missingInfo: result.missingInfo ?? [],
+            mainProductsAndServices: result.mainProductsAndServices ?? null,
+            contractsAndRAndD: result.contractsAndRAndD ?? null,
+            otherNotes: result.otherNotes ?? null
         },
         errorMessage: analysis.errorMessage
     };

@@ -64,17 +64,33 @@ public class OpenDartHttpClient implements OpenDartClient {
         if (!StringUtils.hasText(apiKey) || !StringUtils.hasText(companyName)) {
             return List.of();
         }
-        String corpCode = findCorpCode(companyName);
-        if (!StringUtils.hasText(corpCode)) {
+        List<CorpCode> candidates = findCorpCodeCandidates(companyName);
+        if (candidates.isEmpty()) {
             return List.of();
         }
+        List<DartDisclosureResponse> disclosures = new ArrayList<>();
+        Set<String> seenReceiptNumbers = new LinkedHashSet<>();
+        for (CorpCode candidate : candidates) {
+            for (DartDisclosureResponse disclosure : listPeriodicDisclosuresForCorp(candidate, companyName)) {
+                if (seenReceiptNumbers.add(disclosure.rceptNo())) {
+                    disclosures.add(disclosure);
+                }
+            }
+            if (disclosures.size() >= 20) {
+                break;
+            }
+        }
+        return disclosures;
+    }
+
+    private List<DartDisclosureResponse> listPeriodicDisclosuresForCorp(CorpCode corpCode, String fallbackCompanyName) {
         String today = LocalDate.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.BASIC_ISO_DATE);
         String threeYearsAgo = LocalDate.now(ZoneId.of("Asia/Seoul"))
             .minusYears(3)
             .format(DateTimeFormatter.BASIC_ISO_DATE);
         String uri = UriComponentsBuilder.fromHttpUrl(BASE_URL + "/list.json")
             .queryParam("crtfc_key", apiKey)
-            .queryParam("corp_code", corpCode)
+            .queryParam("corp_code", corpCode.corpCode())
             .queryParam("bgn_de", threeYearsAgo)
             .queryParam("end_de", today)
             .queryParam("pblntf_ty", "A")
@@ -97,7 +113,7 @@ public class OpenDartHttpClient implements OpenDartClient {
                 reportName,
                 row.path("pblntf_detail_ty").asText("A"),
                 row.path("rcept_dt").asText(""),
-                row.path("corp_name").asText(companyName),
+                row.path("corp_name").asText(StringUtils.hasText(corpCode.corpName()) ? corpCode.corpName() : fallbackCompanyName),
                 reportName.contains("사업보고서"),
                 "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=" + rceptNo
             ));
@@ -122,20 +138,29 @@ public class OpenDartHttpClient implements OpenDartClient {
     }
 
     private String findCorpCode(String companyName) {
+        return findCorpCodeCandidates(companyName).stream()
+            .findFirst()
+            .map(CorpCode::corpCode)
+            .orElse("");
+    }
+
+    private List<CorpCode> findCorpCodeCandidates(String companyName) {
         Map<String, CorpCode> corpCodes = getCorpCodes();
         String normalized = normalizeCompanyName(companyName);
-        CorpCode exact = corpCodes.get(normalized);
-        if (exact != null) {
-            return exact.corpCode();
+        if (!StringUtils.hasText(normalized)) {
+            return List.of();
         }
         return corpCodes.values().stream()
             .filter(row -> {
                 String dartName = normalizeCompanyName(row.corpName());
                 return dartName.contains(normalized) || normalized.contains(dartName);
             })
-            .max(Comparator.comparingInt(row -> normalizeCompanyName(row.corpName()).length()))
-            .map(CorpCode::corpCode)
-            .orElse("");
+            .sorted(Comparator
+                .comparingInt((CorpCode row) -> normalizeCompanyName(row.corpName()).equals(normalized) && normalized.length() > 2 ? 1 : 0)
+                .thenComparingInt(row -> normalizeCompanyName(row.corpName()).length())
+                .reversed())
+            .limit(5)
+            .toList();
     }
 
     private Map<String, CorpCode> getCorpCodes() {
