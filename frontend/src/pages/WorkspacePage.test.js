@@ -591,6 +591,16 @@ describe('WorkspacePage', () => {
         expect(wrapper.get('[data-testid="draft-character-count"]').text()).toContain('5 / 1000자');
     });
 
+    it('WS-011: counts visible draft text when the editor stores rich HTML', async () => {
+        const wrapper = await mountWorkspace();
+
+        await setDraftText(wrapper, '<p><strong>가 나</strong> 다</p><figure><img src="data:image/png;base64,AAAA" alt="첨부"></figure>');
+        expect(wrapper.get('[data-testid="draft-character-count"]').text()).toContain('5 / 1000자');
+
+        await wrapper.get('[data-testid="count-without-spaces"]').trigger('click');
+        expect(wrapper.get('[data-testid="draft-character-count"]').text()).toContain('3 / 1000자');
+    });
+
     it('WS-018: saves a titled final essay in version management', async () => {
         const wrapper = await mountWorkspace();
 

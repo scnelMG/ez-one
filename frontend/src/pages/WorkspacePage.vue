@@ -404,8 +404,8 @@
                     <span class="ai-summary-spinner" aria-hidden="true"></span>
                     <span>AI가 자소서 변경점을 요약하는 중입니다.</span>
                   </div>
-                  <div v-else-if="activeComparison?.aiSummary" class="ai-summary-content" style="white-space: pre-wrap; line-height: 1.6; color: #334155; padding-top: 16px; border-top: 1px solid #e2e8f0;">
-                    {{ activeComparison.aiSummary }}
+                  <div v-else-if="activeComparisonSummary" class="ai-summary-content" style="white-space: pre-wrap; line-height: 1.6; color: #334155; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+                    {{ activeComparisonSummary }}
                   </div>
                   <div v-else class="ai-summary-content" style="padding: 16px; color: #64748b; text-align: center;">
                     두 버전을 비교하시면 AI가 변경점을 요약해 드립니다.
@@ -615,7 +615,7 @@
 
 <script setup>
 import { computed, h, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
-import { diffLines } from 'diff';
+import { diffArrays } from 'diff';
 import { useRoute } from 'vue-router';
 import { rememberRecentWorkspace } from '@/features/basket/recentWorkspaces';
 import { workspaceApi } from '@/features/workspace/api/workspaceApi';
@@ -812,6 +812,14 @@ const activeComparison = computed(() => {
   if (String(comparison.rightVersionId) !== String(selectedRightVersionId.value)) return null;
   return comparison;
 });
+const activeComparisonSummary = computed(() => {
+  if (!activeComparison.value?.aiSummary) return '';
+  return normalizeComparisonSummaryText(
+    activeComparison.value.aiSummary,
+    selectedLeftVersion.value?.versionName || activeComparison.value.leftVersionName || '이전 저장본',
+    selectedRightVersion.value?.versionName || activeComparison.value.rightVersionName || '비교 저장본'
+  );
+});
 const versionDiffRows = computed(() => buildLineDiff(
   activeComparison.value?.leftBody ?? selectedLeftVersion.value?.body ?? '',
   activeComparison.value?.rightBody ?? selectedRightVersion.value?.body ?? ''
@@ -821,8 +829,11 @@ const canSaveFinalEssay = computed(() => Boolean(
   && finalEssayTitle.value.trim()
   && finalEssayBody.value.trim()
 ));
+const draftCountText = computed(() => extractVisibleText(draftBody.value));
 const draftCharacterCount = computed(() => (
-  characterCountMode.value === 'withoutSpaces' ? draftBody.value.replace(/\s/g, '').length : draftBody.value.length
+  characterCountMode.value === 'withoutSpaces'
+    ? draftCountText.value.replace(/\s/g, '').length
+    : draftCountText.value.length
 ));
 const filteredReferences = computed(() => {
   const references = workspaceStore.workspace?.references ?? [];
@@ -1044,12 +1055,12 @@ async function compareVersions() {
 function buildLineDiff(leftBody, rightBody) {
   let diffs = [];
   try {
-    diffs = diffLines(normalizeDiffText(leftBody), normalizeDiffText(rightBody), { newlineIsToken: false });
+    diffs = diffArrays(toDiffLineArray(leftBody), toDiffLineArray(rightBody));
   } catch (error) {
     console.error('Diff calculation failed:', error);
     return {
-      leftRows: [{ type: 'same', content: normalizeDiffText(leftBody) }],
-      rightRows: [{ type: 'same', content: normalizeDiffText(rightBody) }]
+      leftRows: toDiffLineArray(leftBody).map((line) => ({ type: 'same', content: line })),
+      rightRows: toDiffLineArray(rightBody).map((line) => ({ type: 'same', content: line }))
     };
   }
 
@@ -1061,10 +1072,8 @@ function buildLineDiff(leftBody, rightBody) {
 
     if (part.removed && i + 1 < diffs.length && diffs[i+1].added) {
       const addedPart = diffs[i+1];
-      const removedLines = part.value.split('\n');
-      if (removedLines[removedLines.length - 1] === '') removedLines.pop();
-      const addedLines = addedPart.value.split('\n');
-      if (addedLines[addedLines.length - 1] === '') addedLines.pop();
+      const removedLines = part.value;
+      const addedLines = addedPart.value;
 
       const maxLines = Math.max(removedLines.length, addedLines.length);
       for (let j = 0; j < maxLines; j++) {
@@ -1077,10 +1086,8 @@ function buildLineDiff(leftBody, rightBody) {
 
     if (part.added && i + 1 < diffs.length && diffs[i+1].removed) {
       const removedPart = diffs[i+1];
-      const addedLines = part.value.split('\n');
-      if (addedLines[addedLines.length - 1] === '') addedLines.pop();
-      const removedLines = removedPart.value.split('\n');
-      if (removedLines[removedLines.length - 1] === '') removedLines.pop();
+      const addedLines = part.value;
+      const removedLines = removedPart.value;
 
       const maxLines = Math.max(removedLines.length, addedLines.length);
       for (let j = 0; j < maxLines; j++) {
@@ -1091,8 +1098,7 @@ function buildLineDiff(leftBody, rightBody) {
       continue;
     }
 
-    const lines = part.value.split('\n');
-    if (lines[lines.length - 1] === '') lines.pop();
+    const lines = part.value;
 
     lines.forEach((line) => {
       if (part.added) {
@@ -1122,11 +1128,100 @@ function splitLines(body) {
 }
 
 function normalizeDiffText(body) {
+  return extractVisibleText(body)
+    .replace(/\r\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trimEnd();
+}
+
+function toDiffLineArray(body) {
+  const text = normalizeDiffText(body);
+  if (!text) return [''];
+  return text
+    .split('\n')
+    .flatMap((line) => splitLongDiffLine(line.trimEnd()))
+    .filter((line, index, lines) => line || lines.length === 1);
+}
+
+function splitLongDiffLine(line) {
+  if (line.length <= 120) return [line];
+  const chunks = (line.match(/[^.!?。！？]+[.!?。！？]?/g) ?? [])
+    .map((chunk) => chunk.trim())
+    .filter(Boolean);
+  return chunks.length > 1 ? chunks : [line];
+}
+
+function normalizeComparisonSummaryText(summary, leftName, rightName) {
+  const normalized = String(summary || '')
+    .replace(/version\s*1/gi, leftName)
+    .replace(/version\s*2/gi, rightName)
+    .replace(/버전\s*1/g, leftName)
+    .replace(/버전\s*2/g, rightName)
+    .replace(/1번\s*버전/g, leftName)
+    .replace(/2번\s*버전/g, rightName)
+    .replaceAll('첫 번째 버전', leftName)
+    .replaceAll('두 번째 버전', rightName)
+    .replaceAll('첫번째 버전', leftName)
+    .replaceAll('두번째 버전', rightName)
+    .replaceAll('이전 버전', leftName)
+    .replaceAll('비교 버전', rightName);
+  return enforceComparisonBulletFormat(normalized);
+}
+
+function enforceComparisonBulletFormat(summary) {
+  const text = String(summary || '').trim();
+  if (!text) return '';
+  const hasFactSection = text.includes('1. 변경된 사실');
+  const hasFeedbackSection = text.includes('2. 채용담당자 관점 피드백');
+  const hasBullets = text.split('\n').some((line) => line.trim().startsWith('- '));
+  if (hasFactSection && hasFeedbackSection && hasBullets) return text;
+
+  const sentences = splitSummarySentences(text);
+  if (!sentences.length) return text;
+  const splitIndex = Math.max(1, Math.ceil(sentences.length / 2));
+  const facts = sentences.slice(0, splitIndex);
+  const feedback = sentences.slice(splitIndex);
+  const fallbackFeedback = feedback.length
+    ? feedback
+    : ['지원 기업, 직무, JD, 작성 문항과 연결되는 역량 표현을 더 구체화하면 채용담당자가 지원 적합성을 판단하기 쉬워집니다.'];
+
+  return [
+    '1. 변경된 사실',
+    ...facts.map((sentence) => `- ${sentence}`),
+    '',
+    '2. 채용담당자 관점 피드백',
+    ...fallbackFeedback.map((sentence) => `- ${sentence}`)
+  ].join('\n');
+}
+
+function splitSummarySentences(text) {
+  const cleaned = String(text || '')
+    .replace(/^\s*\d+\.\s*(변경된 사실|변경된 내용|채용담당자 관점 피드백)\s*$/gm, '')
+    .replace(/^\s*[-•]\s*/gm, '')
+    .replace(/(\d)\.(\d)/g, '$1<decimal>$2')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return (cleaned.match(/[^.!?。！？]+[.!?。！？]?/g) ?? [])
+    .map((sentence) => sentence.replace(/<decimal>/g, '.').trim())
+    .filter(Boolean);
+}
+
+function extractVisibleText(body) {
   const raw = String(body || '');
   if (!raw) return '';
   const htmlLike = /<[^>]+>/.test(raw);
-  if (!htmlLike || typeof document === 'undefined') {
-    return raw.replace(/\r\n/g, '\n').trimEnd();
+  if (!htmlLike) return raw.replace(/\r\n/g, '\n');
+  if (typeof document === 'undefined') {
+    return raw
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/(p|div|li|h[1-6]|blockquote|pre|summary|details|figure)>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&amp;/gi, '&')
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/&quot;/gi, '"')
+      .replace(/&#039;/gi, "'");
   }
   const container = document.createElement('div');
   container.innerHTML = raw
@@ -1134,8 +1229,7 @@ function normalizeDiffText(body) {
     .replace(/<\/(p|div|li|h[1-6]|blockquote|pre|summary|details|figure)>/gi, '\n');
   return (container.innerText || container.textContent || '')
     .replace(/\u00A0/g, ' ')
-    .replace(/\n{3,}/g, '\n\n')
-    .trimEnd();
+    .replace(/\u200B/g, '');
 }
 
 function openBoard(type) {
@@ -1991,10 +2085,10 @@ const MarkdownBoard = {
 
     function handlePaste(event) {
       const items = [...(event.clipboardData?.items ?? [])];
-      const imageItem = items.find((item) => item.type.startsWith('image/'));
-      if (imageItem) {
+      const imageItems = items.filter((item) => item.type.startsWith('image/'));
+      if (imageItems.length) {
         event.preventDefault();
-        insertImageFile(imageItem.getAsFile(), () => {
+        insertImageFiles(imageItems.map((item) => item.getAsFile()).filter(Boolean), () => {
           ensureBoardDraft().body = editorToPlainText(editorRef.value);
           updateEmptyState();
         });
@@ -2010,11 +2104,11 @@ const MarkdownBoard = {
     }
 
     function handleDrop(event) {
-      const file = [...(event.dataTransfer?.files ?? [])].find((item) => item.type.startsWith('image/'));
-      if (!file) return;
+      const files = [...(event.dataTransfer?.files ?? [])].filter((item) => item.type.startsWith('image/'));
+      if (!files.length) return;
       event.preventDefault();
       focusEditor();
-      insertImageFile(file, () => {
+      insertImageFiles(files, () => {
         ensureBoardDraft().body = editorToPlainText(editorRef.value);
         updateEmptyState();
       });
@@ -2735,6 +2829,7 @@ const MarkdownDraftEditor = {
     const selectedColor = ref('#334155');
     const selectedFontSize = ref('3');
     let syncingFromModel = false;
+    let savedSelectionRange = null;
 
     onMounted(() => {
       if (editorRef.value) {
@@ -2757,12 +2852,37 @@ const MarkdownDraftEditor = {
       emit('update:modelValue', editorToPlainText(editorRef.value));
     }
 
+    function rememberSelection() {
+      const editor = editorRef.value;
+      const selection = window.getSelection();
+      if (!editor || !selection || selection.rangeCount === 0) return;
+      const anchor = selection.anchorNode;
+      const focus = selection.focusNode;
+      if (!anchor || !focus || !editor.contains(anchor) || !editor.contains(focus)) return;
+      savedSelectionRange = selection.getRangeAt(0).cloneRange();
+    }
+
+    function restoreSelection() {
+      const selection = window.getSelection();
+      if (!selection || !savedSelectionRange) {
+        editorRef.value?.focus();
+        return;
+      }
+      selection.removeAllRanges();
+      selection.addRange(savedSelectionRange);
+    }
+
+    function emitAndRemember() {
+      rememberSelection();
+      emitPlainText();
+    }
+
     function handlePaste(event) {
       const items = [...(event.clipboardData?.items ?? [])];
-      const imageItem = items.find((item) => item.type.startsWith('image/'));
-      if (imageItem) {
+      const imageItems = items.filter((item) => item.type.startsWith('image/'));
+      if (imageItems.length) {
         event.preventDefault();
-        insertImageFile(imageItem.getAsFile(), emitPlainText);
+        insertImageFiles(imageItems.map((item) => item.getAsFile()).filter(Boolean), emitAndRemember);
         return;
       }
 
@@ -2770,30 +2890,30 @@ const MarkdownDraftEditor = {
       if (!markdown.trim()) return;
       event.preventDefault();
       insertHtmlAtCursor(markdownToHtml(markdown));
-      emitPlainText();
+      emitAndRemember();
     }
 
     function handleDrop(event) {
-      const file = [...(event.dataTransfer?.files ?? [])].find((item) => item.type.startsWith('image/'));
-      if (!file) return;
+      const files = [...(event.dataTransfer?.files ?? [])].filter((item) => item.type.startsWith('image/'));
+      if (!files.length) return;
       event.preventDefault();
       editorRef.value?.focus();
-      insertImageFile(file, emitPlainText);
+      insertImageFiles(files, emitAndRemember);
     }
 
     function handleKeydown(event) {
       if (event.key !== ' ' && event.key !== 'Enter') return;
       nextTick(() => {
         applyCanvasMarkdownShortcut();
-        emitPlainText();
+        emitAndRemember();
       });
     }
 
     function runFormat(command, value = null) {
       if (props.disabled) return;
-      editorRef.value?.focus();
+      restoreSelection();
       document.execCommand(command, false, value);
-      emitPlainText();
+      emitAndRemember();
     }
 
     function applyColor(event) {
@@ -2803,7 +2923,21 @@ const MarkdownDraftEditor = {
 
     function applyFontSize(event) {
       selectedFontSize.value = event.target.value;
-      runFormat('fontSize', selectedFontSize.value);
+      if (props.disabled) return;
+      restoreSelection();
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0 && !selection.getRangeAt(0).collapsed) {
+        document.execCommand('fontSize', false, selectedFontSize.value);
+      } else {
+        const block = currentEditableBlock();
+        if (block && editorRef.value?.contains(block)) {
+          block.style.fontSize = fontSizeCss(selectedFontSize.value);
+          block.dataset.fontSize = selectedFontSize.value;
+        } else {
+          document.execCommand('fontSize', false, selectedFontSize.value);
+        }
+      }
+      emitAndRemember();
     }
 
     function applyCanvasMarkdownShortcut() {
@@ -2838,7 +2972,7 @@ const MarkdownDraftEditor = {
         h('span', { class: 'rich-toolbar-divider', 'aria-hidden': 'true' }),
         h('label', { class: 'rich-toolbar-select' }, [
           h('span', '크기'),
-          h('select', { value: selectedFontSize.value, onMousedown: (event) => event.preventDefault(), onChange: applyFontSize }, [
+          h('select', { value: selectedFontSize.value, onFocus: rememberSelection, onChange: applyFontSize }, [
             h('option', { value: '2' }, '작게'),
             h('option', { value: '3' }, '보통'),
             h('option', { value: '4' }, '크게'),
@@ -2863,11 +2997,13 @@ const MarkdownDraftEditor = {
         'data-testid': 'draft-editor',
         'data-placeholder': '자기소개서 초안을 작성하세요.',
         ...attrs,
-        onInput: emitPlainText,
+        onInput: emitAndRemember,
         onPaste: handlePaste,
         onDrop: handleDrop,
         onDragover: (event) => event.preventDefault(),
-        onKeydown: handleKeydown
+        onKeydown: handleKeydown,
+        onKeyup: rememberSelection,
+        onMouseup: rememberSelection
       })
     ]);
   }
@@ -2997,6 +3133,18 @@ function insertNodeAtCursor(node) {
   placeCursorAfter(node);
 }
 
+function insertImageFiles(files, afterInsert = () => {}) {
+  const validFiles = files.filter(Boolean);
+  if (!validFiles.length) return;
+  let pending = validFiles.length;
+  validFiles.forEach((file) => {
+    insertImageFile(file, () => {
+      pending -= 1;
+      if (pending === 0) afterInsert();
+    });
+  });
+}
+
 function insertImageFile(file, afterInsert = () => {}) {
   if (!file) return;
   const reader = new FileReader();
@@ -3010,7 +3158,9 @@ function insertImageFile(file, afterInsert = () => {}) {
     image.className = 'markdown-pasted-image';
     frame.appendChild(image);
     insertNodeAtCursor(frame);
-    insertNodeAtCursor(document.createElement('p'));
+    const spacer = document.createElement('p');
+    spacer.innerHTML = '<br>';
+    insertNodeAtCursor(spacer);
     afterInsert();
   };
   reader.readAsDataURL(file);
@@ -3040,6 +3190,15 @@ function transformBlock(block, tagName) {
   replacement.innerHTML = '<br>';
   block.replaceWith(replacement);
   placeCursorAtEnd(replacement);
+}
+
+function fontSizeCss(size) {
+  return {
+    2: '0.92rem',
+    3: '1rem',
+    4: '1.16rem',
+    5: '1.35rem'
+  }[Number(size)] ?? '1rem';
 }
 
 function createCodeBlock(text) {
