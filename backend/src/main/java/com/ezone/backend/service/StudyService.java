@@ -9,7 +9,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -77,7 +80,18 @@ public class StudyService {
     public List<StudyGroupDto> listMyStudies(String userEmail) {
         return studyMapper.findStudyGroupsByUserEmail(userEmail).stream().map(g -> {
             StudyGroupDto dto = mapToDto(g);
-            List<StudyMemberRow> members = studyMapper.findMembersByStudyId(g.getId());
+            List<StudyMemberDto> members = studyMapper.findMembersByStudyId(g.getId()).stream()
+                .map(m -> {
+                    StudyMemberDto mDto = new StudyMemberDto();
+                    mDto.setId(m.getId());
+                    mDto.setUserEmail(m.getUserEmail());
+                    mDto.setRole(m.getRole());
+                    mDto.setJoinedAt(m.getJoinedAt());
+                    mDto.setUserName(m.getUserName());
+                    mDto.setUserNickname(m.getUserNickname());
+                    return mDto;
+                }).collect(Collectors.toList());
+            dto.setMembers(members);
             dto.setMemberCount(members.size());
             return dto;
         }).collect(Collectors.toList());
@@ -97,6 +111,8 @@ public class StudyService {
                 int notStartedCount = studyMapper.countNotStartedJobsByUserEmail(m.getUserEmail());
                 int appsThisMonthCount = studyMapper.countJobsThisMonthByUserEmail(m.getUserEmail());
                 int appsThisWeekCount = studyMapper.countJobsThisWeekByUserEmail(m.getUserEmail());
+                int completedJobCount = studyMapper.countCompletedJobsByUserEmail(m.getUserEmail());
+                int appsLastTwoWeeksCount = studyMapper.countCompletedJobsLastTwoWeeksByUserEmail(m.getUserEmail());
 
                 StudyMemberDto mDto = new StudyMemberDto();
                 mDto.setId(m.getId());
@@ -107,6 +123,8 @@ public class StudyService {
                 mDto.setNotStartedCount(notStartedCount);
                 mDto.setAppsThisMonthCount(appsThisMonthCount);
                 mDto.setAppsThisWeekCount(appsThisWeekCount);
+                mDto.setCompletedJobCount(completedJobCount);
+                mDto.setAppsLastTwoWeeksCount(appsLastTwoWeeksCount);
                 mDto.setUserName(m.getUserName());
                 mDto.setUserNickname(m.getUserNickname());
                 return mDto;
@@ -141,6 +159,19 @@ public class StudyService {
             dto.setCompanyName(e.getCompanyName());
             dto.setPositionTitle(e.getPositionTitle());
             dto.setDeadlineLabel(e.getDeadlineLabel());
+            dto.setUpdatedAt(e.getUpdatedAt());
+
+            List<String> latestAddedVersionIds = parseVersionIds(e.getLatestAddedVersionIds());
+            dto.setLatestAddedCount(latestAddedVersionIds.size());
+            if (latestAddedVersionIds.isEmpty()) {
+                dto.setLatestAddedQuestionNumbers(List.of());
+            } else {
+                dto.setLatestAddedQuestionNumbers(studyMapper.findEssayItemsByVersionIds(latestAddedVersionIds).stream()
+                    .map(SharedEssayItemDto::getQuestionOrder)
+                    .filter(order -> order != null)
+                    .map(order -> order + 1)
+                    .toList());
+            }
             
             // 본인이 작성한 것이 아니고, 읽음 로그가 없으면 NEW
             boolean isMine = userEmail.equals(e.getUserEmail());
@@ -256,20 +287,31 @@ public class StudyService {
         requireStudyMember(studyId, userEmail);
         p1WorkspaceService.getWorkspace(userId, parseWorkspaceId(request.getWorkspaceId()));
 
+        List<String> incomingVersionIds = request.getVersionIds() == null ? List.of() : request.getVersionIds();
+        if (incomingVersionIds.isEmpty()) {
+            throw new IllegalArgumentException("공유할 자소서 버전을 선택해야 합니다.");
+        }
+
+        SharedEssayRow existing = studyMapper.findSharedEssayByStudyUserWorkspace(studyId, userEmail, request.getWorkspaceId());
+        if (existing != null) {
+            List<String> mergedVersionIds = mergeVersionsByQuestion(parseVersionIds(existing.getVersionIds()), incomingVersionIds);
+            String mergedJson = writeVersionIds(mergedVersionIds);
+            String latestJson = writeVersionIds(incomingVersionIds);
+            studyMapper.updateSharedEssayVersions(existing.getId(), mergedJson, latestJson, LocalDateTime.now());
+            studyMapper.deleteEssayReadLogsForEssayExceptUser(existing.getId(), userEmail);
+            return;
+        }
+
         SharedEssayRow essay = new SharedEssayRow();
         essay.setId(UUID.randomUUID().toString());
         essay.setStudyId(studyId);
         essay.setUserEmail(userEmail);
         essay.setWorkspaceId(request.getWorkspaceId());
-
-        try {
-            String json = objectMapper.writeValueAsString(request.getVersionIds());
-            essay.setVersionIds(json);
-        } catch (JsonProcessingException e) {
-            essay.setVersionIds("[]");
-        }
+        essay.setVersionIds(writeVersionIds(incomingVersionIds));
+        essay.setLatestAddedVersionIds(writeVersionIds(incomingVersionIds));
         
         essay.setSharedAt(LocalDateTime.now());
+        essay.setUpdatedAt(essay.getSharedAt());
         studyMapper.insertSharedEssay(essay);
     }
 
@@ -300,19 +342,14 @@ public class StudyService {
         SharedEssayDetailDto dto = new SharedEssayDetailDto();
         dto.setId(e.getId());
         dto.setUserEmail(e.getUserEmail());
+        dto.setWorkspaceId(e.getWorkspaceId());
         dto.setSharedAt(e.getSharedAt());
+        dto.setUpdatedAt(e.getUpdatedAt());
         dto.setCompanyName(e.getCompanyName());
         dto.setPositionTitle(e.getPositionTitle());
         dto.setDeadlineLabel(e.getDeadlineLabel());
         
-        List<String> versionIds = List.of();
-        try {
-            if (e.getVersionIds() != null) {
-                versionIds = objectMapper.readValue(e.getVersionIds(), new TypeReference<List<String>>() {});
-            }
-        } catch (JsonProcessingException ex) {
-            // ignore
-        }
+        List<String> versionIds = parseVersionIds(e.getVersionIds());
         
         if (versionIds.isEmpty()) {
             dto.setItems(List.of());
@@ -333,6 +370,44 @@ public class StudyService {
         dto.setFeedbacks(feedbacks);
         
         return dto;
+    }
+
+    private List<String> parseVersionIds(String versionIdsJson) {
+        if (versionIdsJson == null || versionIdsJson.isBlank()) {
+            return List.of();
+        }
+        try {
+            List<String> ids = objectMapper.readValue(versionIdsJson, new TypeReference<List<String>>() {});
+            return ids == null ? List.of() : ids;
+        } catch (JsonProcessingException ex) {
+            return List.of();
+        }
+    }
+
+    private String writeVersionIds(List<String> versionIds) {
+        try {
+            return objectMapper.writeValueAsString(versionIds == null ? List.of() : versionIds);
+        } catch (JsonProcessingException e) {
+            return "[]";
+        }
+    }
+
+    private List<String> mergeVersionsByQuestion(List<String> existingVersionIds, List<String> incomingVersionIds) {
+        Map<String, String> versionIdByQuestionId = new LinkedHashMap<>();
+        for (SharedEssayItemDto item : findEssayItemsSafely(existingVersionIds)) {
+            versionIdByQuestionId.put(item.getQuestionId(), item.getVersionId());
+        }
+        for (SharedEssayItemDto item : findEssayItemsSafely(incomingVersionIds)) {
+            versionIdByQuestionId.put(item.getQuestionId(), item.getVersionId());
+        }
+        return new ArrayList<>(versionIdByQuestionId.values());
+    }
+
+    private List<SharedEssayItemDto> findEssayItemsSafely(List<String> versionIds) {
+        if (versionIds == null || versionIds.isEmpty()) {
+            return List.of();
+        }
+        return studyMapper.findEssayItemsByVersionIds(versionIds);
     }
 
     public void addEssayFeedback(String userEmail, String studyId, String sharedEssayId, AddFeedbackRequest request) {
@@ -410,7 +485,7 @@ public class StudyService {
             throw new IllegalStateException("스터디장만 스터디를 삭제할 수 있습니다.");
         }
 
-        studyMapper.deleteStudyGroup(studyId);
+        deleteStudyCascade(studyId);
     }
 
     @org.springframework.transaction.annotation.Transactional
@@ -428,14 +503,17 @@ public class StudyService {
 
         if ("LEADER".equals(me.getRole())) {
             if (members.size() == 1) {
-                studyMapper.deleteStudyGroup(studyId);
+                deleteStudyCascade(studyId);
                 return;
             }
             if (delegateEmail == null || delegateEmail.trim().isEmpty()) {
                 throw new IllegalStateException("스터디장은 탈퇴 시 다른 멤버에게 권한을 위임해야 합니다.");
             }
+            if (userEmail.equals(delegateEmail)) {
+                throw new IllegalArgumentException("본인에게 스터디장 권한을 위임할 수 없습니다.");
+            }
             StudyMemberRow newLeader = members.stream()
-                .filter(m -> m.getUserEmail().equals(delegateEmail))
+                .filter(m -> m.getUserEmail().equals(delegateEmail) && !m.getUserEmail().equals(userEmail))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("위임할 멤버를 찾을 수 없습니다."));
             
@@ -443,6 +521,16 @@ public class StudyService {
         }
 
         studyMapper.deleteStudyMember(studyId, userEmail);
+    }
+
+    private void deleteStudyCascade(String studyId) {
+        studyMapper.deleteStudyEssayReadLogsByStudyId(studyId);
+        studyMapper.deleteEssayFeedbacksByStudyId(studyId);
+        studyMapper.deleteSharedEssaysByStudyId(studyId);
+        studyMapper.deleteSharedJobsByStudyId(studyId);
+        studyMapper.deleteStudyInvitesByStudyId(studyId);
+        studyMapper.deleteStudyMembersByStudyId(studyId);
+        studyMapper.deleteStudyGroup(studyId);
     }
 
     private StudyMemberRow requireStudyMember(String studyId, String userEmail) {

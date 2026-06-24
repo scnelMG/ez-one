@@ -6,7 +6,9 @@ import java.util.List;
 public class SharedEssayDetailDto {
     private String id;
     private String userEmail;
+    private String workspaceId;
     private LocalDateTime sharedAt;
+    private LocalDateTime updatedAt;
     private String companyName;
     private String positionTitle;
     private String deadlineLabel;
@@ -18,8 +20,12 @@ public class SharedEssayDetailDto {
     public void setId(String id) { this.id = id; }
     public String getUserEmail() { return userEmail; }
     public void setUserEmail(String userEmail) { this.userEmail = userEmail; }
+    public String getWorkspaceId() { return workspaceId; }
+    public void setWorkspaceId(String workspaceId) { this.workspaceId = workspaceId; }
     public LocalDateTime getSharedAt() { return sharedAt; }
     public void setSharedAt(LocalDateTime sharedAt) { this.sharedAt = sharedAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
     public String getCompanyName() { return companyName; }
     public void setCompanyName(String companyName) { this.companyName = companyName; }
     public String getPositionTitle() { return positionTitle; }

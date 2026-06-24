@@ -81,7 +81,6 @@ public class GmsDartAiAnalysisClient implements DartAiAnalysisClient {
             )
         ));
         body.put("text", Map.of("format", jsonSchema()));
-        body.put("max_output_tokens", 900);
         return body;
     }
 
@@ -90,12 +89,11 @@ public class GmsDartAiAnalysisClient implements DartAiAnalysisClient {
             You are an assistant for Korean job application preparation.
             Use only the provided DART report text.
             Do not provide investment advice, stock outlooks, hiring probability, or unsupported claims.
+            Do not summarize the whole report.
+            Curate only concise, JD-relevant facts that can become essay evidence.
+            Avoid duplicate facts, accounting-heavy details, and generic company introductions.
             Prioritize evidence cards and appeal points that can support a resume or essay.
             Every core claim must include a source section and receipt number.
-            Write all user-facing strings in Korean.
-            Keep the output concise: at most 3 evidence cards, 3 appeal points, 3 suggested sentences,
-            3 cautions, and 3 missing-info items.
-            Each evidence card summary should be 2 short Korean sentences or less.
             Before returning JSON, self-check that each evidence card is grounded in the selected receipt number,
             removes investment or hiring-probability language, and avoids generic company introductions.
             Return strict JSON matching the provided schema.
@@ -103,30 +101,7 @@ public class GmsDartAiAnalysisClient implements DartAiAnalysisClient {
     }
 
     private String userPrompt(DartAiAnalysisRequest request) {
-        return """
-            Receipt number: %s
-            Report name: %s
-            Company: %s
-            Position: %s
-            Essay questions: %s
-
-            Analyze the report in three steps:
-            1. Extract business, new business, R&D, investment, risk, and financial signals.
-            2. Rank signals by relevance to the position and essay questions.
-            3. Compose source-grounded appeal cards for user review.
-            4. Run a final quality check: keep only claims grounded in the selected DART report, and put uncertainty in missingInfo.
-            5. Return concise Korean copy that a job applicant can immediately review, not a generic company summary.
-
-            DART report text:
-            %s
-            """.formatted(
-            defaultText(request.rceptNo()),
-            defaultText(request.reportName()),
-            defaultText(request.companyName()),
-            defaultText(request.positionTitle()),
-            request.essayQuestions() == null ? List.of() : request.essayQuestions(),
-            defaultText(request.documentText())
-        );
+        return DartAnalysisPromptBuilder.build(request);
     }
 
     private Map<String, Object> jsonSchema() {
@@ -143,6 +118,39 @@ public class GmsDartAiAnalysisClient implements DartAiAnalysisClient {
             "required", List.of("title", "summary", "sourceSection", "rceptNo", "relevanceScore")
         );
         Map<String, Object> stringArray = Map.of("type", "array", "items", Map.of("type", "string"));
+        Map<String, Object> resumeUsePoint = Map.of(
+            "type", "object",
+            "additionalProperties", false,
+            "properties", Map.of(
+                "useCase", Map.of("type", "string"),
+                "recommendation", Map.of("type", "string")
+            ),
+            "required", List.of("useCase", "recommendation")
+        );
+        Map<String, Object> sectionAnalysis = Map.of(
+            "type", "object",
+            "additionalProperties", false,
+            "properties", Map.of(
+                "sectionTitle", Map.of("type", "string"),
+                "coreSummary", Map.of("type", "string"),
+                "evidencePoints", stringArray,
+                "jobFitPoints", stringArray,
+                "resumeUsePoints", Map.of("type", "array", "items", resumeUsePoint),
+                "sentenceCandidates", stringArray,
+                "cautionPoints", stringArray,
+                "rawText", Map.of("type", "string")
+            ),
+            "required", List.of(
+                "sectionTitle",
+                "coreSummary",
+                "evidencePoints",
+                "jobFitPoints",
+                "resumeUsePoints",
+                "sentenceCandidates",
+                "cautionPoints",
+                "rawText"
+            )
+        );
         return Map.of(
             "type", "json_schema",
             "name", "dart_analysis",
@@ -155,9 +163,21 @@ public class GmsDartAiAnalysisClient implements DartAiAnalysisClient {
                     "appealPoints", stringArray,
                     "suggestedSentences", stringArray,
                     "cautions", stringArray,
-                    "missingInfo", stringArray
+                    "missingInfo", stringArray,
+                    "mainProductsAndServices", sectionAnalysis,
+                    "contractsAndRAndD", sectionAnalysis,
+                    "otherNotes", sectionAnalysis
                 ),
-                "required", List.of("evidenceCards", "appealPoints", "suggestedSentences", "cautions", "missingInfo")
+                "required", List.of(
+                    "evidenceCards",
+                    "appealPoints",
+                    "suggestedSentences",
+                    "cautions",
+                    "missingInfo",
+                    "mainProductsAndServices",
+                    "contractsAndRAndD",
+                    "otherNotes"
+                )
             )
         );
     }
@@ -180,7 +200,4 @@ public class GmsDartAiAnalysisClient implements DartAiAnalysisClient {
         return output.toString();
     }
 
-    private static String defaultText(String value) {
-        return StringUtils.hasText(value) ? value : "";
-    }
 }

@@ -53,11 +53,9 @@ const makeRouter = () => createRouter({
         { path: '/workspaces/:workspaceId', component: WorkspacePage },
         { path: '/main', component: { template: '<div>main</div>' } },
         { path: '/basket', component: { template: '<div>basket</div>' } },
-        { path: '/history', component: { template: '<div>history</div>' } },
         { path: '/mypage', component: { template: '<div>mypage</div>' } },
         { path: '/study', component: { template: '<div>study</div>' } },
         { path: '/mypage/terms', component: { template: '<div>terms</div>' } },
-        { path: '/mypage/partnership', component: { template: '<div>partnership</div>' } },
         { path: '/document-profile', component: { template: '<div>document profile</div>' } }
     ]
 });
@@ -65,9 +63,11 @@ const makeRouter = () => createRouter({
 describe('WorkspacePage', () => {
     afterEach(() => {
         vi.useRealTimers();
+        vi.unstubAllGlobals();
     });
 
     beforeEach(() => {
+        vi.stubGlobal('alert', vi.fn());
         localStorage.clear();
         Object.values(mocks).forEach((mock) => mock.mockReset());
         mocks.getWorkspace.mockResolvedValue({
@@ -235,7 +235,39 @@ describe('WorkspacePage', () => {
                 appealPoints: ['Connect platform investment to backend reliability experience.'],
                 suggestedSentences: ['I can contribute to reliable AI platform operations.'],
                 cautions: ['Do not describe this as investment advice.'],
-                missingInfo: []
+                missingInfo: [],
+                mainProductsAndServices: {
+                    sectionTitle: '주요 제품 및 서비스',
+                    coreSummary: 'AI 플랫폼 투자를 통해 검색과 추천 서비스 경쟁력을 강화하고 있습니다.',
+                    evidencePoints: ['사업보고서의 사업 개요에서 AI 플랫폼 투자가 확인됩니다.'],
+                    jobFitPoints: ['Backend Engineer 직무에서는 안정적인 플랫폼 운영 경험과 연결할 수 있습니다.'],
+                    resumeUsePoints: [
+                        { useCase: '지원동기', recommendation: 'AI 플랫폼 방향을 직무 관심도와 연결합니다.' }
+                    ],
+                    sentenceCandidates: ['AI 플랫폼 고도화 흐름 속에서 안정적인 백엔드 운영 경험으로 기여하겠습니다.'],
+                    cautionPoints: ['투자 성과를 확정적으로 표현하지 않습니다.'],
+                    rawText: 'AI platform investment'
+                },
+                contractsAndRAndD: {
+                    sectionTitle: '주요 계약 및 연구 개발 활동',
+                    coreSummary: '연구개발 흐름은 직무 역량 문항의 기술 이해 근거로 활용할 수 있습니다.',
+                    evidencePoints: [],
+                    jobFitPoints: [],
+                    resumeUsePoints: [],
+                    sentenceCandidates: [],
+                    cautionPoints: [],
+                    rawText: ''
+                },
+                otherNotes: {
+                    sectionTitle: '기타 참고사항',
+                    coreSummary: '기타 참고사항은 보조 근거로만 짧게 활용하는 편이 좋습니다.',
+                    evidencePoints: [],
+                    jobFitPoints: [],
+                    resumeUsePoints: [],
+                    sentenceCandidates: [],
+                    cautionPoints: [],
+                    rawText: ''
+                }
             },
             errorMessage: null
         });
@@ -244,7 +276,7 @@ describe('WorkspacePage', () => {
             id: '778',
             boardName: 'DART',
             type: 'DART',
-            title: 'DART AI 분석 - 사업보고서',
+            title: 'DART AI analysis - 사업보고서',
             body: 'The report describes AI platform investment.',
             url: 'https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260330000123'
         });
@@ -365,11 +397,17 @@ describe('WorkspacePage', () => {
         expect(wrapper.get('[data-testid="workspace-push-layout"]').classes()).toContain('drawer-open');
         await wrapper.get('[data-testid="panel-trigger-JD"]').trigger('click');
         expect(router.currentRoute.value.fullPath).toBe('/workspaces/102');
-        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('JD 게시판');
-        expect(wrapper.get('[data-testid="workspace-main-pane"]').attributes('style')).toContain('--drawer-width');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).not.toContain('JD 게시판');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('제목');
 
-        await wrapper.get('[data-testid="workspace-panel-divider"]').trigger('keydown', { key: 'ArrowLeft' });
-        expect(wrapper.get('[data-testid="workspace-main-pane"]').attributes('style')).toContain('464px');
+        await wrapper.get('.minimize-btn').trigger('click');
+        await flushPromises();
+        expect(wrapper.get('[data-testid="workspace-push-layout"]').classes()).not.toContain('drawer-open');
+        expect(document.querySelector('.bee-minimize-button')).not.toBeNull();
+
+        document.querySelector('.bee-minimize-button')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await flushPromises();
+        expect(wrapper.get('[data-testid="workspace-push-layout"]').classes()).toContain('drawer-open');
 
         await wrapper.get('[data-testid="board-full-view"]').trigger('click');
         await flushPromises();
@@ -381,16 +419,19 @@ describe('WorkspacePage', () => {
     it('REF-001: side panel supports the requested board types without page navigation', async () => {
         const wrapper = await mountWorkspace();
 
-        for (const [type, title] of [
-            ['NEWS', '뉴스기사 게시판'],
-            ['DART', 'DART 게시판'],
-            ['TALENT_PROFILE', '인재상 게시판'],
-            ['AWARDS_PROJECTS', '수상/프로젝트'],
-            ['PROMPT', '프롬프트 게시판'],
-            ['FREE_MEMO', '메모 게시판']
+        for (const [type, expectedText, removedTitle] of [
+            ['NEWS', '기사 제목', '뉴스기사 게시판'],
+            ['DART', '확인 경로', 'DART 게시판'],
+            ['TALENT_PROFILE', '핵심 가치 / 키워드', '인재상 게시판'],
+            ['AWARDS_PROJECTS', '프로젝트', null],
+            ['PROMPT', '+ 프롬프트 추가', '프롬프트 게시판'],
+            ['FREE_MEMO', '제목', '메모 게시판']
         ]) {
             await wrapper.get(`[data-testid="panel-trigger-${type}"]`).trigger('click');
-            expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain(title);
+            expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain(expectedText);
+            if (removedTitle) {
+                expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).not.toContain(removedTitle);
+            }
         }
     });
 
@@ -439,7 +480,21 @@ describe('WorkspacePage', () => {
 
         await wrapper.get('[data-testid="panel-trigger-DART"]').trigger('click');
         expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('확인 경로');
-        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('주요 계약 및 연구 개발 활동');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('계약/R&D');
+        await flushPromises();
+        expect(mocks.listDartDisclosures).toHaveBeenCalledWith('102');
+        expect(mocks.createDartAnalysis).toHaveBeenCalledWith('102', expect.objectContaining({
+            rceptNo: '20260330000123',
+            companyName: 'Naver',
+            positionTitle: 'Backend Engineer'
+        }));
+        expect(wrapper.get('[data-testid="dart-auto-fill-status"]').text()).toContain('문항별 활용 추천을 생성했습니다');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('AI 플랫폼 투자를 통해');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('자소서 활용 DART 포인트');
+        expect(wrapper.get('[data-testid="dart-essay-guide"]').text()).toContain('자소서에 활용하기 좋은 DART 포인트');
+        expect(wrapper.get('[data-testid="dart-essay-guide"]').text()).toContain('문항별 추천');
+        expect(wrapper.get('[data-testid="dart-essay-guide"]').text()).toContain('Naver');
+        expect(wrapper.get('[data-testid="dart-essay-guide"]').text()).toContain('Backend Engineer');
         await wrapper.get('[data-testid="save-dart-entry"]').trigger('click');
         expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('저장한 DART 메모');
 
@@ -465,37 +520,16 @@ describe('WorkspacePage', () => {
         expect(wrapper.find('[data-testid="project-title-0"]').exists()).toBe(true);
     });
 
-    it('REF-003/JOB-018/REF-008/AI-004/AI-006: loads DART disclosures, renders AI evidence cards, and saves only after review', async () => {
+    it('REF-003: keeps the DART board focused on manual notes and source path', async () => {
         const wrapper = await mountWorkspace();
 
         await wrapper.get('[data-testid="panel-trigger-DART"]').trigger('click');
-        await wrapper.get('[data-testid="load-dart-disclosures"]').trigger('click');
-        await flushPromises();
-
-        expect(mocks.listDartDisclosures).toHaveBeenCalledWith('102');
-        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('사업보고서');
-
-        await wrapper.get('[data-testid="create-dart-analysis"]').trigger('click');
-        await flushPromises();
-
-        expect(mocks.createDartAnalysis).toHaveBeenCalledWith('102', {
-            rceptNo: '20260330000123',
-            reportName: '사업보고서',
-            companyName: 'Naver',
-            positionTitle: 'Backend Engineer',
-            essayQuestions: ['지원동기를 작성하세요.'],
-            documentText: ''
-        });
-        expect(wrapper.get('[data-testid="dart-analysis-result"]').text()).toContain('AI platform investment');
-        expect(wrapper.get('[data-testid="dart-analysis-result"]').text()).toContain('Business overview');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('확인 경로');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('DART 바로가기');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).not.toContain('확인 항목');
+        expect(wrapper.find('[data-testid="load-dart-disclosures"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="create-dart-analysis"]').exists()).toBe(false);
         expect(getDraftText(wrapper)).toBe('기존 초안');
-
-        await wrapper.get('[data-testid="save-dart-analysis-reference"]').trigger('click');
-        await flushPromises();
-
-        expect(mocks.saveDartAnalysisReference).toHaveBeenCalledWith('102', '901');
-        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('DART 참고자료로 저장했습니다.');
-        expect(wrapper.get('[data-testid="save-dart-analysis-reference"]').attributes('disabled')).toBeDefined();
     });
 
     it('REF-004/REF-005: saves JD notes into the local board list', async () => {
@@ -527,7 +561,7 @@ describe('WorkspacePage', () => {
 
         await wrapper.get('[data-testid="compare-versions"]').trigger('click');
         await flushPromises();
-        expect(mocks.compareVersions).toHaveBeenCalledWith('102', '501', '502', expect.any(String));
+        expect(mocks.compareVersions).toHaveBeenCalledWith('102', '501', '502');
         expect(wrapper.text()).toContain('초안 v1');
         expect(wrapper.text()).toContain('초안 v2');
         expect(wrapper.text()).toContain('AI가 변경점을 요약했습니다.');
@@ -555,6 +589,16 @@ describe('WorkspacePage', () => {
 
         await wrapper.get('[data-testid="count-with-spaces"]').trigger('click');
         expect(wrapper.get('[data-testid="draft-character-count"]').text()).toContain('5 / 1000자');
+    });
+
+    it('WS-011: counts visible draft text when the editor stores rich HTML', async () => {
+        const wrapper = await mountWorkspace();
+
+        await setDraftText(wrapper, '<p><strong>가 나</strong> 다</p><figure><img src="data:image/png;base64,AAAA" alt="첨부"></figure>');
+        expect(wrapper.get('[data-testid="draft-character-count"]').text()).toContain('5 / 1000자');
+
+        await wrapper.get('[data-testid="count-without-spaces"]').trigger('click');
+        expect(wrapper.get('[data-testid="draft-character-count"]').text()).toContain('3 / 1000자');
     });
 
     it('WS-018: saves a titled final essay in version management', async () => {

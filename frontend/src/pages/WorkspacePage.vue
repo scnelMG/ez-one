@@ -107,7 +107,7 @@
         :class="{ 'drawer-open': !isMinimized }"
         data-testid="workspace-push-layout"
       >
-        <main class="workspace-main-pane" :style="drawerStyle" data-testid="workspace-main-pane">
+        <main class="workspace-main-pane" data-testid="workspace-main-pane">
           <div class="workspace-bottom-tabs is-fixed" data-testid="workspace-bottom-tabs">
             <button
               class="tab-button"
@@ -169,14 +169,24 @@
                   <div class="question-title-editor">
                     <p class="section-kicker">초안 작성</p>
                     <label class="question-field">
-                      <input
+                      <textarea
                         v-model="editQuestion.prompt"
                         data-testid="edit-question-prompt"
                         aria-label="문항 제목"
+                        rows="2"
                         @blur="saveQuestionSettings"
                         @keydown.enter.prevent="saveQuestionSettings"
                       />
                     </label>
+                  </div>
+                  <div class="editor-status-column">
+                    <span
+                      class="auto-save-badge"
+                      data-testid="auto-save-status"
+                      :data-save-state="autoSaveStatus"
+                    >
+                      {{ editorStatusLabel }}
+                    </span>
                     <label class="question-limit-field">
                       <span>글자수</span>
                       <input
@@ -189,13 +199,6 @@
                       />
                     </label>
                   </div>
-                  <span
-                    class="auto-save-badge"
-                    data-testid="auto-save-status"
-                    :data-save-state="autoSaveStatus"
-                  >
-                    {{ editorStatusLabel }}
-                  </span>
                 </div>
                 <MarkdownDraftEditor
                   v-model="draftBody"
@@ -248,7 +251,7 @@
               <div class="version-workspace">
                 <div class="section-heading">
                   <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-                    <h2 style="color: #8b5cf6; margin: 0;">{{ activeQuestionIndex + 1 }}번 문항 {{ isCreatingNewVersion ? '새 버전 저장' : '변경점 비교' }}</h2>
+                    <h2 class="version-section-title">{{ activeQuestionIndex + 1 }}번 문항 {{ isCreatingNewVersion ? '새 버전 저장' : '변경점 비교' }}</h2>
                     <button
                       v-if="!isCreatingNewVersion"
                       class="primary-button"
@@ -377,34 +380,32 @@
 
                 <div class="version-summary ai-summary" style="margin-top: 24px; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
                   <div class="section-heading compact-heading" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                    <h3 style="margin: 0; color: #4338ca; display: flex; align-items: center; gap: 8px; font-size: 1.1rem;">
-                      ✨ AI 변경점 요약
+                    <h3 class="version-section-title">
+                      AI 변경점 요약
                     </h3>
-                    <div style="display: flex; gap: 8px;">
-                      <button v-if="selectedLeftVersionId && selectedRightVersionId" class="ghost-button" @click="compareVersions" :disabled="workspaceStore.status === 'loading'" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: #e0e7ff; color: #4f46e5; border: none; cursor: pointer; font-weight: 600;">
-                        🔄 새로고침
-                      </button>
-                      <button class="primary-button small-button" @click="isEditingPrompt = !isEditingPrompt" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; background: #8b5cf6; border: none; cursor: pointer;">
-                        {{ isEditingPrompt ? '커스텀 닫기' : '프롬프트 커스텀하기' }}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div v-if="isEditingPrompt" class="ai-prompt-editor" style="margin-bottom: 16px; padding: 12px; background: #fff; border-radius: 6px; border: 1px solid #cbd5e1;">
-                    <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 6px;">AI 요약 기준 (프롬프트 커스텀)</label>
-                    <textarea v-model="customAiPrompt" style="width: 100%; min-height: 60px; padding: 10px; font-size: 0.9rem; border: 1px solid #e2e8f0; border-radius: 6px; resize: vertical;" placeholder="AI가 요약할 때 집중할 부분을 적어주세요."></textarea>
-                    <div style="text-align: right; margin-top: 8px;">
-                      <button class="primary-button small-button" @click="compareVersions(); isEditingPrompt = false;" :disabled="workspaceStore.status === 'loading'" style="background: #4f46e5;">
-                        저장 후 요약하기
+                    <div class="ai-summary-actions">
+                      <button
+                        v-if="selectedLeftVersionId && selectedRightVersionId"
+                        class="ai-summary-refresh-button"
+                        type="button"
+                        @click="compareVersions"
+                        :disabled="workspaceStore.isComparingVersions"
+                      >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M20 12a8 8 0 0 1-13.66 5.66M4 12A8 8 0 0 1 17.66 6.34" />
+                          <path d="M20 5v5h-5M4 19v-5h5" />
+                        </svg>
+                        <span>새로고침</span>
                       </button>
                     </div>
                   </div>
 
-                  <div v-if="workspaceStore.status === 'loading'" class="ai-summary-content" style="padding: 16px; color: #64748b; font-style: italic; text-align: center;">
-                    AI가 변경점을 분석하고 요약 중입니다... 잠시만 기다려주세요.
+                  <div v-if="workspaceStore.isComparingVersions" class="ai-summary-loading" data-testid="ai-summary-loading">
+                    <span class="ai-summary-spinner" aria-hidden="true"></span>
+                    <span>AI가 자소서 변경점을 요약하는 중입니다.</span>
                   </div>
-                  <div v-else-if="activeComparison?.aiSummary" class="ai-summary-content" style="white-space: pre-wrap; line-height: 1.6; color: #334155; padding-top: 16px; border-top: 1px solid #e2e8f0;">
-                    {{ activeComparison.aiSummary }}
+                  <div v-else-if="activeComparisonSummary" class="ai-summary-content" style="white-space: pre-wrap; line-height: 1.6; color: #334155; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+                    {{ activeComparisonSummary }}
                   </div>
                   <div v-else class="ai-summary-content" style="padding: 16px; color: #64748b; text-align: center;">
                     두 버전을 비교하시면 AI가 변경점을 요약해 드립니다.
@@ -420,7 +421,6 @@
             v-if="isMinimized"
             class="bee-minimize-button"
             :style="beeStyle"
-            @mousedown="startBeeDrag"
             @click="onBeeClick"
             title="참고자료 열기"
           >
@@ -431,32 +431,10 @@
         <aside
           v-show="!isMinimized"
           class="floating-side-panel"
-          :style="floatingPanelStyle"
           data-testid="workspace-side-drawer"
           data-panel-testid="workspace-floating-panel"
         >
-          <div
-            class="panel-resize-handle resize-left"
-            role="separator"
-            tabindex="0"
-            data-testid="workspace-panel-divider"
-            @mousedown.stop="startPanelResize('left', $event)"
-            @keydown.left.prevent="nudgeDrawerWidth(24)"
-            @keydown.right.prevent="nudgeDrawerWidth(-24)"
-          ></div>
-          <div class="panel-resize-handle resize-right" @mousedown.stop="startPanelResize('right', $event)"></div>
-          <div class="panel-resize-handle resize-top" @mousedown.stop="startPanelResize('top', $event)"></div>
-          <div class="panel-resize-handle resize-bottom" @mousedown.stop="startPanelResize('bottom', $event)"></div>
-          <div class="panel-resize-handle resize-top-left" @mousedown.stop="startPanelResize('top-left', $event)"></div>
-          <div class="panel-resize-handle resize-top-right" @mousedown.stop="startPanelResize('top-right', $event)"></div>
-          <div class="panel-resize-handle resize-bottom-left" @mousedown.stop="startPanelResize('bottom-left', $event)"></div>
-          <div class="panel-resize-handle resize-bottom-right" @mousedown.stop="startPanelResize('bottom-right', $event)"></div>
-
-          <div class="floating-drag-handle" @mousedown="startPanelDrag">
-            <span class="handle-title">참고자료 및 메모</span>
-            <button class="icon-button minimize-btn" @click.stop="isMinimized = true" aria-label="최소화">_</button>
-          </div>
-          <div class="floating-panel-body">
+          <header class="floating-panel-header">
             <nav class="workspace-side-rail" aria-label="참고자료 게시판">
               <button
                 v-for="board in boards"
@@ -469,23 +447,22 @@
                 {{ board.shortLabel }}
               </button>
             </nav>
-
+            <button class="panel-collapse-button minimize-btn" type="button" @click.stop="isMinimized = true" aria-label="사이드 패널 접기">
+              <span aria-hidden="true">−</span>
+              <span>접기</span>
+            </button>
+          </header>
+          <div class="floating-panel-body">
             <div class="workspace-drawer-content">
-              <header class="drawer-header">
-                <div>
-                  <p class="section-kicker">참고자료</p>
-                  <h2>{{ activeBoardTitle }}</h2>
-                </div>
-                <button
-                  class="drawer-expand-button"
-                  type="button"
-                  aria-label="게시판 전체 보기"
-                  data-testid="board-full-view"
-                  @click="openBoardFullView"
-                >
-                  ↗
-                </button>
-              </header>
+              <button
+                class="drawer-expand-button drawer-floating-expand"
+                type="button"
+                aria-label="게시판 전체 보기"
+                data-testid="board-full-view"
+                @click="openBoardFullView"
+              >
+                ↗
+              </button>
 
               <section v-if="showReferenceCreateButton" class="drawer-reference-list">
                 <button
@@ -638,7 +615,7 @@
 
 <script setup>
 import { computed, h, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
-import { diffLines } from 'diff';
+import { diffArrays } from 'diff';
 import { useRoute } from 'vue-router';
 import { rememberRecentWorkspace } from '@/features/basket/recentWorkspaces';
 import { workspaceApi } from '@/features/workspace/api/workspaceApi';
@@ -656,8 +633,6 @@ const autoSaveStatus = ref('idle');
 const activeMode = ref('canvas');
 const activeBoard = ref('JD');
 const activeQuestionIndex = ref(0);
-const drawerOpen = ref(true);
-const drawerWidth = ref(440);
 const boardFullViewOpen = ref(false);
 const selectedLeftVersionId = ref('');
 const selectedRightVersionId = ref('');
@@ -669,153 +644,10 @@ let suppressNextDraftWatch = false;
 let syncActiveMarkdownEditor = () => {};
 
 const isMinimized = ref(false);
-const isEditingPrompt = ref(false);
-const customAiPrompt = ref('자소서 변경 전후의 뉘앙스 차이, 분량의 적절성, 어색한 표현 개선 여부를 중심으로 어떤 점이 나아졌는지, 그리고 어떤 부분이 부족한지 3~5문장으로 요약해줘.');
-const floatingPanelStyle = reactive({ top: '132px', right: '32px', width: '440px', height: 'calc(100vh - 160px)', left: 'auto' });
 const beeStyle = reactive({ top: 'auto', left: 'auto', bottom: '40px', right: '40px' });
 
-let isDraggingPanel = false;
-let dragStartX = 0;
-let dragStartY = 0;
-let panelInitialTop = 0;
-let panelInitialLeft = 0;
-
-function startPanelDrag(e) {
-  if (e.target.closest('button')) return;
-  isDraggingPanel = true;
-  dragStartX = e.clientX;
-  dragStartY = e.clientY;
-  const panel = document.querySelector('.floating-side-panel');
-  if (panel) {
-    const rect = panel.getBoundingClientRect();
-    panelInitialTop = rect.top;
-    panelInitialLeft = rect.left;
-    floatingPanelStyle.top = `${rect.top}px`;
-    floatingPanelStyle.left = `${rect.left}px`;
-    floatingPanelStyle.right = 'auto';
-  }
-  document.addEventListener('mousemove', onPanelDrag);
-  document.addEventListener('mouseup', stopPanelDrag);
-}
-
-function onPanelDrag(e) {
-  if (!isDraggingPanel) return;
-  const dx = e.clientX - dragStartX;
-  const dy = e.clientY - dragStartY;
-  floatingPanelStyle.left = `${panelInitialLeft + dx}px`;
-  floatingPanelStyle.top = `${panelInitialTop + dy}px`;
-}
-
-function stopPanelDrag() {
-  isDraggingPanel = false;
-  document.removeEventListener('mousemove', onPanelDrag);
-  document.removeEventListener('mouseup', stopPanelDrag);
-}
-
-let isDraggingBee = false;
-let hasDraggedBee = false;
-let beeDragStartX = 0;
-let beeDragStartY = 0;
-let beeInitialTop = 0;
-let beeInitialLeft = 0;
-
-function startBeeDrag(e) {
-  isDraggingBee = true;
-  hasDraggedBee = false;
-  beeDragStartX = e.clientX;
-  beeDragStartY = e.clientY;
-  const bee = document.querySelector('.bee-minimize-button');
-  if (bee) {
-    const rect = bee.getBoundingClientRect();
-    beeInitialTop = rect.top;
-    beeInitialLeft = rect.left;
-    beeStyle.top = `${rect.top}px`;
-    beeStyle.left = `${rect.left}px`;
-    beeStyle.bottom = 'auto';
-    beeStyle.right = 'auto';
-  }
-  document.addEventListener('mousemove', onBeeDrag);
-  document.addEventListener('mouseup', stopBeeDrag);
-}
-
-function onBeeDrag(e) {
-  if (!isDraggingBee) return;
-  hasDraggedBee = true;
-  const dx = e.clientX - beeDragStartX;
-  const dy = e.clientY - beeDragStartY;
-  beeStyle.left = `${beeInitialLeft + dx}px`;
-  beeStyle.top = `${beeInitialTop + dy}px`;
-}
-
-function stopBeeDrag() {
-  isDraggingBee = false;
-  document.removeEventListener('mousemove', onBeeDrag);
-  document.removeEventListener('mouseup', stopBeeDrag);
-}
-
 function onBeeClick() {
-  if (!hasDraggedBee) {
-    isMinimized.value = false;
-  }
-}
-
-let isResizingPanel = false;
-let resizeDirection = '';
-let panelInitialWidth = 0;
-let panelInitialHeight = 0;
-
-function startPanelResize(direction, e) {
-  isResizingPanel = true;
-  resizeDirection = direction;
-  dragStartX = e.clientX;
-  dragStartY = e.clientY;
-  const panel = document.querySelector('.floating-side-panel');
-  if (panel) {
-    const rect = panel.getBoundingClientRect();
-    panelInitialWidth = rect.width;
-    panelInitialHeight = rect.height;
-    panelInitialTop = rect.top;
-    panelInitialLeft = rect.left;
-    floatingPanelStyle.left = `${rect.left}px`;
-    floatingPanelStyle.top = `${rect.top}px`;
-    floatingPanelStyle.right = 'auto';
-  }
-  document.addEventListener('mousemove', onPanelResize);
-  document.addEventListener('mouseup', stopPanelResize);
-}
-
-function onPanelResize(e) {
-  if (!isResizingPanel) return;
-  e.preventDefault();
-  const dx = e.clientX - dragStartX;
-  const dy = e.clientY - dragStartY;
-
-  if (resizeDirection.includes('right')) {
-    floatingPanelStyle.width = `${Math.max(380, panelInitialWidth + dx)}px`;
-  }
-  if (resizeDirection.includes('left')) {
-    const newWidth = Math.max(380, panelInitialWidth - dx);
-    if (newWidth > 380) {
-      floatingPanelStyle.width = `${newWidth}px`;
-      floatingPanelStyle.left = `${panelInitialLeft + dx}px`;
-    }
-  }
-  if (resizeDirection.includes('bottom')) {
-    floatingPanelStyle.height = `${Math.max(400, panelInitialHeight + dy)}px`;
-  }
-  if (resizeDirection.includes('top')) {
-    const newHeight = Math.max(400, panelInitialHeight - dy);
-    if (newHeight > 400) {
-      floatingPanelStyle.height = `${newHeight}px`;
-      floatingPanelStyle.top = `${panelInitialTop + dy}px`;
-    }
-  }
-}
-
-function stopPanelResize() {
-  isResizingPanel = false;
-  document.removeEventListener('mousemove', onPanelResize);
-  document.removeEventListener('mouseup', stopPanelResize);
+  isMinimized.value = false;
 }
 
 const boards = [
@@ -826,6 +658,26 @@ const boards = [
   { type: 'AWARDS_PROJECTS', shortLabel: '수상/프로젝트', title: '수상/프로젝트' },
   { type: 'PROMPT', shortLabel: '프롬프트', title: '프롬프트 게시판' },
   { type: 'FREE_MEMO', shortLabel: '메모', title: '메모 게시판' }
+];
+const dartSectionMeta = [
+  {
+    legacyKey: 'products',
+    analysisKey: 'mainProductsAndServices',
+    title: '주요 제품 및 서비스',
+    shortTitle: '제품/서비스'
+  },
+  {
+    legacyKey: 'contracts',
+    analysisKey: 'contractsAndRAndD',
+    title: '주요 계약 및 연구 개발 활동',
+    shortTitle: '계약/R&D'
+  },
+  {
+    legacyKey: 'notes',
+    analysisKey: 'otherNotes',
+    title: '기타 참고사항',
+    shortTitle: '참고사항'
+  }
 ];
 const creatableReferenceTypes = ['JD', 'NEWS', 'DART', 'TALENT_PROFILE', 'AWARDS_PROJECTS', 'PROMPT', 'FREE_MEMO'];
 const referenceForm = reactive({
@@ -862,7 +714,6 @@ const canvasQuestions = computed(() => {
   return [...merged, ...localQuestions.value.map((question) => applyLocalQuestionEdit(question))];
 });
 const currentQuestion = computed(() => canvasQuestions.value[activeQuestionIndex.value] ?? canvasQuestions.value[0] ?? null);
-const drawerStyle = computed(() => ({ '--drawer-width': `${drawerWidth.value}px` }));
 const activeBoardTitle = computed(() => boards.find((board) => board.type === activeBoard.value)?.title ?? '참고자료');
 const boardsWithInlineCreate = new Set(['JD', 'NEWS', 'DART', 'TALENT_PROFILE', 'AWARDS_PROJECTS', 'PROMPT', 'FREE_MEMO']);
 const showReferenceCreateButton = computed(() => !boardsWithInlineCreate.has(activeBoard.value));
@@ -961,6 +812,14 @@ const activeComparison = computed(() => {
   if (String(comparison.rightVersionId) !== String(selectedRightVersionId.value)) return null;
   return comparison;
 });
+const activeComparisonSummary = computed(() => {
+  if (!activeComparison.value?.aiSummary) return '';
+  return normalizeComparisonSummaryText(
+    activeComparison.value.aiSummary,
+    selectedLeftVersion.value?.versionName || activeComparison.value.leftVersionName || '이전 저장본',
+    selectedRightVersion.value?.versionName || activeComparison.value.rightVersionName || '비교 저장본'
+  );
+});
 const versionDiffRows = computed(() => buildLineDiff(
   activeComparison.value?.leftBody ?? selectedLeftVersion.value?.body ?? '',
   activeComparison.value?.rightBody ?? selectedRightVersion.value?.body ?? ''
@@ -970,8 +829,11 @@ const canSaveFinalEssay = computed(() => Boolean(
   && finalEssayTitle.value.trim()
   && finalEssayBody.value.trim()
 ));
+const draftCountText = computed(() => extractVisibleText(draftBody.value));
 const draftCharacterCount = computed(() => (
-  characterCountMode.value === 'withoutSpaces' ? draftBody.value.replace(/\s/g, '').length : draftBody.value.length
+  characterCountMode.value === 'withoutSpaces'
+    ? draftCountText.value.replace(/\s/g, '').length
+    : draftCountText.value.length
 ));
 const filteredReferences = computed(() => {
   const references = workspaceStore.workspace?.references ?? [];
@@ -1187,21 +1049,18 @@ async function compareVersions() {
   const left = selectedLeftVersion.value;
   const right = selectedRightVersion.value;
   if (!left || !right || left.id === right.id) return null;
-  return workspaceStore.compareVersions(workspaceId.value, left.id, right.id, customAiPrompt.value);
+  return workspaceStore.compareVersions(workspaceId.value, left.id, right.id);
 }
 
 function buildLineDiff(leftBody, rightBody) {
-  const formatToSentenceLines = (text) => text ? text.replace(/([.?!])\s+/g, '$1\n') : '';
-
   let diffs = [];
   try {
-    diffs = diffLines(formatToSentenceLines(leftBody), formatToSentenceLines(rightBody));
+    diffs = diffArrays(toDiffLineArray(leftBody), toDiffLineArray(rightBody));
   } catch (error) {
     console.error('Diff calculation failed:', error);
-    // Fallback if diff fails
     return {
-      leftRows: [{ type: 'same', content: leftBody }],
-      rightRows: [{ type: 'same', content: rightBody }]
+      leftRows: toDiffLineArray(leftBody).map((line) => ({ type: 'same', content: line })),
+      rightRows: toDiffLineArray(rightBody).map((line) => ({ type: 'same', content: line }))
     };
   }
 
@@ -1213,10 +1072,8 @@ function buildLineDiff(leftBody, rightBody) {
 
     if (part.removed && i + 1 < diffs.length && diffs[i+1].added) {
       const addedPart = diffs[i+1];
-      const removedLines = part.value.split('\n');
-      if (removedLines[removedLines.length - 1] === '') removedLines.pop();
-      const addedLines = addedPart.value.split('\n');
-      if (addedLines[addedLines.length - 1] === '') addedLines.pop();
+      const removedLines = part.value;
+      const addedLines = addedPart.value;
 
       const maxLines = Math.max(removedLines.length, addedLines.length);
       for (let j = 0; j < maxLines; j++) {
@@ -1229,10 +1086,8 @@ function buildLineDiff(leftBody, rightBody) {
 
     if (part.added && i + 1 < diffs.length && diffs[i+1].removed) {
       const removedPart = diffs[i+1];
-      const addedLines = part.value.split('\n');
-      if (addedLines[addedLines.length - 1] === '') addedLines.pop();
-      const removedLines = removedPart.value.split('\n');
-      if (removedLines[removedLines.length - 1] === '') removedLines.pop();
+      const addedLines = part.value;
+      const removedLines = removedPart.value;
 
       const maxLines = Math.max(removedLines.length, addedLines.length);
       for (let j = 0; j < maxLines; j++) {
@@ -1243,8 +1098,7 @@ function buildLineDiff(leftBody, rightBody) {
       continue;
     }
 
-    const lines = part.value.split('\n');
-    if (lines[lines.length - 1] === '') lines.pop();
+    const lines = part.value;
 
     lines.forEach((line) => {
       if (part.added) {
@@ -1273,10 +1127,135 @@ function splitLines(body) {
   return body.replace(/\r\n/g, '\n').split('\n');
 }
 
+function normalizeDiffText(body) {
+  return extractVisibleText(body)
+    .replace(/\r\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trimEnd();
+}
+
+function toDiffLineArray(body) {
+  const text = normalizeDiffText(body);
+  if (!text) return [''];
+  return text
+    .split('\n')
+    .flatMap((line) => splitLongDiffLine(line.trimEnd()))
+    .filter((line, index, lines) => line || lines.length === 1);
+}
+
+function splitLongDiffLine(line) {
+  if (line.length <= 120) return [line];
+  const chunks = (line.match(/[^.!?。！？]+[.!?。！？]?/g) ?? [])
+    .map((chunk) => chunk.trim())
+    .filter(Boolean);
+  return chunks.length > 1 ? chunks : [line];
+}
+
+function normalizeComparisonSummaryText(summary, leftName, rightName) {
+  const normalized = String(summary || '')
+    .replace(/version\s*1/gi, leftName)
+    .replace(/version\s*2/gi, rightName)
+    .replace(/버전\s*1/g, leftName)
+    .replace(/버전\s*2/g, rightName)
+    .replace(/1번\s*버전/g, leftName)
+    .replace(/2번\s*버전/g, rightName)
+    .replaceAll('첫 번째 버전', leftName)
+    .replaceAll('두 번째 버전', rightName)
+    .replaceAll('첫번째 버전', leftName)
+    .replaceAll('두번째 버전', rightName)
+    .replaceAll('이전 버전', leftName)
+    .replaceAll('비교 버전', rightName);
+  return enforceComparisonBulletFormat(normalized);
+}
+
+function enforceComparisonBulletFormat(summary) {
+  const text = String(summary || '').trim();
+  if (!text) return '';
+  const hasFactSection = text.includes('1. 변경된 사실');
+  const hasFeedbackSection = text.includes('2. 채용담당자 관점 피드백');
+  const hasBullets = text.split('\n').some((line) => line.trim().startsWith('- '));
+  if (hasFactSection && hasFeedbackSection && hasBullets) return text;
+
+  const sentences = splitSummarySentences(text);
+  if (!sentences.length) return text;
+  const splitIndex = Math.max(1, Math.ceil(sentences.length / 2));
+  const facts = sentences.slice(0, splitIndex);
+  const feedback = sentences.slice(splitIndex);
+  const fallbackFeedback = feedback.length
+    ? feedback
+    : ['지원 기업, 직무, JD, 작성 문항과 연결되는 역량 표현을 더 구체화하면 채용담당자가 지원 적합성을 판단하기 쉬워집니다.'];
+
+  return [
+    '1. 변경된 사실',
+    ...facts.map((sentence) => `- ${sentence}`),
+    '',
+    '2. 채용담당자 관점 피드백',
+    ...fallbackFeedback.map((sentence) => `- ${sentence}`)
+  ].join('\n');
+}
+
+function splitSummarySentences(text) {
+  const cleaned = String(text || '')
+    .replace(/^\s*\d+\.\s*(변경된 사실|변경된 내용|채용담당자 관점 피드백)\s*$/gm, '')
+    .replace(/^\s*[-•]\s*/gm, '')
+    .replace(/(\d)\.(\d)/g, '$1<decimal>$2')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return (cleaned.match(/[^.!?。！？]+[.!?。！？]?/g) ?? [])
+    .map((sentence) => sentence.replace(/<decimal>/g, '.').trim())
+    .filter(Boolean);
+}
+
+function extractVisibleText(body) {
+  const raw = String(body || '');
+  if (!raw) return '';
+  const htmlLike = /<[^>]+>/.test(raw);
+  if (!htmlLike) return raw.replace(/\r\n/g, '\n');
+  if (typeof document === 'undefined') {
+    return raw
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/(p|div|li|h[1-6]|blockquote|pre|summary|details|figure)>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&amp;/gi, '&')
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/&quot;/gi, '"')
+      .replace(/&#039;/gi, "'");
+  }
+  const container = document.createElement('div');
+  container.innerHTML = raw
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|li|h[1-6]|blockquote|pre|summary|details|figure)>/gi, '\n');
+  container.querySelectorAll('img').forEach((image) => image.remove());
+  container.querySelectorAll('figure').forEach((figure) => {
+    if (!figure.textContent?.trim()) {
+      figure.remove();
+    }
+  });
+  return (container.innerText || container.textContent || '')
+    .replace(/\u00A0/g, ' ')
+    .replace(/\u200B/g, '')
+    .replace(/^\n+|\n+$/g, '');
+}
+
 function openBoard(type) {
   activeBoard.value = type;
   isMinimized.value = false;
   workspaceStore.activeReference = null;
+  if (type === 'DART') {
+    const draft = ensureBoardDraft('DART');
+    if (shouldRunDartAutoAnalysis(draft)) {
+      void fillDartSectionsFromApi(draft);
+    }
+  }
+}
+
+function shouldRunDartAutoAnalysis(draft) {
+  if (!draft) return false;
+  if (draft.dartAutoFillStatus === 'loading' || draft.dartAnalysisStatus === 'loading') return false;
+  if (draft.dartAutoFillStatus === 'ready' && draft.dartAnalysis?.status === 'COMPLETED') return false;
+  return true;
 }
 
 function openBoardFullView() {
@@ -1285,33 +1264,6 @@ function openBoardFullView() {
 
 function closeBoardFullView() {
   boardFullViewOpen.value = false;
-}
-
-function startDrawerResize(event) {
-  resizeStartX = event.clientX;
-  resizeStartWidth = drawerWidth.value;
-  resizeLayoutWidth = event.currentTarget?.parentElement?.getBoundingClientRect?.().width ?? 0;
-  event.currentTarget?.setPointerCapture?.(event.pointerId);
-  window.addEventListener('pointermove', resizeDrawer);
-  window.addEventListener('pointerup', stopDrawerResize, { once: true });
-}
-
-function resizeDrawer(event) {
-  const nextWidth = resizeStartWidth - (event.clientX - resizeStartX);
-  drawerWidth.value = clampDrawerWidth(nextWidth, resizeLayoutWidth);
-}
-
-function stopDrawerResize() {
-  window.removeEventListener('pointermove', resizeDrawer);
-}
-
-function nudgeDrawerWidth(delta) {
-  drawerWidth.value = clampDrawerWidth(drawerWidth.value + delta);
-}
-
-function clampDrawerWidth(width, layoutWidth = null) {
-  const maxByLayout = layoutWidth ? Math.max(380, layoutWidth - 620) : 760;
-  return Math.min(900, maxByLayout, Math.max(380, Math.round(width)));
 }
 
 async function saveFinalEssay() {
@@ -1374,7 +1326,7 @@ function openReference(referenceId) {
   if (reference?.type) {
     activeBoard.value = reference.type;
   }
-  drawerOpen.value = true;
+  isMinimized.value = false;
   void workspaceStore.openReference(referenceId);
 }
 
@@ -1489,6 +1441,8 @@ function createBoardDraft(type) {
       contracts: '',
       notes: ''
     },
+    dartStructuredSections: {},
+    activeDartSectionKey: 'products',
     dartEntries: [],
     dartDisclosures: [],
     dartDisclosureStatus: 'idle',
@@ -1498,6 +1452,9 @@ function createBoardDraft(type) {
     dartAnalysis: null,
     dartAnalysisMessage: '',
     dartSaveStatus: 'idle',
+    dartAutoFillStatus: 'idle',
+    dartAutoFillMessage: '',
+    dartEssayGuide: null,
     profileSections: createProfileSections(),
     prompts: [],
     isAddingPrompt: false,
@@ -1660,7 +1617,8 @@ function saveDartEntry(draft) {
     id: `dart-${Date.now()}`,
     title,
     createdAt: new Date().toLocaleString('ko-KR'),
-    sections: { ...draft.dartSections }
+    sections: { ...draft.dartSections },
+    structuredSections: { ...(draft.dartStructuredSections || {}) }
   }, ...draft.dartEntries];
 }
 
@@ -1671,6 +1629,171 @@ function addDartEntry(draft) {
     contracts: '',
     notes: ''
   };
+  draft.dartStructuredSections = {};
+  draft.activeDartSectionKey = 'products';
+  draft.dartEssayGuide = null;
+}
+
+function generateDartEssayGuide(draft) {
+  const companyName = workspaceStore.workspace?.companyName || '지원 기업';
+  const positionTitle = workspaceStore.workspace?.positionTitle || '지원 직무';
+  const filledSections = dartSectionMeta
+    .map((meta) => ({
+      key: meta.legacyKey,
+      label: meta.title,
+      analysis: draft.dartStructuredSections?.[meta.legacyKey] || null,
+      text: plainTextFromMarkdown(draft.dartSections?.[meta.legacyKey] || '')
+    }))
+    .filter((section) => section.text.trim() || section.analysis?.coreSummary);
+  const sourceSections = filledSections.length
+    ? filledSections
+    : dartSectionMeta.map((meta) => ({
+      key: meta.legacyKey,
+      label: meta.title,
+      analysis: draft.dartStructuredSections?.[meta.legacyKey] || null,
+      text: ''
+    }));
+
+  const questionRecommendations = canvasQuestions.value.slice(0, 5).map((question, index) => {
+    const prompt = question.prompt || `${index + 1}번 문항`;
+    const intent = inferEssayQuestionIntent(prompt);
+    const basis = selectDartBasis(intent, sourceSections);
+    return {
+      id: question.id || `question-${index + 1}`,
+      questionNumber: index + 1,
+      prompt,
+      fit: intent.fit,
+      basisLabel: basis.label,
+      basisText: basis.analysis?.coreSummary || summarizeDartSnippet(basis.text, fallbackBasisText(intent, companyName, positionTitle)),
+      competency: intent.competency,
+      sentence: firstNonBlank(basis.analysis?.sentenceCandidates) || buildDartEssaySentence(intent, companyName, positionTitle, basis)
+    };
+  });
+
+  draft.dartEssayGuide = {
+    generatedAt: new Date().toLocaleString('ko-KR'),
+    companyName,
+    positionTitle,
+    points: sourceSections.slice(0, 3).map((section) => ({
+      label: section.label,
+      meaning: section.analysis?.coreSummary || summarizeDartSnippet(section.text, fallbackPointMeaning(section.label, companyName)),
+      direction: firstNonBlank(section.analysis?.jobFitPoints) || buildDartPointDirection(section.label, positionTitle)
+    })),
+    recommendations: questionRecommendations,
+    cautions: [
+      {
+        risk: 'DART 내용을 회사 설명으로만 길게 쓰면 자기소개서 설득력이 약해질 수 있습니다.',
+        rewrite: '공시 근거를 한 문장으로 짚고, 바로 본인의 경험과 직무 기여로 연결하세요.'
+      },
+      {
+        risk: '계약, 투자, 연구개발 내용을 확정적 성과처럼 과장하면 위험합니다.',
+        rewrite: '강화하고 있다, 확인했다, 주목했다처럼 근거 중심 표현을 사용하세요.'
+      }
+    ]
+  };
+}
+
+function plainTextFromMarkdown(value) {
+  return String(value || '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/!\[[^\]]*]\([^)]*\)/g, ' ')
+    .replace(/\[[^\]]+]\([^)]*\)/g, (match) => match.replace(/\[|\]\([^)]*\)/g, ''))
+    .replace(/[#>*_`-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function firstNonBlank(values) {
+  return (values || []).find((value) => String(value || '').trim()) || '';
+}
+
+function summarizeDartSnippet(text, fallback) {
+  const normalized = plainTextFromMarkdown(text);
+  if (!normalized) return fallback;
+  const firstSentence = normalized.match(/^.{1,140}?(?:[.!?。]|다\.|요\.|\s{2,}|$)/)?.[0]?.trim() || normalized;
+  return firstSentence.length > 110 ? `${firstSentence.slice(0, 110)}...` : firstSentence;
+}
+
+function inferEssayQuestionIntent(prompt) {
+  const normalized = String(prompt || '');
+  if (/지원\s*동기|동기|왜|관심/.test(normalized)) {
+    return {
+      fit: '높음',
+      type: 'motivation',
+      competency: '기업 이해도와 직무 관심도'
+    };
+  }
+  if (/포부|입사\s*후|기여|계획|성장/.test(normalized)) {
+    return {
+      fit: '높음',
+      type: 'aspiration',
+      competency: '사업 방향을 이해한 기여 계획'
+    };
+  }
+  if (/역량|강점|경험|프로젝트|문제|해결|성과/.test(normalized)) {
+    return {
+      fit: '보통',
+      type: 'competency',
+      competency: '직무 역량과 경험 근거'
+    };
+  }
+  return {
+    fit: '보통',
+    type: 'general',
+    competency: '기업 분석 기반의 지원 논리'
+  };
+}
+
+function selectDartBasis(intent, sections) {
+  const byKey = Object.fromEntries(sections.map((section) => [section.key, section]));
+  if (intent.type === 'motivation') {
+    return byKey.products || byKey.contracts || sections[0];
+  }
+  if (intent.type === 'aspiration') {
+    return byKey.contracts || byKey.products || sections[0];
+  }
+  if (intent.type === 'competency') {
+    return byKey.contracts || byKey.products || byKey.notes || sections[0];
+  }
+  return byKey.notes || byKey.products || sections[0];
+}
+
+function fallbackBasisText(intent, companyName, positionTitle) {
+  if (intent.type === 'motivation') {
+    return `${companyName}의 사업 방향과 ${positionTitle} 직무의 연결 지점을 지원동기에 활용하세요.`;
+  }
+  if (intent.type === 'aspiration') {
+    return `${companyName}의 연구개발 및 사업 확장 흐름을 입사 후 기여 계획으로 연결하세요.`;
+  }
+  return `${positionTitle} 직무에서 요구되는 역량과 DART 근거를 함께 연결하세요.`;
+}
+
+function fallbackPointMeaning(label, companyName) {
+  return `${companyName}의 ${label} 항목에서 자소서에 활용할 기업 이해 포인트를 정리하세요.`;
+}
+
+function buildDartPointDirection(label, positionTitle) {
+  if (label.includes('제품') || label.includes('서비스')) {
+    return `${positionTitle} 직무 관점에서 어떤 고객 가치나 서비스 개선에 기여할 수 있는지 연결하기 좋습니다.`;
+  }
+  if (label.includes('계약') || label.includes('연구')) {
+    return '입사 후 포부나 직무역량 문항에서 성장 방향, 기술 이해도, 문제 해결 경험과 연결하기 좋습니다.';
+  }
+  return '지원동기 말미나 포부 문항에서 회사 이해도를 보여주는 보조 근거로 쓰기 좋습니다.';
+}
+
+function buildDartEssaySentence(intent, companyName, positionTitle, basis) {
+  const basisLabel = basis?.label || 'DART 정보';
+  if (intent.type === 'motivation') {
+    return `${companyName}의 ${basisLabel}에서 확인한 사업 방향을 보며, ${positionTitle} 직무에서 제 경험을 실제 고객 가치로 연결할 수 있다고 판단했습니다.`;
+  }
+  if (intent.type === 'aspiration') {
+    return `입사 후에는 ${basisLabel}에서 드러난 성장 방향을 이해하고, ${positionTitle} 직무에서 실행 가능한 개선 과제를 찾아 기여하고 싶습니다.`;
+  }
+  if (intent.type === 'competency') {
+    return `${basisLabel}에서 요구되는 방향과 제 경험을 연결해, ${positionTitle} 직무에서 문제를 구조화하고 실행까지 이어가는 강점을 보여줄 수 있습니다.`;
+  }
+  return `${companyName}의 ${basisLabel}을 근거로 회사의 방향성을 이해하고 있음을 보여준 뒤, 제 경험이 그 방향에 어떻게 기여하는지 연결해보세요.`;
 }
 
 function selectedDartDisclosure(draft) {
@@ -1708,7 +1831,7 @@ async function createDartAnalysis(draft) {
       reportName: disclosure.reportName,
       companyName: workspaceStore.workspace?.companyName || disclosure.corpName || '',
       positionTitle: workspaceStore.workspace?.positionTitle || '',
-      essayQuestions: (workspaceStore.workspace?.questions || []).map((question) => question.prompt),
+      essayQuestions: dartAnalysisContextItems(),
       documentText: dartManualContext(draft)
     });
     draft.dartAnalysis = analysis;
@@ -1719,6 +1842,168 @@ async function createDartAnalysis(draft) {
     draft.dartAnalysisStatus = 'error';
     draft.dartAnalysisMessage = 'AI 분석을 완료하지 못했습니다. DART 수동 메모 작성과 저장은 계속 사용할 수 있어요.';
   }
+}
+
+async function fillDartSectionsFromApi(draft) {
+  draft.dartAutoFillStatus = 'loading';
+  draft.dartAutoFillMessage = 'DART에서 지원 기업에 맞는 공시를 찾고, JD 맞춤 자소서 포인트를 만들고 있습니다.';
+  draft.dartAnalysisMessage = '';
+  try {
+    if (!draft.dartDisclosures.length) {
+      await loadDartDisclosures(draft);
+    }
+    const recommended = draft.dartDisclosures.find((item) => item.recommended) || draft.dartDisclosures[0];
+    if (!recommended) {
+      draft.dartAutoFillStatus = 'error';
+      draft.dartAutoFillMessage = 'DART에서 이 기업의 사업/반기/분기보고서를 찾지 못했습니다. 기업명 또는 계열사명을 확인해주세요.';
+      return;
+    }
+    draft.selectedDartRceptNo = recommended.rceptNo;
+    draft.dartAutoFillMessage = `${recommended.corpName || workspaceStore.workspace?.companyName || '기업'}의 ${recommended.reportName}에서 자소서에 쓸 핵심 근거를 선별하고 있습니다.`;
+    await createDartAnalysis(draft);
+    if (draft.dartAnalysis?.status !== 'COMPLETED') {
+      draft.dartAutoFillStatus = 'error';
+      draft.dartAutoFillMessage = draft.dartAnalysisMessage || 'DART 분석을 완료하지 못했습니다. 직접 입력하거나 잠시 후 다시 시도해주세요.';
+      return;
+    }
+    const nextSections = sectionsFromDartAnalysis(draft.dartAnalysis);
+    draft.dartSections = nextSections.sections;
+    draft.dartStructuredSections = nextSections.structuredSections;
+    draft.activeDartSectionKey = dartSectionMeta[0].legacyKey;
+    draft.dartAutoFillStatus = 'ready';
+    draft.dartAutoFillMessage = `${recommended.corpName || workspaceStore.workspace?.companyName || '선택 기업'}의 ${recommended.reportName}에서 JD 맞춤 핵심 포인트와 문항별 활용 추천을 생성했습니다.`;
+    generateDartEssayGuide(draft);
+  } catch (error) {
+    draft.dartAutoFillStatus = 'error';
+    draft.dartAutoFillMessage = 'DART API 또는 AI 분석 연결에 실패했습니다. 설정과 네트워크 상태를 확인해주세요.';
+  }
+}
+
+function dartAnalysisContextItems() {
+  const questionItems = (workspaceStore.workspace?.questions || [])
+    .map((question, index) => `${index + 1}번 문항: ${question.prompt}`)
+    .filter(Boolean);
+  const jdContext = collectJdContext();
+  return [
+    ...questionItems,
+    jdContext ? `사용자가 입력한 JD 참고자료: ${jdContext}` : ''
+  ].filter(Boolean);
+}
+
+function collectJdContext() {
+  const savedJdReferences = (workspaceStore.workspace?.references || [])
+    .filter((reference) => reference.type === 'JD')
+    .map((reference) => [reference.title, reference.body].filter(Boolean).join('\n'))
+    .filter(Boolean);
+  const jdDraft = boardDrafts.JD
+    ? [boardDrafts.JD.title, boardDrafts.JD.body].filter(Boolean).join('\n')
+    : '';
+  return [...savedJdReferences, jdDraft]
+    .map((value) => normalizeCompanyValue(value))
+    .filter(Boolean)
+    .join('\n\n')
+    .slice(0, 3000);
+}
+
+function sectionsFromDartAnalysis(analysis) {
+  const result = analysis.result || {};
+  const structuredSections = Object.fromEntries(dartSectionMeta.map((meta) => [
+    meta.legacyKey,
+    normalizeDartSectionAnalysis(result[meta.analysisKey], meta.title)
+  ]));
+  const hasStructuredContent = Object.values(structuredSections).some((section) => hasDartSectionContent(section));
+  if (hasStructuredContent) {
+    return {
+      structuredSections,
+      sections: Object.fromEntries(dartSectionMeta.map((meta) => [
+        meta.legacyKey,
+        formatStructuredDartSection(structuredSections[meta.legacyKey], analysis)
+      ]))
+    };
+  }
+  const cards = result.evidenceCards || [];
+  const products = cards.filter((card) => /제품|서비스|사업|고객|매출|플랫폼/i.test(`${card.title} ${card.summary} ${card.sourceSection}`));
+  const contracts = cards.filter((card) => /계약|연구|개발|R&D|투자|신사업|기술/i.test(`${card.title} ${card.summary} ${card.sourceSection}`));
+  const used = new Set([...products, ...contracts]);
+  const notes = cards.filter((card) => !used.has(card));
+  return {
+    structuredSections,
+    sections: {
+      products: formatDartAnalysisSection(products.length ? products : cards.slice(0, 3), result.appealPoints || [], analysis),
+      contracts: formatDartAnalysisSection(contracts.length ? contracts : cards.slice(0, 3), result.suggestedSentences || [], analysis),
+      notes: formatDartAnalysisSection(notes.length ? notes : cards.slice(0, 3), [...(result.cautions || []), ...(result.missingInfo || [])], analysis)
+    }
+  };
+}
+
+function normalizeDartSectionAnalysis(section, fallbackTitle) {
+  if (!section || typeof section !== 'object') {
+    return {
+      sectionTitle: fallbackTitle,
+      coreSummary: '',
+      evidencePoints: [],
+      jobFitPoints: [],
+      resumeUsePoints: [],
+      sentenceCandidates: [],
+      cautionPoints: [],
+      rawText: ''
+    };
+  }
+  return {
+    sectionTitle: section.sectionTitle || fallbackTitle,
+    coreSummary: section.coreSummary || '',
+    evidencePoints: Array.isArray(section.evidencePoints) ? section.evidencePoints : [],
+    jobFitPoints: Array.isArray(section.jobFitPoints) ? section.jobFitPoints : [],
+    resumeUsePoints: Array.isArray(section.resumeUsePoints) ? section.resumeUsePoints : [],
+    sentenceCandidates: Array.isArray(section.sentenceCandidates) ? section.sentenceCandidates : [],
+    cautionPoints: Array.isArray(section.cautionPoints) ? section.cautionPoints : [],
+    rawText: section.rawText || ''
+  };
+}
+
+function hasDartSectionContent(section) {
+  return Boolean(
+    section?.coreSummary
+    || section?.rawText
+    || section?.evidencePoints?.length
+    || section?.jobFitPoints?.length
+    || section?.resumeUsePoints?.length
+    || section?.sentenceCandidates?.length
+    || section?.cautionPoints?.length
+  );
+}
+
+function formatStructuredDartSection(section, analysis) {
+  const lines = [];
+  if (section.coreSummary) lines.push(`## 핵심 요약\n${section.coreSummary}`);
+  if (section.evidencePoints.length) lines.push(`## DART 근거\n${section.evidencePoints.map((item) => `- ${item}`).join('\n')}`);
+  if (section.jobFitPoints.length) lines.push(`## 지원 직무와 연결\n${section.jobFitPoints.map((item) => `- ${item}`).join('\n')}`);
+  if (section.resumeUsePoints.length) {
+    lines.push(`## 자소서 활용 포인트\n${section.resumeUsePoints.map((item) => `- **${item.useCase || '활용'}**: ${item.recommendation || ''}`).join('\n')}`);
+  }
+  if (section.sentenceCandidates.length) lines.push(`## 삽입 문장 후보\n${section.sentenceCandidates.map((item) => `- ${item}`).join('\n')}`);
+  if (section.cautionPoints.length) lines.push(`## 주의할 표현\n${section.cautionPoints.map((item) => `- ${item}`).join('\n')}`);
+  if (section.rawText) lines.push(`## 원문 메모\n${section.rawText}`);
+  if (analysis?.sourceUrl) lines.push(`\n출처: ${analysis.sourceUrl}`);
+  return lines.join('\n\n').trim();
+}
+
+function formatDartAnalysisSection(cards, extras, analysis) {
+  const lines = [];
+  const source = analysis?.sourceUrl ? `출처: ${analysis.sourceUrl}` : '';
+  cards.slice(0, 4).forEach((card) => {
+    lines.push(`- **${card.title || 'DART 근거'}**: ${card.summary || ''}`);
+    if (card.sourceSection || card.rceptNo) {
+      lines.push(`  - 근거: ${[card.sourceSection, card.rceptNo].filter(Boolean).join(' · ')}`);
+    }
+  });
+  extras.slice(0, 4).forEach((item) => {
+    lines.push(`- ${item}`);
+  });
+  if (source) {
+    lines.push(`\n${source}`);
+  }
+  return lines.join('\n').trim();
 }
 
 async function saveDartAnalysisReference(draft) {
@@ -1797,6 +2082,7 @@ const MarkdownBoard = {
       if (!editor) return;
       const draft = ensureBoardDraft();
       editor.innerHTML = plainTextToEditorHtml(draft.body);
+      wrapLooseEditorImages(editor);
       updateEmptyState();
     }
 
@@ -1806,10 +2092,13 @@ const MarkdownBoard = {
 
     function handlePaste(event) {
       const items = [...(event.clipboardData?.items ?? [])];
-      const imageItem = items.find((item) => item.type.startsWith('image/'));
-      if (imageItem) {
+      const imageItems = items.filter((item) => item.type.startsWith('image/'));
+      if (imageItems.length) {
         event.preventDefault();
-        insertImageFile(imageItem.getAsFile(), updateEmptyState);
+        insertImageFiles(imageItems.map((item) => item.getAsFile()).filter(Boolean), () => {
+          ensureBoardDraft().body = editorToPlainText(editorRef.value);
+          updateEmptyState();
+        });
         return;
       }
 
@@ -1822,11 +2111,11 @@ const MarkdownBoard = {
     }
 
     function handleDrop(event) {
-      const file = [...(event.dataTransfer?.files ?? [])].find((item) => item.type.startsWith('image/'));
-      if (!file) return;
+      const files = [...(event.dataTransfer?.files ?? [])].filter((item) => item.type.startsWith('image/'));
+      if (!files.length) return;
       event.preventDefault();
       focusEditor();
-      insertImageFile(file, () => {
+      insertImageFiles(files, () => {
         ensureBoardDraft().body = editorToPlainText(editorRef.value);
         updateEmptyState();
       });
@@ -1900,7 +2189,10 @@ const MarkdownBoard = {
             h('span', entry.createdAt)
           ]),
           entry.keywords?.length ? h('div', { class: 'entry-keyword-list' }, entry.keywords.map((keyword) => h('span', keyword))) : null,
-          entry.body ? h('p', entry.body) : null
+          entry.body ? h('div', {
+            class: 'board-entry-body markdown-empty-page',
+            innerHTML: savedEntryBodyHtml(entry.body)
+          }) : null
         ])) : [h('p', { class: 'empty-board-message' }, emptyLabel)])
       ]);
     }
@@ -1983,16 +2275,7 @@ const MarkdownBoard = {
             }
           })
         ]),
-        h('div', { class: 'prompt-board-tools' }, [
-          h('button', {
-            type: 'button',
-            class: 'ghost-button board-add-button',
-            onClick: () => {
-              draft.isAddingPrompt = true;
-            }
-          }, '+ 프롬프트 추가')
-        ]),
-        h('div', { class: 'prompt-card-list' }, visiblePrompts.length ? visiblePrompts.map((prompt) => h('article', { class: 'prompt-board-card', key: prompt.id }, [
+        visiblePrompts.length ? h('div', { class: 'prompt-card-list' }, visiblePrompts.map((prompt) => h('article', { class: 'prompt-board-card', key: prompt.id }, [
           h('header', [
             h('div', [
               h('strong', prompt.title),
@@ -2010,10 +2293,8 @@ const MarkdownBoard = {
                 .catch(() => alert('복사 실패'));
             }
           }, '복사')
-        ])) : [
-          h('p', { class: 'empty-board-message' }, '저장한 프롬프트가 없습니다.')
-        ]),
-        h('section', { class: 'prompt-add-form' }, [
+        ]))) : null,
+        draft.isAddingPrompt ? h('section', { class: 'prompt-add-form' }, [
           h('h3', '프롬프트 추가'),
           h('label', ['제목', h('input', {
             value: draft.newPrompt.title,
@@ -2048,6 +2329,16 @@ const MarkdownBoard = {
             } }, '취소'),
             h('button', { type: 'button', class: 'primary-button board-save-button', onClick: () => addPromptCard(draft) }, '저장')
           ])
+        ]) : null,
+        h('div', { class: 'prompt-board-bottom' }, [
+          !draft.isAddingPrompt ? h('button', {
+            type: 'button',
+            class: 'ghost-button board-add-button',
+            onClick: () => {
+              draft.isAddingPrompt = true;
+            }
+          }, '+ 프롬프트 추가') : null,
+          visiblePrompts.length ? null : h('p', { class: 'empty-board-message' }, '저장한 프롬프트가 없습니다.')
         ])
       ]);
     }
@@ -2066,13 +2357,13 @@ const MarkdownBoard = {
           })
         ]),
         h('div', { class: 'markdown-editor-wrap' }, [
-          isEmpty.value ? h('p', { class: 'markdown-placeholder' }, referenceTemplate('TALENT_PROFILE')?.placeholder ?? '메모를 붙여넣으세요.') : null,
           h('div', {
             ref: editorRef,
             class: 'markdown-empty-page',
             contenteditable: 'true',
             'aria-label': '인재상 게시판 편집 영역',
             'data-testid': 'markdown-editor',
+            'data-placeholder': '마크다운으로 입력하거나 이미지를 붙여넣으세요.',
             onInput: handleInput,
             onPaste: handlePaste,
             onDrop: handleDrop,
@@ -2201,27 +2492,151 @@ const MarkdownBoard = {
       ]);
     }
 
+    function renderDartLinkedText(text, sourceUrl) {
+      if (!sourceUrl) return text;
+      return h('a', { href: sourceUrl, target: '_blank', rel: 'noreferrer' }, text);
+    }
+
+    function renderDartStructuredList(title, items, sourceUrl) {
+      const normalizedItems = (items || []).filter((item) => String(item || '').trim()).slice(0, 3);
+      if (!normalizedItems.length) return null;
+      return h('div', { class: 'dart-section-list-group' }, [
+        h('b', title),
+        h('ul', normalizedItems.map((item) => h('li', renderDartLinkedText(item, sourceUrl))))
+      ]);
+    }
+
+    function renderDartUsePoints(points, sourceUrl) {
+      const normalizedPoints = (points || []).filter((item) => item?.useCase || item?.recommendation).slice(0, 3);
+      if (!normalizedPoints.length) return null;
+      return h('div', { class: 'dart-use-grid' }, [
+        h('div', { class: 'dart-section-title' }, [h('span', { class: 'dart-dot' }), '자소서 활용 DART 포인트']),
+        ...normalizedPoints.map((item, index) => h('article', { key: `${item.useCase || 'use'}-${index}` }, [
+          h('span', item.useCase || '활용 포인트'),
+          h('p', renderDartLinkedText(item.recommendation || '', sourceUrl))
+        ]))
+      ]);
+    }
+
+    function dartSectionSubtitle(meta) {
+      if (meta.legacyKey === 'products') {
+        return '회사의 서비스 구조와 고객가치를 직무 관점으로 해석했습니다.';
+      }
+      if (meta.legacyKey === 'contracts') {
+        return '계약, 연구개발, 투자 흐름을 지원동기와 역량 근거로 정리했습니다.';
+      }
+      return '공시에서 확인한 보조 근거와 주의해서 써야 할 표현을 정리했습니다.';
+    }
+
+    function renderDartStructuredSection(draft, meta) {
+      const section = normalizeDartSectionAnalysis(draft.dartStructuredSections?.[meta.legacyKey], meta.title);
+      const hasStructured = hasDartSectionContent(section);
+      const sourceUrl = draft.dartAnalysis?.sourceUrl;
+      return h('section', { class: 'dart-section-panel dart-analysis-card', key: meta.legacyKey }, [
+        h('header', { class: 'dart-card-head' }, [
+          h('h3', section.sectionTitle || meta.title),
+          h('p', dartSectionSubtitle(meta))
+        ]),
+        hasStructured ? h('div', { class: 'dart-section-insight' }, [
+          section.coreSummary ? h('section', { class: 'dart-card-section' }, [
+            h('div', { class: 'dart-section-title' }, [h('span', { class: 'dart-dot' }), '핵심 요약']),
+            h('p', { class: 'dart-section-summary' }, renderDartLinkedText(section.coreSummary, sourceUrl))
+          ]) : null,
+          h('section', { class: 'dart-card-section' }, [
+            renderDartStructuredList('자소서에 쓸 핵심 근거', section.evidencePoints, sourceUrl),
+            renderDartStructuredList('JD 맞춤 연결 포인트', section.jobFitPoints, sourceUrl)
+          ]),
+          h('section', { class: 'dart-card-section' }, [
+            renderDartUsePoints(section.resumeUsePoints, sourceUrl),
+            renderDartStructuredList('삽입 문장 후보', section.sentenceCandidates, sourceUrl),
+            renderDartStructuredList('주의할 표현', section.cautionPoints, sourceUrl)
+          ])
+        ]) : h('p', { class: 'dart-empty-insight' }, 'DART API 분석을 실행하면 이 항목에 맞는 자소서 활용 포인트가 정리됩니다.'),
+        h('details', { class: 'dart-raw-details', open: !hasStructured }, [
+          h('summary', '원문/분석 기준 보기'),
+          h(MarkdownDraftEditor, {
+            modelValue: draft.dartSections[meta.legacyKey],
+            'onUpdate:modelValue': (value) => {
+              draft.dartSections[meta.legacyKey] = value;
+            },
+            'data-placeholder': '마크다운으로 입력하거나 이미지를 붙여넣으세요.',
+            'aria-label': `${meta.title} 내용`,
+            'data-testid': `dart-section-${meta.legacyKey}`
+          })
+        ])
+      ]);
+    }
+
     function renderDartBoard(draft) {
-      const sectionMeta = [
-        ['products', '주요 제품 및 서비스'],
-        ['contracts', '주요 계약 및 연구 개발 활동'],
-        ['notes', '기타 참고사항']
-      ];
-      return h('section', { class: 'drawer-board dart-board-page' }, [
-        renderDartAiPanel(draft),
-        h('div', { class: 'board-source-path' }, [
-          h('p', '전자공시(DART)에서 타깃기업 정보를 가져와 자유롭게 정리'),
-          h('div', { class: 'dart-route-box' }, [
-            h('div', [h('b', '확인 경로'), h('span', '전자공시 · 정기공시 검색 › 사업보고서 · 반기/분기보고서 › II. 사업의 내용')]),
-            h('a', { href: 'https://dart.fss.or.kr/', target: '_blank', rel: 'noreferrer' }, 'DART 바로가기 ↗'),
-            h('div', [h('b', '확인 항목'), ...sectionMeta.map(([key, label]) => h('button', {
-              type: 'button',
-              class: ''
-            }, label))])
+      const activeSectionMeta = dartSectionMeta.find((meta) => meta.legacyKey === draft.activeDartSectionKey) || dartSectionMeta[0];
+      return h('section', { class: 'drawer-board dart-board-page dart-auto-ai-panel' }, [
+        h('header', { class: 'dart-panel-hero' }, [
+          h('div', [
+            h('h2', 'DART AI 분석'),
+            h('p', '사업보고서를 자동 분석해 자소서에 쓸 기업 근거로 정리합니다.')
           ])
         ]),
-        h('div', { class: 'board-title-field' }, [
-          h('span', '제목'),
+        h('section', { class: 'dart-route-box' }, [
+          h('div', { class: 'dart-route-left' }, [
+            h('span', { class: 'dart-route-icon', 'aria-hidden': 'true' }, '📄'),
+            h('div', [
+              h('b', '확인 경로'),
+              h('span', '전자공시 › 정기공시 › 사업보고서/반기보고서 › II. 사업의 내용')
+            ])
+          ]),
+          h('a', { href: 'https://dart.fss.or.kr/', target: '_blank', rel: 'noreferrer' }, 'DART 바로가기 ↗')
+        ]),
+        h('section', { class: 'dart-api-fill-panel dart-auto-status-panel' }, [
+          h('div', { class: 'dart-api-fill-copy' }, [
+            h('strong', draft.dartAutoFillStatus === 'loading' || draft.dartAnalysisStatus === 'loading'
+              ? 'DART 공시를 자동 분석 중입니다'
+              : draft.dartAutoFillStatus === 'ready'
+                ? 'DART 기반 자소서 포인트가 준비됐습니다'
+                : 'DART 게시판을 열면 자동으로 분석합니다'),
+            h('p', [
+              `${workspaceStore.workspace?.companyName || '지원 기업'} · ${workspaceStore.workspace?.positionTitle || '지원 직무'} 기준으로 `,
+              h('span', 'JD 참고자료'),
+              '와 공시를 함께 읽고 문항별 활용 추천까지 생성합니다.'
+            ])
+          ]),
+          draft.dartAutoFillStatus === 'loading' || draft.dartAnalysisStatus === 'loading'
+            ? h('span', { class: 'dart-auto-spinner', 'aria-label': '분석 중' })
+            : h('span', { class: ['dart-auto-state-chip', { ready: draft.dartAutoFillStatus === 'ready' }] }, draft.dartAutoFillStatus === 'ready' ? '완료' : '자동')
+        ]),
+        draft.dartAutoFillMessage ? h('p', {
+          class: ['dart-api-status', { error: draft.dartAutoFillStatus === 'error', ready: draft.dartAutoFillStatus === 'ready' }],
+          'data-testid': 'dart-auto-fill-status'
+        }, draft.dartAutoFillMessage) : null,
+        draft.dartDisclosures.length ? h('div', { class: 'dart-disclosure-strip' }, draft.dartDisclosures.slice(0, 4).map((disclosure) => h('button', {
+          type: 'button',
+          key: disclosure.rceptNo,
+          class: { active: disclosure.rceptNo === draft.selectedDartRceptNo },
+          onClick: () => {
+            draft.selectedDartRceptNo = disclosure.rceptNo;
+            draft.dartAnalysis = null;
+            draft.dartAnalysisStatus = 'idle';
+            draft.dartAutoFillStatus = 'idle';
+            draft.dartAutoFillMessage = `${disclosure.corpName || '선택 기업'}의 ${disclosure.reportName}을 선택했습니다.`;
+          }
+        }, [
+          h('span', disclosure.recommended ? '추천' : '공시'),
+          h('strong', disclosure.reportName),
+          h('small', `${disclosure.corpName || ''} · ${disclosure.receivedDate || ''}`)
+        ]))) : null,
+        h('div', { class: 'dart-section-tabs', role: 'tablist', 'aria-label': 'DART 항목' }, dartSectionMeta.map((meta) => h('button', {
+          type: 'button',
+          key: meta.legacyKey,
+          role: 'tab',
+          class: { active: meta.legacyKey === activeSectionMeta.legacyKey },
+          'aria-selected': meta.legacyKey === activeSectionMeta.legacyKey ? 'true' : 'false',
+          onClick: () => {
+            draft.activeDartSectionKey = meta.legacyKey;
+          }
+        }, meta.shortTitle))),
+        renderDartStructuredSection(draft, activeSectionMeta),
+        draft.dartEssayGuide ? renderDartEssayGuide(draft.dartEssayGuide) : null,
+        h('div', { class: 'board-title-field dart-save-title-field' }, [
+          h('span', '저장 제목'),
           h('input', {
             value: draft.title,
             'data-testid': 'board-title-input',
@@ -2231,21 +2646,6 @@ const MarkdownBoard = {
             }
           })
         ]),
-        h('div', { class: 'dart-section-list' }, sectionMeta.map(([key, label]) => h('label', {
-          class: 'dart-section-card',
-          key
-        }, [
-          h('span', label),
-          h(MarkdownDraftEditor, {
-            modelValue: draft.dartSections[key],
-            'onUpdate:modelValue': (value) => {
-              draft.dartSections[key] = value;
-            },
-            'data-placeholder': `${label} 내용을 마크다운으로 정리하세요.`,
-            'aria-label': `${label} 내용`,
-            'data-testid': `dart-section-${key}`
-          })
-        ]))),
         h('div', { class: 'dart-board-actions' }, [
           h('button', {
             type: 'button',
@@ -2266,25 +2666,58 @@ const MarkdownBoard = {
               h('strong', entry.title),
               h('span', entry.createdAt)
             ]),
-            ...sectionMeta.map(([key, label]) => h('p', [h('b', label), ' ', entry.sections[key] || '미입력']))
+            ...dartSectionMeta.map((meta) => h('p', [h('b', meta.title), ' ', entry.sections[meta.legacyKey] || '미입력']))
           ]))
         ]) : null
       ]);
     }
 
+    function renderDartEssayGuide(guide) {
+      return h('section', { class: 'dart-essay-guide', 'data-testid': 'dart-essay-guide' }, [
+        h('header', [
+          h('div', [
+            h('strong', `${guide.companyName} · ${guide.positionTitle}`),
+            h('span', `${guide.generatedAt} 생성`)
+          ])
+        ]),
+        h('article', { class: 'dart-guide-block' }, [
+          h('h3', '1. 자소서에 활용하기 좋은 DART 포인트'),
+          ...guide.points.map((point) => h('div', { class: 'dart-guide-card', key: point.label }, [
+            h('b', point.label),
+            h('p', [h('span', '의미'), point.meaning]),
+            h('p', [h('span', '활용 방향'), point.direction])
+          ]))
+        ]),
+        h('article', { class: 'dart-guide-block' }, [
+          h('h3', '2. 문항별 추천'),
+          ...guide.recommendations.map((item) => h('div', { class: 'dart-question-match-card', key: item.id }, [
+            h('header', [
+              h('strong', `${item.questionNumber}번 문항`),
+              h('span', `추천도 ${item.fit}`)
+            ]),
+            h('p', { class: 'dart-question-prompt' }, item.prompt),
+            h('dl', [
+              h('dt', '활용할 DART 근거'),
+              h('dd', `${item.basisLabel} · ${item.basisText}`),
+              h('dt', '연결하기 좋은 역량'),
+              h('dd', item.competency),
+              h('dt', '삽입 문장 후보'),
+              h('dd', item.sentence)
+            ])
+          ]))
+        ]),
+        h('article', { class: 'dart-guide-block' }, [
+          h('h3', '3. 주의할 표현'),
+          ...guide.cautions.map((item, index) => h('div', { class: 'dart-caution-card', key: index }, [
+            h('p', [h('span', '주의'), item.risk]),
+            h('p', [h('span', '권장'), item.rewrite])
+          ]))
+        ])
+      ]);
+    }
+
     function renderNewsBoard(draft) {
       return h('section', { class: 'drawer-board news-board-page' }, [
-        h('div', { class: 'board-title-field' }, [
-          h('span', '제목'),
-          h('input', {
-            value: draft.title,
-            'data-testid': 'board-title-input',
-            placeholder: '뉴스 게시판 제목',
-            onInput: (event) => {
-              draft.title = event.target.value;
-            }
-          })
-        ]),
         h('form', {
           class: 'article-link-form',
           onSubmit: (event) => {
@@ -2317,7 +2750,7 @@ const MarkdownBoard = {
             'onUpdate:modelValue': (value) => {
               draft.articleBody = value;
             },
-            'data-placeholder': '기사에서 자소서에 활용할 내용을 마크다운으로 정리하세요.',
+            'data-placeholder': '마크다운으로 입력하거나 이미지를 붙여넣으세요.',
             'aria-label': '기사 내용',
             'data-testid': 'article-body-input'
           })
@@ -2363,13 +2796,13 @@ const MarkdownBoard = {
           })
         ]),
       h('div', { class: 'markdown-editor-wrap' }, [
-        isEmpty.value ? h('p', { class: 'markdown-placeholder' }, referenceTemplate(activeBoard.value)?.placeholder ?? '마크다운으로 입력하거나 이미지를 붙여넣으세요.') : null,
         h('div', {
           ref: editorRef,
           class: 'markdown-empty-page',
           contenteditable: 'true',
           'aria-label': '마크다운 게시판 편집 영역',
           'data-testid': 'markdown-editor',
+          'data-placeholder': '마크다운으로 입력하거나 이미지를 붙여넣으세요.',
           onInput: handleInput,
           onPaste: handlePaste,
           onDrop: handleDrop,
@@ -2386,6 +2819,7 @@ const MarkdownBoard = {
 
 const MarkdownDraftEditor = {
   name: 'MarkdownDraftEditor',
+  inheritAttrs: false,
   props: {
     modelValue: {
       type: String,
@@ -2399,11 +2833,15 @@ const MarkdownDraftEditor = {
   emits: ['update:modelValue'],
   setup(props, { emit, attrs }) {
     const editorRef = ref(null);
+    const selectedColor = ref('#334155');
+    const selectedFontSize = ref('3');
     let syncingFromModel = false;
+    let savedSelectionRange = null;
 
     onMounted(() => {
       if (editorRef.value) {
         editorRef.value.innerHTML = plainTextToEditorHtml(props.modelValue);
+        wrapLooseEditorImages(editorRef.value);
       }
     });
 
@@ -2412,6 +2850,7 @@ const MarkdownDraftEditor = {
       if (!editor || document.activeElement === editor) return;
       syncingFromModel = true;
       editor.innerHTML = plainTextToEditorHtml(value);
+      wrapLooseEditorImages(editor);
       syncingFromModel = false;
     }, { immediate: true });
 
@@ -2420,12 +2859,37 @@ const MarkdownDraftEditor = {
       emit('update:modelValue', editorToPlainText(editorRef.value));
     }
 
+    function rememberSelection() {
+      const editor = editorRef.value;
+      const selection = window.getSelection();
+      if (!editor || !selection || selection.rangeCount === 0) return;
+      const anchor = selection.anchorNode;
+      const focus = selection.focusNode;
+      if (!anchor || !focus || !editor.contains(anchor) || !editor.contains(focus)) return;
+      savedSelectionRange = selection.getRangeAt(0).cloneRange();
+    }
+
+    function restoreSelection() {
+      const selection = window.getSelection();
+      if (!selection || !savedSelectionRange) {
+        editorRef.value?.focus();
+        return;
+      }
+      selection.removeAllRanges();
+      selection.addRange(savedSelectionRange);
+    }
+
+    function emitAndRemember() {
+      rememberSelection();
+      emitPlainText();
+    }
+
     function handlePaste(event) {
       const items = [...(event.clipboardData?.items ?? [])];
-      const imageItem = items.find((item) => item.type.startsWith('image/'));
-      if (imageItem) {
+      const imageItems = items.filter((item) => item.type.startsWith('image/'));
+      if (imageItems.length) {
         event.preventDefault();
-        insertImageFile(imageItem.getAsFile(), emitPlainText);
+        insertImageFiles(imageItems.map((item) => item.getAsFile()).filter(Boolean), emitAndRemember);
         return;
       }
 
@@ -2433,23 +2897,54 @@ const MarkdownDraftEditor = {
       if (!markdown.trim()) return;
       event.preventDefault();
       insertHtmlAtCursor(markdownToHtml(markdown));
-      emitPlainText();
+      emitAndRemember();
     }
 
     function handleDrop(event) {
-      const file = [...(event.dataTransfer?.files ?? [])].find((item) => item.type.startsWith('image/'));
-      if (!file) return;
+      const files = [...(event.dataTransfer?.files ?? [])].filter((item) => item.type.startsWith('image/'));
+      if (!files.length) return;
       event.preventDefault();
       editorRef.value?.focus();
-      insertImageFile(file, emitPlainText);
+      insertImageFiles(files, emitAndRemember);
     }
 
     function handleKeydown(event) {
       if (event.key !== ' ' && event.key !== 'Enter') return;
       nextTick(() => {
         applyCanvasMarkdownShortcut();
-        emitPlainText();
+        emitAndRemember();
       });
+    }
+
+    function runFormat(command, value = null) {
+      if (props.disabled) return;
+      restoreSelection();
+      document.execCommand(command, false, value);
+      emitAndRemember();
+    }
+
+    function applyColor(event) {
+      selectedColor.value = event.target.value;
+      runFormat('foreColor', selectedColor.value);
+    }
+
+    function applyFontSize(event) {
+      selectedFontSize.value = event.target.value;
+      if (props.disabled) return;
+      restoreSelection();
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0 && !selection.getRangeAt(0).collapsed) {
+        document.execCommand('fontSize', false, selectedFontSize.value);
+      } else {
+        const block = currentEditableBlock();
+        if (block && editorRef.value?.contains(block)) {
+          block.style.fontSize = fontSizeCss(selectedFontSize.value);
+          block.dataset.fontSize = selectedFontSize.value;
+        } else {
+          document.execCommand('fontSize', false, selectedFontSize.value);
+        }
+      }
+      emitAndRemember();
     }
 
     function applyCanvasMarkdownShortcut() {
@@ -2475,21 +2970,49 @@ const MarkdownDraftEditor = {
       }
     }
 
-    return () => h('div', {
-      ref: editorRef,
-      class: ['draft-surface', 'draft-markdown-editor', { disabled: props.disabled }],
-      contenteditable: String(!props.disabled),
-      role: 'textbox',
-      'aria-label': '자기소개서 초안',
-      'data-testid': 'draft-editor',
-      'data-placeholder': '자기소개서 초안을 작성하세요.',
-      ...attrs,
-      onInput: emitPlainText,
-      onPaste: handlePaste,
-      onDrop: handleDrop,
-      onDragover: (event) => event.preventDefault(),
-      onKeydown: handleKeydown
-    });
+    return () => h('div', { class: ['rich-draft-editor', { disabled: props.disabled }] }, [
+      h('div', { class: 'rich-editor-toolbar', 'aria-label': '글 편집 도구' }, [
+        h('button', { type: 'button', title: '굵게', onMousedown: (event) => event.preventDefault(), onClick: () => runFormat('bold') }, 'B'),
+        h('button', { type: 'button', title: '기울임', onMousedown: (event) => event.preventDefault(), onClick: () => runFormat('italic') }, 'I'),
+        h('button', { type: 'button', title: '밑줄', onMousedown: (event) => event.preventDefault(), onClick: () => runFormat('underline') }, 'U'),
+        h('button', { type: 'button', title: '취소선', onMousedown: (event) => event.preventDefault(), onClick: () => runFormat('strikeThrough') }, 'S'),
+        h('span', { class: 'rich-toolbar-divider', 'aria-hidden': 'true' }),
+        h('label', { class: 'rich-toolbar-select' }, [
+          h('span', '크기'),
+          h('select', { value: selectedFontSize.value, onFocus: rememberSelection, onChange: applyFontSize }, [
+            h('option', { value: '2' }, '작게'),
+            h('option', { value: '3' }, '보통'),
+            h('option', { value: '4' }, '크게'),
+            h('option', { value: '5' }, '제목')
+          ])
+        ]),
+        h('label', { class: 'rich-toolbar-color' }, [
+          h('span', '색상'),
+          h('input', { type: 'color', value: selectedColor.value, onMousedown: (event) => event.preventDefault(), onInput: applyColor })
+        ]),
+        h('span', { class: 'rich-toolbar-divider', 'aria-hidden': 'true' }),
+        h('button', { type: 'button', title: '글머리 기호', onMousedown: (event) => event.preventDefault(), onClick: () => runFormat('insertUnorderedList') }, '•'),
+        h('button', { type: 'button', title: '왼쪽 정렬', onMousedown: (event) => event.preventDefault(), onClick: () => runFormat('justifyLeft') }, '≡'),
+        h('button', { type: 'button', title: '가운데 정렬', onMousedown: (event) => event.preventDefault(), onClick: () => runFormat('justifyCenter') }, '☰')
+      ]),
+      h('div', {
+        ref: editorRef,
+        class: ['draft-surface', 'draft-markdown-editor', { disabled: props.disabled }],
+        contenteditable: String(!props.disabled),
+        role: 'textbox',
+        'aria-label': '자기소개서 초안',
+        'data-testid': 'draft-editor',
+        'data-placeholder': '자기소개서 초안을 작성하세요.',
+        ...attrs,
+        onInput: emitAndRemember,
+        onPaste: handlePaste,
+        onDrop: handleDrop,
+        onDragover: (event) => event.preventDefault(),
+        onKeydown: handleKeydown,
+        onKeyup: rememberSelection,
+        onMouseup: rememberSelection
+      })
+    ]);
   }
 };
 
@@ -2548,11 +3071,33 @@ function markdownToHtml(markdown) {
 }
 
 function plainTextToEditorHtml(value) {
-  if (!value?.trim()) return '<p><br></p>';
+  if (!value?.trim()) return '';
+  if (/<(?:p|div|figure|br|span|font|b|strong|i|em|u|ul|ol|li|h[1-6]|blockquote|details|pre|img)\b/i.test(value)) {
+    return value;
+  }
   return markdownToHtml(value);
 }
 
+function savedEntryBodyHtml(value) {
+  const raw = String(value || '');
+  const html = /<(?:p|div|figure|br|span|font|b|strong|i|em|u|s|strike|ul|ol|li|h[1-6]|blockquote|details|pre|img)\b/i.test(raw)
+    ? raw
+    : markdownToHtml(raw);
+  return sanitizeSavedRichContent(html);
+}
+
+function sanitizeSavedRichContent(html) {
+  return String(html || '')
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/\son\w+=(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    .replace(/\s(href|src)=("|')javascript:[^"']*\2/gi, ' $1="#"');
+}
+
 function editorToPlainText(editor) {
+  const html = editor?.innerHTML ?? '';
+  if (/<(?:figure|span|font|b|strong|i|em|u|strike|ul|ol|li|h[1-6]|blockquote|details|pre|img)\b/i.test(html)) {
+    return html.trim();
+  }
   const text = editor?.innerText ?? editor?.textContent ?? '';
   return text
     .replace(/\u00A0/g, ' ')
@@ -2563,7 +3108,7 @@ function editorToPlainText(editor) {
 
 function inlineMarkdown(value) {
   return escapeHtml(value)
-    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img class="markdown-pasted-image" alt="$1" src="$2">')
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<figure class="resizable-image-frame" contenteditable="false"><img class="markdown-pasted-image" alt="$1" src="$2"></figure>')
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/\*([^*]+)\*/g, '<em>$1</em>')
@@ -2595,19 +3140,48 @@ function insertNodeAtCursor(node) {
   placeCursorAfter(node);
 }
 
+function insertImageFiles(files, afterInsert = () => {}) {
+  const validFiles = files.filter(Boolean);
+  if (!validFiles.length) return;
+  let pending = validFiles.length;
+  validFiles.forEach((file) => {
+    insertImageFile(file, () => {
+      pending -= 1;
+      if (pending === 0) afterInsert();
+    });
+  });
+}
+
 function insertImageFile(file, afterInsert = () => {}) {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = () => {
+    const frame = document.createElement('figure');
+    frame.className = 'resizable-image-frame';
+    frame.contentEditable = 'false';
     const image = document.createElement('img');
     image.src = String(reader.result);
     image.alt = file.name || '붙여넣은 이미지';
     image.className = 'markdown-pasted-image';
-    insertNodeAtCursor(image);
-    insertNodeAtCursor(document.createElement('p'));
+    frame.appendChild(image);
+    insertNodeAtCursor(frame);
+    const spacer = document.createElement('p');
+    spacer.innerHTML = '<br>';
+    insertNodeAtCursor(spacer);
     afterInsert();
   };
   reader.readAsDataURL(file);
+}
+
+function wrapLooseEditorImages(editor) {
+  editor?.querySelectorAll?.('img.markdown-pasted-image')?.forEach((image) => {
+    if (image.closest('.resizable-image-frame')) return;
+    const frame = document.createElement('figure');
+    frame.className = 'resizable-image-frame';
+    frame.contentEditable = 'false';
+    image.replaceWith(frame);
+    frame.appendChild(image);
+  });
 }
 
 function currentEditableBlock() {
@@ -2623,6 +3197,15 @@ function transformBlock(block, tagName) {
   replacement.innerHTML = '<br>';
   block.replaceWith(replacement);
   placeCursorAtEnd(replacement);
+}
+
+function fontSizeCss(size) {
+  return {
+    2: '0.92rem',
+    3: '1rem',
+    4: '1.16rem',
+    5: '1.35rem'
+  }[Number(size)] ?? '1rem';
 }
 
 function createCodeBlock(text) {
@@ -2654,6 +3237,5 @@ onMounted(loadCurrentWorkspace);
 watch(workspaceId, loadCurrentWorkspace);
 onBeforeUnmount(() => {
   clearAutoSaveTimer();
-  window.removeEventListener('pointermove', resizeDrawer);
 });
 </script>

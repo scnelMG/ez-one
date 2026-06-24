@@ -56,9 +56,17 @@
     </update>
 
     <insert id="insertSharedEssay" parameterType="com.ezone.backend.domain.persistence.SharedEssayRow">
-        INSERT INTO shared_essay (id, study_id, user_email, workspace_id, version_ids, shared_at)
-        VALUES (#{id}, #{studyId}, #{userEmail}, #{workspaceId}, #{versionIds}, #{sharedAt})
+        INSERT INTO shared_essay (id, study_id, user_email, workspace_id, version_ids, latest_added_version_ids, shared_at, updated_at)
+        VALUES (#{id}, #{studyId}, #{userEmail}, #{workspaceId}, #{versionIds}, #{latestAddedVersionIds}, #{sharedAt}, #{updatedAt})
     </insert>
+
+    <update id="updateSharedEssayVersions">
+        UPDATE shared_essay
+        SET version_ids = #{versionIds},
+            latest_added_version_ids = #{latestAddedVersionIds},
+            updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
 
     <select id="findSharedEssaysByStudyId" resultType="com.ezone.backend.domain.persistence.SharedEssayRow">
         SELECT 
@@ -67,7 +75,9 @@
             se.user_email AS userEmail, 
             se.workspace_id AS workspaceId, 
             se.version_ids AS versionIds, 
+            se.latest_added_version_ids AS latestAddedVersionIds,
             se.shared_at AS sharedAt,
+            se.updated_at AS updatedAt,
             c.name AS companyName,
             j.title AS positionTitle,
             j.deadline_label AS deadlineLabel
@@ -80,6 +90,30 @@
         ORDER BY se.shared_at DESC
     </select>
 
+    <select id="findSharedEssayByStudyUserWorkspace" resultType="com.ezone.backend.domain.persistence.SharedEssayRow">
+        SELECT
+            se.id,
+            se.study_id AS studyId,
+            se.user_email AS userEmail,
+            se.workspace_id AS workspaceId,
+            se.version_ids AS versionIds,
+            se.latest_added_version_ids AS latestAddedVersionIds,
+            se.shared_at AS sharedAt,
+            se.updated_at AS updatedAt,
+            c.name AS companyName,
+            j.title AS positionTitle,
+            j.deadline_label AS deadlineLabel
+        FROM shared_essay se
+        LEFT JOIN workspaces w ON w.id = se.workspace_id
+        LEFT JOIN basket_jobs bj ON bj.id = w.basket_job_id
+        LEFT JOIN jobs j ON j.id = bj.job_id
+        LEFT JOIN companies c ON c.id = j.company_id
+        WHERE se.study_id = #{studyId}
+          AND se.user_email = #{userEmail}
+          AND se.workspace_id = #{workspaceId}
+        LIMIT 1
+    </select>
+
     <select id="findSharedEssayById" resultType="com.ezone.backend.domain.persistence.SharedEssayRow">
         SELECT 
             se.id, 
@@ -87,7 +121,9 @@
             se.user_email AS userEmail, 
             se.workspace_id AS workspaceId, 
             se.version_ids AS versionIds, 
+            se.latest_added_version_ids AS latestAddedVersionIds,
             se.shared_at AS sharedAt,
+            se.updated_at AS updatedAt,
             c.name AS companyName,
             j.title AS positionTitle,
             j.deadline_label AS deadlineLabel
@@ -102,6 +138,7 @@
     <select id="findEssayItemsByVersionIds" resultType="com.ezone.backend.dto.study.SharedEssayItemDto">
         SELECT
             q.id AS questionId,
+            q.sort_order AS questionOrder,
             q.question_text AS questionText,
             v.id AS versionId,
             v.version_name AS versionName,

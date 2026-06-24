@@ -15,6 +15,9 @@ public class SharedEssayDto {
     private String positionTitle;
     private String deadlineLabel;
     private boolean isNew;
+    private LocalDateTime updatedAt;
+    private int latestAddedCount;
+    private List<Integer> latestAddedQuestionNumbers;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -36,4 +39,10 @@ public class SharedEssayDto {
     public void setDeadlineLabel(String deadlineLabel) { this.deadlineLabel = deadlineLabel; }
     public boolean getIsNew() { return isNew; }
     public void setIsNew(boolean isNew) { this.isNew = isNew; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public int getLatestAddedCount() { return latestAddedCount; }
+    public void setLatestAddedCount(int latestAddedCount) { this.latestAddedCount = latestAddedCount; }
+    public List<Integer> getLatestAddedQuestionNumbers() { return latestAddedQuestionNumbers; }
+    public void setLatestAddedQuestionNumbers(List<Integer> latestAddedQuestionNumbers) { this.latestAddedQuestionNumbers = latestAddedQuestionNumbers; }
 }

@@ -1,6 +1,13 @@
 import { defineStore } from 'pinia';
 import { studyApi } from '@/features/study/api/studyApi';
 
+function messageFromError(error, fallback) {
+  return error.response?.data?.message
+    || error.response?.data?.error?.message
+    || error.message
+    || fallback;
+}
+
 export const useStudyStore = defineStore('study', {
   state: () => ({
     myStudies: [],
@@ -124,12 +131,14 @@ export const useStudyStore = defineStore('study', {
       this.status = 'loading';
       try {
         await studyApi.deleteStudy(studyId);
-        // Remove from list
-        this.studies = this.studies.filter(s => s.id !== studyId);
+        this.myStudies = this.myStudies.filter(s => s.id !== studyId);
+        if (this.currentStudy?.id === studyId) {
+          this.currentStudy = null;
+        }
         this.status = 'ready';
       } catch (error) {
         this.status = 'error';
-        this.errorMessage = error.response?.data?.message || '스터디 삭제 중 오류가 발생했습니다.';
+        this.errorMessage = messageFromError(error, '스터디 삭제 중 오류가 발생했습니다.');
         throw error;
       }
     },
@@ -138,11 +147,14 @@ export const useStudyStore = defineStore('study', {
       this.status = 'loading';
       try {
         await studyApi.leaveStudy(studyId, delegateEmail);
-        this.studies = this.studies.filter(s => s.id !== studyId);
+        this.myStudies = this.myStudies.filter(s => s.id !== studyId);
+        if (this.currentStudy?.id === studyId) {
+          this.currentStudy = null;
+        }
         this.status = 'ready';
       } catch (error) {
         this.status = 'error';
-        this.errorMessage = error.response?.data?.message || '스터디 탈퇴 중 오류가 발생했습니다.';
+        this.errorMessage = messageFromError(error, '스터디 탈퇴 중 오류가 발생했습니다.');
         throw error;
       }
     }

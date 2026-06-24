@@ -1,15 +1,22 @@
 <template>
   <AppLayout>
     <section class="study-detail-page">
-      <header class="study-header" :style="studyStore.currentStudy?.imageUrl ? { backgroundImage: `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url(${studyStore.currentStudy.imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center', color: 'white' } : {}">
-        <div class="breadcrumb">
-          <RouterLink to="/study" style="color: #000; font-weight: 600;">← 취업 스터디 목록으로</RouterLink>
+      <div v-if="studyStore.currentStudy?.imageUrl" class="study-cover">
+        <img :src="studyStore.currentStudy.imageUrl" alt="스터디 대표 이미지" />
+      </div>
+
+      <div class="study-top-link">
+        <RouterLink to="/study">← 취업스터디 목록으로</RouterLink>
+      </div>
+
+      <header class="study-header">
+        <div class="study-title-group">
+          <h1>{{ studyStore.currentStudy?.name || '로딩 중...' }}</h1>
+          <p class="study-description">{{ studyStore.currentStudy?.description || '스터디 설명이 없습니다.' }}</p>
         </div>
-        <h1>{{ studyStore.currentStudy?.name || '로딩 중...' }}</h1>
-        <p class="study-description" :style="studyStore.currentStudy?.imageUrl ? { color: '#f3f4f6' } : {}">{{ studyStore.currentStudy?.description }}</p>
         <div class="header-actions">
           <button class="primary-button" type="button" @click="openInviteModal">팀원 초대</button>
-          
+
           <div class="dropdown-container" v-if="amILeader || amIMember">
             <button class="icon-button settings-button" type="button" @click="toggleSettings" title="스터디 설정">⚙️</button>
             <div class="dropdown-menu" v-if="isSettingsOpen">
@@ -21,30 +28,29 @@
       </header>
 
       <div class="study-layout">
-        <!-- 좌측 사이드바: 탭 메뉴 -->
-        <aside class="study-sidebar document-section-rail" aria-label="스터디 탭 메뉴">
+        <nav class="study-tab-menu" aria-label="스터디 탭 메뉴">
           <button
-            class="rail-button"
+            class="study-tab-button"
             :class="{ active: activeTab === 'dashboard' }"
             @click="activeTab = 'dashboard'"
           >
             스터디 대시보드
           </button>
           <button
-            class="rail-button"
+            class="study-tab-button"
             :class="{ active: activeTab === 'essays' }"
             @click="activeTab = 'essays'"
           >
             자소서 피드백
           </button>
           <button
-            class="rail-button"
+            class="study-tab-button"
             :class="{ active: activeTab === 'jobs' }"
             @click="activeTab = 'jobs'"
           >
             지인 공고 추천
           </button>
-        </aside>
+        </nav>
 
         <!-- 우측 메인 콘텐츠 -->
         <main class="study-main-content">
@@ -54,16 +60,16 @@
             <template v-else>
               <!-- 팀원 진척도 차트 섹션 -->
               <div v-if="studySettings.showTeamComparison" class="dashboard-section chart-section">
-                <h2>팀원 진척도 비교 <span class="subtitle">(진행중인 공고 수 기준)</span></h2>
+                <h2>팀원 진척도 비교 <span class="subtitle">최근 2주 지원완료 기준</span></h2>
                 <div class="chart-container">
-                  <div class="chart-bar-row" v-for="member in studyStore.currentStudy?.members || []" :key="'chart-'+member.id">
+                  <div class="chart-bar-row" v-for="(member, index) in studyStore.currentStudy?.members || []" :key="'chart-'+member.id">
                     <div class="chart-label">
-                      <div class="member-avatar-small">{{ (member.userName || member.userEmail).charAt(0).toUpperCase() }}</div>
-                      <span class="member-name" :title="member.userName || member.userEmail.split('@')[0]">{{ member.userName || member.userEmail.split('@')[0] }}</span>
+                      <div class="member-avatar-small">{{ memberAvatarLabel(member) }}</div>
+                      <span class="member-name" :title="memberDisplayName(member)">{{ memberDisplayName(member) }}</span>
                     </div>
                     <div class="chart-track">
-                      <div class="chart-fill" :style="{ width: Math.min((member.activeJobCount || 0) * 10, 100) + '%' }">
-                        <span class="chart-value" v-if="(member.activeJobCount || 0) > 0">{{ member.activeJobCount }}</span>
+                      <div class="chart-fill" :style="chartFillStyle(member, index)">
+                        <span class="chart-value" v-if="recentCompletedCount(member) > 0">{{ recentCompletedCount(member) }}</span>
                       </div>
                     </div>
                   </div>
@@ -76,10 +82,10 @@
                 <div class="member-grid">
                   <div class="member-card-new" v-for="member in studyStore.currentStudy?.members || []" :key="member.id">
                     <div class="member-card-header">
-                      <div class="member-avatar-large">{{ (member.userName || member.userEmail).charAt(0).toUpperCase() }}</div>
+                      <div class="member-avatar-large">{{ memberAvatarLabel(member) }}</div>
                       <div class="member-info-new">
                         <div style="display: flex; align-items: center; gap: 8px;">
-                          <strong>{{ member.userName || member.userEmail.split('@')[0] }}</strong>
+                          <strong>{{ memberDisplayName(member) }}</strong>
                           <span v-if="hasUnreadEssays(member.userEmail)" class="new-badge">NEW!</span>
                         </div>
                         <span class="text-secondary text-sm" style="word-break: break-all;">{{ member.userEmail }}</span>
@@ -97,12 +103,12 @@
                         <strong class="stat-value">{{ member.notStartedCount || 0 }}</strong>
                       </div>
                       <div class="stat-box-new bg-green-light">
-                        <span class="stat-label">이번주</span>
-                        <strong class="stat-value text-green">{{ member.appsThisWeekCount || 0 }}</strong>
+                        <span class="stat-label">최근 2주 완료</span>
+                        <strong class="stat-value text-green">{{ recentCompletedCount(member) }}</strong>
                       </div>
                       <div class="stat-box-new bg-purple-light">
-                        <span class="stat-label">이번달</span>
-                        <strong class="stat-value text-purple">{{ member.appsThisMonthCount || 0 }}</strong>
+                        <span class="stat-label">누적 완료</span>
+                        <strong class="stat-value text-purple">{{ member.completedJobCount ?? member.appsThisMonthCount ?? 0 }}</strong>
                       </div>
                     </div>
                     <div v-else class="member-stats-basic">
@@ -126,14 +132,20 @@
             <div v-else class="shared-list">
               <div class="shared-card" v-for="essay in studyStore.sharedEssays" :key="essay.id">
                 <div class="shared-card-header">
-                  <p><strong>{{ essay.userEmail }}</strong>님의 자소서</p>
+                  <p><strong>{{ getUserLabel(essay.userEmail) }}</strong>님이 공유한 자소서</p>
                   <small>{{ new Date(essay.sharedAt).toLocaleString() }}</small>
                 </div>
-                <h3 style="display:flex; align-items:center; gap:8px;">
+                <h3 class="shared-essay-title">
                   {{ essay.companyName || '회사명 정보 없음' }} - {{ essay.positionTitle || '직무 정보 없음' }}
                   <span v-if="studySettings.showUnreadBadge && essay.isNew" class="badge new-badge">NEW</span>
                 </h3>
-                <p>마감일: {{ essay.deadlineLabel || '-' }}</p>
+                <div class="shared-essay-meta">
+                  <span>{{ sharedQuestionCount(essay) }}개 문항</span>
+                  <span>마감일 {{ essay.deadlineLabel || '-' }}</span>
+                </div>
+                <p v-if="essay.latestAddedCount > 0" class="latest-added-note">
+                  {{ latestAddedLabel(essay) }}
+                </p>
                 <button class="text-button" @click="viewEssay(essay.id)">자세히 보기</button>
               </div>
             </div>
@@ -244,24 +256,48 @@
               </ul>
             </div>
 
-            <!-- Step 2: 문항별 버전 선택 -->
+            <!-- Step 2: 문항 선택 후 버전 선택 -->
             <div v-else-if="shareStep === 2">
-              <h3>2. 문항별 공유할 버전 선택</h3>
+              <h3>2. 공유할 문항과 버전 선택</h3>
               <p class="selected-workspace-title">{{ selectedWorkspaceName }}</p>
               
               <p v-if="isLoadingWorkspaceData">문항 및 버전을 불러오는 중...</p>
-              <div v-else class="question-list">
-                <div v-for="q in workspaceQuestions" :key="q.id" class="question-item">
-                  <p class="question-prompt"><strong>{{ q.prompt }}</strong></p>
-                  <label class="version-select-label">
-                    버전 선택:
-                    <select v-model="selectedVersions[q.id]">
-                      <option value="">-- 공유 안 함 --</option>
-                      <option v-for="v in getVersionsForQuestion(q.id)" :key="v.id" :value="v.id">
-                        {{ v.versionName }} ({{ v.createdAt }})
-                      </option>
-                    </select>
-                  </label>
+              <div v-else-if="workspaceQuestions.length === 0" class="empty-state">
+                이 공고에 등록된 자소서 문항이 없습니다.
+              </div>
+              <div v-else class="question-share-list">
+                <div
+                  v-for="(q, index) in workspaceQuestions"
+                  :key="q.id"
+                  class="question-share-item"
+                  :class="{ selected: selectedQuestionIds[q.id] }"
+                >
+                  <div class="question-heading-row">
+                    <span class="question-number">문항 {{ index + 1 }}</span>
+                    <strong>{{ q.prompt }}</strong>
+                  </div>
+                  <div v-if="getVersionsForQuestion(q.id).length === 0" class="no-version-note">
+                    저장된 버전이 없어 공유할 수 없습니다.
+                  </div>
+                  <div v-else class="question-share-controls">
+                    <label class="version-select-label">
+                      <span>버전 선택</span>
+                      <select v-model="selectedVersions[q.id]" @change="handleVersionChange(q.id)">
+                        <option value="">버전을 선택하세요</option>
+                        <option v-for="v in getVersionsForQuestion(q.id)" :key="v.id" :value="v.id">
+                          문항 {{ index + 1 }} · {{ v.versionName }} · {{ formatDateTime(v.createdAt) }}
+                        </option>
+                      </select>
+                    </label>
+                    <label class="share-checkbox-label">
+                      <input
+                        type="checkbox"
+                        v-model="selectedQuestionIds[q.id]"
+                        :disabled="!selectedVersions[q.id]"
+                      />
+                      <span>이 문항 공유</span>
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>
@@ -269,8 +305,8 @@
 
           <footer class="modal-footer" v-if="shareStep === 2">
             <button class="ghost-button" @click="shareStep = 1">이전</button>
-            <button class="primary-button" @click="submitSharedEssay" :disabled="isSharing">
-              {{ isSharing ? '공유 중...' : '스터디에 공유하기' }}
+            <button class="primary-button" @click="submitSharedEssay" :disabled="isSharing || selectedShareVersionIds.length === 0">
+              {{ isSharing ? '공유 중...' : `${selectedShareVersionIds.length}개 문항 공유하기` }}
             </button>
           </footer>
         </div>
@@ -291,12 +327,23 @@
             <!-- 자소서 영역 -->
             <div class="essay-content-section">
               <div class="essay-meta">
-                <h3>{{ studyStore.currentSharedEssayDetail.companyName }} - {{ studyStore.currentSharedEssayDetail.positionTitle }}</h3>
+                <div class="essay-meta-header">
+                  <h3>{{ studyStore.currentSharedEssayDetail.companyName }} - {{ studyStore.currentSharedEssayDetail.positionTitle }}</h3>
+                  <button
+                    v-if="isCurrentSharedEssayMine"
+                    class="ghost-button small-button"
+                    type="button"
+                    @click="openAppendShareFromDetail"
+                  >
+                    문항 추가 공유하기
+                  </button>
+                </div>
                 <p>작성자: <strong>{{ studyStore.currentSharedEssayDetail.userEmail }}</strong> | 마감일: {{ studyStore.currentSharedEssayDetail.deadlineLabel }}</p>
               </div>
               <div class="essay-items">
                 <div v-for="item in studyStore.currentSharedEssayDetail.items" :key="item.versionId" class="essay-item">
                   <h4 class="question-title">Q. {{ item.questionText }}</h4>
+                  <p class="shared-version-name">{{ item.versionName }}</p>
                   <div class="essay-body">{{ item.body }}</div>
                 </div>
                 <div v-if="studyStore.currentSharedEssayDetail.items.length === 0" class="empty-state">
@@ -387,7 +434,7 @@
             <button class="icon-button" @click="closeLeaveModal">×</button>
           </header>
           <div class="modal-body">
-            <p v-if="amILeader && otherMembers.length > 0">
+            <p v-if="requiresLeaveDelegation">
               스터디장 권한을 위임할 팀원을 선택해야 탈퇴할 수 있습니다.
             </p>
             <p v-else>
@@ -396,7 +443,7 @@
                 마지막 남은 스터디장이므로, 탈퇴 시 스터디가 완전히 삭제됩니다.
               </span>
             </p>
-            <div class="form-group" v-if="amILeader && otherMembers.length > 0">
+            <div class="form-group" v-if="requiresLeaveDelegation">
               <label>권한 위임 대상</label>
               <select v-model="delegateEmail">
                 <option value="">-- 위임할 팀원 선택 --</option>
@@ -408,7 +455,7 @@
           </div>
           <footer class="modal-footer">
             <button class="ghost-button" @click="closeLeaveModal">취소</button>
-            <button class="danger-button" @click="confirmLeave" :disabled="isLeaving || (amILeader && otherMembers.length > 0 && !delegateEmail)">
+            <button class="danger-button" @click="confirmLeave" :disabled="isLeaving || (requiresLeaveDelegation && !delegateEmail)">
               {{ isLeaving ? '처리 중...' : '탈퇴하기' }}
             </button>
           </footer>
@@ -444,7 +491,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import AppLayout from '@/shared/AppLayout.vue';
 import { useStudyStore } from '@/stores/studyStore';
 import { studyApi } from '@/features/study/api/studyApi';
@@ -453,6 +500,7 @@ import { workspaceApi } from '@/features/workspace/api/workspaceApi';
 import { getCurrentUser } from '@/features/auth/session/authSession';
 
 const route = useRoute();
+const router = useRouter();
 const studyStore = useStudyStore();
 const activeTab = ref('dashboard');
 const studyId = route.params.studyId;
@@ -486,12 +534,22 @@ const selectedWorkspaceId = ref(null);
 const selectedWorkspaceName = ref('');
 const workspaceQuestions = ref([]);
 const workspaceVersions = ref([]);
+const selectedQuestionIds = ref({});
 const selectedVersions = ref({});
+const selectedShareVersionIds = computed(() => {
+  return Object.entries(selectedQuestionIds.value)
+    .filter(([, selected]) => selected)
+    .map(([questionId]) => selectedVersions.value[questionId])
+    .filter(Boolean);
+});
 
 // 상세 보기 모달 상태
 const isDetailModalOpen = ref(false);
 const feedbackContent = ref('');
 const isSubmittingFeedback = ref(false);
+const isCurrentSharedEssayMine = computed(() => {
+  return studyStore.currentSharedEssayDetail?.userEmail === myEmail.value;
+});
 
 // 추천 공고 모달 상태
 const isRecommendModalOpen = ref(false);
@@ -539,6 +597,7 @@ const amIMember = computed(() => !!myMemberInfo.value);
 const otherMembers = computed(() => {
   return studyStore.currentStudy?.members?.filter(m => m.userEmail !== myEmail.value) || [];
 });
+const requiresLeaveDelegation = computed(() => amILeader.value && otherMembers.value.length > 0);
 
 const toggleSettings = () => {
   isSettingsOpen.value = !isSettingsOpen.value;
@@ -549,6 +608,48 @@ const hasUnreadEssays = (memberEmail) => {
   if (memberEmail === myEmail.value) return false;
   return studyStore.sharedEssays?.some(e => e.userEmail === memberEmail && e.isNew);
 };
+
+const maxRecentCompletedCount = computed(() => {
+  const counts = studyStore.currentStudy?.members?.map(recentCompletedCount) || [];
+  return Math.max(...counts, 1);
+});
+const chartColors = [
+  ['#6d5dfc', '#8b7cf6'],
+  ['#7c6df4', '#a99cf8'],
+  ['#5d7cf2', '#90a6f8'],
+  ['#8a6cf0', '#b49df8'],
+  ['#6f8df5', '#a6b9fb']
+];
+
+function memberDisplayName(member) {
+  return member?.userName || member?.userNickname || member?.userEmail?.split('@')[0] || '팀원';
+}
+
+function memberAvatarLabel(member) {
+  const name = memberDisplayName(member).trim();
+  if (!name) return '팀';
+  if (/^[가-힣]+$/.test(name) && name.length >= 2) {
+    return name.slice(-2);
+  }
+  return name.length <= 2 ? name : name.charAt(0).toUpperCase();
+}
+
+function recentCompletedCount(member) {
+  return member?.appsLastTwoWeeksCount ?? member?.completedLastTwoWeeksCount ?? member?.appsThisWeekCount ?? 0;
+}
+
+function progressWidth(member) {
+  const ratio = recentCompletedCount(member) / maxRecentCompletedCount.value;
+  return `${Math.max(Math.round(ratio * 100), recentCompletedCount(member) > 0 ? 12 : 0)}%`;
+}
+
+function chartFillStyle(member, index) {
+  const [from, to] = chartColors[index % chartColors.length];
+  return {
+    width: progressWidth(member),
+    background: `linear-gradient(90deg, ${from} 0%, ${to} 100%)`
+  };
+}
 
 watch(activeTab, () => {
   loadData();
@@ -631,6 +732,7 @@ function closeShareModal() {
   selectedWorkspaceId.value = null;
   workspaceQuestions.value = [];
   workspaceVersions.value = [];
+  selectedQuestionIds.value = {};
   selectedVersions.value = {};
 }
 
@@ -646,9 +748,12 @@ async function selectWorkspace(basket) {
     workspaceVersions.value = await workspaceApi.listVersions(basket.workspaceId);
     
     // 기본 선택값 초기화
+    selectedQuestionIds.value = {};
     selectedVersions.value = {};
     workspaceQuestions.value.forEach(q => {
-      selectedVersions.value[q.id] = '';
+      const versions = workspaceVersions.value.filter(v => v.questionId === String(q.id));
+      selectedQuestionIds.value[q.id] = false;
+      selectedVersions.value[q.id] = versions.length === 1 ? versions[0].id : '';
     });
   } catch (e) {
     alert('워크스페이스 정보를 불러오지 못했습니다.');
@@ -658,14 +763,82 @@ async function selectWorkspace(basket) {
   }
 }
 
+async function openAppendShareFromDetail() {
+  const detail = studyStore.currentSharedEssayDetail;
+  if (!detail?.workspaceId) return;
+
+  isDetailModalOpen.value = false;
+  isShareModalOpen.value = true;
+  shareStep.value = 2;
+  selectedWorkspaceId.value = detail.workspaceId;
+  selectedWorkspaceName.value = `${detail.companyName || '회사명 정보 없음'} - ${detail.positionTitle || '직무 정보 없음'}`;
+  isLoadingWorkspaceData.value = true;
+
+  try {
+    const workspace = await workspaceApi.getWorkspace(detail.workspaceId);
+    workspaceQuestions.value = workspace.questions || [];
+    workspaceVersions.value = await workspaceApi.listVersions(detail.workspaceId);
+    selectedQuestionIds.value = {};
+    selectedVersions.value = {};
+    workspaceQuestions.value.forEach(q => {
+      const versions = getVersionsForQuestion(q.id);
+      selectedQuestionIds.value[q.id] = false;
+      selectedVersions.value[q.id] = versions.length === 1 ? versions[0].id : '';
+    });
+  } catch (e) {
+    alert('워크스페이스 정보를 불러오지 못했습니다.');
+    closeShareModal();
+  } finally {
+    isLoadingWorkspaceData.value = false;
+  }
+}
+
 function getVersionsForQuestion(questionId) {
   return workspaceVersions.value.filter(v => v.questionId === String(questionId));
 }
 
+function handleVersionChange(questionId) {
+  if (!selectedVersions.value[questionId]) {
+    selectedQuestionIds.value[questionId] = false;
+  }
+}
+
+function formatDateTime(value) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString();
+}
+
+function sharedQuestionCount(essay) {
+  return Array.isArray(essay.versionIds) ? essay.versionIds.length : 0;
+}
+
+function getUserLabel(email) {
+  return email?.split('@')[0] || '팀원';
+}
+
+function latestAddedLabel(essay) {
+  const numbers = Array.isArray(essay.latestAddedQuestionNumbers)
+    ? essay.latestAddedQuestionNumbers.filter(Boolean)
+    : [];
+  if (numbers.length > 0) {
+    return `${numbers.map(number => `${number}번 문항`).join(', ')} 추가 공유됨`;
+  }
+  return `${essay.latestAddedCount || 0}개 문항 추가 공유됨`;
+}
+
 async function submitSharedEssay() {
-  const versionIds = Object.values(selectedVersions.value).filter(id => id !== '');
+  const versionIds = selectedShareVersionIds.value;
   if (versionIds.length === 0) {
-    alert('최소 1개 이상의 버전을 선택해야 합니다.');
+    alert('공유할 문항을 선택하고 버전을 지정해 주세요.');
+    return;
+  }
+
+  const missingVersion = Object.entries(selectedQuestionIds.value)
+    .some(([questionId, selected]) => selected && !selectedVersions.value[questionId]);
+  if (missingVersion) {
+    alert('선택한 문항마다 공유할 버전을 지정해 주세요.');
     return;
   }
   
@@ -755,6 +928,10 @@ const closeLeaveModal = () => {
   isLeaveModalOpen.value = false;
 };
 const confirmLeave = async () => {
+  if (requiresLeaveDelegation.value && !delegateEmail.value) {
+    alert('스터디장 권한을 위임할 팀원을 선택해 주세요.');
+    return;
+  }
   isLeaving.value = true;
   try {
     await studyStore.leaveStudy(studyId, delegateEmail.value);
@@ -795,29 +972,75 @@ const confirmDelete = async () => {
   padding: 40px;
   max-width: 1200px;
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
-.breadcrumb {
-  margin-bottom: 16px;
-  font-size: 0.9rem;
+.study-top-link {
+  margin-bottom: 0;
+}
+.study-top-link a {
+  color: var(--text-secondary);
+  font-weight: 800;
+  text-decoration: none;
+}
+.study-top-link a:hover {
+  color: var(--color-primary);
 }
 .study-header {
-  margin-bottom: 32px;
-  padding: 32px 40px;
-  border-radius: 16px;
+  margin-bottom: 0;
+  padding: 24px;
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
-  background: linear-gradient(135deg, #ede9fe 0%, #f3f4f6 100%);
+  align-items: flex-start;
+  gap: 24px;
   position: relative;
+  z-index: 1;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.04);
+}
+.study-title-group {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+  min-width: 0;
+  flex-wrap: wrap;
 }
 .study-header h1 {
-  font-size: 2rem;
-  margin-bottom: 8px;
+  font-size: 1.9rem;
+  margin: 0;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+.study-description {
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
+  max-width: 560px;
 }
 .header-actions {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0;
+}
+.study-cover {
+  height: 260px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  margin-bottom: 0;
+  background: #f8fafc;
+  position: relative;
+  z-index: 0;
+  flex: 0 0 auto;
+}
+.study-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .dropdown-container {
   position: relative;
@@ -865,14 +1088,42 @@ const confirmDelete = async () => {
 }
 .study-layout {
   display: flex;
-  gap: 40px;
+  flex-direction: column;
+  gap: 24px;
 }
-.study-sidebar {
-  width: 240px;
-  flex-shrink: 0;
+.study-tab-menu {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.04);
+}
+.study-tab-button {
+  min-height: 86px;
+  border: 0;
+  border-right: 1px solid var(--line);
+  background: white;
+  color: var(--text-secondary);
+  font-size: 1.05rem;
+  font-weight: 900;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+.study-tab-button:last-child {
+  border-right: 0;
+}
+.study-tab-button:hover {
+  background: #f8fafc;
+}
+.study-tab-button.active {
+  color: #4f46e5;
+  background: #eef2ff;
+  box-shadow: inset 0 4px 0 #4f46e5;
 }
 .study-main-content {
-  flex-grow: 1;
+  width: 100%;
 }
 .section-heading {
   display: flex;
@@ -1111,6 +1362,98 @@ const confirmDelete = async () => {
   justify-content: space-between;
   align-items: baseline;
 }
+.shared-essay-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0;
+}
+.shared-essay-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.shared-essay-meta span {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 5px 10px;
+  background: #f8fafc;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.latest-added-note {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin: -4px 0 12px;
+}
+.question-share-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.question-share-item {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  background: white;
+}
+.question-share-item.selected {
+  border-color: #8b5cf6;
+  background: #faf5ff;
+}
+.question-heading-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 10px;
+  line-height: 1.5;
+}
+.question-number {
+  color: #4f46e5;
+  font-weight: 900;
+  white-space: nowrap;
+}
+.no-version-note {
+  margin-top: 10px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+.question-share-item .version-select-label {
+  margin-top: 14px;
+  justify-content: space-between;
+}
+.question-share-item .version-select-label span {
+  font-weight: 800;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+.question-share-controls {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+}
+.share-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: white;
+  color: var(--text-primary);
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.share-checkbox-label:has(input:disabled) {
+  color: var(--text-secondary);
+  cursor: not-allowed;
+  background: #f8fafc;
+}
 
 /* Detail Modal Styles */
 .detail-modal {
@@ -1135,6 +1478,16 @@ const confirmDelete = async () => {
   padding-bottom: 16px;
   border-bottom: 1px dashed var(--line-strong);
 }
+.essay-meta-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+.essay-meta-header h3 {
+  margin: 0;
+}
 .essay-item {
   margin-bottom: 32px;
 }
@@ -1144,6 +1497,11 @@ const confirmDelete = async () => {
   border-radius: 8px;
   margin-bottom: 12px;
   line-height: 1.5;
+}
+.shared-version-name {
+  color: #4f46e5;
+  font-weight: 800;
+  margin-bottom: 8px;
 }
 .essay-body {
   padding: 12px;
@@ -1263,7 +1621,7 @@ const confirmDelete = async () => {
 .dashboard-section {
   background: white;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 24px;
   margin-bottom: 24px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.02);
@@ -1274,10 +1632,22 @@ const confirmDelete = async () => {
   margin-bottom: 16px;
   color: var(--text-primary);
 }
+.dashboard-section h2 .subtitle {
+  margin-left: 8px;
+  color: #94a3b8;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
 .chart-section {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+.chart-container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
 }
 .chart-bar-container {
   display: flex;
@@ -1285,7 +1655,7 @@ const confirmDelete = async () => {
   gap: 12px;
 }
 .chart-label {
-  width: 130px;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1297,17 +1667,18 @@ const confirmDelete = async () => {
   flex-shrink: 0;
 }
 .chart-bar-bg, .chart-track {
-  flex-grow: 1;
-  background: var(--surface-hover);
-  height: 24px;
-  border-radius: 12px;
+  width: 100%;
+  min-width: 180px;
+  background: #eef2f7;
+  height: 28px;
+  border-radius: 999px;
   overflow: hidden;
   position: relative;
 }
 .chart-bar-fill, .chart-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--color-primary) 0%, #a78bfa 100%);
-  border-radius: 12px;
+  min-width: 0;
+  border-radius: 999px;
   transition: width 0.5s ease-out;
   display: flex;
   align-items: center;
@@ -1322,16 +1693,18 @@ const confirmDelete = async () => {
 }
 .member-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+  grid-template-columns: 1fr;
+  gap: 14px;
 }
 .member-card-new {
   background: white;
   border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
+  border-radius: 8px;
+  padding: 18px;
+  display: grid;
+  grid-template-columns: 1fr;
+  width: 100%;
+  align-items: start;
   gap: 16px;
   transition: transform 0.2s, box-shadow 0.2s;
 }
@@ -1400,8 +1773,8 @@ const confirmDelete = async () => {
 }
 .member-stats-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  grid-template-columns: repeat(4, minmax(80px, 1fr));
+  gap: 10px;
 }
 .stat-box-new {
   border-radius: 8px;
@@ -1445,9 +1818,45 @@ const confirmDelete = async () => {
   color: var(--color-primary);
 }
 .chart-bar-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(150px, 220px) minmax(0, 1fr);
   align-items: center;
-  gap: 12px;
+  gap: 16px;
+  width: 100%;
+}
+@media (max-width: 860px) {
+  .study-detail-page {
+    padding: 24px 16px;
+  }
+  .study-header {
+    flex-direction: column;
+    padding: 20px;
+  }
+  .study-title-group {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .study-header h1 {
+    white-space: normal;
+  }
+  .study-tab-menu {
+    grid-template-columns: 1fr;
+  }
+  .study-tab-button {
+    min-height: 66px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .study-tab-button:last-child {
+    border-bottom: 0;
+  }
+  .member-card-new {
+    grid-template-columns: 1fr;
+  }
+  .member-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 .reason-accordion {
   display: flex;

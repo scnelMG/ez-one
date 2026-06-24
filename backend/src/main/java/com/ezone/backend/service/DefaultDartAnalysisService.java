@@ -104,7 +104,7 @@ public class DefaultDartAnalysisService implements DartAnalysisService {
                 null,
                 sourceUrl,
                 DartAnalysisContentResponse.empty(),
-                "AI 분석을 완료하지 못했습니다. DART 수동 메모 작성과 저장은 계속 사용할 수 있어요."
+                "AI analysis failed. You can still write a manual DART memo."
             );
         }
         analyses.put(analysisId, new StoredDartAnalysis(userId, workspaceId, response));
@@ -160,12 +160,35 @@ public class DefaultDartAnalysisService implements DartAnalysisService {
         builder.append("- 기업: ").append(defaultText(analysis.companyName())).append('\n');
         builder.append("- 보고서: ").append(defaultText(analysis.reportName())).append('\n');
         builder.append("- 접수번호: ").append(defaultText(analysis.rceptNo())).append("\n\n");
+        appendSectionAnalysis(builder, analysis.result().mainProductsAndServices());
+        appendSectionAnalysis(builder, analysis.result().contractsAndRAndD());
+        appendSectionAnalysis(builder, analysis.result().otherNotes());
         appendEvidenceCards(builder, analysis.result().evidenceCards());
-        appendList(builder, "지원서에 활용할 포인트", analysis.result().appealPoints());
+        appendList(builder, "지원서에 사용할 포인트", analysis.result().appealPoints());
         appendList(builder, "문장 후보", analysis.result().suggestedSentences());
         appendList(builder, "주의할 표현", analysis.result().cautions());
         appendList(builder, "추가 확인 필요", analysis.result().missingInfo());
         return builder.toString().trim();
+    }
+
+    private void appendSectionAnalysis(StringBuilder builder, DartAnalysisContentResponse.DartSectionAnalysis section) {
+        if (section == null || !StringUtils.hasText(section.coreSummary())) {
+            return;
+        }
+        builder.append("## ").append(defaultText(section.sectionTitle())).append('\n');
+        builder.append(section.coreSummary()).append("\n\n");
+        appendList(builder, "DART evidence", section.evidencePoints());
+        appendList(builder, "Job fit", section.jobFitPoints());
+        if (section.resumeUsePoints() != null && !section.resumeUsePoints().isEmpty()) {
+            builder.append("### Essay use points\n");
+            for (DartAnalysisContentResponse.ResumeUsePoint point : section.resumeUsePoints()) {
+                builder.append("- ").append(defaultText(point.useCase()))
+                    .append(": ").append(defaultText(point.recommendation())).append('\n');
+            }
+            builder.append('\n');
+        }
+        appendList(builder, "Sentence candidates", section.sentenceCandidates());
+        appendList(builder, "Cautions", section.cautionPoints());
     }
 
     private void appendEvidenceCards(StringBuilder builder, List<DartAnalysisContentResponse.EvidenceCard> cards) {

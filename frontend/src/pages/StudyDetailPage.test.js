@@ -16,4 +16,11 @@ describe('StudyDetailPage security rendering', () => {
         expect(source).not.toContain("localStorage.getItem('ez_one_user_email')");
         expect(source).not.toContain('eunjaelee058@gmail.com');
     });
+
+    it('keeps the cover image separate from the title header and stacks member cards in one column', () => {
+        expect(source).toContain('<div v-if="studyStore.currentStudy?.imageUrl" class="study-cover">');
+        expect(source).not.toContain('backgroundImage');
+        expect(source).toContain('.member-grid');
+        expect(source).toContain('grid-template-columns: 1fr;');
+    });
 });

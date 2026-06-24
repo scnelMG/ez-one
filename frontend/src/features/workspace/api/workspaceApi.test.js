@@ -237,6 +237,9 @@ describe('workspaceApi', () => {
         expect(comparison).toEqual({
             leftVersionId: '501',
             rightVersionId: '502',
+            leftVersionName: '',
+            rightVersionName: '',
+            questionPrompt: '',
             leftBody: '초안 v1',
             rightBody: '초안 v2',
             changed: true,

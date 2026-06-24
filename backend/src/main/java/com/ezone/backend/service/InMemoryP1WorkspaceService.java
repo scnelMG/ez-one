@@ -390,12 +390,20 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
         Long workspaceId,
         CompareEssayVersionsRequest request
     ) {
-        requireWorkspace(userId, workspaceId);
+        WorkspaceRecord workspace = requireWorkspace(userId, workspaceId);
         VersionRecord left = requireVersion(userId, workspaceId, request.leftVersionId());
         VersionRecord right = requireVersion(userId, workspaceId, request.rightVersionId());
+        String questionPrompt = workspace.questions().stream()
+            .filter(item -> item.id().equals(left.questionId()))
+            .map(EssayQuestionRecord::prompt)
+            .findFirst()
+            .orElse("");
         return new CompareEssayVersionsResponse(
             left.id(),
             right.id(),
+            left.versionName(),
+            right.versionName(),
+            questionPrompt,
             left.body(),
             right.body(),
             !Objects.equals(left.body(), right.body()),

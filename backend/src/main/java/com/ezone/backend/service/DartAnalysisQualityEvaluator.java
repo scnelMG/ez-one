@@ -43,8 +43,9 @@ public class DartAnalysisQualityEvaluator {
         List<String> suggestedSentences = cleanTextList(source.suggestedSentences(), notes);
         List<String> cautions = new ArrayList<>(nonBlankDistinct(source.cautions()));
         List<String> missingInfo = new ArrayList<>(nonBlankDistinct(source.missingInfo()));
+        boolean hasStructuredEvidence = hasStructuredEvidence(source);
 
-        if (evidenceCards.isEmpty()) {
+        if (evidenceCards.isEmpty() && !hasStructuredEvidence) {
             missingInfo.add("No source-grounded DART evidence card passed the quality gate.");
             notes.add("quality gate: no valid evidence card");
         }
@@ -52,15 +53,18 @@ public class DartAnalysisQualityEvaluator {
             cautions.add("AI quality gate adjusted the analysis. Review source sections before using this in an essay.");
         }
 
-        int score = score(evidenceCards, appealPoints, suggestedSentences, notes);
+        int score = score(evidenceCards, appealPoints, suggestedSentences, notes, hasStructuredEvidence);
         DartAnalysisContentResponse improved = new DartAnalysisContentResponse(
             evidenceCards,
             appealPoints,
             suggestedSentences,
             nonBlankDistinct(cautions),
-            nonBlankDistinct(missingInfo)
+            nonBlankDistinct(missingInfo),
+            source.mainProductsAndServices(),
+            source.contractsAndRAndD(),
+            source.otherNotes()
         );
-        return new DartAnalysisEvaluation(!evidenceCards.isEmpty(), score, improved, List.copyOf(notes));
+        return new DartAnalysisEvaluation(!evidenceCards.isEmpty() || hasStructuredEvidence, score, improved, List.copyOf(notes));
     }
 
     private List<DartAnalysisContentResponse.EvidenceCard> cleanEvidenceCards(
@@ -114,10 +118,11 @@ public class DartAnalysisQualityEvaluator {
         List<DartAnalysisContentResponse.EvidenceCard> evidenceCards,
         List<String> appealPoints,
         List<String> suggestedSentences,
-        List<String> notes
+        List<String> notes,
+        boolean hasStructuredEvidence
     ) {
         int score = 0;
-        if (!evidenceCards.isEmpty()) {
+        if (!evidenceCards.isEmpty() || hasStructuredEvidence) {
             score += 40;
         }
         if (evidenceCards.stream().allMatch((card) -> StringUtils.hasText(card.sourceSection()))) {
@@ -133,6 +138,21 @@ public class DartAnalysisQualityEvaluator {
             score += 10;
         }
         return Math.min(score, 100);
+    }
+
+    private boolean hasStructuredEvidence(DartAnalysisContentResponse content) {
+        return hasSectionEvidence(content.mainProductsAndServices())
+            || hasSectionEvidence(content.contractsAndRAndD())
+            || hasSectionEvidence(content.otherNotes());
+    }
+
+    private boolean hasSectionEvidence(DartAnalysisContentResponse.DartSectionAnalysis section) {
+        return section != null
+            && (
+                StringUtils.hasText(section.coreSummary())
+                || (section.evidencePoints() != null && !section.evidencePoints().isEmpty())
+                || (section.resumeUsePoints() != null && !section.resumeUsePoints().isEmpty())
+            );
     }
 
     private List<String> nonBlankDistinct(List<String> values) {

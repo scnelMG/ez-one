@@ -144,15 +144,12 @@ export function createWorkspaceApi(httpClient = defaultHttpClient) {
                 return mockVersionList(workspaceId).map((version) => ({ ...version }));
             }
         },
-        async compareVersions(workspaceId, leftVersionId, rightVersionId, customPrompt) {
+        async compareVersions(workspaceId, leftVersionId, rightVersionId) {
             try {
                 const payload = {
                     leftVersionId: Number(leftVersionId),
                     rightVersionId: Number(rightVersionId)
                 };
-                if (customPrompt?.trim()) {
-                    payload.customPrompt = customPrompt.trim();
-                }
                 const response = await httpClient.post(`/api/workspaces/${workspaceId}/versions/compare`, payload);
                 return toVersionComparison(unwrapApiData(response.data));
             }
@@ -164,6 +161,9 @@ export function createWorkspaceApi(httpClient = defaultHttpClient) {
                     return {
                         leftVersionId: String(leftVersionId),
                         rightVersionId: String(rightVersionId),
+                        leftVersionName: left?.versionName ?? '이전 저장본',
+                        rightVersionName: right?.versionName ?? '비교 저장본',
+                        questionPrompt: '',
                         leftBody: left ? left.body : '불러올 수 없음',
                         rightBody: right ? right.body : '불러올 수 없음',
                         changed: true,
@@ -174,10 +174,15 @@ export function createWorkspaceApi(httpClient = defaultHttpClient) {
                 return {
                     leftVersionId: left.id,
                     rightVersionId: right.id,
+                    leftVersionName: left.versionName,
+                    rightVersionName: right.versionName,
+                    questionPrompt: '',
                     leftBody: left.body,
                     rightBody: right.body,
                     changed: changed,
-                    aiSummary: changed ? `[테스트 요약] 변경된 내용은 다음과 같습니다.\n${customPrompt || ''}` : '변경된 내용이 없습니다.'
+                    aiSummary: changed
+                        ? `1. 변경된 내용\n- ${left.versionName}에서 ${right.versionName}로 바뀌며 표현과 강조점이 달라졌습니다.\n\n2. 채용담당자 관점 피드백\n- 지원 기업과 직무에 맞춰 성과와 직무 키워드를 더 구체화하세요.`
+                        : '변경된 내용이 없습니다.'
                 };
             }
         },
@@ -258,6 +263,9 @@ function toVersionComparison(data) {
     return {
         leftVersionId: String(data.leftVersionId),
         rightVersionId: String(data.rightVersionId),
+        leftVersionName: data.leftVersionName ?? '',
+        rightVersionName: data.rightVersionName ?? '',
+        questionPrompt: data.questionPrompt ?? '',
         leftBody: data.leftBody ?? '',
         rightBody: data.rightBody ?? '',
         changed: data.changed ?? false,
@@ -286,6 +294,7 @@ function toDartDisclosure(disclosure) {
     };
 }
 function toDartAnalysis(analysis) {
+    const result = analysis.result ?? {};
     return {
         id: String(analysis.id),
         workspaceId: String(analysis.workspaceId),
@@ -295,12 +304,15 @@ function toDartAnalysis(analysis) {
         status: analysis.status,
         model: analysis.model,
         sourceUrl: analysis.sourceUrl,
-        result: analysis.result ?? {
-            evidenceCards: [],
-            appealPoints: [],
-            suggestedSentences: [],
-            cautions: [],
-            missingInfo: []
+        result: {
+            evidenceCards: result.evidenceCards ?? [],
+            appealPoints: result.appealPoints ?? [],
+            suggestedSentences: result.suggestedSentences ?? [],
+            cautions: result.cautions ?? [],
+            missingInfo: result.missingInfo ?? [],
+            mainProductsAndServices: result.mainProductsAndServices ?? null,
+            contractsAndRAndD: result.contractsAndRAndD ?? null,
+            otherNotes: result.otherNotes ?? null
         },
         errorMessage: analysis.errorMessage
     };

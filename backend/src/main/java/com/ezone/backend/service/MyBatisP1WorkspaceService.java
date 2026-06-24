@@ -528,6 +528,8 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
             .orElseThrow(() -> new IllegalArgumentException("Version not found"));
         EssayVersionRow right = mapper.findVersion(userId, workspaceId, request.rightVersionId())
             .orElseThrow(() -> new IllegalArgumentException("Version not found"));
+        EssayQuestionRow question = mapper.findQuestion(workspaceId, left.getQuestionId())
+            .orElseThrow(() -> new IllegalArgumentException("Question not found"));
         String leftBody = left.getBody() != null ? left.getBody() : "";
         String rightBody = right.getBody() != null ? right.getBody() : "";
         boolean changed = !leftBody.equals(rightBody);
@@ -535,7 +537,22 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         String aiSummary = null;
         if (changed) {
             try {
-                aiSummary = openAiClient.generateComparisonSummary(leftBody, rightBody, request.customPrompt());
+                WorkspaceRow workspace = mapper.findWorkspace(userId, workspaceId)
+                    .orElseThrow(() -> new IllegalArgumentException("Workspace not found"));
+                String jdContext = buildJdContext(workspaceId);
+                aiSummary = openAiClient.generateComparisonSummary(
+                    leftBody,
+                    rightBody,
+                    left.getVersionName(),
+                    right.getVersionName(),
+                    question.getPrompt(),
+                    workspace.getCompanyName(),
+                    workspace.getPositionTitle(),
+                    jdContext
+                );
+                if (aiSummary == null || aiSummary.isBlank()) {
+                    aiSummary = "AI 요약을 생성하지 못했습니다. GMS API 키, 비교 모델, 네트워크 설정을 확인해주세요.";
+                }
             } catch (Exception e) {
                 aiSummary = "AI 요약을 생성하는 중 오류가 발생했습니다. (설정이나 네트워크 상태를 확인해주세요.)";
             }
@@ -544,11 +561,35 @@ public class MyBatisP1WorkspaceService implements P1WorkspaceService {
         return new CompareEssayVersionsResponse(
             left.getId(),
             right.getId(),
+            left.getVersionName(),
+            right.getVersionName(),
+            question.getPrompt(),
             leftBody,
             rightBody,
             changed,
             aiSummary
         );
+    }
+
+    private String buildJdContext(Long workspaceId) {
+        return mapper.listReferences(workspaceId).stream()
+            .filter(reference -> reference.getReferenceType() == ReferenceType.JD)
+            .map(reference -> {
+                String title = reference.getTitle() != null ? reference.getTitle().trim() : "";
+                String body = reference.getBody() != null ? reference.getBody().trim() : "";
+                if (title.isBlank()) {
+                    return body;
+                }
+                if (body.isBlank()) {
+                    return title;
+                }
+                return title + "\n" + body;
+            })
+            .filter(text -> !text.isBlank())
+            .limit(5)
+            .reduce((left, right) -> left + "\n\n---\n\n" + right)
+            .map(text -> text.length() > 6000 ? text.substring(0, 6000) : text)
+            .orElse("");
     }
 
     @Override
