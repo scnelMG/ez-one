@@ -25,6 +25,7 @@ import com.ezone.backend.dto.workspace.WorkspaceDefaultsResponse;
 import com.ezone.backend.dto.workspace.WorkspaceResponse;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
@@ -47,10 +48,19 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
     private final Map<Long, ReferenceRecord> references = new LinkedHashMap<>();
     private final Map<Long, VersionRecord> versions = new LinkedHashMap<>();
     private final Map<String, String> companyLogos = new LinkedHashMap<>();
+    private final List<ActivityRecord> activities = new ArrayList<>();
     private final InMemoryHistoryService historyService;
 
     public InMemoryP1WorkspaceService(InMemoryHistoryService historyService) {
         this.historyService = historyService;
+        activities.add(new ActivityRecord(
+            1L,
+            LocalDate.now().toString(),
+            "14:20",
+            2,
+            "지원 상태를 진행 중으로 변경 +2방울",
+            "DOC"
+        ));
         seed(1L, "네이버", "Backend Engineer", "오늘 18:00", true, ApplicationStatus.IN_PROGRESS);
         seed(1L, "카카오페이", "Server Developer", "D-2", true, ApplicationStatus.NOT_APPLIED);
         seed(1L, "토스", "Platform Engineer", "D-5", false, ApplicationStatus.COMPLETED);
@@ -84,12 +94,24 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
 
     @Override
     public List<ActivitySummaryResponse> getActivitySummary(Long userId) {
-        return List.of();
+        Map<String, Integer> dailyScores = new LinkedHashMap<>();
+        activities.stream()
+            .filter(activity -> activity.userId().equals(userId))
+            .sorted(Comparator.comparing(ActivityRecord::date))
+            .forEach(activity -> dailyScores.merge(activity.date(), activity.score(), Integer::sum));
+        return dailyScores.entrySet().stream()
+            .map(entry -> new ActivitySummaryResponse(entry.getKey(), entry.getValue()))
+            .toList();
     }
 
     @Override
     public List<ActivityLogResponse> getActivityLogs(Long userId, String date) {
-        return List.of();
+        return activities.stream()
+            .filter(activity -> activity.userId().equals(userId))
+            .filter(activity -> activity.date().equals(date))
+            .sorted(Comparator.comparing(ActivityRecord::time).reversed())
+            .map(activity -> new ActivityLogResponse(activity.time(), activity.description(), activity.type()))
+            .toList();
     }
 
     @Override
@@ -142,6 +164,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
         );
         basketJobs.put(basketJobId, basketJob);
         createWorkspaceFor(basketJob, questions);
+        recordActivity(userId, workspaceId, "BASKET_ADD", 1);
         return toBasketResponse(basketJob);
     }
 
@@ -221,6 +244,9 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
                 updated.sourceUrl()
             );
         }
+        if (status == ApplicationStatus.IN_PROGRESS || status == ApplicationStatus.COMPLETED) {
+            recordActivity(userId, updated.workspaceId(), "STATUS_CHANGE", 2);
+        }
         return toBasketResponse(updated);
     }
 
@@ -293,6 +319,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             request.maxLength()
         );
         workspace.questions().add(updated);
+        recordActivity(userId, workspaceId, "DRAFT_UPDATE", 1);
         return toQuestionResponse(updated);
     }
 
@@ -403,6 +430,7 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
             false
         );
         references.put(reference.id(), reference);
+        recordActivity(userId, workspaceId, "REFERENCE_ADD", 1);
         return toReferenceResponse(reference);
     }
 
@@ -836,6 +864,38 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
         return value != null && !value.isBlank();
     }
 
+    private void recordActivity(Long userId, Long workspaceId, String actionType, int score) {
+        LocalDateTime now = LocalDateTime.now();
+        activities.add(new ActivityRecord(
+            userId,
+            now.toLocalDate().toString(),
+            now.toLocalTime().withSecond(0).withNano(0).format(DateTimeFormatter.ofPattern("HH:mm")),
+            score,
+            describeActivity(workspaceId, actionType, score),
+            activityType(actionType)
+        ));
+    }
+
+    private String describeActivity(Long workspaceId, String actionType, int score) {
+        WorkspaceRecord workspace = workspaces.get(workspaceId);
+        String companyName = workspace != null ? workspace.companyName() : "Workspace";
+        String actionName = switch (actionType) {
+            case "BASKET_ADD" -> "공고 장바구니에 담기";
+            case "STATUS_CHANGE" -> "지원 상태 변경";
+            case "DRAFT_UPDATE" -> "자기소개서 수정";
+            case "REFERENCE_ADD" -> "참고자료 추가";
+            default -> actionType;
+        };
+        return "[%s] %s +%d방울".formatted(companyName, actionName, score);
+    }
+
+    private String activityType(String actionType) {
+        return switch (actionType) {
+            case "BASKET_ADD", "STATUS_CHANGE" -> "DOC";
+            default -> "COMMIT";
+        };
+    }
+
     private void markWorkspaceInProgress(WorkspaceRecord workspace) {
         BasketRecord current = basketJobs.get(workspace.basketJobId());
         if (current == null || current.deleted()) {
@@ -943,6 +1003,16 @@ public class InMemoryP1WorkspaceService implements P1WorkspaceService {
         Long questionId,
         String versionName,
         String body
+    ) {
+    }
+
+    private record ActivityRecord(
+        Long userId,
+        String date,
+        String time,
+        int score,
+        String description,
+        String type
     ) {
     }
 

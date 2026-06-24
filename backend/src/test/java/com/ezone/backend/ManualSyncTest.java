@@ -1,11 +1,13 @@
 package com.ezone.backend;
 
 import com.ezone.backend.service.CompanyDataSyncService;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
+@Disabled("Manual company-data sync test; run explicitly with real external API configuration.")
 class ManualSyncTest {
 
     @Autowired

@@ -3,9 +3,11 @@ package com.ezone.backend.controller;
 import com.ezone.backend.dto.ApiResponse;
 import com.ezone.backend.dto.notion.NotionConnectRequest;
 import com.ezone.backend.dto.notion.NotionConnectionResponse;
+import com.ezone.backend.dto.notion.NotionOAuthUrlResponse;
 import com.ezone.backend.dto.notion.SyncLogResponse;
 import com.ezone.backend.dto.notion.UpdateNotionSyncSettingsRequest;
 import com.ezone.backend.service.NotionIntegrationService;
+import com.ezone.backend.service.NotionOAuthUrlService;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -21,9 +23,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class NotionIntegrationController {
 
     private final NotionIntegrationService notionIntegrationService;
+    private final NotionOAuthUrlService notionOAuthUrlService;
 
-    public NotionIntegrationController(NotionIntegrationService notionIntegrationService) {
+    public NotionIntegrationController(
+        NotionIntegrationService notionIntegrationService,
+        NotionOAuthUrlService notionOAuthUrlService
+    ) {
         this.notionIntegrationService = notionIntegrationService;
+        this.notionOAuthUrlService = notionOAuthUrlService;
     }
 
     @GetMapping
@@ -31,11 +38,22 @@ public class NotionIntegrationController {
         return ApiResponse.success(notionIntegrationService.getConnection(CurrentUserSupport.currentUserId()));
     }
 
+    @GetMapping("/oauth-url")
+    public ApiResponse<NotionOAuthUrlResponse> getOAuthUrl(
+        @org.springframework.web.bind.annotation.RequestParam String redirectUri,
+        @org.springframework.web.bind.annotation.RequestParam String state
+    ) {
+        return ApiResponse.success(new NotionOAuthUrlResponse(
+            notionOAuthUrlService.buildAuthorizationUrl(redirectUri, state)
+        ));
+    }
+
     @PostMapping("/connect")
     public ApiResponse<NotionConnectionResponse> connect(@RequestBody NotionConnectRequest request) {
         return ApiResponse.success(notionIntegrationService.connect(
             CurrentUserSupport.currentUserId(),
-            request.authorizationCode()
+            request.authorizationCode(),
+            request.redirectUri()
         ));
     }
 
@@ -54,6 +72,13 @@ public class NotionIntegrationController {
             request.syncEnabled(),
             request.syncScope()
         ));
+    }
+
+    @PostMapping("/sync-now")
+    public ApiResponse<NotionConnectionResponse> syncNow() {
+        Long userId = CurrentUserSupport.currentUserId();
+        notionIntegrationService.syncCurrentBasketJobs(userId);
+        return ApiResponse.success(notionIntegrationService.getConnection(userId));
     }
 
     @GetMapping("/sync-logs")

@@ -14,6 +14,7 @@ import com.ezone.backend.domain.persistence.MattermostMessageRow;
 import com.ezone.backend.domain.persistence.MattermostParsedJobPostRow;
 import com.ezone.backend.dto.mattermost.MattermostWebhookRequest;
 import com.ezone.backend.mapper.MattermostMapper;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -70,6 +71,9 @@ class MattermostIngestionServiceTest {
                 && "Backend Engineer 채용".equals(row.getTitle())
                 && "https://recruit.navercorp.com/jobs/101".equals(row.getUrl())
                 && "D-7".equals(row.getDeadlineLabel())
+                && "D_DAY".equals(row.getDeadlineType())
+                && LocalDate.now().plusDays(7).toString().equals(row.getDeadlineDate())
+                && "D-7".equals(row.getNormalizedDeadlineLabel())
                 && "NEEDS_REVIEW".equals(row.getReviewStatus())
         ));
     }
@@ -120,6 +124,12 @@ class MattermostIngestionServiceTest {
                 "https://jumpit.saramin.co.kr/position/52664559",
                 "https://www.wanted.co.kr/wd/324638"
             );
+        assertThat(captor.getAllValues())
+            .extracting(MattermostParsedJobPostRow::getDeadlineType)
+            .containsExactly("DATE", "OPEN");
+        assertThat(captor.getAllValues())
+            .extracting(MattermostParsedJobPostRow::getNormalizedDeadlineLabel)
+            .containsExactly("2026.01.26", "채용 시 마감");
     }
 
     @Test

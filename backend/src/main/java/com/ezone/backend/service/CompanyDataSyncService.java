@@ -7,7 +7,6 @@ import com.ezone.backend.mapper.CompanySyncMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,7 +39,6 @@ public class CompanyDataSyncService {
         this.syncMapper = syncMapper;
     }
 
-    @Scheduled(cron = "0 0 12 * * ?") // 매일 낮 12시에 실행 (사용자 요청)
     public void runDailyPensionSync() {
         int limit = 1000;
         List<String> companiesToSync = syncMapper.findCompaniesNeedingPensionSync(limit);

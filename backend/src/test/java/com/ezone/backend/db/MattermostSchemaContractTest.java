@@ -39,6 +39,10 @@ class MattermostSchemaContractTest {
         String migration = readResource("/db/migration/V34__add_mattermost_scoring_and_deadlines.sql").toLowerCase();
         assertThat(migration).contains("alter table mm_parsed_job_posts");
         assertThat(migration).contains("add column deadline_type varchar(32) null");
+        assertThat(migration).contains("information_schema.columns");
+        assertThat(migration).contains("column_name = 'deadline_type'");
+        assertThat(migration).contains("column_name = 'deadline_date'");
+        assertThat(migration).contains("column_name = 'normalized_deadline_label'");
         assertThat(migration).contains("create table if not exists mm_recommendation_scores");
         assertThat(migration).contains("unique key uk_mm_recommendation_scores_user_candidate");
         assertThat(migration).contains("status varchar(32) not null default 'pending'");
@@ -49,6 +53,9 @@ class MattermostSchemaContractTest {
         String migration = readResource("/db/migration/V33__add_mattermost_posted_at.sql").toLowerCase();
         assertThat(migration).contains("alter table mm_messages");
         assertThat(migration).contains("add column posted_at timestamp null");
+        assertThat(migration).contains("information_schema.columns");
+        assertThat(migration).contains("information_schema.statistics");
+        assertThat(migration).contains("column_name = 'posted_at'");
         assertThat(migration).contains("idx_mm_messages_channel_posted");
     }
 

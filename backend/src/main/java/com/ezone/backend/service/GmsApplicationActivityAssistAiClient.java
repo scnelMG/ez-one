@@ -27,8 +27,42 @@ public class GmsApplicationActivityAssistAiClient implements ApplicationActivity
 
     private static final Logger log = LoggerFactory.getLogger(GmsApplicationActivityAssistAiClient.class);
     private static final String DEFAULT_BASE_URL = "https://gms.ssafy.io/gmsapi/api.openai.com/v1";
+    private static final int MAX_CANDIDATES_FOR_AI = 8;
+    private static final int MAX_FIELD_CHARS = 300;
     private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {
     };
+
+    private static final String PROMPT_TEMPLATE = """
+        역할: 당신은 한국 IT 채용 담당자이자 실무 리뷰어입니다.
+
+        목표: 지원 직무와 입력 필드에 가장 적합한 사용자 활동을 고르고, 바로 붙여넣을 수 있는 한국어 문장을 작성합니다.
+
+        평가 기준:
+        - 직무 관련성: 35점
+        - 본인 기여와 역할 명확성: 20점
+        - 성과, 결과, 근거의 구체성: 20점
+        - 기술 또는 도메인 깊이: 15점
+        - 감지된 입력 필드와의 적합성: 10점
+
+        작성 원칙:
+        - 추천은 최대 %d개만 반환합니다.
+        - 제공된 후보 JSON의 사실만 사용합니다. 수치, 기술, 수상, 조직명, 날짜, 회사 정보는 만들지 않습니다.
+        - draft.text는 감지된 입력 필드에 붙여넣을 수 있는 한국어 문장이어야 합니다.
+        - draft.text는 한 문단으로 작성하고 마크다운, 글머리표, placeholder를 쓰지 않습니다.
+        - draft.text는 %d %s 이내로 작성합니다. 제한이 짧으면 역할, 행동, 성과를 우선합니다.
+        - detail limit이 200자 이상이면 draft.text는 제한의 90%%~100%%를 목표로 충분히 구체적으로 작성합니다.
+        - 활동 자체 설명보다 지원 직무에 왜 맞는지를 보여줍니다.
+        - 근거가 약한 부분은 risks에 적고, 더 강한 사실로 꾸미지 않습니다.
+        - fitScore는 평가 기준을 따른 0부터 100까지의 정수입니다.
+
+        출력은 JSON schema만 따릅니다.
+
+        Company: %s
+        Position: %s
+        Page context: %s
+        Field labels: %s
+        Candidates JSON: %s
+        """;
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
@@ -92,9 +126,61 @@ public class GmsApplicationActivityAssistAiClient implements ApplicationActivity
         return Map.of(
             "model", model,
             "input", prompt(request, candidates, maxItems, detailLimit, detailLimitUnit),
+            "text", Map.of("format", activitySchema()),
             "temperature", 0.2,
             "max_output_tokens", 900
         );
+    }
+
+    private Map<String, Object> activitySchema() {
+        Map<String, Object> draftSchema = objectSchema(Map.of(
+            "label", stringSchema("붙여넣기 문장 용도"),
+            "text", stringSchema("지원서 입력 필드에 바로 붙여넣을 한국어 문장")
+        ), List.of("label", "text"));
+
+        Map<String, Object> recommendationSchema = objectSchema(Map.of(
+            "rank", integerSchema("추천 순위"),
+            "title", stringSchema("활동명"),
+            "fitScore", integerSchema("0부터 100까지의 직무 적합도 점수"),
+            "recruiterView", stringSchema("채용 담당자 관점의 추천 이유"),
+            "practitionerView", stringSchema("실무자 관점의 추천 이유"),
+            "appealPoints", arraySchema(stringSchema("어필 포인트")),
+            "risks", arraySchema(stringSchema("주의하거나 보강할 점")),
+            "drafts", arraySchema(draftSchema)
+        ), List.of("rank", "title", "fitScore", "recruiterView", "practitionerView", "appealPoints", "risks", "drafts"));
+
+        Map<String, Object> rootSchema = objectSchema(
+            Map.of("recommendations", arraySchema(recommendationSchema)),
+            List.of("recommendations")
+        );
+
+        return Map.of(
+            "type", "json_schema",
+            "name", "application_activity_recommendations",
+            "strict", true,
+            "schema", rootSchema
+        );
+    }
+
+    private Map<String, Object> objectSchema(Map<String, Object> properties, List<String> required) {
+        return Map.of(
+            "type", "object",
+            "additionalProperties", false,
+            "properties", properties,
+            "required", required
+        );
+    }
+
+    private Map<String, Object> arraySchema(Map<String, Object> itemSchema) {
+        return Map.of("type", "array", "items", itemSchema);
+    }
+
+    private Map<String, Object> stringSchema(String description) {
+        return Map.of("type", "string", "description", description);
+    }
+
+    private Map<String, Object> integerSchema(String description) {
+        return Map.of("type", "integer", "description", description);
     }
 
     private String prompt(
@@ -105,56 +191,28 @@ public class GmsApplicationActivityAssistAiClient implements ApplicationActivity
         String detailLimitUnit
     ) {
         List<Map<String, Object>> compactCandidates = new ArrayList<>();
-        for (int index = 0; index < candidates.size(); index += 1) {
+        int candidateLimit = Math.min(candidates.size(), MAX_CANDIDATES_FOR_AI);
+        for (int index = 0; index < candidateLimit; index += 1) {
             ApplicationActivityAssistService.ActivityCandidate candidate = candidates.get(index);
-            compactCandidates.add(new LinkedHashMap<>(Map.of(
-                "id", index + 1,
-                "category", candidate.category(),
-                "title", candidate.title(),
-                "role", candidate.role(),
-                "organization", candidate.organization(),
-                "summary", candidate.summary(),
-                "outcome", candidate.outcome(),
-                "skills", candidate.skills()
-            )));
+            Map<String, Object> compact = new LinkedHashMap<>();
+            compact.put("id", index + 1);
+            compact.put("category", truncate(candidate.category()));
+            compact.put("title", truncate(candidate.title()));
+            compact.put("role", truncate(candidate.role()));
+            compact.put("organization", truncate(candidate.organization()));
+            compact.put("summary", truncate(candidate.summary()));
+            compact.put("outcome", truncate(candidate.outcome()));
+            compact.put("skills", truncate(candidate.skills()));
+            compactCandidates.add(compact);
         }
-        return """
-            Role: You are a Korean tech recruiter and senior practitioner reviewing application form activity fields.
-
-            Task: rank the candidate activities by job fit first, then write paste-ready Korean drafts that fit the detected field limit.
-
-            Fit scoring rubric:
-            - Job relevance to the Position and Page context: 35 points.
-            - Direct ownership, role clarity, and contribution scope: 20 points.
-            - Concrete outcome, impact, or evidence: 20 points.
-            - Technical/domain depth and transferable skills: 15 points.
-            - Clarity and usability for the detected Field labels: 10 points.
-
-            Draft-writing rules:
-            - Recommend at most %d items.
-            - Use only facts present in Candidates JSON. Do not invent metrics, technologies, awards, organizations, dates, or company facts.
-            - Each draft.text must be directly pasteable into the detected field: one concise Korean paragraph, no markdown, no bullets, no placeholder text.
-            - Keep each draft.text within %d %s. If the limit is tight, preserve role, action, and impact before details.
-            - Emphasize why the activity fits the target Position, not just what the activity was.
-            - If evidence is weak, mention the risk in risks instead of fabricating stronger proof.
-            - fitScore must follow the rubric and be an integer from 0 to 100.
-
-            Return JSON only with this exact shape:
-            {"recommendations":[{"rank":1,"title":"...","fitScore":0,"recruiterView":"...","practitionerView":"...","appealPoints":["..."],"risks":["..."],"drafts":[{"label":"글자수 맞춤","text":"..."}]}]}
-
-            Company: %s
-            Position: %s
-            Page context: %s
-            Field labels: %s
-            Candidates JSON: %s
-            """.formatted(
+        return PROMPT_TEMPLATE.formatted(
             maxItems,
             detailLimit,
             detailLimitUnit,
             safe(request.companyName()),
             safe(request.positionTitle()),
-            safe(request.pageContext()),
-            request.fieldLabels() == null ? List.of() : request.fieldLabels(),
+            truncate(safe(request.pageContext())),
+            request.fieldLabels() == null ? List.of() : request.fieldLabels().stream().map(this::truncate).toList(),
             toJson(compactCandidates)
         );
     }
@@ -299,6 +357,11 @@ public class GmsApplicationActivityAssistAiClient implements ApplicationActivity
 
     private String safe(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    private String truncate(String value) {
+        String safeValue = safe(value);
+        return safeValue.length() <= MAX_FIELD_CHARS ? safeValue : safeValue.substring(0, MAX_FIELD_CHARS).stripTrailing();
     }
 
     private String trimTrailingSlash(String value) {

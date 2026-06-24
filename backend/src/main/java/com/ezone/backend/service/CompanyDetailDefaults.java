@@ -2,6 +2,7 @@ package com.ezone.backend.service;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -23,7 +24,28 @@ final class CompanyDetailDefaults {
         "programmers.co.kr"
     );
 
-    private static final Map<String, CompanyDefaults> KNOWN_COMPANIES = Map.ofEntries(
+    private static final Map<String, CompanyDefaults> KNOWN_COMPANIES = knownCompanies(
+        known("한국산업은행", "kdb.co.kr", "금융권", "공공기관", "금융/AI"),
+        known("KDB산업은행", "kdb.co.kr", "금융권", "공공기관", "금융/AI"),
+        known("산업은행", "kdb.co.kr", "금융권", "공공기관", "금융/AI"),
+        known("연합인포맥스", "einfomax.co.kr", "중견기업", "중견기업", "금융정보/IT"),
+        known("한국선급", "krs.co.kr", "공공기관", "공공기관", "해양/AI"),
+        known("KR", "krs.co.kr", "공공기관", "공공기관", "해양/AI"),
+        known("에스넷시스템", "snetsystems.co.kr", "중견기업", "중견기업", "AI/ICT"),
+        known("레브잇", "team.alwayz.co", "스타트업", "스타트업", "커머스/AI"),
+        known("마드라스체크", "flow.team", "스타트업", "중소기업", "SaaS/AI"),
+        known("에너자이", "enerzai.com", "스타트업", "스타트업", "AI"),
+        known("에스아이에이", "si-analytics.ai", "스타트업", "중소기업", "AI/위성영상"),
+        known("(주)에스아이에이", "si-analytics.ai", "스타트업", "중소기업", "AI/위성영상"),
+        known("주)에스아이에이", "si-analytics.ai", "스타트업", "중소기업", "AI/위성영상"),
+        known("소크라에이아이", "socra.ai", "스타트업", "중소기업", "AI/에듀테크"),
+        known("Socra AI", "socra.ai", "스타트업", "중소기업", "AI/에듀테크"),
+        known("보스반도체", "boss-semi.com", "스타트업", "중소기업", "반도체"),
+        known("애자일소다", "agilesoda.ai", "스타트업", "중소기업", "AI"),
+        known("케이뱅크", "kbanknow.com", "금융권", "대기업", "금융"),
+        known("HL만도", "hlmando.com", "대기업", "대기업", "모빌리티"),
+        known("아이엠티", "imt-c.co.kr", "중소기업", "중소기업", "반도체"),
+        known("마이다스그룹", "midas.co.kr", "중견기업", "중견기업", "IT"),
         known("카카오뱅크", "kakaobank.com", "대기업", "대기업", "금융"),
         known("KB국민은행", "kbstar.com", "금융권", "대기업", "금융"),
         known("국민은행", "kbstar.com", "금융권", "대기업", "금융"),
@@ -133,9 +155,22 @@ final class CompanyDetailDefaults {
         return Map.entry(normalizeCompanyName(companyName), new CompanyDefaults(domain, companyType, size, industry));
     }
 
+    @SafeVarargs
+    private static Map<String, CompanyDefaults> knownCompanies(Map.Entry<String, CompanyDefaults>... entries) {
+        Map<String, CompanyDefaults> companies = new LinkedHashMap<>();
+        for (Map.Entry<String, CompanyDefaults> entry : entries) {
+            companies.putIfAbsent(entry.getKey(), entry.getValue());
+        }
+        return Map.copyOf(companies);
+    }
+
     private static String normalizeCompanyName(String companyName) {
         return String.valueOf(companyName)
             .trim()
+            .replace("㈜", "")
+            .replace("(주)", "")
+            .replace("주)", "")
+            .replace("주식회사", "")
             .replaceAll("\\s+", "")
             .toLowerCase(Locale.ROOT);
     }

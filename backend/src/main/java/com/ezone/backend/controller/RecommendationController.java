@@ -35,12 +35,13 @@ public class RecommendationController {
 
     @GetMapping
     public ApiResponse<List<DashboardJobResponse>> listRecommendations(
-        @RequestParam(defaultValue = "recommendation") String source
+        @RequestParam(name = "source", defaultValue = "recommendation") String source,
+        @RequestParam(name = "deadlineMode", defaultValue = "open") String deadlineMode
     ) {
         Long userId = CurrentUserSupport.currentUserId();
         requireSsafyForMattermost(userId, source);
         if (isMattermostSource(source)) {
-            return ApiResponse.success(mattermostRecommendationService.listOpenRecommendations(userId));
+            return ApiResponse.success(mattermostRecommendationService.listRecommendations(userId, deadlineMode));
         }
         return ApiResponse.success(workspaceService.listRecommendationJobs(userId, source));
     }
@@ -48,7 +49,7 @@ public class RecommendationController {
     @PostMapping("/{recommendationId}/save")
     public ApiResponse<BasketJobResponse> saveRecommendation(
         @PathVariable Long recommendationId,
-        @RequestParam(defaultValue = "recommendation") String source
+        @RequestParam(name = "source", defaultValue = "recommendation") String source
     ) {
         Long userId = CurrentUserSupport.currentUserId();
         requireSsafyForMattermost(userId, source);

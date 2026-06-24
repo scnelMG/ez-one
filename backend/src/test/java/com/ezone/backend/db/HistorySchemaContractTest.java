@@ -20,6 +20,9 @@ class HistorySchemaContractTest {
         String workspaceMapper = Files.readString(Path.of(
             "src/main/resources/mapper/P1WorkspaceMapper.xml"
         ));
+        String historyMapper = Files.readString(Path.of(
+            "src/main/resources/mapper/HistoryMapper.xml"
+        ));
 
         assertThat(baseMigration).contains("CREATE TABLE IF NOT EXISTS application_history");
         assertThat(baseMigration).contains("result_stage");
@@ -30,6 +33,8 @@ class HistorySchemaContractTest {
         assertThat(workspaceMapper).contains("ON DUPLICATE KEY UPDATE");
         assertThat(workspaceMapper).contains("bj.deleted_at IS NULL");
         assertThat(workspaceMapper).contains("application_history ah");
+        assertThat(historyMapper).contains("bj.application_status IN ('COMPLETED', 'IN_PROGRESS', 'NOT_APPLIED', 'READY')");
+        assertThat(historyMapper).doesNotContain("bj.application_status IN ('COMPLETED', 'IN_PROGRESS', 'NOT_APPLIED')\n          OR (");
         assertThat(relaxMigration).contains("period_year INT NULL");
         assertThat(baseMigration + relaxMigration).doesNotContain("@gmail.com");
     }

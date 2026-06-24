@@ -18,6 +18,7 @@ public class MattermostParsedJobPostRow {
     private Integer recommendationScore;
     private String recommendationReason;
     private String recommendationStatus;
+    private String recommendationModelVersion;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -53,4 +54,6 @@ public class MattermostParsedJobPostRow {
     public void setRecommendationReason(String recommendationReason) { this.recommendationReason = recommendationReason; }
     public String getRecommendationStatus() { return recommendationStatus; }
     public void setRecommendationStatus(String recommendationStatus) { this.recommendationStatus = recommendationStatus; }
+    public String getRecommendationModelVersion() { return recommendationModelVersion; }
+    public void setRecommendationModelVersion(String recommendationModelVersion) { this.recommendationModelVersion = recommendationModelVersion; }
 }

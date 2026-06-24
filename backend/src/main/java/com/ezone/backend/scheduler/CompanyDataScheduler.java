@@ -4,12 +4,14 @@ import com.ezone.backend.mapper.CompanySyncMapper;
 import com.ezone.backend.service.CompanyDataSyncService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 
 @Component
+@ConditionalOnProperty(prefix = "company-data.batch-sync", name = "enabled", havingValue = "true")
 public class CompanyDataScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(CompanyDataScheduler.class);
@@ -22,7 +24,7 @@ public class CompanyDataScheduler {
         this.syncMapper = syncMapper;
     }
 
-    @Scheduled(cron = "0 0 2 * * ?") // 매일 새벽 2시
+    @Scheduled(cron = "0 0 2 * * ?")
     public void syncCompanyDataBatch() {
         log.info("Starting nightly company data sync from National Pension API.");
         
@@ -33,7 +35,7 @@ public class CompanyDataScheduler {
         for (String companyName : companiesToUpdate) {
             try {
                 syncService.syncCompanyByName(companyName);
-                Thread.sleep(500); // 0.5초 대기
+                Thread.sleep(500);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 log.error("Sync interrupted.", e);
