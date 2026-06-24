@@ -51,11 +51,9 @@
 import PreferenceForm from '@/features/profile/components/PreferenceForm.vue';
 import { onMounted, reactive, ref } from 'vue';
 import { useProfileStore } from '@/stores/profileStore';
-import { useBasketStore } from '@/stores/basketStore';
 
 const emit = defineEmits(['completed']);
 const profileStore = useProfileStore();
-const basketStore = useBasketStore();
 const profileLoadNotice = ref('');
 const form = reactive({
     desiredRoles: [],
@@ -83,38 +81,6 @@ onMounted(async () => {
     }
 });
 
-function copyList(values) {
-    return Array.isArray(values) ? [...values] : [];
-}
-
-async function seedDummyJobs() {
-    try {
-        await basketStore.createJob({
-            companyName: '네이버',
-            positionTitle: 'Backend Engineer',
-            deadlineLabel: '2026.06.30',
-            sourceUrl: 'https://recruit.navercorp.com/',
-            savedSource: 'MANUAL'
-        });
-        await basketStore.createJob({
-            companyName: '카카오페이',
-            positionTitle: 'Server Developer',
-            deadlineLabel: 'D-5',
-            sourceUrl: 'https://careers.kakao.com/jobs/S-4714',
-            savedSource: 'MANUAL'
-        });
-        await basketStore.createJob({
-            companyName: '당근',
-            positionTitle: 'Product Engineer',
-            deadlineLabel: 'D-9',
-            sourceUrl: 'https://about.daangn.com/jobs/software-engineer-backend/',
-            savedSource: 'MANUAL'
-        });
-    } catch (e) {
-        console.error('Failed to seed dummy jobs', e);
-    }
-}
-
 async function saveOnboarding() {
     await profileStore.saveProfile({
         desiredRoles: form.desiredRoles,
@@ -125,7 +91,6 @@ async function saveOnboarding() {
         ssafy: form.ssafy
     });
     if (profileStore.status === 'ready') {
-        await seedDummyJobs();
         emit('completed');
     }
 }
@@ -140,8 +105,11 @@ async function skipOnboarding() {
         ssafy: false
     });
     if (profileStore.status === 'ready') {
-        await seedDummyJobs();
         emit('completed');
     }
+}
+
+function copyList(values) {
+    return Array.isArray(values) ? [...values] : [];
 }
 </script>

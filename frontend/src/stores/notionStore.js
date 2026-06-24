@@ -17,6 +17,10 @@ export const useNotionStore = defineStore('notion', () => {
             ]);
             connection.value = loadedConnection;
             syncLogs.value = loadedLogs;
+            if (loadedConnection.connected && loadedConnection.syncEnabled) {
+                connection.value = await notionApi.syncNow();
+                syncLogs.value = await notionApi.listSyncLogs();
+            }
             status.value = 'ready';
         }
         catch (error) {
@@ -31,6 +35,10 @@ export const useNotionStore = defineStore('notion', () => {
         errorMessage.value = '';
         try {
             connection.value = await notionApi.updateSyncSettings(syncEnabled);
+            if (connection.value.connected && connection.value.syncEnabled) {
+                connection.value = await notionApi.syncNow();
+                syncLogs.value = await notionApi.listSyncLogs();
+            }
             status.value = 'ready';
         }
         catch (error) {
@@ -38,11 +46,11 @@ export const useNotionStore = defineStore('notion', () => {
             errorMessage.value = messageFromError(error, 'Notion 동기화 설정을 저장하지 못했습니다.');
         }
     }
-    async function connectNotion() {
+    async function connectNotion(oauthResult) {
         status.value = 'saving';
         errorMessage.value = '';
         try {
-            connection.value = await notionApi.connect();
+            connection.value = await notionApi.connect(oauthResult);
             syncLogs.value = await notionApi.listSyncLogs();
             status.value = 'ready';
         }
@@ -50,6 +58,9 @@ export const useNotionStore = defineStore('notion', () => {
             status.value = 'error';
             errorMessage.value = messageFromError(error, 'Notion 계정을 연결하지 못했습니다.');
         }
+    }
+    async function getNotionOAuthUrl(oauthRequest) {
+        return notionApi.getOAuthUrl(oauthRequest);
     }
     async function disconnectNotion() {
         status.value = 'saving';
@@ -64,5 +75,5 @@ export const useNotionStore = defineStore('notion', () => {
             errorMessage.value = messageFromError(error, 'Notion 연결을 해제하지 못했습니다.');
         }
     }
-    return { status, connection, syncLogs, errorMessage, loadNotionSettings, connectNotion, disconnectNotion, updateJobOnlySync };
+    return { status, connection, syncLogs, errorMessage, loadNotionSettings, connectNotion, disconnectNotion, updateJobOnlySync, getNotionOAuthUrl };
 });

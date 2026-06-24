@@ -25,17 +25,17 @@
           <span>전체 공고</span>
           <strong>{{ summary.total }}</strong>
         </div>
-        <div class="history-metric" data-testid="metric-ready">
-          <span>지원전</span>
-          <strong>{{ summary.ready }}</strong>
+        <div class="history-metric" data-testid="metric-document-failed">
+          <span>서류 탈락</span>
+          <strong>{{ summary.documentFailed }}</strong>
         </div>
-        <div class="history-metric" data-testid="metric-in-progress">
-          <span>진행 중</span>
-          <strong>{{ summary.inProgress }}</strong>
+        <div class="history-metric" data-testid="metric-test-failed">
+          <span>필기 탈락</span>
+          <strong>{{ summary.testFailed }}</strong>
         </div>
-        <div class="history-metric" data-testid="metric-completed">
-          <span>지원완료</span>
-          <strong>{{ summary.completed }}</strong>
+        <div class="history-metric" data-testid="metric-interview-failed">
+          <span>면접 탈락</span>
+          <strong>{{ summary.interviewFailed }}</strong>
         </div>
         <div class="history-metric" data-testid="metric-not-applied">
           <span>미지원</span>
@@ -265,7 +265,8 @@ import { companyInitial, normalizedSourceUrl, statusClass, statusLabel } from '@
 
 const selectedPeriod = ref('ALL');
 const selectedApplicationStatus = ref('');
-const selectedSort = ref('DEFAULT');
+const defaultHistorySort = 'DEADLINE_DESC';
+const selectedSort = ref(defaultHistorySort);
 const searchQuery = ref('');
 const status = ref('idle');
 const errorMessage = ref('');
@@ -344,7 +345,7 @@ const resultStageOptions = [
 ];
 const hasClientFilters = computed(() => Boolean(
     selectedApplicationStatus.value ||
-    selectedSort.value !== 'DEFAULT' ||
+    selectedSort.value !== defaultHistorySort ||
     searchQuery.value.trim()
 ));
 const visibleRows = computed(() => {
@@ -412,7 +413,7 @@ async function saveHistoryLabels(row) {
 
 function resetClientFilters() {
     selectedApplicationStatus.value = '';
-    selectedSort.value = 'DEFAULT';
+    selectedSort.value = defaultHistorySort;
     searchQuery.value = '';
 }
 

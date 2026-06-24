@@ -44,8 +44,7 @@ describe('recommendationApi', () => {
         const jobs = await api.listMattermostJobs();
 
         expect(get).toHaveBeenCalledWith('/api/recommendations/jobs', {
-            params: { source: 'mattermost' },
-            skipAuthRefresh: true
+            params: { source: 'mattermost', deadlineMode: 'exact' }
         });
         expect(jobs[0]).toMatchObject({
             id: '9101',

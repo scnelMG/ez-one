@@ -55,7 +55,8 @@
             </div>
           </div>
           </div>
-          <aside class="honey-log-side-panel" data-testid="honey-log-side-panel" aria-label="선택 날짜 점수 로그">
+          <div v-if="!selectedDate" class="honey-log-placeholder" data-testid="honey-log-placeholder" aria-hidden="true"></div>
+          <aside v-else class="honey-log-side-panel" data-testid="honey-log-side-panel" aria-label="선택 날짜 점수 로그">
             <div v-if="!selectedDate" class="log-panel-empty">
               <strong>점수 로그</strong>
               <p>날짜 칸을 누르면 왜 방울을 받았는지 여기에 표시돼요.</p>
@@ -423,17 +424,16 @@ function getMonthName(m) {
 .honey-log-body {
   display: grid;
   grid-template-columns: minmax(0, max-content) minmax(160px, 1fr);
-  align-items: center;
+  align-items: start;
   gap: 18px;
-  min-height: 126px;
+  min-height: 190px;
 }
 
 .honey-log-side-panel {
   display: flex;
   min-width: 240px;
   max-width: 360px;
-  min-height: 142px;
-  max-height: 190px;
+  height: 190px;
   flex-direction: column;
   overflow: hidden;
   border: 1px solid #eef2f7;
@@ -442,10 +442,16 @@ function getMonthName(m) {
   padding: 12px;
 }
 
+.honey-log-placeholder {
+  min-width: 240px;
+  max-width: 360px;
+  height: 190px;
+}
+
 .log-panel-empty {
   display: grid;
   height: 100%;
-  align-content: center;
+  align-content: start;
   gap: 7px;
   color: #64748b;
 }

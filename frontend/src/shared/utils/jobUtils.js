@@ -1,30 +1,18 @@
 export function deadlineRank(job) {
-  if (job.deadlineDate) {
-    const time = Date.parse(job.deadlineDate);
-    if (!Number.isNaN(time)) {
-      return time;
-    }
+  const explicitDate = parseDeadlineDate(job);
+  if (explicitDate) {
+    return explicitDate.getTime();
   }
-  const source = job.deadlineDate ?? job.deadlineLabel ?? '';
-  const explicit = source.match(/(20\d{2})[-.](\d{1,2})[-.](\d{1,2})/);
-  if (explicit) {
-    return new Date(Number(explicit[1]), Number(explicit[2]) - 1, Number(explicit[3])).getTime();
-  }
-  const dDay = source.match(/D-(\d+)/i);
-  return dDay ? Number(dDay[1]) : Number.MAX_SAFE_INTEGER;
+
+  const relativeDate = parseRelativeDeadlineDate(job);
+  return relativeDate ? relativeDate.getTime() : Number.MAX_SAFE_INTEGER;
 }
 
 export function isDeadlineWithinDays(job, days) {
   const rank = deadlineRank(job);
-  // D-day format returns small numbers (e.g. 3 for D-3)
-  if (rank <= days) return true;
-  // If it's max value, there's no deadline
   if (rank === Number.MAX_SAFE_INTEGER) return false;
-  
-  // For absolute timestamps
+
   const now = Date.now();
-  // Filter for jobs that are in the future but within the given days
-  // Also include jobs that just passed today (within 24h) just in case
   return rank >= now - 86400000 && rank <= now + (days * 24 * 60 * 60 * 1000);
 }
 
@@ -70,27 +58,26 @@ export function formatParticipantCount(value) {
 export function formatDDay(job) {
   const label = String(job.deadlineLabel ?? '').trim();
   if (/^D[-+]\d+/i.test(label) || label === 'D-Day') {
-      return label;
+    return label;
   }
   if (label.startsWith('오늘')) {
-      return '오늘';
+    return '오늘';
   }
 
-  const d = parseDeadlineDate(job);
-  if (d) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      d.setHours(0, 0, 0, 0);
-      const diffTime = d - today;
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      if (diffDays === 0) return '오늘';
-      if (diffDays > 0) return `D-${diffDays}`;
-      return `D+${-diffDays}`;
+  const deadline = parseDeadlineDate(job);
+  if (deadline) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    deadline.setHours(0, 0, 0, 0);
+    const diffDays = Math.ceil((deadline.getTime() - today.getTime()) / 86400000);
+    if (diffDays === 0) return '오늘';
+    if (diffDays > 0) return `D-${diffDays}`;
+    return `D+${-diffDays}`;
   }
   return null;
 }
 
-function parseDeadlineDate(job) {
+export function parseDeadlineDate(job) {
   if (job.deadlineDate) {
     const deadlineDate = new Date(job.deadlineDate);
     if (!Number.isNaN(deadlineDate.getTime())) {
@@ -99,9 +86,35 @@ function parseDeadlineDate(job) {
   }
 
   const label = String(job.deadlineLabel ?? '').trim();
-  const dateMatch = label.match(/(20\d{2})\s*(?:[-.]|년\s*)(\d{1,2})\s*(?:[-.]|월\s*)(\d{1,2})/);
+  const dateMatch = label.match(/(20\d{2})\s*(?:[-.]|년)\s*(\d{1,2})\s*(?:[-.]|월)\s*(\d{1,2})/);
   if (dateMatch) {
     return new Date(Number(dateMatch[1]), Number(dateMatch[2]) - 1, Number(dateMatch[3]));
+  }
+
+  return null;
+}
+
+function parseRelativeDeadlineDate(job) {
+  const label = String(job.deadlineLabel ?? '').trim();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (label === '오늘' || label === '?ㅻ뒛' || label === 'D-Day') {
+    return today;
+  }
+
+  const dMinus = label.match(/^D-(\d+)$/i);
+  if (dMinus) {
+    const date = new Date(today);
+    date.setDate(today.getDate() + Number(dMinus[1]));
+    return date;
+  }
+
+  const dPlus = label.match(/^D\+(\d+)$/i);
+  if (dPlus) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - Number(dPlus[1]));
+    return date;
   }
 
   return null;
@@ -123,14 +136,14 @@ export function formatAbsoluteDeadline(job) {
   if (!job.deadlineLabel || job.deadlineLabel === '기한없음' || job.deadlineLabel === '상시채용') {
     return job.deadlineLabel || '-';
   }
-  
+
   const today = new Date();
-  today.setHours(23, 59, 0, 0); // Assuming deadlines are usually 23:59
-  
+  today.setHours(23, 59, 0, 0);
+
   if (job.deadlineLabel === '오늘') {
     return `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')} 23:59`;
   }
-  
+
   const dDayMatch = job.deadlineLabel.match(/D-(\d+)/i);
   if (dDayMatch) {
     const diffDays = parseInt(dDayMatch[1], 10);
@@ -138,11 +151,11 @@ export function formatAbsoluteDeadline(job) {
     targetDate.setDate(today.getDate() + diffDays);
     return `${targetDate.getFullYear()}.${String(targetDate.getMonth() + 1).padStart(2, '0')}.${String(targetDate.getDate()).padStart(2, '0')} 23:59`;
   }
-  
-  const dateMatch = job.deadlineLabel.match(/(20\d{2})[-.](\d{1,2})[-.](\d{1,2})/);
-  if (dateMatch) {
-    return `${dateMatch[1]}.${dateMatch[2].padStart(2, '0')}.${dateMatch[3].padStart(2, '0')} 23:59`;
+
+  const parsedDate = parseDeadlineDate(job);
+  if (parsedDate) {
+    return `${parsedDate.getFullYear()}.${String(parsedDate.getMonth() + 1).padStart(2, '0')}.${String(parsedDate.getDate()).padStart(2, '0')} 23:59`;
   }
-  
+
   return job.deadlineLabel;
 }

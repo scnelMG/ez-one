@@ -90,7 +90,7 @@
             <span class="deadline-align-cell">마감일</span>
             <span class="center-cell">바로가기</span>
             <span class="center-cell">최근 작업</span>
-            <span aria-label="삭제"></span>
+            <span aria-label="관리"></span>
           </div>
 
           <article
@@ -184,18 +184,29 @@
                 이어가기
               </RouterLink>
             </span>
-            <button
-              class="delete-job-button"
-              type="button"
-              :data-testid="`archive-${job.id}`"
-              aria-label="공고 삭제"
-              @click="archiveJob(job.id)"
-            >
-              <svg class="icon-close" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </button>
+            <div class="basket-row-actions">
+              <button
+                class="edit-job-button"
+                type="button"
+                :data-testid="`edit-${job.id}`"
+                aria-label="공고 수정"
+                @click="openEditJob(job)"
+              >
+                수정
+              </button>
+              <button
+                class="delete-job-button"
+                type="button"
+                :data-testid="`archive-${job.id}`"
+                aria-label="공고 삭제"
+                @click="archiveJob(job.id)"
+              >
+                <svg class="icon-close" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
           </article>
 
           <div v-if="totalPages > 1" class="pagination-row" aria-label="장바구니 페이지 이동">
@@ -262,6 +273,11 @@
         </div>
       </section>
       <ManualJobAddModal :is-open="isManualAddModalOpen" @close="isManualAddModalOpen = false" />
+      <EditBasketJobModal
+        :is-open="Boolean(editingJob)"
+        :job="editingJob"
+        @close="editingJob = null"
+      />
     </section>
   </AppLayout>
 </template>
@@ -277,7 +293,8 @@ import {
   companyInitial,
   formatDDay,
   formatDateTime,
-  formatAbsoluteDeadline
+  formatAbsoluteDeadline,
+  parseDeadlineDate
 } from '@/shared/utils/jobUtils';
 import AppLayout from '@/shared/AppLayout.vue';
 import StatePanel from '@/shared/StatePanel.vue';
@@ -285,6 +302,7 @@ import SkeletonLoader from '@/shared/SkeletonLoader.vue';
 import { isRecentWorkspace } from '@/features/basket/recentWorkspaces';
 import { useBasketStore } from '@/stores/basketStore';
 import ManualJobAddModal from '@/features/basket/components/ManualJobAddModal.vue';
+import EditBasketJobModal from '@/features/basket/components/EditBasketJobModal.vue';
 
 const route = useRoute();
 const basketStore = useBasketStore();
@@ -340,6 +358,7 @@ const calendarMonthLabel = computed(() => new Intl.DateTimeFormat('ko-KR', {
     month: 'long'
 }).format(currentMonthDate.value));
 const isManualAddModalOpen = ref(false);
+const editingJob = ref(null);
 const statusFilters = [
     { label: '전체', value: undefined },
     { label: '지원 전', value: 'READY' },
@@ -418,14 +437,6 @@ function savedRank(job) {
     const rank = Number(job.id);
     return Number.isFinite(rank) ? rank : Number.MAX_SAFE_INTEGER;
 }
-function parseDeadlineDate(job) {
-    const source = job.deadlineDate ?? job.deadlineLabel ?? '';
-    const match = source.match(/(20\d{2})[-.](\d{1,2})[-.](\d{1,2})/);
-    if (!match) {
-        return null;
-    }
-    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
-}
 function startOfToday() {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -467,6 +478,11 @@ function changeStatus(jobId, nextStatus) {
     openStatusJobId.value = null;
     void basketStore.updateStatus(jobId, nextStatus);
 }
+
+function openEditJob(job) {
+    editingJob.value = { ...job };
+}
+
 async function archiveJob(id) {
   const job = basketStore.jobs.find((item) => item.id === id);
   const label = job ? `${job.companyName} ${job.positionTitle}` : '해당';
@@ -515,5 +531,25 @@ watch(totalPages, (nextTotalPages) => {
 }
 .add-manual-btn:hover {
   background: #7c3aed;
+}
+.basket-row-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.edit-job-button {
+  border: 1px solid #c7d2fe;
+  background: #eef2ff;
+  color: #4338ca;
+  border-radius: 5px;
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.edit-job-button:hover {
+  background: #e0e7ff;
 }
 </style>

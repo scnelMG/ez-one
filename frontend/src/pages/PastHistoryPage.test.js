@@ -127,21 +127,39 @@ describe('PastHistoryPage', () => {
         }));
     });
 
+    it('HISTORY-012: defaults to deadline latest order for Korean deadline labels', async () => {
+        const fixture = cloneHistoryFixture();
+        fixture.rows = [
+            historyRow('1', 'Kodata', '2026년 2월 1일'),
+            historyRow('2', 'KODIT', '2026년 2월 3일'),
+            historyRow('3', 'Savings Bank Federation', '2026년 2월 20일')
+        ];
+        mocks.listApplications.mockResolvedValue(fixture);
+
+        const wrapper = await mountHistory('/history');
+
+        expect(wrapper.get('[data-testid="history-sort-select"]').element.value).toBe('DEADLINE_DESC');
+        expect(rowCompanies(wrapper)).toEqual(['Savings Bank Federation', 'KODIT', 'Kodata']);
+
+        await wrapper.get('[data-testid="history-sort-select"]').setValue('DEADLINE_ASC');
+        expect(rowCompanies(wrapper)).toEqual(['Kodata', 'KODIT', 'Savings Bank Federation']);
+    });
+
     it('HISTORY-003/HISTORY-006: renders past history as a basket-connected job list', async () => {
         const wrapper = await mountHistory('/history');
 
         expect(mocks.listApplications).toHaveBeenCalledWith({ period: 'ALL' });
         expect(wrapper.get('[data-testid="history-period-select"]').text()).toContain('2026 상반기');
         expect(wrapper.get('[data-testid="metric-total"]').text()).toContain('194');
-        expect(wrapper.get('[data-testid="metric-ready"]').text()).toContain('0');
+        expect(wrapper.get('[data-testid="metric-document-failed"]').text()).toContain('68');
+        expect(wrapper.get('[data-testid="metric-test-failed"]').text()).toContain('9');
+        expect(wrapper.get('[data-testid="metric-interview-failed"]').text()).toContain('2');
         expect(wrapper.get('[data-testid="metric-not-applied"]').text()).toContain('109');
-        expect(wrapper.get('[data-testid="metric-in-progress"]').text()).toContain('6');
-        expect(wrapper.get('[data-testid="metric-completed"]').text()).toContain('79');
         expect(wrapper.findAll('.history-summary .history-metric span').map((metric) => metric.text())).toEqual([
             '전체 공고',
-            '지원전',
-            '진행 중',
-            '지원완료',
+            '서류 탈락',
+            '필기 탈락',
+            '면접 탈락',
             '미지원'
         ]);
         expect(wrapper.findAll('.filter-bar .filter-chip').map((chip) => chip.text())).toEqual([
@@ -152,7 +170,7 @@ describe('PastHistoryPage', () => {
             '미지원'
         ]);
         expect(wrapper.find('[data-testid="history-result-label-filter"]').exists()).toBe(false);
-        expect(rowCompanies(wrapper)).toEqual(['달파', '넥슨코리아', '한국전력공사']);
+        expect(rowCompanies(wrapper)).toEqual(['한국전력공사', '달파', '넥슨코리아']);
     });
 
     it('HISTORY-006/HISTORY-008: shows readable charts without mixing raw CSV labels into row status', async () => {
@@ -198,15 +216,16 @@ describe('PastHistoryPage', () => {
             '마감일',
             '채용 사이트 링크'
         ]);
-        const firstRow = wrapper.get('[data-testid="history-row"]');
-        expect(firstRow.text()).toContain('달파');
-        expect(firstRow.text()).toContain(statusLabel('COMPLETED'));
-        expect(firstRow.text()).toContain('서류 탈락');
-        expect(firstRow.text()).not.toContain('서류 단계 종료');
-        expect(firstRow.text()).not.toContain('서류탈락');
-        expect(firstRow.element.children.length).toBe(wrapper.get('.history-table-head').element.children.length);
-        expect(firstRow.get('.company-cell').attributes('href')).toBe('/workspaces/102');
-        expect(firstRow.get('.company-logo-badge img').attributes('src')).toBe('https://logo.example.com/dalpha.png');
+        const dalphaRow = wrapper.findAll('[data-testid="history-row"]')
+            .find((row) => row.text().includes('달파')) ?? wrapper.find('[data-testid="missing-dalpha-row"]');
+        expect(dalphaRow.exists()).toBe(true);
+        expect(dalphaRow.text()).toContain(statusLabel('COMPLETED'));
+        expect(dalphaRow.text()).toContain('서류 탈락');
+        expect(dalphaRow.text()).not.toContain('서류 단계 종료');
+        expect(dalphaRow.text()).not.toContain('서류탈락');
+        expect(dalphaRow.element.children.length).toBe(wrapper.get('.history-table-head').element.children.length);
+        expect(dalphaRow.get('.company-cell').attributes('href')).toBe('/workspaces/102');
+        expect(dalphaRow.get('.company-logo-badge img').attributes('src')).toBe('https://logo.example.com/dalpha.png');
         expect(wrapper.get('[data-testid="history-source-1"]').attributes('href')).toBe('https://example.com/dalpha');
         expect(wrapper.get('[data-testid="history-source-1"]').text()).toBe('바로가기');
         expect(wrapper.find('[data-testid="history-workspace-1"]').exists()).toBe(false);
@@ -257,7 +276,7 @@ describe('PastHistoryPage', () => {
         expect(rowCompanies(wrapper)).toEqual([]);
 
         await wrapper.get('[data-testid="history-reset-filters"]').trigger('click');
-        expect(rowCompanies(wrapper)).toEqual(['달파', '넥슨코리아', '한국전력공사']);
+        expect(rowCompanies(wrapper)).toEqual(['한국전력공사', '달파', '넥슨코리아']);
     });
 
     it('filters by standard application status and sorts rows independently from search', async () => {
@@ -293,6 +312,22 @@ async function mountHistory(path) {
 
 function rowCompanies(wrapper) {
     return wrapper.findAll('[data-testid="history-row-company"]').map((company) => company.text());
+}
+
+function historyRow(id, companyName, deadlineLabel) {
+    return {
+        id,
+        workspaceId: String(Number(id) + 200),
+        companyName,
+        positionTitle: 'Data Analyst',
+        applicationStatus: 'READY',
+        resultStage: 'IN_PROGRESS',
+        resultLabel: '지원 전',
+        rawResult: '지원 전',
+        deadlineLabel,
+        sourceUrl: `https://example.com/history-sort-${id}`,
+        companyType: 'Finance'
+    };
 }
 
 function flushPromises() {

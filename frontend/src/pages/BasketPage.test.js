@@ -7,6 +7,7 @@ import BasketPage from './BasketPage.vue';
 const mocks = vi.hoisted(() => ({
     listJobs: vi.fn(),
     createJob: vi.fn(),
+    updateJob: vi.fn(),
     updateStatus: vi.fn(),
     archiveJob: vi.fn()
 }));
@@ -15,6 +16,7 @@ vi.mock('@/features/basket/api/basketApi', () => ({
     basketApi: {
         listJobs: mocks.listJobs,
         createJob: mocks.createJob,
+        updateJob: mocks.updateJob,
         updateStatus: mocks.updateStatus,
         archiveJob: mocks.archiveJob
     }
@@ -97,6 +99,7 @@ describe('BasketPage', () => {
         localStorage.clear();
         mocks.listJobs.mockReset();
         mocks.createJob.mockReset();
+        mocks.updateJob.mockReset();
         mocks.updateStatus.mockReset();
         mocks.archiveJob.mockReset();
         vi.stubGlobal('confirm', vi.fn(() => true));
@@ -112,6 +115,15 @@ describe('BasketPage', () => {
             deadlineSoon: false,
             workspaceId: '202',
             sourceUrl: 'https://www.jasoseol.com/'
+        });
+        mocks.updateJob.mockResolvedValue({
+            ...defaultJobs[0],
+            companyName: 'Naver Cloud',
+            positionTitle: 'Platform Engineer',
+            deadlineLabel: '2026.06.30',
+            deadlineDate: '2026-06-30',
+            sourceUrl: 'https://careers.navercloud.com/job/101',
+            applicationMemo: '서류 우선 제출'
         });
         mocks.updateStatus.mockResolvedValue({
             ...defaultJobs[0],
@@ -153,14 +165,32 @@ describe('BasketPage', () => {
     });
 
     it('JOB-014: renders only saved job deadlines on the calendar with company, position, status, and workspace links', async () => {
+        mocks.listJobs.mockResolvedValueOnce([
+            ...defaultJobs,
+            {
+                id: '120',
+                companyName: '한국리서치',
+                positionTitle: '신입 · 개발직',
+                status: 'IN_PROGRESS',
+                statusLabel: '진행 중',
+                deadlineLabel: '2026년 6월 30일 23:59',
+                deadlineDate: null,
+                deadlineSoon: false,
+                workspaceId: '1202',
+                sourceUrl: 'https://www.jasoseol.com/'
+            }
+        ]);
         const wrapper = await mountBasket('/basket?sort=deadline');
 
         const calendarJobs = wrapper.findAll('[data-testid="calendar-job"]');
-        expect(calendarJobs).toHaveLength(4);
+        expect(calendarJobs).toHaveLength(5);
         const naverCalendarJob = calendarJobs.find((job) => job.text().includes('Naver'));
         expect(naverCalendarJob?.text()).toContain('Backend Engineer');
         expect(naverCalendarJob?.text()).toContain('진행중');
+        const koreanDateCalendarJob = calendarJobs.find((job) => job.text().includes('한국리서치'));
+        expect(koreanDateCalendarJob?.text()).toContain('신입 · 개발직');
         expect(calendarJobs.map((job) => job.attributes('href'))).toContain('/workspaces/102');
+        expect(calendarJobs.map((job) => job.attributes('href'))).toContain('/workspaces/1202');
         expect(wrapper.find('[data-testid="calendar-today"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="calendar-month-picker"]').exists()).toBe(true);
         expect(wrapper.find('[data-testid="calendar-weekend"]').exists()).toBe(true);
@@ -291,6 +321,33 @@ describe('BasketPage', () => {
         });
         await flushPromises();
         expect(wrapper.text()).toContain('지원완료');
+    });
+
+    it('JOB-007: edits a saved basket job from the basket list', async () => {
+        const wrapper = await mountBasket('/basket');
+
+        await wrapper.get('[data-testid="edit-101"]').trigger('click');
+        expect(wrapper.get('[data-testid="edit-job-company"]').element.value).toBe('Naver');
+        expect(wrapper.get('[data-testid="edit-job-position"]').element.value).toBe('Backend Engineer');
+
+        await wrapper.get('[data-testid="edit-job-company"]').setValue('Naver Cloud');
+        await wrapper.get('[data-testid="edit-job-position"]').setValue('Platform Engineer');
+        await wrapper.get('[data-testid="edit-job-deadline"]').setValue('2026.06.30');
+        await wrapper.get('[data-testid="edit-job-source"]').setValue('https://careers.navercloud.com/job/101');
+        await wrapper.get('[data-testid="edit-job-memo"]').setValue('서류 우선 제출');
+        await wrapper.get('[data-testid="edit-job-form"]').trigger('submit');
+        await flushPromises();
+
+        expect(mocks.updateJob).toHaveBeenCalledWith('101', {
+            companyName: 'Naver Cloud',
+            positionTitle: 'Platform Engineer',
+            deadlineLabel: '2026.06.30',
+            sourceUrl: 'https://careers.navercloud.com/job/101',
+            applicationMemo: '서류 우선 제출'
+        });
+        expect(wrapper.text()).toContain('Naver Cloud');
+        expect(wrapper.text()).toContain('Platform Engineer');
+        expect(wrapper.find('[data-testid="edit-job-form"]').exists()).toBe(false);
     });
 
     it('JOB-014: filters priority basket jobs', async () => {

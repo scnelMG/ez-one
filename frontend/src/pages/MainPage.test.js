@@ -60,6 +60,7 @@ const makeRouter = () => createRouter({
     { path: '/basket', component: { template: '<div>basket</div>' } },
     { path: '/mypage', component: { template: '<div>mypage</div>' } },
     { path: '/study', component: { template: '<div>study</div>' } },
+    { path: '/study/:studyId', component: { template: '<div>study detail</div>' } },
     { path: '/workspaces/:workspaceId', component: { template: '<div>workspace</div>' } },
     { path: '/history', component: { template: '<div>history</div>' } },
     { path: '/document-profile', component: { template: '<div>document profile</div>' } },
@@ -181,7 +182,38 @@ describe('MainPage', () => {
     expect(draftCard.text()).toContain('Naver');
     expect(draftCard.text()).toContain('Backend Engineer');
     expect(draftCard.text()).toContain('33%');
+    expect(draftCard.text().match(/33%/g)).toHaveLength(1);
     expect(wrapper.get('[data-testid="active-application-link"]').attributes('href')).toBe('/workspaces/102');
+  });
+
+  it('sorts the main basket preview by the nearest deadline even when D-day labels are mixed with dates', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date('2026-06-24T09:00:00+09:00'));
+    vi.mocked(basketApi.listJobs).mockResolvedValueOnce([
+      job('201', 'D Six', 'Backend Engineer', 'READY', '지원 전', '2026-06-30', '201', {
+        deadlineDate: null,
+        deadlineLabel: 'D-6'
+      }),
+      job('202', 'Tomorrow', 'Frontend Engineer', 'READY', '지원 전', '2026-06-25', '202'),
+      job('203', 'Today', 'Data Engineer', 'READY', '지원 전', '2026-06-24', '203', {
+        deadlineDate: null,
+        deadlineLabel: '오늘'
+      }),
+      job('204', 'Korean Date', 'Planner', 'READY', '지원 전', '2026-06-30', '204', {
+        deadlineDate: null,
+        deadlineLabel: '2026년 6월 30일 23:59'
+      })
+    ]);
+
+    const wrapper = await mountMain();
+
+    expect(wrapper.findAll('[data-testid="main-basket-company"] strong').map((item) => item.text())).toEqual([
+      'Today',
+      'Tomorrow',
+      'D Six',
+      'Korean Date'
+    ]);
+    vi.useRealTimers();
   });
 
   it('renders the study panel and the responsive application list', async () => {
@@ -204,7 +236,8 @@ describe('MainPage', () => {
       '진행중 공고 7개',
       '새 피드백 1개'
     ]);
-    expect(studyLinks.map((link) => link.attributes('href'))).toEqual(['/study', '/study']);
+    expect(studyLinks.map((link) => link.attributes('href'))).toEqual(['/study/data-job-prep', '/study/service-interview']);
+    expect(wrapper.get('[data-testid="study-more-link"]').attributes('href')).toBe('/study');
     expect(wrapper.get('[data-testid="basket-panel"]').text()).toContain('공고 장바구니');
     expect(wrapper.get('[data-testid="basket-panel"]').text()).not.toContain('지원 공고 리스트');
     expect(wrapper.get('[data-testid="basket-panel"]').classes()).toContain('basket-panel');
@@ -261,7 +294,8 @@ describe('MainPage', () => {
     expect(honeyPanel.text()).not.toContain('점수 기준표 보기');
     expect(wrapper.find('[data-testid="honey-character-strip"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="honey-log-character"]').exists()).toBe(false);
-    expect(wrapper.get('[data-testid="honey-log-side-panel"]').text()).toContain('날짜 칸을 누르면');
+    expect(wrapper.find('[data-testid="honey-log-side-panel"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="honey-log-placeholder"]').exists()).toBe(true);
     const honeyCharacter = wrapper.get('[data-testid="honey-status-character"]');
     expect(honeyCharacter.attributes('src')).toContain('bee-honey-jar-cutout');
     expect(wrapper.findAll('.honey-pot-week').length).toBeLessThanOrEqual(27);

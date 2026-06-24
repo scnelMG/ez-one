@@ -110,6 +110,50 @@ describe('ExtensionConnectPage', () => {
             refreshToken: 'extension-refresh-token'
         }), expect.any(Function));
     });
+    it('EXT-003: falls back to the stable local extension id when configured id cannot receive login', async () => {
+        vi.stubEnv('VITE_EXTENSION_ID', 'stale-extension-id');
+        const runtime = {
+            lastError: null,
+            sendMessage: vi.fn((extensionId, _message, callback) => {
+                if (extensionId === 'stale-extension-id') {
+                    runtime.lastError = {
+                        message: 'Could not establish connection. Receiving end does not exist.'
+                    };
+                    callback(undefined);
+                    runtime.lastError = null;
+                    return;
+                }
+                callback({ accepted: true });
+            })
+        };
+        vi.stubGlobal('chrome', { runtime });
+        localStorage.setItem('ezone.accessToken', 'access-token');
+        localStorage.setItem('ezone.refreshToken', 'refresh-token');
+        localStorage.setItem('ezone.currentUser', JSON.stringify({
+            id: 1,
+            email: 'user@example.com',
+            name: 'Hong Gil Dong',
+            nickname: 'Gil Dong',
+            profileCompleted: true
+        }));
+
+        const wrapper = mount(ExtensionConnectPage, {
+            global: {
+                stubs: ['RouterLink']
+            }
+        });
+        await new Promise((resolve) => setTimeout(resolve));
+
+        expect(runtime.sendMessage).toHaveBeenNthCalledWith(1, 'stale-extension-id', expect.objectContaining({
+            type: 'EZONE_EXTENSION_AUTH_SESSION'
+        }), expect.any(Function));
+        expect(runtime.sendMessage).toHaveBeenNthCalledWith(2, 'ikpeibohnopmikegoogggmdipmhmiadi', expect.objectContaining({
+            type: 'EZONE_EXTENSION_AUTH_SESSION',
+            accessToken: 'extension-access-token',
+            refreshToken: 'extension-refresh-token'
+        }), expect.any(Function));
+        expect(wrapper.text()).toContain('확장프로그램 연결이 완료되었습니다.');
+    });
     it('EXT-003: returns to the original job posting URL after connecting the extension', async () => {
         vi.stubEnv('VITE_EXTENSION_ID', 'extension-id');
         const replace = vi.fn();
