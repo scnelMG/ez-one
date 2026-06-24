@@ -60,7 +60,7 @@
             <template v-else>
               <!-- 팀원 진척도 차트 섹션 -->
               <div v-if="studySettings.showTeamComparison" class="dashboard-section chart-section">
-                <h2>팀원 진척도 비교 <span class="subtitle">(최근 2주 지원완료 기준)</span></h2>
+                <h2>팀원 진척도 비교 <span class="subtitle">최근 2주 지원완료 기준</span></h2>
                 <div class="chart-container">
                   <div class="chart-bar-row" v-for="(member, index) in studyStore.currentStudy?.members || []" :key="'chart-'+member.id">
                     <div class="chart-label">
@@ -614,11 +614,11 @@ const maxRecentCompletedCount = computed(() => {
   return Math.max(...counts, 1);
 });
 const chartColors = [
-  ['#4f46e5', '#22c7d9'],
-  ['#f59e0b', '#f97316'],
-  ['#10b981', '#34d399'],
-  ['#ec4899', '#a855f7'],
-  ['#2563eb', '#60a5fa']
+  ['#6d5dfc', '#8b7cf6'],
+  ['#7c6df4', '#a99cf8'],
+  ['#5d7cf2', '#90a6f8'],
+  ['#8a6cf0', '#b49df8'],
+  ['#6f8df5', '#a6b9fb']
 ];
 
 function memberDisplayName(member) {
@@ -1631,6 +1631,12 @@ const confirmDelete = async () => {
   font-weight: bold;
   margin-bottom: 16px;
   color: var(--text-primary);
+}
+.dashboard-section h2 .subtitle {
+  margin-left: 8px;
+  color: #94a3b8;
+  font-size: 0.9rem;
+  font-weight: 600;
 }
 .chart-section {
   display: flex;

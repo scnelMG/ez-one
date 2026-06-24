@@ -5685,17 +5685,47 @@ li {
   z-index: 2;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  gap: 10px;
-  min-height: 58px;
+  justify-content: center;
+  gap: 0;
+  min-height: 82px;
   border-bottom: 1px solid var(--color-border);
   background: #fff;
-  padding: 0 18px;
+  padding: 12px 24px;
 }
 
 .workspace-bottom-tabs.is-fixed {
   position: sticky;
   top: 0;
+}
+
+.workspace-bottom-tabs .tab-button {
+  min-width: 220px;
+  min-height: 58px;
+  border: 1px solid #e2e8f0;
+  border-radius: 0;
+  background: #fff;
+  color: #334155;
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+}
+
+.workspace-bottom-tabs .tab-button:first-child {
+  border-radius: 8px 0 0 8px;
+}
+
+.workspace-bottom-tabs .tab-button:last-child {
+  border-radius: 0 8px 8px 0;
+}
+
+.workspace-bottom-tabs .tab-button.active {
+  position: relative;
+  z-index: 1;
+  border-color: #c7d2fe;
+  background: #eef2ff;
+  color: #4f46e5;
+  box-shadow: inset 0 4px 0 #5b4ff3, 0 12px 26px rgba(79, 70, 229, 0.08);
 }
 
 .workspace-mode-surface {
