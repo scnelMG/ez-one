@@ -1448,6 +1448,7 @@ function createBoardDraft(type) {
     dartDisclosureStatus: 'idle',
     dartDisclosureMessage: '',
     selectedDartRceptNo: '',
+    dartSectionSources: {},
     dartAnalysisStatus: 'idle',
     dartAnalysis: null,
     dartAnalysisMessage: '',
@@ -1630,6 +1631,7 @@ function addDartEntry(draft) {
     notes: ''
   };
   draft.dartStructuredSections = {};
+  draft.dartSectionSources = {};
   draft.activeDartSectionKey = 'products';
   draft.dartEssayGuide = null;
 }
@@ -1806,7 +1808,7 @@ async function loadDartDisclosures(draft) {
   draft.dartSaveStatus = 'idle';
   try {
     const response = await workspaceApi.listDartDisclosures(workspaceId.value);
-    draft.dartDisclosures = response.disclosures || [];
+    draft.dartDisclosures = sortDartDisclosures(response.disclosures || []);
     draft.dartDisclosureStatus = response.available ? 'ready' : 'error';
     draft.dartDisclosureMessage = response.message || '';
     const recommended = draft.dartDisclosures.find((item) => item.recommended) || draft.dartDisclosures[0];
@@ -1819,9 +1821,22 @@ async function loadDartDisclosures(draft) {
   }
 }
 
+function sortDartDisclosures(disclosures) {
+  return [...disclosures].sort((left, right) => {
+    const leftDate = String(left?.receivedDate || '');
+    const rightDate = String(right?.receivedDate || '');
+    if (leftDate !== rightDate) return rightDate.localeCompare(leftDate);
+    return String(right?.rceptNo || '').localeCompare(String(left?.rceptNo || ''));
+  });
+}
+
 async function createDartAnalysis(draft) {
   const disclosure = selectedDartDisclosure(draft);
   if (!disclosure) return;
+  return createDartAnalysisForDisclosure(draft, disclosure);
+}
+
+async function createDartAnalysisForDisclosure(draft, disclosure) {
   draft.dartAnalysisStatus = 'loading';
   draft.dartAnalysisMessage = '';
   draft.dartSaveStatus = 'idle';
@@ -1837,10 +1852,12 @@ async function createDartAnalysis(draft) {
     draft.dartAnalysis = analysis;
     draft.dartAnalysisStatus = analysis.status === 'COMPLETED' ? 'completed' : 'error';
     draft.dartAnalysisMessage = analysis.errorMessage || '';
+    return analysis;
   } catch (error) {
     draft.dartAnalysis = null;
     draft.dartAnalysisStatus = 'error';
     draft.dartAnalysisMessage = 'AI 분석을 완료하지 못했습니다. DART 수동 메모 작성과 저장은 계속 사용할 수 있어요.';
+    return null;
   }
 }
 
@@ -1858,25 +1875,96 @@ async function fillDartSectionsFromApi(draft) {
       draft.dartAutoFillMessage = 'DART에서 이 기업의 사업/반기/분기보고서를 찾지 못했습니다. 기업명 또는 계열사명을 확인해주세요.';
       return;
     }
-    draft.selectedDartRceptNo = recommended.rceptNo;
-    draft.dartAutoFillMessage = `${recommended.corpName || workspaceStore.workspace?.companyName || '기업'}의 ${recommended.reportName}에서 자소서에 쓸 핵심 근거를 선별하고 있습니다.`;
-    await createDartAnalysis(draft);
-    if (draft.dartAnalysis?.status !== 'COMPLETED') {
+    const candidateDisclosures = buildDartDisclosureFallbackQueue(draft.dartDisclosures, recommended);
+    draft.selectedDartRceptNo = candidateDisclosures[0].rceptNo;
+    draft.dartAutoFillMessage = `${candidateDisclosures[0].corpName || workspaceStore.workspace?.companyName || '기업'}의 최신 ${candidateDisclosures[0].reportName}에서 자소서에 쓸 핵심 근거를 선별하고 있습니다.`;
+
+    const firstAnalysis = await createDartAnalysisForDisclosure(draft, candidateDisclosures[0]);
+    if (firstAnalysis?.status !== 'COMPLETED') {
       draft.dartAutoFillStatus = 'error';
       draft.dartAutoFillMessage = draft.dartAnalysisMessage || 'DART 분석을 완료하지 못했습니다. 직접 입력하거나 잠시 후 다시 시도해주세요.';
       return;
     }
-    const nextSections = sectionsFromDartAnalysis(draft.dartAnalysis);
-    draft.dartSections = nextSections.sections;
-    draft.dartStructuredSections = nextSections.structuredSections;
+    const merged = await buildDartSectionsWithFallback(draft, firstAnalysis, candidateDisclosures);
+    draft.dartSections = merged.sections;
+    draft.dartStructuredSections = merged.structuredSections;
+    draft.dartSectionSources = merged.sectionSources;
+    draft.dartAnalysis = firstAnalysis;
+    draft.dartAnalysisStatus = 'completed';
     draft.activeDartSectionKey = dartSectionMeta[0].legacyKey;
     draft.dartAutoFillStatus = 'ready';
-    draft.dartAutoFillMessage = `${recommended.corpName || workspaceStore.workspace?.companyName || '선택 기업'}의 ${recommended.reportName}에서 JD 맞춤 핵심 포인트와 문항별 활용 추천을 생성했습니다.`;
+    const fallbackCount = Object.values(merged.sectionSources || {})
+      .filter((source) => source?.rceptNo && source.rceptNo !== firstAnalysis.rceptNo)
+      .length;
+    draft.dartAutoFillMessage = `${recommended.corpName || workspaceStore.workspace?.companyName || '선택 기업'}의 최신 ${recommended.reportName}에서 JD 맞춤 핵심 포인트를 생성했습니다.${fallbackCount ? ` 부족한 ${fallbackCount}개 항목은 이전 보고서로 보강했습니다.` : ''}`;
     generateDartEssayGuide(draft);
   } catch (error) {
     draft.dartAutoFillStatus = 'error';
     draft.dartAutoFillMessage = 'DART API 또는 AI 분석 연결에 실패했습니다. 설정과 네트워크 상태를 확인해주세요.';
   }
+}
+
+function buildDartDisclosureFallbackQueue(disclosures, recommended) {
+  const sorted = sortDartDisclosures(disclosures);
+  const head = recommended || sorted[0];
+  const byReceipt = new Map();
+  [head, ...sorted].filter(Boolean).forEach((item) => {
+    if (!byReceipt.has(item.rceptNo)) byReceipt.set(item.rceptNo, item);
+  });
+  return Array.from(byReceipt.values()).slice(0, 4);
+}
+
+async function buildDartSectionsWithFallback(draft, firstAnalysis, candidateDisclosures) {
+  const initial = sectionsFromDartAnalysis(firstAnalysis);
+  const structuredSections = { ...initial.structuredSections };
+  const sections = { ...initial.sections };
+  const sectionSources = Object.fromEntries(dartSectionMeta.map((meta) => [
+    meta.legacyKey,
+    dartSourceFromAnalysis(firstAnalysis)
+  ]));
+  let missingKeys = missingDartSectionKeys(structuredSections);
+
+  for (const disclosure of candidateDisclosures.slice(1)) {
+    if (!missingKeys.length) break;
+    const fallbackAnalysis = await createDartAnalysisForDisclosure(draft, disclosure);
+    if (fallbackAnalysis?.status !== 'COMPLETED') continue;
+    const fallback = sectionsFromDartAnalysis(fallbackAnalysis);
+    missingKeys.forEach((key) => {
+      const section = fallback.structuredSections[key];
+      if (!hasDartSectionContent(section)) return;
+      structuredSections[key] = section;
+      sections[key] = fallback.sections[key];
+      sectionSources[key] = dartSourceFromAnalysis(fallbackAnalysis);
+    });
+    missingKeys = missingDartSectionKeys(structuredSections);
+  }
+
+  return { structuredSections, sections, sectionSources };
+}
+
+function missingDartSectionKeys(structuredSections) {
+  return dartSectionMeta
+    .filter((meta) => !hasMeaningfulDartSectionContent(structuredSections?.[meta.legacyKey]))
+    .map((meta) => meta.legacyKey);
+}
+
+function hasMeaningfulDartSectionContent(section) {
+  return Boolean(
+    section?.coreSummary
+    || section?.rawText
+    || section?.evidencePoints?.length
+    || section?.jobFitPoints?.length
+    || section?.resumeUsePoints?.length
+    || section?.sentenceCandidates?.length
+  );
+}
+
+function dartSourceFromAnalysis(analysis) {
+  return {
+    rceptNo: analysis?.rceptNo || '',
+    reportName: analysis?.reportName || '',
+    sourceUrl: analysis?.sourceUrl || ''
+  };
 }
 
 function dartAnalysisContextItems() {
@@ -2493,8 +2581,7 @@ const MarkdownBoard = {
     }
 
     function renderDartLinkedText(text, sourceUrl) {
-      if (!sourceUrl) return text;
-      return h('a', { href: sourceUrl, target: '_blank', rel: 'noreferrer' }, text);
+      return text;
     }
 
     function renderDartStructuredList(title, items, sourceUrl) {
@@ -2528,14 +2615,32 @@ const MarkdownBoard = {
       return '공시에서 확인한 보조 근거와 주의해서 써야 할 표현을 정리했습니다.';
     }
 
+    function renderDartSourceButton(source) {
+      if (!source?.sourceUrl) return null;
+      const label = source.reportName ? `${source.reportName} 원문 보기` : 'DART 원문 보기';
+      return h('a', {
+        class: 'dart-source-button',
+        href: source.sourceUrl,
+        target: '_blank',
+        rel: 'noreferrer'
+      }, [
+        h('span', label),
+        h('small', source.rceptNo || '')
+      ]);
+    }
+
     function renderDartStructuredSection(draft, meta) {
       const section = normalizeDartSectionAnalysis(draft.dartStructuredSections?.[meta.legacyKey], meta.title);
       const hasStructured = hasDartSectionContent(section);
-      const sourceUrl = draft.dartAnalysis?.sourceUrl;
+      const source = draft.dartSectionSources?.[meta.legacyKey] || dartSourceFromAnalysis(draft.dartAnalysis);
+      const sourceUrl = source?.sourceUrl;
       return h('section', { class: 'dart-section-panel dart-analysis-card', key: meta.legacyKey }, [
         h('header', { class: 'dart-card-head' }, [
-          h('h3', section.sectionTitle || meta.title),
-          h('p', dartSectionSubtitle(meta))
+          h('div', [
+            h('h3', section.sectionTitle || meta.title),
+            h('p', dartSectionSubtitle(meta))
+          ]),
+          renderDartSourceButton(source)
         ]),
         hasStructured ? h('div', { class: 'dart-section-insight' }, [
           section.coreSummary ? h('section', { class: 'dart-card-section' }, [
@@ -2607,22 +2712,11 @@ const MarkdownBoard = {
           class: ['dart-api-status', { error: draft.dartAutoFillStatus === 'error', ready: draft.dartAutoFillStatus === 'ready' }],
           'data-testid': 'dart-auto-fill-status'
         }, draft.dartAutoFillMessage) : null,
-        draft.dartDisclosures.length ? h('div', { class: 'dart-disclosure-strip' }, draft.dartDisclosures.slice(0, 4).map((disclosure) => h('button', {
-          type: 'button',
-          key: disclosure.rceptNo,
-          class: { active: disclosure.rceptNo === draft.selectedDartRceptNo },
-          onClick: () => {
-            draft.selectedDartRceptNo = disclosure.rceptNo;
-            draft.dartAnalysis = null;
-            draft.dartAnalysisStatus = 'idle';
-            draft.dartAutoFillStatus = 'idle';
-            draft.dartAutoFillMessage = `${disclosure.corpName || '선택 기업'}의 ${disclosure.reportName}을 선택했습니다.`;
-          }
-        }, [
-          h('span', disclosure.recommended ? '추천' : '공시'),
-          h('strong', disclosure.reportName),
-          h('small', `${disclosure.corpName || ''} · ${disclosure.receivedDate || ''}`)
-        ]))) : null,
+        draft.dartDisclosures.length ? h('p', { class: 'dart-latest-report-note' }, [
+          '최신 보고서 자동 선택: ',
+          h('b', `${(draft.dartDisclosures[0]?.corpName || workspaceStore.workspace?.companyName || '기업')} · ${draft.dartDisclosures[0]?.reportName || '정기공시'}`),
+          draft.dartDisclosures[0]?.receivedDate ? ` · ${draft.dartDisclosures[0].receivedDate}` : ''
+        ]) : null,
         h('div', { class: 'dart-section-tabs', role: 'tablist', 'aria-label': 'DART 항목' }, dartSectionMeta.map((meta) => h('button', {
           type: 'button',
           key: meta.legacyKey,

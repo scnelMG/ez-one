@@ -7717,11 +7717,19 @@ li {
 }
 
 .dart-card-head {
-  display: grid;
-  gap: 5px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
   border-bottom: 1px solid #edf0f7;
   background: #fcfcff;
   padding: 15px 16px;
+}
+
+.dart-card-head > div {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
 }
 
 .dart-card-head h3 {
@@ -7738,6 +7746,38 @@ li {
   font-size: 0.76rem;
   font-weight: 750;
   line-height: 1.45;
+}
+
+.dart-source-button {
+  flex: 0 0 auto;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2px;
+  min-height: 40px;
+  border: 1px solid #dcd7ff;
+  border-radius: 12px;
+  background: #fff;
+  color: #5136d9;
+  font-size: 0.76rem;
+  font-weight: 950;
+  line-height: 1.2;
+  padding: 7px 10px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.dart-source-button:hover {
+  border-color: #7c5cff;
+  background: #f7f3ff;
+  color: #4427c9;
+}
+
+.dart-source-button small {
+  color: #8a94a8;
+  font-size: 0.66rem;
+  font-weight: 800;
 }
 
 .dart-card-section {
@@ -8104,6 +8144,23 @@ li {
   border-color: #fecaca;
   background: #fef2f2;
   color: #b42318;
+}
+
+.dart-latest-report-note {
+  margin: 0;
+  border: 1px solid #e4e8f4;
+  border-radius: 14px;
+  background: #fff;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.45;
+  padding: 10px 12px;
+}
+
+.dart-latest-report-note b {
+  color: #2b3448;
+  font-weight: 950;
 }
 
 .dart-disclosure-strip {

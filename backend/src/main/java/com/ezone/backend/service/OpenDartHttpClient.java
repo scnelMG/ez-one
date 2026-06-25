@@ -80,7 +80,7 @@ public class OpenDartHttpClient implements OpenDartClient {
                 break;
             }
         }
-        return disclosures;
+        return markLatestDisclosureRecommended(disclosures);
     }
 
     private List<DartDisclosureResponse> listPeriodicDisclosuresForCorp(CorpCode corpCode, String fallbackCompanyName) {
@@ -114,11 +114,38 @@ public class OpenDartHttpClient implements OpenDartClient {
                 row.path("pblntf_detail_ty").asText("A"),
                 row.path("rcept_dt").asText(""),
                 row.path("corp_name").asText(StringUtils.hasText(corpCode.corpName()) ? corpCode.corpName() : fallbackCompanyName),
-                reportName.contains("사업보고서"),
+                false,
                 "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=" + rceptNo
             ));
         }
         return disclosures;
+    }
+
+    private List<DartDisclosureResponse> markLatestDisclosureRecommended(List<DartDisclosureResponse> disclosures) {
+        List<DartDisclosureResponse> sorted = disclosures.stream()
+            .sorted(Comparator
+                .comparing(OpenDartHttpClient::safeReceivedDate)
+                .thenComparing(DartDisclosureResponse::rceptNo, Comparator.nullsLast(String::compareTo))
+                .reversed())
+            .toList();
+        List<DartDisclosureResponse> recommended = new ArrayList<>();
+        for (int index = 0; index < sorted.size(); index += 1) {
+            DartDisclosureResponse disclosure = sorted.get(index);
+            recommended.add(new DartDisclosureResponse(
+                disclosure.rceptNo(),
+                disclosure.reportName(),
+                disclosure.reportType(),
+                disclosure.receivedDate(),
+                disclosure.corpName(),
+                index == 0,
+                disclosure.sourceUrl()
+            ));
+        }
+        return recommended;
+    }
+
+    private static String safeReceivedDate(DartDisclosureResponse disclosure) {
+        return disclosure == null || disclosure.receivedDate() == null ? "" : disclosure.receivedDate();
     }
 
     @Override

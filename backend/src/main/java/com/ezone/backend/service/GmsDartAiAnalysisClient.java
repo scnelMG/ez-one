@@ -92,6 +92,9 @@ public class GmsDartAiAnalysisClient implements DartAiAnalysisClient {
             Do not summarize the whole report.
             Curate only concise, JD-relevant facts that can become essay evidence.
             Avoid duplicate facts, accounting-heavy details, and generic company introductions.
+            Reject weak accounting-only facts unless the target JD is explicitly accounting, finance, audit, risk, or IR.
+            Prefer actual products, services, customer value, technology, R&D, market/channel strategy, and new business facts.
+            If a section lacks useful JD-relevant evidence, leave that section intentionally sparse instead of forcing a weak connection.
             Prioritize evidence cards and appeal points that can support a resume or essay.
             Every core claim must include a source section and receipt number.
             Before returning JSON, self-check that each evidence card is grounded in the selected receipt number,

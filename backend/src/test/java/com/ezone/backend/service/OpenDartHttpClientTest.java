@@ -70,6 +70,13 @@ class OpenDartHttpClientTest {
                       "status": "000",
                       "list": [
                         {
+                          "report_nm": "반기보고서 (2026.06)",
+                          "rcept_no": "20260814000002",
+                          "pblntf_detail_ty": "A002",
+                          "rcept_dt": "20260814",
+                          "corp_name": "KB금융"
+                        },
+                        {
                           "report_nm": "사업보고서 (2025.12)",
                           "rcept_no": "20260318000001",
                           "pblntf_detail_ty": "A001",
@@ -86,7 +93,9 @@ class OpenDartHttpClientTest {
 
         assertThat(disclosures)
             .extracting(DartDisclosureResponse::rceptNo)
-            .containsExactly("20260318000001");
+            .containsExactly("20260814000002", "20260318000001");
+        assertThat(disclosures.get(0).recommended()).isTrue();
+        assertThat(disclosures.get(1).recommended()).isFalse();
     }
 
     private static byte[] zip(String xml) throws Exception {

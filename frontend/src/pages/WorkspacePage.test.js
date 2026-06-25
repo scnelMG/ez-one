@@ -68,6 +68,9 @@ describe('WorkspacePage', () => {
 
     beforeEach(() => {
         vi.stubGlobal('alert', vi.fn());
+        if (!globalThis.localStorage) {
+            vi.stubGlobal('localStorage', createLocalStorageMock());
+        }
         localStorage.clear();
         Object.values(mocks).forEach((mock) => mock.mockReset());
         mocks.getWorkspace.mockResolvedValue({
@@ -488,8 +491,10 @@ describe('WorkspacePage', () => {
             companyName: 'Naver',
             positionTitle: 'Backend Engineer'
         }));
-        expect(wrapper.get('[data-testid="dart-auto-fill-status"]').text()).toContain('문항별 활용 추천을 생성했습니다');
+        expect(wrapper.get('[data-testid="dart-auto-fill-status"]').text()).toContain('JD 맞춤 핵심 포인트를 생성했습니다');
         expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('AI 플랫폼 투자를 통해');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('최신 보고서 자동 선택');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('사업보고서 원문 보기');
         expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('자소서 활용 DART 포인트');
         expect(wrapper.get('[data-testid="dart-essay-guide"]').text()).toContain('자소서에 활용하기 좋은 DART 포인트');
         expect(wrapper.get('[data-testid="dart-essay-guide"]').text()).toContain('문항별 추천');
@@ -685,4 +690,20 @@ async function setEditorText(wrapper, testId, value) {
 
 function flushPromises() {
     return new Promise((resolve) => setTimeout(resolve));
+}
+
+function createLocalStorageMock() {
+    const storage = new Map();
+    return {
+        getItem: vi.fn((key) => storage.get(key) ?? null),
+        setItem: vi.fn((key, value) => {
+            storage.set(key, String(value));
+        }),
+        removeItem: vi.fn((key) => {
+            storage.delete(key);
+        }),
+        clear: vi.fn(() => {
+            storage.clear();
+        })
+    };
 }
