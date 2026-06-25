@@ -57,11 +57,11 @@ public class GmsApplicationActivityAssistAiClient implements ApplicationActivity
 
         출력은 JSON schema만 따릅니다.
 
-        Company: %s
-        Position: %s
-        Page context: %s
-        Field labels: %s
-        Candidates JSON: %s
+        회사명: %s
+        지원 직무: %s
+        페이지 문맥: %s
+        입력 필드 라벨: %s
+        후보 활동 JSON: %s
         """;
 
     private final RestTemplate restTemplate;

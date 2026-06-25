@@ -127,7 +127,7 @@ public class OpenAiClient {
         Map<String, Object> requestBody = Map.of(
             "model", compareModel,
             "input", List.of(
-                Map.of("role", "system", "content", "You are a precise Korean recruiter and career coach. Compare essay versions using the actual version names, company, role, JD, and question intent. Respond only in detailed Korean bullet points with separate fact-based changes and recruiter feedback sections."),
+                Map.of("role", "system", "content", "당신은 정확한 한국어 채용담당자이자 커리어 코치입니다. 실제 버전명, 회사, 직무, JD, 문항 의도를 기준으로 자기소개서 버전을 비교하세요. 답변은 변경된 사실과 채용담당자 관점 피드백을 분리한 상세한 한국어 bullet로만 작성합니다."),
                 Map.of("role", "user", "content", prompt)
             ),
             "temperature", 0.35,
