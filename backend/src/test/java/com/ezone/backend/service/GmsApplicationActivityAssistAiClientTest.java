@@ -82,8 +82,8 @@ class GmsApplicationActivityAssistAiClientTest {
         assertThat(prompt).contains("붙여넣을 수 있는 한국어 문장");
         assertThat(prompt).contains("500 char");
         assertThat(prompt).contains("90%");
-        assertThat(prompt).contains("Company: 카카오뱅크");
-        assertThat(prompt).contains("Position: 데이터 엔지니어");
+        assertThat(prompt).contains("회사명: 카카오뱅크");
+        assertThat(prompt).contains("지원 직무: 데이터 엔지니어");
         assertThat(format.get("type")).isEqualTo("json_schema");
         assertThat(format.get("name")).isEqualTo("application_activity_recommendations");
         assertThat(format.get("strict")).isEqualTo(true);

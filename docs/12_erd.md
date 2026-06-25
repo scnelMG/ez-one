@@ -27,6 +27,7 @@ erDiagram
     workspaces ||--o{ essay_drafts : has
     workspaces ||--o{ essay_versions : has
     workspaces ||--o{ reference_materials : has
+    workspaces ||--o{ dart_analyses : has
 ```
 
 ## P1 테이블
@@ -50,6 +51,7 @@ erDiagram
 | `document_profile_sections` | id, user_id, section_type, payload_json | 표준 서류 입력 정보 |
 | `document_custom_fields` | id, user_id, label, field_type, value | 사용자 커스텀 항목 |
 | `reference_materials` | id, workspace_id, board_name, reference_type, title, body, image_payload_json, url, display_mode | 수동 참고자료 |
+| `dart_analyses` | id, user_id, workspace_id, rcept_no, report_name, company_name, status, model, source_url, result_json, error_message, created_at | DART AI analysis preview and save-reference source |
 | `notion_connections` | user_id, notion_account_email, workspace_id, access_token_ciphertext, bot_id, connected_at, updated_at | Notion OAuth 연결 계정. access token은 AES-GCM ciphertext로만 저장한다. |
 | `notion_sync_settings` | user_id, database_id, data_source_id, root_page_id, enabled, sync_scope, updated_at | P1 기본 scope는 `JOB_ONLY`; OAuth 연결 시 생성한 EZ-ONE Notion DB와 row 생성 대상 data source를 저장한다. |
 | `sync_logs` | id, user_id, basket_job_id, sync_scope, target, status, message, notion_page_id, created_at | 외부 연동 로그 |
@@ -82,9 +84,9 @@ erDiagram
 ## 2026-06-19 DART GMS AI Analysis Data Note
 
 - Requirement: `REF-003`, `JOB-018`, `REF-008`, `AI-004`, `AI-006`.
-- Current implementation stores reviewed DART AI output in existing `reference_materials` with `reference_type = DART` and `board_name = DART`.
-- OpenDART disclosure lookup and GMS analysis preview are non-blocking integration steps. The initial analysis preview cache is runtime-scoped and does not introduce a required migration.
-- If async processing, durable cache, or cross-session retrieval becomes required, add `dart_analysis_jobs` with `workspace_id`, `company_id`, `rcept_no`, `status`, `model`, `result_json`, `error_message`, `created_at`, and `updated_at`, plus a unique key on `(workspace_id, rcept_no)`.
+- Current implementation stores DART AI analysis previews in `dart_analyses` and stores reviewed output in existing `reference_materials` with `reference_type = DART` and `board_name = DART`.
+- `dart_analyses.result_json` stores the structured AI result so `GET /dart/analyses/{analysisId}` and `save-reference` survive backend restarts.
+- OpenDART disclosure lookup and GMS failures remain non-blocking; failed analyses are persisted with `status = FAILED` and `error_message`.
 - Secrets remain outside the database and are read only from backend environment/configuration.
 
 ## 구현 주의사항

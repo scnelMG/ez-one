@@ -274,7 +274,7 @@ function getMemberLabel(member) {
 
 function getMemberAvatarLabel(member) {
   const label = getMemberLabel(member).trim();
-  if (!label) return '팀';
+  if (!label) return '';
   if (/^[가-힣]+$/.test(label) && label.length >= 2) {
     return label.slice(-2);
   }
@@ -297,8 +297,8 @@ function memberPreview(study) {
   const count = Math.max(study.memberCount || 1, 1);
   return Array.from({ length: Math.min(count, 4) }, (_, index) => ({
     key: `${study.id}-placeholder-${index}`,
-    label: index === 0 ? '나' : '팀원',
-    initial: index === 0 ? '나' : '팀'
+    label: index === 0 ? '나' : `스터디원 ${index + 1}`,
+    initial: index === 0 ? '나' : String(index + 1)
   }));
 }
 

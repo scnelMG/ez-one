@@ -10,44 +10,71 @@ final class DartAnalysisPromptBuilder {
 
     static String build(DartAiAnalysisRequest request) {
         return """
-            접수번호: %s
-            보고서명: %s
-            회사명: %s
-            지원 직무: %s
-            자기소개서 문항 및 JD 문맥: %s
+            Receipt number: %s
+            Report name: %s
+            Company: %s
+            Position: %s
+            Essay questions and JD context: %s
 
-            목표:
-            한국어 자기소개서에 가장 유용한 DART 근거만 선별합니다.
-            이 작업은 재무 요약이나 회사 소개가 아닙니다.
-            결과는 지원자가 해당 직무의 지원동기, 직무역량, 입사 후 포부 문항을 작성하는 데 도움을 줘야 합니다.
+            Goal:
+            Turn DART disclosure facts into compact, usable Korean job-application essay material.
+            This is an integrated DART-to-essay analysis. Do not produce a raw DART summary and do not write a generic company introduction.
+            Read the user's saved JD context, target company, target position, and essay questions first.
+            Select only facts that can help the applicant write 지원동기, 직무역량, 입사 후 포부, or related answers for the target position.
 
-            필수 분석:
-            1. 분석 결과는 정확히 세 섹션으로 나눕니다.
-               - mainProductsAndServices: 제품, 서비스, 비즈니스 모델, 고객 가치, 시장 방향.
-               - contractsAndRAndD: 주요 계약, 파트너십, R&D, 기술, 생산, 투자, 신사업.
-               - otherNotes: 자기소개서에 의미가 있을 수 있는 리스크, 규제, ESG, 조직, 글로벌 확장, 재무/운영 참고사항.
-            2. 각 섹션에는 다음 항목을 작성합니다.
-               - coreSummary: 최대 2개의 한국어 문장. 해당 사실이 자기소개서에 왜 유용한지 설명합니다.
-               - evidencePoints: 1~3개의 짧은 사실. 각 사실은 DART 보고서에 근거해야 하며 JD/직무에 유용해야 합니다.
-               - jobFitPoints: DART 사실을 사용자의 JD와 지원 직무에 연결하는 1~3개 bullet. 일반론은 피합니다.
-               - resumeUsePoints: 1~2개 활용 사례. useCase는 지원동기, 직무역량, 입사 후 포부, 성장경험, 기타 중 하나입니다.
-               - sentenceCandidates: 자기소개서에 바로 다듬어 쓸 수 있는 한국어 문장 1~2개. 보고서 요약이 아니라 지원자의 문장처럼 씁니다.
-               - cautionPoints: 해당 사실을 과하게 사용하지 않기 위한 주의점 1~2개.
-               - rawText: 최대 120자의 짧은 출처 메모 1개.
-            3. 세 섹션 간 중복 내용을 피합니다.
-               여러 섹션에 들어갈 수 있는 사실은 가장 유용한 섹션 하나에만 넣습니다.
-            4. 재무 수치를 과도하게 사용하지 않습니다.
-               숫자는 제공된 JD의 자기소개서 포인트를 직접 뒷받침할 때만 포함합니다.
-               매출 표, 계약자산/부채, 회계 세부사항은 사용자 직무에 명확히 유용할 때만 씁니다.
-            5. JD 관련성을 우선합니다.
-               제공된 JD 문맥에서 필요한 역량을 먼저 추론한 뒤, 그 역량을 뒷받침할 DART 사실을 고릅니다.
-            6. 하위 호환을 위해 evidenceCards, appealPoints, suggestedSentences, cautions, missingInfo도 유지합니다.
-               이 항목들은 간결하고 중복 없이 작성합니다.
-            7. 사실을 지어내지 않습니다. 보고서에 유용한 사실이 없으면 missingInfo 또는 cautionPoints에 씁니다.
-            8. 모든 evidence card는 선택된 접수번호에 근거해야 합니다.
-            9. 한국어로 반환합니다. 긴 문단이 아니라 간결한 개조식 표현을 사용합니다.
+            Work in this order before writing the final JSON:
+            collect the relevant DART passages, organize them into the three required business buckets, analyze JD fit,
+            then produce Actionable advice for the applicant.
+            Do not expose raw DART facts item-by-item. Convert source facts into organized insight, essay-use advice,
+            sentence candidates, and cautions. Keep receipt numbers and source sections inside evidence fields for audit,
+            but make the user-facing advice concise and practical.
 
-            DART 보고서 텍스트:
+            Required analysis:
+            1. Split the analysis into exactly three sections:
+               - mainProductsAndServices: actual products, services, business model, channels, customer value, product line, market direction.
+               - contractsAndRAndD: major contracts, partnerships, R&D, technology, production capability, investment, new business.
+               - otherNotes: risks, regulations, ESG, organization, global expansion, operational notes, or cautions that may matter for an essay.
+            2. For each section, write:
+               - coreSummary: 1 to 2 Korean sentences. Summarize the selected DART facts and why they are useful for this JD.
+               - evidencePoints: 1 to 3 concrete DART facts only, unless no useful facts exist. Each item must include source section and receipt number.
+               - jobFitPoints: 1 to 3 bullets that directly connect the evidence to the saved JD duties/competencies and target position.
+               - resumeUsePoints: 1 to 2 actionable use cases. The useCase must be one of 지원동기, 직무역량, 입사 후 포부, 성장경험, 기타.
+                 The recommendation must explain where in the essay to use the fact and how to connect it to the applicant's experience.
+               - sentenceCandidates: 1 to 2 polished Korean essay-ready sentences. They must be grounded in DART and sound like an applicant's sentence.
+               - cautionPoints: 1 to 2 warnings about overclaiming, unsupported interpretation, or weak use.
+               - rawText: one short source note, maximum 120 Korean characters, formatted as "근거: source section · receipt number".
+            3. Avoid duplicate content across the three sections.
+               If a fact fits multiple sections, put it only in the most useful section.
+            4. Strict accounting filter:
+               Do not select impairment tests, recoverable amount valuation, contract assets/liabilities, revenue recognition policy,
+               lease accounting, audit opinions, internal accounting control, financial statement notes, or generic accounting controls
+               unless the saved JD or target position explicitly requires accounting, audit, risk, finance, IR, compliance, or internal control work.
+               For service planning, product planning, marketing, design, data, engineering, HR, or business planning roles, these accounting facts are usually noise.
+               If only accounting-only facts are available for a section, return that section as empty so the caller can try an older report.
+            5. Prioritize JD relevance in this order:
+               a. Facts about actual products/services, customers, channels, markets, technology, R&D, production, partnerships, overseas expansion, or new business.
+               b. Facts that can support the user's target position duties and required competencies inferred from the JD context.
+               c. Facts that can become a sentence in 지원동기, 직무역량, or 입사 후 포부.
+               d. Financial numbers only if they directly explain product scale, market focus, R&D investment, or business priority for the user's role.
+            6. If a section has no useful fact in this report, return an empty section:
+               coreSummary="", evidencePoints=[], jobFitPoints=[], resumeUsePoints=[], sentenceCandidates=[], cautionPoints=["이 보고서에서 해당 항목의 자소서 활용 근거가 충분하지 않습니다."], rawText="".
+               Do not force weak facts into a section.
+            7. Evidence wording rules:
+               - Start each evidencePoint with a concrete DART fact, then add why it matters for the JD in one short clause.
+               - Include the source section name and receipt number inside the evidence text when possible.
+               - Do not use vague phrases like "도움이 될 수 있음" without saying exactly which JD competency it supports.
+            8. Sentence candidates must be applicant-facing:
+               They should show how the applicant will use their experience for the company's product/service direction.
+               Avoid sentences that merely praise the company.
+            9. Also keep backward-compatible evidenceCards, appealPoints, suggestedSentences, cautions, and missingInfo.
+               Keep these concise and non-duplicative.
+            10. Do not invent facts. If the report does not contain a useful fact, put it in missingInfo or cautionPoints.
+            11. Every evidence card must be grounded in the selected receipt number.
+            12. Return Korean. Use compact bullet-style wording, not long paragraphs.
+            13. The final UI will show "주요 제품 및 서비스", "주요 계약 및 연구 개발 활동", and "기타 참고사항".
+                Make each section immediately useful to a job seeker: 핵심 근거 + JD 맞춤 연결 + 자소서 활용방안.
+
+            DART report text:
             %s
             """.formatted(
             defaultText(request.rceptNo()),

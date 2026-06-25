@@ -7717,11 +7717,19 @@ li {
 }
 
 .dart-card-head {
-  display: grid;
-  gap: 5px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
   border-bottom: 1px solid #edf0f7;
   background: #fcfcff;
   padding: 15px 16px;
+}
+
+.dart-card-head > div {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
 }
 
 .dart-card-head h3 {
@@ -7738,6 +7746,38 @@ li {
   font-size: 0.76rem;
   font-weight: 750;
   line-height: 1.45;
+}
+
+.dart-source-button {
+  flex: 0 0 auto;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2px;
+  min-height: 40px;
+  border: 1px solid #dcd7ff;
+  border-radius: 12px;
+  background: #fff;
+  color: #5136d9;
+  font-size: 0.76rem;
+  font-weight: 950;
+  line-height: 1.2;
+  padding: 7px 10px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.dart-source-button:hover {
+  border-color: #7c5cff;
+  background: #f7f3ff;
+  color: #4427c9;
+}
+
+.dart-source-button small {
+  color: #8a94a8;
+  font-size: 0.66rem;
+  font-weight: 800;
 }
 
 .dart-card-section {
@@ -7998,6 +8038,14 @@ li {
   animation: ai-summary-spin 0.8s linear infinite;
 }
 
+.dart-auto-status-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
 .dart-auto-state-chip {
   display: inline-flex;
   align-items: center;
@@ -8018,6 +8066,42 @@ li {
   color: #15803d;
 }
 
+.dart-refresh-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 34px;
+  border: 1px solid #dcd7ff;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #5638d8;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 950;
+  padding: 0 12px;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+  white-space: nowrap;
+}
+
+.dart-refresh-button:hover:not(:disabled) {
+  border-color: #7c5cff;
+  background: #f7f3ff;
+  transform: translateY(-1px);
+}
+
+.dart-refresh-button:disabled {
+  cursor: wait;
+  opacity: 0.58;
+  transform: none;
+}
+
+.dart-refresh-button span:first-child {
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
 .dart-api-fill-copy {
   display: grid;
   gap: 5px;
@@ -8030,6 +8114,10 @@ li {
 }
 
 .dart-api-fill-copy p {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
   margin: 0;
   color: #64748b;
   font-size: 0.8rem;
@@ -8040,6 +8128,20 @@ li {
 .dart-api-fill-copy span {
   color: #5b35d5;
   font-weight: 900;
+}
+
+.dart-api-fill-copy .dart-context-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  border: 1px solid #dcd7ff;
+  border-radius: 999px;
+  background: #fff;
+  color: #5638d8;
+  font-size: 0.76rem;
+  font-weight: 950;
+  line-height: 1;
+  padding: 0 9px;
 }
 
 .dart-api-fill-button,
@@ -8104,6 +8206,23 @@ li {
   border-color: #fecaca;
   background: #fef2f2;
   color: #b42318;
+}
+
+.dart-latest-report-note {
+  margin: 0;
+  border: 1px solid #e4e8f4;
+  border-radius: 14px;
+  background: #fff;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.45;
+  padding: 10px 12px;
+}
+
+.dart-latest-report-note b {
+  color: #2b3448;
+  font-weight: 950;
 }
 
 .dart-disclosure-strip {
@@ -10081,7 +10200,7 @@ li {
     minmax(216px, 1fr)
     minmax(112px, 0.64fr)
     minmax(124px, 0.66fr)
-    44px;
+    minmax(88px, 0.46fr);
 }
 
 .main-basket-head,
