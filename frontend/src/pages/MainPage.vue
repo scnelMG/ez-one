@@ -607,7 +607,11 @@ async function archiveJob(id) {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: clamp(10px, 1.1vw, 14px);
   margin-top: 0;
+  border: 0;
+  box-shadow: none;
   background: transparent;
+  padding: 0;
+  outline: 0;
 }
 
 .main-metric-card {
@@ -1322,7 +1326,7 @@ async function archiveJob(id) {
   gap: 12px;
   align-content: stretch;
   background:
-    linear-gradient(180deg, #ffffff 0%, #fbfaff 100%);
+    linear-gradient(145deg, #ffffff 0%, #fbfaff 48%, #f7fbff 100%);
 }
 
 .study-panel-heading {
@@ -1349,6 +1353,7 @@ async function archiveJob(id) {
 }
 
 .study-card {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
@@ -1367,6 +1372,20 @@ async function archiveJob(id) {
     transform 0.18s ease,
     border-color 0.18s ease,
     box-shadow 0.18s ease;
+  overflow: hidden;
+}
+
+.study-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: linear-gradient(180deg, #6d4aff 0%, #22c55e 100%);
+  opacity: 0.82;
+}
+
+.study-card:nth-of-type(2n)::before {
+  background: linear-gradient(180deg, #0ea5e9 0%, #f59e0b 100%);
 }
 
 .study-card:hover {
@@ -1411,6 +1430,30 @@ async function archiveJob(id) {
   line-height: 1.2;
   padding: 0 9px;
   white-space: nowrap;
+}
+
+.study-stat-tag:nth-child(1) {
+  border-color: rgba(109, 74, 255, 0.22);
+  background: #f3f0ff;
+  color: #5638d8;
+}
+
+.study-stat-tag:nth-child(2) {
+  border-color: rgba(34, 197, 94, 0.2);
+  background: #ecfdf5;
+  color: #15803d;
+}
+
+.study-stat-tag:nth-child(3) {
+  border-color: rgba(14, 165, 233, 0.2);
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.study-stat-tag:nth-child(4) {
+  border-color: rgba(245, 158, 11, 0.22);
+  background: #fffbeb;
+  color: #b45309;
 }
 
 .study-card a {

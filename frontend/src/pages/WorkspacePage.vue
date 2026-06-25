@@ -1846,8 +1846,7 @@ async function createDartAnalysisForDisclosure(draft, disclosure) {
       reportName: disclosure.reportName,
       companyName: workspaceStore.workspace?.companyName || disclosure.corpName || '',
       positionTitle: workspaceStore.workspace?.positionTitle || '',
-      essayQuestions: dartAnalysisContextItems(),
-      documentText: dartManualContext(draft)
+      essayQuestions: dartAnalysisContextItems()
     });
     draft.dartAnalysis = analysis;
     draft.dartAnalysisStatus = analysis.status === 'COMPLETED' ? 'completed' : 'error';
@@ -1876,16 +1875,25 @@ async function fillDartSectionsFromApi(draft) {
       return;
     }
     const candidateDisclosures = buildDartDisclosureFallbackQueue(draft.dartDisclosures, recommended);
-    draft.selectedDartRceptNo = candidateDisclosures[0].rceptNo;
-    draft.dartAutoFillMessage = `${candidateDisclosures[0].corpName || workspaceStore.workspace?.companyName || '기업'}의 최신 ${candidateDisclosures[0].reportName}에서 자소서에 쓸 핵심 근거를 선별하고 있습니다.`;
-
-    const firstAnalysis = await createDartAnalysisForDisclosure(draft, candidateDisclosures[0]);
-    if (firstAnalysis?.status !== 'COMPLETED') {
+    let firstAnalysis = null;
+    let firstAnalysisIndex = -1;
+    for (let index = 0; index < candidateDisclosures.length; index += 1) {
+      const disclosure = candidateDisclosures[index];
+      draft.selectedDartRceptNo = disclosure.rceptNo;
+      draft.dartAutoFillMessage = `${disclosure.corpName || workspaceStore.workspace?.companyName || '기업'} · ${disclosure.reportName} 분석 중`;
+      const analysis = await createDartAnalysisForDisclosure(draft, disclosure);
+      if (analysis?.status === 'COMPLETED') {
+        firstAnalysis = analysis;
+        firstAnalysisIndex = index;
+        break;
+      }
+    }
+    if (!firstAnalysis) {
       draft.dartAutoFillStatus = 'error';
-      draft.dartAutoFillMessage = draft.dartAnalysisMessage || 'DART 분석을 완료하지 못했습니다. 직접 입력하거나 잠시 후 다시 시도해주세요.';
+      draft.dartAutoFillMessage = 'DART 공시 분석을 완료하지 못했습니다. 잠시 후 다시 열거나 JD 저장 내용을 확인해주세요.';
       return;
     }
-    const merged = await buildDartSectionsWithFallback(draft, firstAnalysis, candidateDisclosures);
+    const merged = await buildDartSectionsWithFallback(draft, firstAnalysis, candidateDisclosures.slice(Math.max(firstAnalysisIndex, 0)));
     draft.dartSections = merged.sections;
     draft.dartStructuredSections = merged.structuredSections;
     draft.dartSectionSources = merged.sectionSources;
@@ -1896,12 +1904,31 @@ async function fillDartSectionsFromApi(draft) {
     const fallbackCount = Object.values(merged.sectionSources || {})
       .filter((source) => source?.rceptNo && source.rceptNo !== firstAnalysis.rceptNo)
       .length;
-    draft.dartAutoFillMessage = `${recommended.corpName || workspaceStore.workspace?.companyName || '선택 기업'}의 최신 ${recommended.reportName}에서 JD 맞춤 핵심 포인트를 생성했습니다.${fallbackCount ? ` 부족한 ${fallbackCount}개 항목은 이전 보고서로 보강했습니다.` : ''}`;
+    draft.dartAutoFillMessage = `${firstAnalysis.companyName || recommended.corpName || workspaceStore.workspace?.companyName || '선택 기업'} · ${firstAnalysis.reportName || recommended.reportName} 기준 분석 완료${fallbackCount ? ` · 이전 보고서 ${fallbackCount}개 항목 보강` : ''}`;
     generateDartEssayGuide(draft);
   } catch (error) {
     draft.dartAutoFillStatus = 'error';
     draft.dartAutoFillMessage = 'DART API 또는 AI 분석 연결에 실패했습니다. 설정과 네트워크 상태를 확인해주세요.';
   }
+}
+
+function refreshDartAnalysis(draft) {
+  if (draft.dartAutoFillStatus === 'loading' || draft.dartAnalysisStatus === 'loading') return;
+  draft.dartSections = {
+    products: '',
+    contracts: '',
+    notes: ''
+  };
+  draft.dartStructuredSections = {};
+  draft.dartSectionSources = {};
+  draft.dartAnalysis = null;
+  draft.dartAnalysisStatus = 'idle';
+  draft.dartAnalysisMessage = '';
+  draft.dartSaveStatus = 'idle';
+  draft.dartAutoFillStatus = 'idle';
+  draft.dartAutoFillMessage = '';
+  draft.dartEssayGuide = null;
+  void fillDartSectionsFromApi(draft);
 }
 
 function buildDartDisclosureFallbackQueue(disclosures, recommended) {
@@ -2495,91 +2522,6 @@ const MarkdownBoard = {
       ]);
     }
 
-    function renderDartAiPanel(draft) {
-      const selected = selectedDartDisclosure(draft);
-      const analysis = draft.dartAnalysis;
-      return h('section', { class: 'dart-ai-panel' }, [
-        h('div', { class: 'dart-ai-toolbar' }, [
-          h('div', [
-            h('strong', 'DART AI 분석'),
-            h('p', '공시를 선택하면 지원서에 쓸 수 있는 근거 카드와 주의점을 정리해 드립니다. 결과를 확인한 뒤 DART 참고자료로 저장하세요.')
-          ]),
-          h('button', {
-            type: 'button',
-            class: 'ghost-button',
-            'data-testid': 'load-dart-disclosures',
-            disabled: draft.dartDisclosureStatus === 'loading',
-            onClick: () => loadDartDisclosures(draft)
-          }, draft.dartDisclosureStatus === 'loading' ? '공시 불러오는 중' : '공시 불러오기')
-        ]),
-        draft.dartDisclosureMessage ? h('p', { class: 'dart-ai-status' }, draft.dartDisclosureMessage) : null,
-        draft.dartDisclosures.length ? h('div', { class: 'dart-disclosure-list' }, draft.dartDisclosures.map((disclosure) => h('button', {
-          type: 'button',
-          class: ['dart-disclosure-card', { active: disclosure.rceptNo === draft.selectedDartRceptNo }],
-          key: disclosure.rceptNo,
-          'data-testid': `dart-disclosure-${disclosure.rceptNo}`,
-          onClick: () => {
-            draft.selectedDartRceptNo = disclosure.rceptNo;
-            draft.dartAnalysis = null;
-            draft.dartAnalysisStatus = 'idle';
-            draft.dartSaveStatus = 'idle';
-          }
-        }, [
-          h('span', disclosure.recommended ? '추천 공시' : '공시'),
-          h('strong', disclosure.reportName),
-          h('small', `${disclosure.receivedDate || ''} ${disclosure.rceptNo}`)
-        ]))) : null,
-        h('div', { class: 'dart-ai-actions' }, [
-          h('button', {
-            type: 'button',
-            class: 'primary-button',
-            'data-testid': 'create-dart-analysis',
-            disabled: !selected || draft.dartAnalysisStatus === 'loading',
-            onClick: () => createDartAnalysis(draft)
-          }, draft.dartAnalysisStatus === 'loading' ? 'AI 분석 중' : 'GMS AI로 분석')
-        ]),
-        draft.dartAnalysisStatus === 'error'
-          ? h('p', { class: 'dart-ai-status error' }, draft.dartAnalysisMessage || 'AI 분석을 완료하지 못했습니다.')
-          : null,
-        analysis ? h('section', { class: 'dart-analysis-preview', 'data-testid': 'dart-analysis-result' }, [
-          h('header', [
-            h('span', analysis.model || 'AI'),
-            h('strong', `${analysis.reportName} · ${analysis.status}`)
-          ]),
-          ...(analysis.result?.evidenceCards || []).map((card) => h('article', { class: 'dart-evidence-card', key: `${card.rceptNo}-${card.title}` }, [
-            h('strong', card.title),
-            h('p', card.summary),
-            h('small', `${card.sourceSection} · ${card.rceptNo} · 관련도 ${card.relevanceScore}`)
-          ])),
-          renderDartAnalysisList('지원서에 활용할 포인트', analysis.result?.appealPoints || []),
-          renderDartAnalysisList('문장 후보', analysis.result?.suggestedSentences || []),
-          renderDartAnalysisList('주의할 표현', analysis.result?.cautions || []),
-          renderDartAnalysisList('추가 확인 필요', analysis.result?.missingInfo || []),
-          h('button', {
-            type: 'button',
-            class: 'primary-button',
-            'data-testid': 'save-dart-analysis-reference',
-            disabled: analysis.status !== 'COMPLETED' || draft.dartSaveStatus === 'saving' || draft.dartSaveStatus === 'saved',
-            onClick: () => saveDartAnalysisReference(draft)
-          }, draft.dartSaveStatus === 'saved'
-            ? 'DART 참고자료로 저장됨'
-            : draft.dartSaveStatus === 'saving'
-              ? '저장 중'
-              : 'DART 참고자료로 저장'),
-          draft.dartSaveStatus === 'saved' ? h('p', { class: 'dart-ai-status saved' }, 'DART 참고자료로 저장했습니다.') : null,
-          draft.dartSaveStatus === 'error' ? h('p', { class: 'dart-ai-status error' }, 'DART 참고자료 저장에 실패했습니다.') : null
-        ]) : null
-      ]);
-    }
-
-    function renderDartAnalysisList(title, items) {
-      if (!items.length) return null;
-      return h('div', { class: 'dart-analysis-list' }, [
-        h('b', title),
-        h('ul', items.map((item) => h('li', item)))
-      ]);
-    }
-
     function renderDartLinkedText(text, sourceUrl) {
       return text;
     }
@@ -2597,7 +2539,7 @@ const MarkdownBoard = {
       const normalizedPoints = (points || []).filter((item) => item?.useCase || item?.recommendation).slice(0, 3);
       if (!normalizedPoints.length) return null;
       return h('div', { class: 'dart-use-grid' }, [
-        h('div', { class: 'dart-section-title' }, [h('span', { class: 'dart-dot' }), '자소서 활용 DART 포인트']),
+        h('div', { class: 'dart-section-title' }, [h('span', { class: 'dart-dot' }), '자소서 활용방안']),
         ...normalizedPoints.map((item, index) => h('article', { key: `${item.useCase || 'use'}-${index}` }, [
           h('span', item.useCase || '활용 포인트'),
           h('p', renderDartLinkedText(item.recommendation || '', sourceUrl))
@@ -2617,7 +2559,7 @@ const MarkdownBoard = {
 
     function renderDartSourceButton(source) {
       if (!source?.sourceUrl) return null;
-      const label = source.reportName ? `${source.reportName} 원문 보기` : 'DART 원문 보기';
+      const label = source.reportName ? `${source.reportName} 원문 확인` : 'DART 원문 확인';
       return h('a', {
         class: 'dart-source-button',
         href: source.sourceUrl,
@@ -2656,9 +2598,9 @@ const MarkdownBoard = {
             renderDartStructuredList('삽입 문장 후보', section.sentenceCandidates, sourceUrl),
             renderDartStructuredList('주의할 표현', section.cautionPoints, sourceUrl)
           ])
-        ]) : h('p', { class: 'dart-empty-insight' }, 'DART API 분석을 실행하면 이 항목에 맞는 자소서 활용 포인트가 정리됩니다.'),
+        ]) : null,
         h('details', { class: 'dart-raw-details', open: !hasStructured }, [
-          h('summary', '원문/분석 기준 보기'),
+          h('summary', '정리된 원문 메모 보기'),
           h(MarkdownDraftEditor, {
             modelValue: draft.dartSections[meta.legacyKey],
             'onUpdate:modelValue': (value) => {
@@ -2677,8 +2619,7 @@ const MarkdownBoard = {
       return h('section', { class: 'drawer-board dart-board-page dart-auto-ai-panel' }, [
         h('header', { class: 'dart-panel-hero' }, [
           h('div', [
-            h('h2', 'DART AI 분석'),
-            h('p', '사업보고서를 자동 분석해 자소서에 쓸 기업 근거로 정리합니다.')
+            h('h2', 'DART 자소서 활용 포인트')
           ])
         ]),
         h('section', { class: 'dart-route-box' }, [
@@ -2696,27 +2637,35 @@ const MarkdownBoard = {
             h('strong', draft.dartAutoFillStatus === 'loading' || draft.dartAnalysisStatus === 'loading'
               ? 'DART 공시를 자동 분석 중입니다'
               : draft.dartAutoFillStatus === 'ready'
-                ? 'DART 기반 자소서 포인트가 준비됐습니다'
+                ? 'DART 기반 자소서 활용 포인트가 준비됐습니다'
                 : 'DART 게시판을 열면 자동으로 분석합니다'),
             h('p', [
-              `${workspaceStore.workspace?.companyName || '지원 기업'} · ${workspaceStore.workspace?.positionTitle || '지원 직무'} 기준으로 `,
-              h('span', 'JD 참고자료'),
-              '와 공시를 함께 읽고 문항별 활용 추천까지 생성합니다.'
+              h('span', { class: 'dart-context-chip' }, workspaceStore.workspace?.companyName || '지원 기업'),
+              h('span', { class: 'dart-context-chip' }, workspaceStore.workspace?.positionTitle || '지원 직무'),
+              ' 기준으로 JD를 참고하여 분석'
             ])
           ]),
-          draft.dartAutoFillStatus === 'loading' || draft.dartAnalysisStatus === 'loading'
-            ? h('span', { class: 'dart-auto-spinner', 'aria-label': '분석 중' })
-            : h('span', { class: ['dart-auto-state-chip', { ready: draft.dartAutoFillStatus === 'ready' }] }, draft.dartAutoFillStatus === 'ready' ? '완료' : '자동')
+          h('div', { class: 'dart-auto-status-actions' }, [
+            draft.dartAutoFillStatus === 'loading' || draft.dartAnalysisStatus === 'loading'
+              ? h('span', { class: 'dart-auto-spinner', 'aria-label': '분석 중' })
+              : h('span', { class: ['dart-auto-state-chip', { ready: draft.dartAutoFillStatus === 'ready' }] }, draft.dartAutoFillStatus === 'ready' ? '완료' : '자동'),
+            h('button', {
+              type: 'button',
+              class: 'dart-refresh-button',
+              disabled: draft.dartAutoFillStatus === 'loading' || draft.dartAnalysisStatus === 'loading',
+              'aria-label': 'JD 기준으로 DART 다시 분석',
+              title: 'JD 기준으로 다시 분석',
+              onClick: () => refreshDartAnalysis(draft)
+            }, [
+              h('span', { 'aria-hidden': 'true' }, '↻'),
+              h('span', '재분석')
+            ])
+          ])
         ]),
         draft.dartAutoFillMessage ? h('p', {
           class: ['dart-api-status', { error: draft.dartAutoFillStatus === 'error', ready: draft.dartAutoFillStatus === 'ready' }],
           'data-testid': 'dart-auto-fill-status'
         }, draft.dartAutoFillMessage) : null,
-        draft.dartDisclosures.length ? h('p', { class: 'dart-latest-report-note' }, [
-          '최신 보고서 자동 선택: ',
-          h('b', `${(draft.dartDisclosures[0]?.corpName || workspaceStore.workspace?.companyName || '기업')} · ${draft.dartDisclosures[0]?.reportName || '정기공시'}`),
-          draft.dartDisclosures[0]?.receivedDate ? ` · ${draft.dartDisclosures[0].receivedDate}` : ''
-        ]) : null,
         h('div', { class: 'dart-section-tabs', role: 'tablist', 'aria-label': 'DART 항목' }, dartSectionMeta.map((meta) => h('button', {
           type: 'button',
           key: meta.legacyKey,

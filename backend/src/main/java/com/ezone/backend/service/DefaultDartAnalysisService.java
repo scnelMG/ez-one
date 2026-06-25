@@ -104,7 +104,7 @@ public class DefaultDartAnalysisService implements DartAnalysisService {
                 null,
                 sourceUrl,
                 DartAnalysisContentResponse.empty(),
-                "AI analysis failed. You can still write a manual DART memo."
+                "DART 공시 분석을 완료하지 못했습니다. 잠시 후 다시 시도해주세요."
             );
         }
         analyses.put(analysisId, new StoredDartAnalysis(userId, workspaceId, response));
