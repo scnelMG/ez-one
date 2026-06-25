@@ -40,17 +40,19 @@ Google 로그인 -> 온보딩 -> 메인 -> 공고 저장 -> 공고함 -> 지원 
 | 공고함 | 저장한 공고의 마감일, 지원 상태, 준비 현황을 관리합니다. |
 | 지원 워크스페이스 | 공고별 자기소개서, 참고자료, 지원 메모를 한곳에서 관리합니다. |
 | 서류 입력 정보 | 학력, 경력, 프로젝트, 자격증 등 반복 입력 정보를 정리해 재사용합니다. |
-| 추천 공고 | 온보딩에서 입력한 선호 조건을 바탕으로 확인할 공고 후보를 보여줍니다. |
 | Chrome Extension | 채용 사이트에서 공고 정보를 추출하고 미리보기 후 저장합니다. |
 | Notion 동기화 | 저장한 공고 정보만 Notion으로 동기화합니다. |
+| 과거 지원 이력 | 지원 상태가 바뀐 공고와 가져온 이력을 기간, 결과, 기업 유형으로 확인합니다. |
+| 취업 스터디 | 스터디 구성원끼리 자소서와 피드백을 공유합니다. |
+| SSAFY 추천 공고 | SSAFY 사용자에게 Mattermost 기반 추천 공고 목록을 제공합니다. |
 
 ## 현재 개발 상태
 
-현재는 P1 제품 흐름을 기준으로 프론트 화면, 라우터, API 클라이언트, 로컬 QA용 폴백 데이터가 준비된 상태입니다.
+현재는 백엔드 API, 프론트엔드 화면, Chrome Extension, 테스트, 제출용 빌드 산출물이 준비된 상태입니다.
 
-P1 범위는 공고 저장, 공고함, 지원 워크스페이스, 서류 입력 정보, 추천 공고, Notion 공고 정보 동기화입니다. 알림, 캘린더 확장, 과거 지원 이력, 확장된 Notion 동기화는 P2 또는 예약 영역으로 둡니다.
+핵심 제출 범위는 Google 로그인, 온보딩, 메인 대시보드, 공고 저장/공고함, 지원 워크스페이스, 참고자료, 서류 입력 정보, Chrome Extension 공고 저장, Notion `JOB_ONLY` 동기화입니다. 구현된 확장 범위로 과거 지원 이력, 취업 스터디, SSAFY 전용 Mattermost 추천, DART 기반 참고자료 분석 보조가 포함되어 있습니다.
 
-자세한 구현 진행 기록은 [docs/18_wbs.md](./docs/18_wbs.md)와 [docs/24_development-start-checklist.md](./docs/24_development-start-checklist.md)를 참고합니다.
+알림 독립 채널, 외부 캘린더 연동, 관리자 운영 화면, 자소서/도화지 Notion 확장 동기화, AI의 자동 자소서 수정은 제출 범위에 포함하지 않습니다. 자세한 최종 범위와 검증 결과는 [docs/37_final-submission-report.md](./docs/37_final-submission-report.md)를 참고합니다.
 
 ## 기술 스택
 
@@ -78,6 +80,7 @@ P1 범위는 공고 저장, 공고함, 지원 워크스페이스, 서류 입력 
 | 목적 | 문서 |
 | --- | --- |
 | 요구사항 | [docs/04_requirements.md](./docs/04_requirements.md) |
+| 최종 제출 보고서 | [docs/37_final-submission-report.md](./docs/37_final-submission-report.md) |
 | 전체 IA | [docs/08_information-architecture.md](./docs/08_information-architecture.md) |
 | 화면 설계 | [docs/09_screen-design.md](./docs/09_screen-design.md) |
 | 기능 명세 | [docs/10_feature-spec.md](./docs/10_feature-spec.md) |
