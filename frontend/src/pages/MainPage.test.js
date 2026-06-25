@@ -170,7 +170,7 @@ describe('MainPage', () => {
     const image = wrapper.get('[data-testid="main-character-image"]');
 
     expect(image.attributes('alt')).toBe('지원 현황을 들고 있는 EZ-ONE 캐릭터');
-    expect(image.attributes('src')).toContain('bee-job-application-cutout');
+    expect(image.attributes('src')).toContain('bee-backpack-main');
     expect(image.classes()).toContain('hero-face-character');
   });
 

@@ -83,7 +83,11 @@ async function retryWithFallbackApiBaseUrl(error) {
     }
 
     const currentBaseUrl = resolveApiBaseUrl(error.config.baseURL ?? defaultHttpClient.defaults.baseURL);
-    const nextBaseUrl = nextFallbackApiBaseUrl(currentBaseUrl, error.config._apiBaseFallbackIndex);
+    const attemptedBaseUrls = new Set(error.config._apiBaseFallbackAttempted ?? []);
+    if (currentBaseUrl) {
+        attemptedBaseUrls.add(currentBaseUrl);
+    }
+    const nextBaseUrl = nextFallbackApiBaseUrl(currentBaseUrl, error.config._apiBaseFallbackIndex, attemptedBaseUrls);
     if (!nextBaseUrl) {
         return null;
     }
@@ -92,17 +96,20 @@ async function retryWithFallbackApiBaseUrl(error) {
     return defaultHttpClient.request({
         ...error.config,
         baseURL: nextBaseUrl,
-        _apiBaseFallbackIndex: apiBaseUrlCandidates.indexOf(nextBaseUrl)
+        _apiBaseFallbackIndex: apiBaseUrlCandidates.indexOf(nextBaseUrl),
+        _apiBaseFallbackAttempted: [...attemptedBaseUrls, nextBaseUrl]
     });
 }
 
-function nextFallbackApiBaseUrl(currentBaseUrl, previousIndex) {
+function nextFallbackApiBaseUrl(currentBaseUrl, previousIndex, attemptedBaseUrls = new Set()) {
     const startIndex = Number.isInteger(previousIndex)
         ? previousIndex + 1
         : Math.max(0, apiBaseUrlCandidates.indexOf(currentBaseUrl) + 1);
-    for (let index = startIndex; index < apiBaseUrlCandidates.length; index += 1) {
-        if (apiBaseUrlCandidates[index] !== currentBaseUrl) {
-            return apiBaseUrlCandidates[index];
+    for (let offset = 0; offset < apiBaseUrlCandidates.length; offset += 1) {
+        const index = (startIndex + offset) % apiBaseUrlCandidates.length;
+        const candidate = apiBaseUrlCandidates[index];
+        if (candidate !== currentBaseUrl && !attemptedBaseUrls.has(candidate)) {
+            return candidate;
         }
     }
     return null;

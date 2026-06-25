@@ -337,7 +337,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue';
-import characterImage from '@/assets/bee-job-application-cutout.png';
+import characterImage from '@/assets/bee-backpack-main.png';
 import HoneyPotGraph from '@/components/HoneyPotGraph.vue';
 import AppLayout from '@/shared/AppLayout.vue';
 import {
@@ -1380,12 +1380,12 @@ async function archiveJob(id) {
   position: absolute;
   inset: 0 auto 0 0;
   width: 5px;
-  background: linear-gradient(180deg, #6d4aff 0%, #22c55e 100%);
+  background: #6d4aff;
   opacity: 0.82;
 }
 
 .study-card:nth-of-type(2n)::before {
-  background: linear-gradient(180deg, #0ea5e9 0%, #f59e0b 100%);
+  background: #6d4aff;
 }
 
 .study-card:hover {
