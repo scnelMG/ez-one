@@ -22,6 +22,13 @@ final class DartAnalysisPromptBuilder {
             Read the user's saved JD context, target company, target position, and essay questions first.
             Select only facts that can help the applicant write 지원동기, 직무역량, 입사 후 포부, or related answers for the target position.
 
+            Work in this order before writing the final JSON:
+            collect the relevant DART passages, organize them into the three required business buckets, analyze JD fit,
+            then produce Actionable advice for the applicant.
+            Do not expose raw DART facts item-by-item. Convert source facts into organized insight, essay-use advice,
+            sentence candidates, and cautions. Keep receipt numbers and source sections inside evidence fields for audit,
+            but make the user-facing advice concise and practical.
+
             Required analysis:
             1. Split the analysis into exactly three sections:
                - mainProductsAndServices: actual products, services, business model, channels, customer value, product line, market direction.

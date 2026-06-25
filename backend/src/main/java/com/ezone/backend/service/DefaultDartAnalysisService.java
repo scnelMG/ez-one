@@ -1,6 +1,7 @@
 package com.ezone.backend.service;
 
 import com.ezone.backend.domain.ReferenceType;
+import com.ezone.backend.domain.persistence.DartAnalysisRow;
 import com.ezone.backend.dto.dart.CreateDartAnalysisRequest;
 import com.ezone.backend.dto.dart.DartAnalysisContentResponse;
 import com.ezone.backend.dto.dart.DartAnalysisResponse;
@@ -8,11 +9,11 @@ import com.ezone.backend.dto.dart.DartDisclosureListResponse;
 import com.ezone.backend.dto.workspace.CreateReferenceRequest;
 import com.ezone.backend.dto.workspace.ReferenceResponse;
 import com.ezone.backend.dto.workspace.WorkspaceResponse;
+import com.ezone.backend.mapper.DartAnalysisMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicLong;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -24,21 +25,25 @@ public class DefaultDartAnalysisService implements DartAnalysisService {
     private final DartAiAnalysisClient aiClient;
     private final GmsKeyInfoClient gmsKeyInfoClient;
     private final DartAnalysisQualityEvaluator qualityEvaluator;
-    private final AtomicLong analysisSequence = new AtomicLong(1000L);
-    private final ConcurrentMap<Long, StoredDartAnalysis> analyses = new ConcurrentHashMap<>();
+    private final DartAnalysisMapper dartAnalysisMapper;
+    private final ObjectMapper objectMapper;
 
     public DefaultDartAnalysisService(
         P1WorkspaceService workspaceService,
         OpenDartClient openDartClient,
         DartAiAnalysisClient aiClient,
         GmsKeyInfoClient gmsKeyInfoClient,
-        DartAnalysisQualityEvaluator qualityEvaluator
+        DartAnalysisQualityEvaluator qualityEvaluator,
+        DartAnalysisMapper dartAnalysisMapper,
+        ObjectMapper objectMapper
     ) {
         this.workspaceService = workspaceService;
         this.openDartClient = openDartClient;
         this.aiClient = aiClient;
         this.gmsKeyInfoClient = gmsKeyInfoClient;
         this.qualityEvaluator = qualityEvaluator;
+        this.dartAnalysisMapper = dartAnalysisMapper;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -47,7 +52,11 @@ public class DefaultDartAnalysisService implements DartAnalysisService {
         try {
             return DartDisclosureListResponse.available(openDartClient.listPeriodicDisclosures(workspace.companyName()));
         } catch (RuntimeException exception) {
-            return DartDisclosureListResponse.unavailable("DART disclosures are temporarily unavailable.");
+            return DartDisclosureListResponse.unavailable(
+                StringUtils.hasText(exception.getMessage())
+                    ? exception.getMessage()
+                    : "DART disclosures are temporarily unavailable."
+            );
         }
     }
 
@@ -61,7 +70,6 @@ public class DefaultDartAnalysisService implements DartAnalysisService {
             );
         }
 
-        Long analysisId = analysisSequence.incrementAndGet();
         String companyName = firstText(request.companyName(), workspace.companyName());
         String positionTitle = firstText(request.positionTitle(), workspace.positionTitle());
         String documentText = firstText(request.documentText(), downloadDocumentText(request.rceptNo()));
@@ -82,7 +90,7 @@ public class DefaultDartAnalysisService implements DartAnalysisService {
                 throw new IllegalStateException("AI analysis did not pass the DART quality gate.");
             }
             response = new DartAnalysisResponse(
-                analysisId,
+                null,
                 workspaceId,
                 request.rceptNo(),
                 request.reportName(),
@@ -95,7 +103,7 @@ public class DefaultDartAnalysisService implements DartAnalysisService {
             );
         } catch (RuntimeException exception) {
             response = new DartAnalysisResponse(
-                analysisId,
+                null,
                 workspaceId,
                 request.rceptNo(),
                 request.reportName(),
@@ -107,8 +115,7 @@ public class DefaultDartAnalysisService implements DartAnalysisService {
                 "DART 공시 분석을 완료하지 못했습니다. 잠시 후 다시 시도해주세요."
             );
         }
-        analyses.put(analysisId, new StoredDartAnalysis(userId, workspaceId, response));
-        return response;
+        return persistAnalysis(userId, response);
     }
 
     @Override
@@ -133,14 +140,72 @@ public class DefaultDartAnalysisService implements DartAnalysisService {
     }
 
     private StoredDartAnalysis requireAnalysis(Long userId, Long workspaceId, Long analysisId) {
-        StoredDartAnalysis stored = analyses.get(analysisId);
-        if (stored == null) {
+        DartAnalysisRow row = dartAnalysisMapper.findById(analysisId);
+        if (row == null) {
             throw new IllegalArgumentException("DART analysis not found.");
         }
-        if (!Objects.equals(stored.userId(), userId) || !Objects.equals(stored.workspaceId(), workspaceId)) {
+        if (!Objects.equals(row.getUserId(), userId) || !Objects.equals(row.getWorkspaceId(), workspaceId)) {
             throw new ForbiddenResourceException("DART analysis is not owned by current user.");
         }
-        return stored;
+        return new StoredDartAnalysis(row.getUserId(), row.getWorkspaceId(), toResponse(row));
+    }
+
+    private DartAnalysisResponse persistAnalysis(Long userId, DartAnalysisResponse response) {
+        DartAnalysisRow row = new DartAnalysisRow();
+        row.setUserId(userId);
+        row.setWorkspaceId(response.workspaceId());
+        row.setRceptNo(response.rceptNo());
+        row.setReportName(response.reportName());
+        row.setCompanyName(response.companyName());
+        row.setStatus(response.status());
+        row.setModel(response.model());
+        row.setSourceUrl(response.sourceUrl());
+        row.setResultJson(writeResultJson(response.result()));
+        row.setErrorMessage(response.errorMessage());
+        dartAnalysisMapper.insert(row);
+        return new DartAnalysisResponse(
+            row.getId(),
+            response.workspaceId(),
+            response.rceptNo(),
+            response.reportName(),
+            response.companyName(),
+            response.status(),
+            response.model(),
+            response.sourceUrl(),
+            response.result(),
+            response.errorMessage()
+        );
+    }
+
+    private DartAnalysisResponse toResponse(DartAnalysisRow row) {
+        return new DartAnalysisResponse(
+            row.getId(),
+            row.getWorkspaceId(),
+            row.getRceptNo(),
+            row.getReportName(),
+            row.getCompanyName(),
+            row.getStatus(),
+            row.getModel(),
+            row.getSourceUrl(),
+            readResultJson(row.getResultJson()),
+            row.getErrorMessage()
+        );
+    }
+
+    private String writeResultJson(DartAnalysisContentResponse result) {
+        try {
+            return objectMapper.writeValueAsString(result);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("Failed to serialize DART analysis result.", exception);
+        }
+    }
+
+    private DartAnalysisContentResponse readResultJson(String resultJson) {
+        try {
+            return objectMapper.readValue(resultJson, DartAnalysisContentResponse.class);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("Failed to read DART analysis result.", exception);
+        }
     }
 
     private String downloadDocumentText(String rceptNo) {
@@ -156,14 +221,12 @@ public class DefaultDartAnalysisService implements DartAnalysisService {
 
     private String formatReferenceBody(DartAnalysisResponse analysis) {
         StringBuilder builder = new StringBuilder();
-        builder.append("# DART AI 분석\n\n");
-        builder.append("- 기업: ").append(defaultText(analysis.companyName())).append('\n');
-        builder.append("- 보고서: ").append(defaultText(analysis.reportName())).append('\n');
-        builder.append("- 접수번호: ").append(defaultText(analysis.rceptNo())).append("\n\n");
-        appendSectionAnalysis(builder, analysis.result().mainProductsAndServices());
-        appendSectionAnalysis(builder, analysis.result().contractsAndRAndD());
-        appendSectionAnalysis(builder, analysis.result().otherNotes());
-        appendEvidenceCards(builder, analysis.result().evidenceCards());
+        builder.append("# DART analysis advice\n\n");
+        builder.append("- Company: ").append(defaultText(analysis.companyName())).append('\n');
+        builder.append("- Report: ").append(defaultText(analysis.reportName())).append("\n\n");
+        appendAdviceSection(builder, analysis.result().mainProductsAndServices());
+        appendAdviceSection(builder, analysis.result().contractsAndRAndD());
+        appendAdviceSection(builder, analysis.result().otherNotes());
         appendList(builder, "지원서에 사용할 포인트", analysis.result().appealPoints());
         appendList(builder, "문장 후보", analysis.result().suggestedSentences());
         appendList(builder, "주의할 표현", analysis.result().cautions());
@@ -171,16 +234,14 @@ public class DefaultDartAnalysisService implements DartAnalysisService {
         return builder.toString().trim();
     }
 
-    private void appendSectionAnalysis(StringBuilder builder, DartAnalysisContentResponse.DartSectionAnalysis section) {
+    private void appendAdviceSection(StringBuilder builder, DartAnalysisContentResponse.DartSectionAnalysis section) {
         if (section == null || !StringUtils.hasText(section.coreSummary())) {
             return;
         }
         builder.append("## ").append(defaultText(section.sectionTitle())).append('\n');
         builder.append(section.coreSummary()).append("\n\n");
-        appendList(builder, "DART evidence", section.evidencePoints());
-        appendList(builder, "Job fit", section.jobFitPoints());
         if (section.resumeUsePoints() != null && !section.resumeUsePoints().isEmpty()) {
-            builder.append("### Essay use points\n");
+            builder.append("### Advice\n");
             for (DartAnalysisContentResponse.ResumeUsePoint point : section.resumeUsePoints()) {
                 builder.append("- ").append(defaultText(point.useCase()))
                     .append(": ").append(defaultText(point.recommendation())).append('\n');
@@ -189,20 +250,6 @@ public class DefaultDartAnalysisService implements DartAnalysisService {
         }
         appendList(builder, "Sentence candidates", section.sentenceCandidates());
         appendList(builder, "Cautions", section.cautionPoints());
-    }
-
-    private void appendEvidenceCards(StringBuilder builder, List<DartAnalysisContentResponse.EvidenceCard> cards) {
-        if (cards == null || cards.isEmpty()) {
-            return;
-        }
-        builder.append("## 근거 카드\n");
-        for (DartAnalysisContentResponse.EvidenceCard card : cards) {
-            builder.append("- ").append(defaultText(card.title()))
-                .append(" (").append(defaultText(card.sourceSection()))
-                .append(", ").append(defaultText(card.rceptNo())).append("): ")
-                .append(defaultText(card.summary())).append('\n');
-        }
-        builder.append('\n');
     }
 
     private void appendList(StringBuilder builder, String title, List<String> items) {

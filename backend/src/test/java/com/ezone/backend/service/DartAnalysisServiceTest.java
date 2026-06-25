@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.ezone.backend.domain.ReferenceType;
+import com.ezone.backend.domain.persistence.DartAnalysisRow;
 import com.ezone.backend.dto.dart.CreateDartAnalysisRequest;
 import com.ezone.backend.dto.dart.DartAnalysisContentResponse;
 import com.ezone.backend.dto.dart.DartAnalysisResponse;
@@ -14,7 +15,10 @@ import com.ezone.backend.dto.dart.DartDisclosureResponse;
 import com.ezone.backend.dto.workspace.CreateReferenceRequest;
 import com.ezone.backend.dto.workspace.ReferenceResponse;
 import com.ezone.backend.dto.workspace.WorkspaceResponse;
+import com.ezone.backend.mapper.DartAnalysisMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
@@ -25,14 +29,24 @@ class DartAnalysisServiceTest {
     private final OpenDartClient openDartClient = Mockito.mock(OpenDartClient.class);
     private final DartAiAnalysisClient aiClient = Mockito.mock(DartAiAnalysisClient.class);
     private final GmsKeyInfoClient gmsKeyInfoClient = Mockito.mock(GmsKeyInfoClient.class);
+    private final DartAnalysisMapper dartAnalysisMapper = Mockito.mock(DartAnalysisMapper.class);
     private final DartAnalysisQualityEvaluator qualityEvaluator = new DartAnalysisQualityEvaluator();
-    private final DefaultDartAnalysisService service = new DefaultDartAnalysisService(
-        workspaceService,
-        openDartClient,
-        aiClient,
-        gmsKeyInfoClient,
-        qualityEvaluator
-    );
+    private DefaultDartAnalysisService service;
+    private DartAnalysisRow insertedAnalysis;
+
+    @BeforeEach
+    void setUp() {
+        service = new DefaultDartAnalysisService(
+            workspaceService,
+            openDartClient,
+            aiClient,
+            gmsKeyInfoClient,
+            qualityEvaluator,
+            dartAnalysisMapper,
+            new ObjectMapper()
+        );
+        insertedAnalysis = null;
+    }
 
     @Test
     void listDisclosuresReturnsPeriodicReportsWithoutBlockingWorkspaceAccess() {
@@ -57,6 +71,19 @@ class DartAnalysisServiceTest {
     }
 
     @Test
+    void listDisclosuresReportsProviderConfigurationFailureSeparatelyFromNoReports() {
+        when(workspaceService.getWorkspace(1L, 102L)).thenReturn(workspace());
+        when(openDartClient.listPeriodicDisclosures("Kakao"))
+            .thenThrow(new IllegalStateException("OpenDART API key is not configured."));
+
+        var response = service.listDisclosures(1L, 102L);
+
+        assertThat(response.available()).isFalse();
+        assertThat(response.disclosures()).isEmpty();
+        assertThat(response.message()).contains("OpenDART API key");
+    }
+
+    @Test
     void createAnalysisRequiresAvailableGmsCredits() {
         when(workspaceService.getWorkspace(1L, 102L)).thenReturn(workspace());
         when(gmsKeyInfoClient.getKeyStatus()).thenReturn(
@@ -74,6 +101,7 @@ class DartAnalysisServiceTest {
         when(gmsKeyInfoClient.getKeyStatus()).thenReturn(
             new GmsKeyStatus(true, 100, "2026-12-31T23:59:59", null)
         );
+        assignInsertedAnalysisId(1001L);
         when(aiClient.analyze(any())).thenReturn(new DartAiAnalysisResult(
             "gpt-4.1",
             new DartAnalysisContentResponse(
@@ -92,6 +120,7 @@ class DartAnalysisServiceTest {
         ));
 
         DartAnalysisResponse response = service.createAnalysis(1L, 102L, analysisRequest());
+        when(dartAnalysisMapper.findById(response.id())).thenReturn(insertedAnalysis);
 
         assertThat(response.status()).isEqualTo("COMPLETED");
         assertThat(response.result().evidenceCards()).hasSize(1);
@@ -101,11 +130,54 @@ class DartAnalysisServiceTest {
     }
 
     @Test
+    void getAnalysisReadsPersistedAnalysisAfterServiceRestart() {
+        when(workspaceService.getWorkspace(1L, 102L)).thenReturn(workspace());
+        when(gmsKeyInfoClient.getKeyStatus()).thenReturn(
+            new GmsKeyStatus(true, 100, "2026-12-31T23:59:59", null)
+        );
+        assignInsertedAnalysisId(1002L);
+        when(aiClient.analyze(any())).thenReturn(new DartAiAnalysisResult(
+            "gpt-4.1",
+            new DartAnalysisContentResponse(
+                List.of(new DartAnalysisContentResponse.EvidenceCard(
+                    "Platform",
+                    "The report describes platform investment.",
+                    "Business overview",
+                    "20260330000123",
+                    90
+                )),
+                List.of("Use platform reliability as the main appeal."),
+                List.of("I can improve platform reliability."),
+                List.of("Do not overstate ownership."),
+                List.of()
+            )
+        ));
+
+        DartAnalysisResponse created = service.createAnalysis(1L, 102L, analysisRequest());
+        when(dartAnalysisMapper.findById(created.id())).thenReturn(insertedAnalysis);
+        DefaultDartAnalysisService restarted = new DefaultDartAnalysisService(
+            workspaceService,
+            openDartClient,
+            aiClient,
+            gmsKeyInfoClient,
+            qualityEvaluator,
+            dartAnalysisMapper,
+            new ObjectMapper()
+        );
+
+        DartAnalysisResponse restored = restarted.getAnalysis(1L, 102L, created.id());
+
+        assertThat(restored.id()).isEqualTo(created.id());
+        assertThat(restored.result().appealPoints()).containsExactly("Use platform reliability as the main appeal.");
+    }
+
+    @Test
     void createAnalysisEvaluatesAndImprovesAiOutputBeforeUserReview() {
         when(workspaceService.getWorkspace(1L, 102L)).thenReturn(workspace());
         when(gmsKeyInfoClient.getKeyStatus()).thenReturn(
             new GmsKeyStatus(true, 100, "2026-12-31T23:59:59", null)
         );
+        assignInsertedAnalysisId(1003L);
         when(aiClient.analyze(any())).thenReturn(new DartAiAnalysisResult(
             "gpt-4.1",
             new DartAnalysisContentResponse(
@@ -151,6 +223,7 @@ class DartAnalysisServiceTest {
         when(gmsKeyInfoClient.getKeyStatus()).thenReturn(
             new GmsKeyStatus(true, 100, "2026-12-31T23:59:59", null)
         );
+        assignInsertedAnalysisId(1004L);
         when(aiClient.analyze(any())).thenReturn(new DartAiAnalysisResult(
             "gpt-4.1",
             new DartAnalysisContentResponse(
@@ -178,6 +251,7 @@ class DartAnalysisServiceTest {
             ));
 
         DartAnalysisResponse analysis = service.createAnalysis(1L, 102L, analysisRequest());
+        when(dartAnalysisMapper.findById(analysis.id())).thenReturn(insertedAnalysis);
         ReferenceResponse reference = service.saveAnalysisAsReference(1L, 102L, analysis.id());
 
         assertThat(reference.referenceType()).isEqualTo(ReferenceType.DART);
@@ -185,7 +259,9 @@ class DartAnalysisServiceTest {
         verify(workspaceService).createReference(Mockito.eq(1L), Mockito.eq(102L), captor.capture());
         assertThat(captor.getValue().boardName()).isEqualTo("DART");
         assertThat(captor.getValue().title()).startsWith("DART AI 분석 - ");
-        assertThat(captor.getValue().body()).contains("DART AI 분석", "근거 카드", "R&D signal", "20260330000123", "Keep the source-limited wording.");
+        assertThat(captor.getValue().body())
+            .contains("DART analysis advice", "Use R&D execution experience as the appeal angle.", "Keep the source-limited wording.")
+            .doesNotContain("R&D signal", "20260330000123", "Evidence");
 
         assertThatThrownBy(() -> service.saveAnalysisAsReference(2L, 102L, analysis.id()))
             .isInstanceOf(ForbiddenResourceException.class);
@@ -215,5 +291,13 @@ class DartAnalysisServiceTest {
             List.of(),
             List.of()
         );
+    }
+
+    private void assignInsertedAnalysisId(Long id) {
+        Mockito.doAnswer(invocation -> {
+            invocation.getArgument(0, DartAnalysisRow.class).setId(id);
+            insertedAnalysis = invocation.getArgument(0, DartAnalysisRow.class);
+            return 1;
+        }).when(dartAnalysisMapper).insert(any(DartAnalysisRow.class));
     }
 }

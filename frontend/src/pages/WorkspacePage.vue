@@ -619,6 +619,7 @@ import { diffArrays } from 'diff';
 import { useRoute } from 'vue-router';
 import { rememberRecentWorkspace } from '@/features/basket/recentWorkspaces';
 import { workspaceApi } from '@/features/workspace/api/workspaceApi';
+import { messageFromError } from '@/shared/errorMessage';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 
 const isCreatingNewVersion = ref(false);
@@ -1618,9 +1619,23 @@ function saveDartEntry(draft) {
     id: `dart-${Date.now()}`,
     title,
     createdAt: new Date().toLocaleString('ko-KR'),
-    sections: { ...draft.dartSections },
+    sections: dartAdviceEntrySections(draft),
     structuredSections: { ...(draft.dartStructuredSections || {}) }
   }, ...draft.dartEntries];
+}
+
+function dartAdviceEntrySections(draft) {
+  return Object.fromEntries(dartSectionMeta.map((meta) => {
+    const section = normalizeDartSectionAnalysis(draft.dartStructuredSections?.[meta.legacyKey], meta.title);
+    const text = [
+      section.coreSummary,
+      firstNonBlank(section.resumeUsePoints?.map((item) => item?.recommendation)),
+      firstNonBlank(section.sentenceCandidates),
+      firstNonBlank(section.cautionPoints)
+    ].filter(Boolean).join('\n');
+    const manualText = draft.dartAnalysis ? '' : plainTextFromMarkdown(draft.dartSections?.[meta.legacyKey] || '');
+    return [meta.legacyKey, text || manualText];
+  }));
 }
 
 function addDartEntry(draft) {
@@ -1855,7 +1870,8 @@ async function createDartAnalysisForDisclosure(draft, disclosure) {
   } catch (error) {
     draft.dartAnalysis = null;
     draft.dartAnalysisStatus = 'error';
-    draft.dartAnalysisMessage = 'AI 분석을 완료하지 못했습니다. DART 수동 메모 작성과 저장은 계속 사용할 수 있어요.';
+    draft.dartAnalysisMessage = messageFromError(error, '')
+      || 'AI 분석을 완료하지 못했습니다. DART 수동 메모 작성과 저장은 계속 사용할 수 있어요.';
     return null;
   }
 }
@@ -1871,7 +1887,9 @@ async function fillDartSectionsFromApi(draft) {
     const recommended = draft.dartDisclosures.find((item) => item.recommended) || draft.dartDisclosures[0];
     if (!recommended) {
       draft.dartAutoFillStatus = 'error';
-      draft.dartAutoFillMessage = 'DART에서 이 기업의 사업/반기/분기보고서를 찾지 못했습니다. 기업명 또는 계열사명을 확인해주세요.';
+      draft.dartAutoFillMessage = draft.dartDisclosureStatus === 'error' && draft.dartDisclosureMessage
+        ? draft.dartDisclosureMessage
+        : 'DART에서 이 기업의 사업/반기/분기보고서를 찾지 못했습니다. 기업명 또는 계열사명을 확인해주세요.';
       return;
     }
     const candidateDisclosures = buildDartDisclosureFallbackQueue(draft.dartDisclosures, recommended);
@@ -1890,7 +1908,8 @@ async function fillDartSectionsFromApi(draft) {
     }
     if (!firstAnalysis) {
       draft.dartAutoFillStatus = 'error';
-      draft.dartAutoFillMessage = 'DART 공시 분석을 완료하지 못했습니다. 잠시 후 다시 열거나 JD 저장 내용을 확인해주세요.';
+      draft.dartAutoFillMessage = draft.dartAnalysisMessage
+        || 'DART 공시 분석을 완료하지 못했습니다. 잠시 후 다시 열거나 JD 저장 내용을 확인해주세요.';
       return;
     }
     const merged = await buildDartSectionsWithFallback(draft, firstAnalysis, candidateDisclosures.slice(Math.max(firstAnalysisIndex, 0)));
@@ -2137,6 +2156,11 @@ async function saveDartAnalysisReference(draft) {
   } catch (error) {
     draft.dartSaveStatus = 'error';
   }
+}
+
+async function saveDartBoard(draft) {
+  saveDartEntry(draft);
+  await saveDartAnalysisReference(draft);
 }
 
 function dartManualContext(draft) {
@@ -2614,8 +2638,75 @@ const MarkdownBoard = {
       ]);
     }
 
+    function renderDartAdvicePanel(draft) {
+      const sections = dartSectionMeta
+        .map((meta) => ({
+          meta,
+          section: normalizeDartSectionAnalysis(draft.dartStructuredSections?.[meta.legacyKey], meta.title)
+        }))
+        .filter(({ section }) => hasDartSectionContent(section));
+      if (!sections.length) {
+        return h('section', { class: 'dart-section-panel dart-analysis-card', 'data-testid': 'dart-advice-panel' }, [
+          h('header', { class: 'dart-card-head' }, [
+            h('div', [
+              h('h3', 'DART 분석 조언'),
+              h('p', '공시를 불러오면 지원 직무에 맞춰 요약과 활용 조언을 정리합니다.')
+            ])
+          ])
+        ]);
+      }
+      const summaryItems = sections
+        .map(({ meta, section }) => ({
+          label: meta.title,
+          text: section.coreSummary || firstNonBlank(section.jobFitPoints) || firstNonBlank(section.sentenceCandidates)
+        }))
+        .filter((item) => item.text);
+      const usePoints = sections.flatMap(({ meta, section }) => (section.resumeUsePoints || [])
+        .filter((item) => item?.recommendation)
+        .map((item) => ({
+          label: item.useCase || meta.shortTitle,
+          text: item.recommendation
+        })));
+      const sentenceItems = sections.flatMap(({ section }) => section.sentenceCandidates || []).filter(Boolean);
+      const cautionItems = sections.flatMap(({ section }) => section.cautionPoints || []).filter(Boolean);
+      return h('section', { class: 'dart-section-panel dart-analysis-card', 'data-testid': 'dart-advice-panel' }, [
+        h('header', { class: 'dart-card-head' }, [
+          h('div', [
+            h('h3', 'DART 분석 조언'),
+            h('p', '공시 원문은 내부에서 정리하고, 화면에는 자소서에 바로 쓸 판단과 조언만 보여줍니다.')
+          ])
+        ]),
+        h('div', { class: 'dart-section-insight' }, [
+          h('section', { class: 'dart-card-section' }, [
+            h('div', { class: 'dart-section-title' }, [h('span', { class: 'dart-dot' }), '핵심 판단']),
+            summaryItems.length
+              ? h('ul', summaryItems.slice(0, 3).map((item) => h('li', [
+                h('b', item.label),
+                ' ',
+                item.text
+              ])))
+              : h('p', { class: 'dart-section-summary' }, '아직 자소서에 연결할 만큼 충분한 DART 분석이 없습니다.')
+          ]),
+          usePoints.length ? h('section', { class: 'dart-card-section' }, [
+            h('div', { class: 'dart-section-title' }, [h('span', { class: 'dart-dot' }), '활용 조언']),
+            h('div', { class: 'dart-use-grid' }, usePoints.slice(0, 4).map((item, index) => h('article', { key: `${item.label}-${index}` }, [
+              h('span', item.label),
+              h('p', item.text)
+            ])))
+          ]) : null,
+          sentenceItems.length ? h('section', { class: 'dart-card-section' }, [
+            h('div', { class: 'dart-section-title' }, [h('span', { class: 'dart-dot' }), '문장 후보']),
+            h('ul', sentenceItems.slice(0, 3).map((item) => h('li', item)))
+          ]) : null,
+          cautionItems.length ? h('section', { class: 'dart-card-section' }, [
+            h('div', { class: 'dart-section-title' }, [h('span', { class: 'dart-dot' }), '주의할 점']),
+            h('ul', cautionItems.slice(0, 3).map((item) => h('li', item)))
+          ]) : null
+        ])
+      ]);
+    }
+
     function renderDartBoard(draft) {
-      const activeSectionMeta = dartSectionMeta.find((meta) => meta.legacyKey === draft.activeDartSectionKey) || dartSectionMeta[0];
       return h('section', { class: 'drawer-board dart-board-page dart-auto-ai-panel' }, [
         h('header', { class: 'dart-panel-hero' }, [
           h('div', [
@@ -2666,17 +2757,7 @@ const MarkdownBoard = {
           class: ['dart-api-status', { error: draft.dartAutoFillStatus === 'error', ready: draft.dartAutoFillStatus === 'ready' }],
           'data-testid': 'dart-auto-fill-status'
         }, draft.dartAutoFillMessage) : null,
-        h('div', { class: 'dart-section-tabs', role: 'tablist', 'aria-label': 'DART 항목' }, dartSectionMeta.map((meta) => h('button', {
-          type: 'button',
-          key: meta.legacyKey,
-          role: 'tab',
-          class: { active: meta.legacyKey === activeSectionMeta.legacyKey },
-          'aria-selected': meta.legacyKey === activeSectionMeta.legacyKey ? 'true' : 'false',
-          onClick: () => {
-            draft.activeDartSectionKey = meta.legacyKey;
-          }
-        }, meta.shortTitle))),
-        renderDartStructuredSection(draft, activeSectionMeta),
+        renderDartAdvicePanel(draft),
         draft.dartEssayGuide ? renderDartEssayGuide(draft.dartEssayGuide) : null,
         h('div', { class: 'board-title-field dart-save-title-field' }, [
           h('span', '저장 제목'),
@@ -2699,7 +2780,7 @@ const MarkdownBoard = {
             type: 'button',
             class: 'primary-button board-save-button',
             'data-testid': 'save-dart-entry',
-            onClick: () => saveDartEntry(draft)
+            onClick: () => { void saveDartBoard(draft); }
           }, '저장')
         ]),
         draft.dartEntries.length ? h('section', { class: 'dart-entry-list' }, [

@@ -483,7 +483,7 @@ describe('WorkspacePage', () => {
 
         await wrapper.get('[data-testid="panel-trigger-DART"]').trigger('click');
         expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('확인 경로');
-        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('계약/R&D');
+        expect(wrapper.get('[data-testid="dart-advice-panel"]').exists()).toBe(true);
         await flushPromises();
         expect(mocks.listDartDisclosures).toHaveBeenCalledWith('102');
         expect(mocks.createDartAnalysis).toHaveBeenCalledWith('102', expect.objectContaining({
@@ -491,17 +491,21 @@ describe('WorkspacePage', () => {
             companyName: 'Naver',
             positionTitle: 'Backend Engineer'
         }));
-        expect(wrapper.get('[data-testid="dart-auto-fill-status"]').text()).toContain('JD 맞춤 핵심 포인트를 생성했습니다');
+        expect(wrapper.get('[data-testid="dart-auto-fill-status"]').text()).toContain('분석 완료');
+        expect(wrapper.get('[data-testid="dart-advice-panel"]').exists()).toBe(true);
         expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('AI 플랫폼 투자를 통해');
-        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('최신 보고서 자동 선택');
-        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('사업보고서 원문 보기');
-        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('자소서 활용 DART 포인트');
-        expect(wrapper.get('[data-testid="dart-essay-guide"]').text()).toContain('자소서에 활용하기 좋은 DART 포인트');
-        expect(wrapper.get('[data-testid="dart-essay-guide"]').text()).toContain('문항별 추천');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).not.toContain('AI platform investment');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).not.toContain('Business overview');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).not.toContain('20260330000123');
         expect(wrapper.get('[data-testid="dart-essay-guide"]').text()).toContain('Naver');
         expect(wrapper.get('[data-testid="dart-essay-guide"]').text()).toContain('Backend Engineer');
         await wrapper.get('[data-testid="save-dart-entry"]').trigger('click');
+        await flushPromises();
+        expect(mocks.saveDartAnalysisReference).toHaveBeenCalledWith('102', '901');
         expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('저장한 DART 메모');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).not.toContain('AI platform investment');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).not.toContain('Business overview');
+        expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).not.toContain('20260330000123');
 
         await wrapper.get('[data-testid="panel-trigger-TALENT_PROFILE"]').trigger('click');
         expect(wrapper.get('[data-testid="workspace-side-drawer"]').text()).toContain('핵심 가치 / 키워드');
@@ -535,6 +539,37 @@ describe('WorkspacePage', () => {
         expect(wrapper.find('[data-testid="load-dart-disclosures"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="create-dart-analysis"]').exists()).toBe(false);
         expect(getDraftText(wrapper)).toBe('기존 초안');
+    });
+
+    it('REF-003: shows OpenDART provider failures instead of no-report guidance', async () => {
+        mocks.listDartDisclosures.mockResolvedValueOnce({
+            available: false,
+            message: 'OpenDART API key is not configured.',
+            disclosures: []
+        });
+        const wrapper = await mountWorkspace();
+
+        await wrapper.get('[data-testid="panel-trigger-DART"]').trigger('click');
+        await flushPromises();
+
+        expect(wrapper.get('[data-testid="dart-auto-fill-status"]').text())
+            .toContain('OpenDART API key is not configured.');
+        expect(wrapper.get('[data-testid="dart-auto-fill-status"]').text())
+            .not.toContain('기업명 또는 계열사명');
+        expect(mocks.createDartAnalysis).not.toHaveBeenCalled();
+    });
+
+    it('REF-003/AI-004: keeps the concrete DART AI failure reason visible', async () => {
+        mocks.createDartAnalysis.mockRejectedValueOnce(new Error('GMS API key is not configured.'));
+        const wrapper = await mountWorkspace();
+
+        await wrapper.get('[data-testid="panel-trigger-DART"]').trigger('click');
+        await flushPromises();
+
+        expect(wrapper.get('[data-testid="dart-auto-fill-status"]').text())
+            .toContain('GMS API key is not configured.');
+        expect(wrapper.get('[data-testid="dart-auto-fill-status"]').text())
+            .not.toContain('JD 저장 내용');
     });
 
     it('REF-004/REF-005: saves JD notes into the local board list', async () => {

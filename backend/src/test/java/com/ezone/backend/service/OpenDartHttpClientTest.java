@@ -1,6 +1,7 @@
 package com.ezone.backend.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
@@ -25,7 +26,7 @@ class OpenDartHttpClientTest {
     @Test
     void downloadDocumentTextFocusesLongReportsAroundJobApplicationSignals() throws Exception {
         RestTemplate restTemplate = Mockito.mock(RestTemplate.class);
-        String longPrefix = "일반 표지 ".repeat(5000);
+        String longPrefix = "일반 주석 ".repeat(5000);
         String businessSection = "II. 사업의 내용 주요 제품 서비스 연구개발 투자 위험 재무 신호";
         String longSuffix = "반복 주석 ".repeat(5000);
         when(restTemplate.getForObject(any(String.class), eq(byte[].class)))
@@ -44,7 +45,7 @@ class OpenDartHttpClientTest {
     }
 
     @Test
-    void listPeriodicDisclosuresMatchesShortDartCorpNameAgainstLongUserCompanyName() throws Exception {
+    void listPeriodicDisclosuresMatchesKoreanPeriodicReportNames() throws Exception {
         RestTemplate restTemplate = Mockito.mock(RestTemplate.class);
         when(restTemplate.getForObject(contains("corpCode.xml"), eq(byte[].class)))
             .thenReturn(zip("""
@@ -77,10 +78,24 @@ class OpenDartHttpClientTest {
                           "corp_name": "KB금융"
                         },
                         {
+                          "report_nm": "분기보고서 (2026.03)",
+                          "rcept_no": "20260515000003",
+                          "pblntf_detail_ty": "A003",
+                          "rcept_dt": "20260515",
+                          "corp_name": "KB금융"
+                        },
+                        {
                           "report_nm": "사업보고서 (2025.12)",
                           "rcept_no": "20260318000001",
                           "pblntf_detail_ty": "A001",
                           "rcept_dt": "20260318",
+                          "corp_name": "KB금융"
+                        },
+                        {
+                          "report_nm": "주요사항보고서",
+                          "rcept_no": "20260301000001",
+                          "pblntf_detail_ty": "B001",
+                          "rcept_dt": "20260301",
                           "corp_name": "KB금융"
                         }
                       ]
@@ -93,9 +108,19 @@ class OpenDartHttpClientTest {
 
         assertThat(disclosures)
             .extracting(DartDisclosureResponse::rceptNo)
-            .containsExactly("20260814000002", "20260318000001");
+            .containsExactly("20260814000002", "20260515000003", "20260318000001");
         assertThat(disclosures.get(0).recommended()).isTrue();
         assertThat(disclosures.get(1).recommended()).isFalse();
+    }
+
+    @Test
+    void listPeriodicDisclosuresFailsClearlyWhenApiKeyIsMissing() {
+        RestTemplate restTemplate = Mockito.mock(RestTemplate.class);
+
+        assertThatThrownBy(() -> new OpenDartHttpClient(restTemplate, "")
+            .listPeriodicDisclosures("네이버"))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("OpenDART API key");
     }
 
     private static byte[] zip(String xml) throws Exception {

@@ -61,7 +61,10 @@ public class OpenDartHttpClient implements OpenDartClient {
 
     @Override
     public List<DartDisclosureResponse> listPeriodicDisclosures(String companyName) {
-        if (!StringUtils.hasText(apiKey) || !StringUtils.hasText(companyName)) {
+        if (!StringUtils.hasText(apiKey)) {
+            throw new IllegalStateException("OpenDART API key is not configured.");
+        }
+        if (!StringUtils.hasText(companyName)) {
             return List.of();
         }
         List<CorpCode> candidates = findCorpCodeCandidates(companyName);

@@ -537,6 +537,8 @@ watch(totalPages, (nextTotalPages) => {
   align-items: center;
   justify-content: center;
   gap: 6px;
+  min-width: 82px;
+  white-space: nowrap;
 }
 .edit-job-button {
   border: 1px solid #c7d2fe;
@@ -544,10 +546,12 @@ watch(totalPages, (nextTotalPages) => {
   color: #4338ca;
   border-radius: 5px;
   min-height: 30px;
+  min-width: 48px;
   padding: 0 10px;
   font-size: 0.78rem;
   font-weight: 800;
   cursor: pointer;
+  white-space: nowrap;
 }
 .edit-job-button:hover {
   background: #e0e7ff;
