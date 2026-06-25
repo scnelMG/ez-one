@@ -1,7 +1,7 @@
 # EZ-ONE
 
 <p align="center">
-  <img src="./docs/assets/brand/ez-one-readme-logo.png" alt="EZ-ONE" width="360" />
+  <img src="./docs/assets/brand/ez-one-readme-logo.png" alt="EZ-ONE" width="520" />
 </p>
 
 <p align="center">
