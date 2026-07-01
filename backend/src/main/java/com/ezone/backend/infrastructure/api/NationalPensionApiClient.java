@@ -23,15 +23,16 @@ public class NationalPensionApiClient {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private final String serviceKey;
-
-    private static final String API_URL = "http://apis.data.go.kr/B552015/NpsBplcInfoInqireServiceV2/getBassInfoSearchV2";
+    private final String apiUrl;
 
     public NationalPensionApiClient(RestTemplate restTemplate,
-                                    @Value("${public-data.api.key}") String serviceKey) {
+                                    @Value("${public-data.api.key}") String serviceKey,
+                                    @Value("${company-enrichment.national-pension.url}") String apiUrl) {
         this.restTemplate = restTemplate;
         this.objectMapper = new ObjectMapper()
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         this.serviceKey = serviceKey;
+        this.apiUrl = apiUrl == null ? "" : apiUrl.trim();
     }
 
     public List<CompanyPensionData> searchCompanyByName(String companyName) {
@@ -41,7 +42,7 @@ public class NationalPensionApiClient {
         }
 
         try {
-            String urlString = API_URL + "?serviceKey=" + java.net.URLEncoder.encode(serviceKey, "UTF-8") +
+            String urlString = apiUrl + "?serviceKey=" + java.net.URLEncoder.encode(serviceKey, "UTF-8") +
                     "&wkplNm=" + java.net.URLEncoder.encode(companyName, "UTF-8") +
                     "&pageNo=1&numOfRows=10";
             URI uri = new URI(urlString);

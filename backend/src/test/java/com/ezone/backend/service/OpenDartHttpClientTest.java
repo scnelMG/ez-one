@@ -21,6 +21,9 @@ import org.springframework.web.client.RestTemplate;
 
 class OpenDartHttpClientTest {
 
+    private static final String OPENDART_API_BASE_URL = "https://opendart.fss.or.kr/api";
+    private static final String OPENDART_VIEWER_BASE_URL = "https://dart.fss.or.kr/dsaf001/main.do";
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
@@ -37,7 +40,12 @@ class OpenDartHttpClientTest {
                 </DOCUMENT>
                 """.formatted(longPrefix, businessSection, longSuffix)));
 
-        String documentText = new OpenDartHttpClient(restTemplate, "opendart-key")
+        String documentText = new OpenDartHttpClient(
+            restTemplate,
+            "opendart-key",
+            OPENDART_API_BASE_URL,
+            OPENDART_VIEWER_BASE_URL
+        )
             .downloadDocumentText("20260330000123");
 
         assertThat(documentText).contains("사업의 내용", "연구개발", "재무 신호");
@@ -103,7 +111,12 @@ class OpenDartHttpClientTest {
                     """);
             });
 
-        List<DartDisclosureResponse> disclosures = new OpenDartHttpClient(restTemplate, "opendart-key")
+        List<DartDisclosureResponse> disclosures = new OpenDartHttpClient(
+            restTemplate,
+            "opendart-key",
+            OPENDART_API_BASE_URL,
+            OPENDART_VIEWER_BASE_URL
+        )
             .listPeriodicDisclosures("KB금융지주");
 
         assertThat(disclosures)
@@ -117,7 +130,12 @@ class OpenDartHttpClientTest {
     void listPeriodicDisclosuresFailsClearlyWhenApiKeyIsMissing() {
         RestTemplate restTemplate = Mockito.mock(RestTemplate.class);
 
-        assertThatThrownBy(() -> new OpenDartHttpClient(restTemplate, "")
+        assertThatThrownBy(() -> new OpenDartHttpClient(
+            restTemplate,
+            "",
+            OPENDART_API_BASE_URL,
+            OPENDART_VIEWER_BASE_URL
+        )
             .listPeriodicDisclosures("네이버"))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("OpenDART API key");

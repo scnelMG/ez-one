@@ -93,6 +93,12 @@
             <span aria-label="관리"></span>
           </div>
 
+          <div v-if="sortedJobs.length === 0" class="basket-empty-state" data-testid="basket-empty-state">
+            <strong>{{ basketEmptyTitle }}</strong>
+            <p>{{ basketEmptyBody }}</p>
+            <p>{{ basketEmptyHint }}</p>
+          </div>
+
           <article
             v-for="job in pagedJobs"
             :key="job.id"
@@ -243,32 +249,41 @@
             <option v-for="month in selectableMonths" :key="month.key" :value="month.key">{{ month.label }}</option>
           </select>
         </div>
+        <p class="basket-calendar-mobile-hint" data-testid="basket-calendar-mobile-hint">
+          좁은 화면에서는 캘린더를 좌우로 밀어서 볼 수 있습니다.
+        </p>
 
-        <div class="deadline-calendar job-calendar" :aria-label="`${calendarMonthLabel} 공고 캘린더`">
-          <span v-for="weekday in weekdays" :key="weekday" class="weekday">{{ weekday }}</span>
-          <div v-for="offset in firstDayOffset" :key="`offset-${offset}`" aria-hidden="true"></div>
-          <div
-            v-for="day in monthDays"
-            :key="day"
-            class="deadline-day job-calendar-day"
-            :class="{ today: isToday(day), weekend: isWeekend(day) }"
-            :data-testid="isToday(day) ? 'calendar-today' : (isWeekend(day) ? 'calendar-weekend' : undefined)"
-          >
-            <span>{{ day }}</span>
-            <RouterLink
-              v-for="job in jobsByDay[day] ?? []"
-              :key="job.id"
-              class="calendar-job-card"
-              data-testid="calendar-job"
-              :to="`/workspaces/${job.workspaceId}`"
+        <div
+          class="basket-calendar-scroll"
+          data-testid="basket-calendar-scroll"
+          aria-label="모바일 공고 캘린더 좌우 스크롤 영역"
+        >
+          <div class="deadline-calendar job-calendar" :aria-label="`${calendarMonthLabel} 공고 캘린더`">
+            <span v-for="weekday in weekdays" :key="weekday" class="weekday">{{ weekday }}</span>
+            <div v-for="offset in firstDayOffset" :key="`offset-${offset}`" aria-hidden="true"></div>
+            <div
+              v-for="day in monthDays"
+              :key="day"
+              class="deadline-day job-calendar-day"
+              :class="{ today: isToday(day), weekend: isWeekend(day) }"
+              :data-testid="isToday(day) ? 'calendar-today' : (isWeekend(day) ? 'calendar-weekend' : undefined)"
             >
-              <strong>{{ job.companyName }}</strong>
-              <small>{{ job.positionTitle }}</small>
-              <div style="display: flex; align-items: center; gap: 4px; margin-top: 2px;">
-                <em class="status-tag" :class="statusClass(job.status)" style="font-size: 0.6rem; padding: 2px 6px;">{{ statusLabel(job.status) }}</em>
-                <span style="color: #94a3b8; font-size: 0.65rem;" v-if="formatDDay(job)">{{ formatDDay(job) }}</span>
-              </div>
-            </RouterLink>
+              <span>{{ day }}</span>
+              <RouterLink
+                v-for="job in jobsByDay[day] ?? []"
+                :key="job.id"
+                class="calendar-job-card"
+                data-testid="calendar-job"
+                :to="`/workspaces/${job.workspaceId}`"
+              >
+                <strong>{{ job.companyName }}</strong>
+                <small>{{ job.positionTitle }}</small>
+                <div class="calendar-job-meta">
+                  <em class="status-tag" :class="statusClass(job.status)">{{ statusLabel(job.status) }}</em>
+                  <span v-if="formatDDay(job)">{{ formatDDay(job) }}</span>
+                </div>
+              </RouterLink>
+            </div>
           </div>
         </div>
       </section>
@@ -388,6 +403,22 @@ const sortedJobs = computed(() => [...searchedJobs.value].sort((left, right) => 
     const deadlineDifference = deadlineRank(left) - deadlineRank(right);
     return deadlineDifference === 0 ? savedRank(left) - savedRank(right) : deadlineDifference;
 }));
+const basketEmptyTitle = computed(() => {
+    if (basketStore.jobs.length === 0) return '아직 저장한 공고가 없습니다.';
+    return '조건에 맞는 공고가 없습니다.';
+});
+const basketEmptyBody = computed(() => {
+    if (basketStore.jobs.length === 0) {
+        return '확장 프로그램으로 지원 중인 공고를 저장하거나 직접 추가해 보세요.';
+    }
+    return '검색어 또는 필터를 바꾸면 저장한 공고를 다시 볼 수 있습니다.';
+});
+const basketEmptyHint = computed(() => {
+    if (basketStore.jobs.length === 0) {
+        return '저장하면 마감일, 지원 상태, 워크스페이스가 이곳에 정리됩니다.';
+    }
+    return '중요 필터를 켰다면 하트 표시한 공고만 나타납니다.';
+});
 const totalPages = computed(() => Math.max(1, Math.ceil(sortedJobs.value.length / pageSize)));
 const pagedJobs = computed(() => {
     const start = (currentPage.value - 1) * pageSize;
@@ -555,5 +586,25 @@ watch(totalPages, (nextTotalPages) => {
 }
 .edit-job-button:hover {
   background: #e0e7ff;
+}
+
+.basket-empty-state {
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  color: #475569;
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 22px;
+  text-align: center;
+}
+
+.basket-empty-state strong {
+  color: #0f172a;
+  font-size: 0.98rem;
+}
+
+.basket-empty-state p {
+  margin: 0;
 }
 </style>

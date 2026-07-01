@@ -1,7 +1,8 @@
 import axios from 'axios';
-import { clearAuthSession, getAccessToken, getRefreshToken, saveAuthSession } from '@/features/auth/session/authSession';
+import { clearAuthSession, getAccessToken, saveAuthSession } from '@/features/auth/session/authSession';
 export const defaultHttpClient = axios.create({
-    baseURL: resolveApiBaseUrl(import.meta.env.VITE_API_BASE_URL)
+    baseURL: resolveApiBaseUrl(import.meta.env.VITE_API_BASE_URL),
+    withCredentials: true
 });
 const apiBaseUrlCandidates = resolveApiBaseUrlCandidates(import.meta.env.VITE_API_BASE_URL, import.meta.env.VITE_API_FALLBACK_BASE_URLS);
 let loginRedirectHandler = defaultLoginRedirectHandler;
@@ -31,15 +32,9 @@ defaultHttpClient.interceptors.response.use((response) => response, async (error
         isAuthRefreshExcludedEndpoint(originalRequest.url)) {
         throw error;
     }
-    const refreshToken = getRefreshToken();
-    if (!refreshToken) {
-        clearAuthSession();
-        await redirectToLogin();
-        throw error;
-    }
     try {
         originalRequest._retry = true;
-        const response = await defaultHttpClient.post('/api/auth/refresh', { refreshToken }, { skipAuthRefresh: true });
+        const response = await defaultHttpClient.post('/api/auth/refresh', undefined, { skipAuthRefresh: true });
         saveAuthSession(response.data.data);
         originalRequest.headers = {
             ...originalRequest.headers,
@@ -66,13 +61,14 @@ export function resolveApiBaseUrl(value) {
     return value.replace(/\/api\/?$/, '');
 }
 
-export function resolveApiBaseUrlCandidates(primaryValue, fallbackValue = '') {
+export function resolveApiBaseUrlCandidates(primaryValue, fallbackValue = '', options = {}) {
+    const includeLocalDevelopment = options.includeLocalDevelopment ?? import.meta.env.DEV;
     const candidates = [
         resolveApiBaseUrl(primaryValue),
         ...String(fallbackValue)
             .split(',')
             .map((value) => resolveApiBaseUrl(value.trim())),
-        ...localDevelopmentApiBaseUrls()
+        ...(includeLocalDevelopment ? localDevelopmentApiBaseUrls() : [])
     ].filter(Boolean);
     return [...new Set(candidates)];
 }

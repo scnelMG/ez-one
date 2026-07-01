@@ -51,7 +51,6 @@ describe('ExtensionConnectPage', () => {
             }
         });
         localStorage.setItem('ezone.accessToken', 'access-token');
-        localStorage.setItem('ezone.refreshToken', 'refresh-token');
         localStorage.setItem('ezone.currentUser', JSON.stringify({
             id: 1,
             email: 'user@example.com',
@@ -90,7 +89,6 @@ describe('ExtensionConnectPage', () => {
             }
         });
         localStorage.setItem('ezone.accessToken', 'access-token');
-        localStorage.setItem('ezone.refreshToken', 'refresh-token');
         localStorage.setItem('ezone.currentUser', JSON.stringify({
             id: 1,
             email: 'user@example.com',
@@ -128,7 +126,6 @@ describe('ExtensionConnectPage', () => {
         };
         vi.stubGlobal('chrome', { runtime });
         localStorage.setItem('ezone.accessToken', 'access-token');
-        localStorage.setItem('ezone.refreshToken', 'refresh-token');
         localStorage.setItem('ezone.currentUser', JSON.stringify({
             id: 1,
             email: 'user@example.com',
@@ -297,7 +294,6 @@ describe('ExtensionConnectPage', () => {
     it('EXT-003: shows a friendly login retry message when extension session issuance is unauthorized', async () => {
         vi.stubEnv('VITE_EXTENSION_ID', 'extension-id');
         localStorage.setItem('ezone.accessToken', 'expired-access-token');
-        localStorage.setItem('ezone.refreshToken', 'expired-refresh-token');
         mocks.issueExtensionSession.mockRejectedValue(new Error('Request failed with status code 401'));
         const wrapper = mount(ExtensionConnectPage, {
             global: {
@@ -307,5 +303,22 @@ describe('ExtensionConnectPage', () => {
         await new Promise((resolve) => setTimeout(resolve));
         expect(wrapper.text()).toContain('로그인 시간이 만료되었습니다. 다시 로그인해 주세요.');
         expect(wrapper.text()).not.toContain('Request failed with status code 401');
+    });
+    it('EXT-003/EXT-012: explains how to recover when the extension runtime is unavailable', async () => {
+        vi.stubEnv('VITE_EXTENSION_ID', 'extension-id');
+        vi.stubEnv('VITE_EXTENSION_INSTALL_URL', 'https://chromewebstore.google.com/detail/ez-one/extension-id');
+        localStorage.setItem('ezone.accessToken', 'access-token');
+
+        const wrapper = mount(ExtensionConnectPage, {
+            global: {
+                stubs: ['RouterLink']
+            }
+        });
+        await new Promise((resolve) => setTimeout(resolve));
+
+        expect(wrapper.text()).toContain('Chrome 확장프로그램에서 연결을 시작해야 합니다.');
+        expect(wrapper.text()).toContain('스토어에서 설치한 뒤 지원 중인 채용공고 페이지에서 EZ-ONE을 다시 열어 주세요.');
+        expect(wrapper.text()).toContain('그래도 안 되면 확장 프로그램을 새로고침하고 다시 로그인해 주세요.');
+        expect(wrapper.get('[data-testid="extension-install-link"]').attributes('href')).toBe('https://chromewebstore.google.com/detail/ez-one/extension-id');
     });
 });

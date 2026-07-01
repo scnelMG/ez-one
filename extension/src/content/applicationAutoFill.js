@@ -8,14 +8,14 @@ const AUTOFILL_RELATED_IDLE_AFTER_PROGRESS_MS = 240;
 const AUTOFILL_RELATED_INITIAL_IDLE_MS = 280;
 const AUTOFILL_RELATED_GROUP_INITIAL_IDLE_MS = 450;
 const AUTOFILL_RELATED_SCHOOL_GROUP_FAST_IDLE_MS = 280;
-const AUTOFILL_RELATED_SCHOOL_GROUP_INITIAL_IDLE_MS = 1550;
-const AUTOFILL_RELATED_MAJOR_DETAIL_IDLE_MS = 180;
-const AUTOFILL_RELATED_MAJOR_DETAIL_WAIT_TIMEOUT_MS = 900;
+const AUTOFILL_RELATED_SCHOOL_GROUP_INITIAL_IDLE_MS = 2500;
+const AUTOFILL_RELATED_MAJOR_DETAIL_IDLE_MS = 450;
+const AUTOFILL_RELATED_MAJOR_DETAIL_WAIT_TIMEOUT_MS = 2200;
 const AUTOFILL_RELATED_CERTIFICATE_DETAIL_IDLE_MS = 180;
 const AUTOFILL_RELATED_CERTIFICATE_DATE_IDLE_MS = 760;
-const AUTOFILL_CERTIFICATE_OPTION_COMMIT_WAIT_MS = 180;
+const AUTOFILL_CERTIFICATE_OPTION_COMMIT_WAIT_MS = 500;
 const AUTOFILL_CERTIFICATE_DATE_MISSING_WAIT_MS = 0;
-const AUTOFILL_APPLY_MAX_DURATION_MS = 15000;
+const AUTOFILL_APPLY_MAX_DURATION_MS = 30000;
 const PANEL_HOST_ID = 'ezone-extension-panel-host';
 const APPLICATION_FORM_SELECTOR = 'input, textarea, select, button, [role="combobox"], [role="radio"], [role="checkbox"], [role="switch"], [aria-haspopup], [data-value], [data-option]';
 const EDUCATION_MAJOR_DETAIL_FIELDS = new Set(['majorName', 'majorType', 'majorCategory', 'dayNight']);
@@ -24,11 +24,23 @@ const ACTIVITY_COPY_CANDIDATE_MARKER = 'activities.*';
 const PROFILE_PHOTO_FIELD_KEY = 'basicInfo.profilePhoto';
 const AUTOFILL_CONTEXT_TEXT_MAX_LENGTH = 240;
 const AUTOFILL_CONTEXT_TEXT_MAX_NODES = 80;
-const openedEducationMajorControls = new WeakMap();
-const applicationFormElementCaches = new WeakMap();
+let openedEducationMajorControls = new WeakMap();
+let applicationFormElementCaches = new WeakMap();
 const activeApplicationFormElementCacheDocuments = new Set();
 let applicationFormElementCacheDepth = 0;
 let applicationAutoFillPlanCache = null;
+
+export function resetApplicationAutoFillRuntimeForTests() {
+    for (const documentRef of activeApplicationFormElementCacheDocuments) {
+        const cache = applicationFormElementCaches.get(documentRef);
+        cache?.observer?.disconnect?.();
+    }
+    openedEducationMajorControls = new WeakMap();
+    applicationFormElementCaches = new WeakMap();
+    activeApplicationFormElementCacheDocuments.clear();
+    applicationFormElementCacheDepth = 0;
+    applicationAutoFillPlanCache = null;
+}
 
 const BASIC_FIELDS = [
     { key: 'basicInfo.nameKo', label: '이름', section: 'basicInfo', field: 'nameKo', terms: ['이름', '성명', '지원자명', 'applicantname', 'username', 'name'] },
@@ -998,6 +1010,10 @@ function createApplicationFormTextCache() {
         labelWithoutControl: new WeakMap(),
         elementOwnText: new WeakMap(),
         nearbyRawText: new WeakMap(),
+        closestSectionText: new WeakMap(),
+        precedingHeadingText: new WeakMap(),
+        repeatedWildcardKeys: new WeakMap(),
+        headings: null,
         normalizedBodyText: ''
     };
 }
@@ -1013,7 +1029,7 @@ function applicationFormTextCacheForElement(element) {
 
 function applicationFormTextCacheForDocument(documentRef) {
     if (applicationFormElementCacheDepth <= 0 || !documentRef) return null;
-    return applicationFormElementCacheForDocument(documentRef)?.text ?? null;
+    return applicationFormElementCaches.get(documentRef)?.text ?? null;
 }
 
 function invalidateApplicationFormElementCache(documentRef) {
@@ -1230,7 +1246,7 @@ function isEducationCustomSelectControl(control) {
         choiceElementText(control)
     ].filter(Boolean).join(' '))) || directFieldKeyFromText(choiceElementText(control)) || directFieldKeyFromText(context.displayLabel);
     return /^education\.(?:highSchool|universities|graduateSchools|\*)/.test(String(key ?? '')) &&
-        /\.(?:location|gradeScale|majorCategory|campusType)$/.test(String(key));
+        /\.(?:location|gradeScale|majorCategory|campusType|graduationStatus|degreeType|admissionType|track)$/.test(String(key));
 }
 
 function isCustomSelectLikeControl(control) {
@@ -1370,7 +1386,7 @@ function addDeferredEducationMajorItems(documentRef, values, fillable) {
         !fillable.some((item) => item.fieldKey === value.key))
         .sort((left, right) => educationMajorValueOrder(left.key) - educationMajorValueOrder(right.key));
     for (const value of majorValues) {
-        const rowExists = educationMajorEntryExistsForFieldKey(documentRef, value.key, value.value);
+        const rowExists = educationMajorEntryExistsForFieldKey(documentRef, value.key, value.value, { allowBlankIndexFallback: false });
         const opener = rowExists ? documentRef.body : findEducationMajorOpenControl(documentRef, value.key);
         if (!opener) continue;
         const majorRelatedValues = values.filter((candidate) => educationMajorDetailBase(candidate.key) === educationMajorDetailBase(value.key));
@@ -1551,6 +1567,15 @@ function findCertificateAddControlFast(documentRef, group, target = null) {
 }
 
 function certificateAddControlHasGroupContext(control, group) {
+    const nearestSection = control?.closest?.('section, fieldset, [role="region"], article, div');
+    const nearestSectionContext = normalize([
+        nearestSection?.getAttribute?.('aria-label'),
+        nearestSection?.querySelector?.('h1, h2, h3, h4, h5, legend')?.textContent
+    ].filter(Boolean).join(' '));
+    const nearestSectionGroup = certificateGroupFromSpecificContext(nearestSectionContext) ??
+        certificateGroupFromContext(nearestSectionContext);
+    if (nearestSectionGroup) return nearestSectionGroup === group;
+
     const localContext = normalize([
         choiceCandidateText(control),
         choiceElementText(control),
@@ -1608,6 +1633,7 @@ function isCertificateNavigationControl(control, group) {
     if (!control || isIconOnlyActionButton(control)) return false;
     const text = normalize(choiceCandidateText(control) || choiceElementText(control));
     if (!text) return false;
+    if (ACTION_BUTTON_TERMS.some((term) => text === term || text.includes(term))) return false;
     if (text.includes(normalize('\uc5b4\ud559/\uc790\uaca9/\uae30\ud0c0'))) return false;
     if (group === 'certificates') {
         return text === normalize('\uc790\uaca9\uc99d') || text.includes(normalize('\uc790\uaca9\uc99d'));
@@ -2011,6 +2037,17 @@ function directEducationFieldKeyForControl(control, signature) {
     if (midasNameKey) return midasNameKey;
     const group = educationGroupFromContext([signature, sectionContext].join(' '));
     if (!group) return null;
+    const ownSignature = normalize([
+        control.getAttribute('name'),
+        control.id,
+        control.getAttribute('placeholder'),
+        control.getAttribute('aria-label'),
+        choiceElementText(control)
+    ].filter(Boolean).join(' '));
+    const explicitOwnMajorKey = explicitEducationMajorFieldKey(group, ownSignature);
+    if (explicitOwnMajorKey) return explicitOwnMajorKey;
+    const explicitOwnEducationKey = explicitEducationFieldKeyFromOwnSignature(group, ownSignature);
+    if (explicitOwnEducationKey) return explicitOwnEducationKey;
     const explicitMajorKey = explicitEducationMajorFieldKey(group, signature);
     if (explicitMajorKey) return explicitMajorKey;
     const majorChoiceKey = directEducationMajorChoiceFieldKey(control, group);
@@ -2160,6 +2197,18 @@ function educationFieldKey(group, field) {
     return group === 'highSchool' ? `education.highSchool.${field}` : `education.${group}.*.${field}`;
 }
 
+function explicitEducationFieldKeyFromOwnSignature(group, signature) {
+    if (!signature) return null;
+    if (signature.includes(normalize('\ud559\uc704\uad6c\ubd84')) || signature.includes('degreetype')) return educationFieldKey(group, 'degreeType');
+    if (signature.includes(normalize('\uc878\uc5c5\uad6c\ubd84')) || signature.includes('graduationstatus')) return educationFieldKey(group, 'graduationStatus');
+    if (signature.includes(normalize('\uc785\ud559\uad6c\ubd84')) || signature.includes('admissiontype')) return educationFieldKey(group, 'admissionType');
+    if (signature.includes(normalize('\ud559\uad50\uc18c\uc7ac\uc9c0')) || signature.includes(normalize('\uc18c\uc7ac\uc9c0')) || signature.includes('schoollocation')) return educationFieldKey(group, 'location');
+    if (signature.includes(normalize('\ub9cc\uc810\uae30\uc900')) || signature.includes('gradescale') || signature.includes('fullscore') || signature.includes('maxgrade')) return educationFieldKey(group, 'gradeScale');
+    if (signature.includes(normalize('\ubcf8\uad50\ubd84\uad50')) || signature.includes(normalize('\ubcf8\uad50/\ubd84\uad50')) || signature.includes('campustype')) return educationFieldKey(group, 'campusType');
+    if (signature === normalize('\uacc4\uc5f4') || signature.includes('schooltrack')) return educationFieldKey(group, group === 'highSchool' ? 'track' : 'majorCategory');
+    return null;
+}
+
 function explicitEducationMajorFieldKey(group, signature) {
     if (!['universities', 'graduateSchools'].includes(group)) return null;
     const majorIndex = explicitEducationMajorIndexFromSignature(signature);
@@ -2170,6 +2219,9 @@ function explicitEducationMajorFieldKey(group, signature) {
 
 function explicitEducationMajorIndexFromSignature(signature) {
     const normalized = normalize(signature);
+    const zeroBasedMatch = normalized.match(/major(?:name|type|category|daynight)(\d+)/);
+    const zeroBasedValue = Number(zeroBasedMatch?.[1]);
+    if (Number.isInteger(zeroBasedValue) && zeroBasedValue >= 0 && zeroBasedValue < 20) return zeroBasedValue;
     const matches = [
         normalized.match(/(?:\uc804\uacf5|major)(\d+)/),
         normalized.match(/(\d+)(?:\uc804\uacf5|major)/)
@@ -2552,6 +2604,22 @@ function activityAnswerIndexNearControl(control) {
 }
 
 function repeatedWildcardKeyForControl(control, wildcardKey) {
+    const cache = applicationFormTextCacheForElement(control);
+    if (cache) {
+        let keys = cache.repeatedWildcardKeys.get(control);
+        if (!keys) {
+            keys = new Map();
+            cache.repeatedWildcardKeys.set(control, keys);
+        }
+        if (keys.has(wildcardKey)) return keys.get(wildcardKey);
+        const key = repeatedWildcardKeyForControlUncached(control, wildcardKey);
+        keys.set(wildcardKey, key);
+        return key;
+    }
+    return repeatedWildcardKeyForControlUncached(control, wildcardKey);
+}
+
+function repeatedWildcardKeyForControlUncached(control, wildcardKey) {
     const signature = normalizedDirectControlSignature(control);
     if (wildcardKey.startsWith('certificates.')) return directCertificateFieldKeyForControl(control, signature);
     if (wildcardKey.startsWith('education.')) return directEducationFieldKeyForControl(control, signature);
@@ -3083,7 +3151,8 @@ function setControlValue(control, value, item = {}) {
     else if (item.sectionOpenControl) {
         const majorNameKey = educationMajorNameKeyFromOpenFieldKey(item.fieldKey);
         if (majorNameKey && isEffectivelyDisabled(control)) return { success: false, reason: 'control_not_ready' };
-        if (majorNameKey && educationMajorEntryExistsForFieldKey(control.ownerDocument, majorNameKey, expectedEducationMajorNameForFieldKey(majorNameKey, item.relatedValues))) {
+        if (majorNameKey &&
+            educationMajorEntryExistsForFieldKey(control.ownerDocument, majorNameKey, expectedEducationMajorNameForFieldKey(majorNameKey, item.relatedValues), { allowBlankIndexFallback: false })) {
             return { success: true, value: value || '\uC785\uB825\uCE78 \uC5F4\uAE30' };
         }
         if (majorNameKey && wasEducationMajorOpenControlUsed(control, majorNameKey)) {
@@ -3194,14 +3263,21 @@ async function openCertificateEntryAsync(documentRef, target, item = {}, deadlin
             closeOpenCustomSelectMenus(documentRef);
             activateElement(addControl);
             const opened = await waitForValue(() => {
-                if (certificateOpenTargetReady(documentRef, target, primaryValue)) return true;
-                return certificatePrimaryControlCount(documentRef, target.group) > previousCount &&
-                    certificatePrimaryControlCount(documentRef, target.group) > target.index;
+                const ready = certificateOpenTargetReady(documentRef, target, primaryValue);
+                const currentCount = certificatePrimaryControlCount(documentRef, target.group);
+                if (ready) return true;
+                return currentCount > previousCount &&
+                    currentCount > target.index;
             }, false, boundedAutoFillWaitMs(AUTOFILL_ASYNC_WAIT_TIMEOUT_MS, deadlineAt));
             if (opened) return true;
+            if (target.index === 0) return true;
         }
 
         const navControl = findCertificateNavigationOpenControl(documentRef, target.group);
+        if (navControl && addControl && navControl === addControl) {
+            await sleep(boundedAutoFillWaitMs(AUTOFILL_DEPENDENT_FIELD_SETTLE_MS, deadlineAt));
+            continue;
+        }
         if (navControl && !isEffectivelyDisabled(navControl)) {
             closeOpenCustomSelectMenus(documentRef);
             activateElement(navControl);
@@ -3220,6 +3296,7 @@ async function openCertificateEntryAsync(documentRef, target, item = {}, deadlin
 function certificateOpenTargetReady(documentRef, target, primaryValue = '') {
     if (!documentRef || !target) return false;
     if (certificatePrimarySlotCountFast(documentRef, target.group) > target.index) return true;
+    if (target.index === 0 && certificateGroupHasVisibleFieldSurface(documentRef, target.group)) return true;
     if (certificatePrimarySelectionExists(documentRef, target.primaryKey, primaryValue)) return true;
     return certificatePrimaryControlCount(documentRef, target.group) > target.index;
 }
@@ -3359,7 +3436,7 @@ async function openEducationMajorEntryAsync(documentRef, majorNameKey, item = {}
     if (!documentRef || !majorNameKey) return false;
     const expectedMajorName = expectedEducationMajorNameForFieldKey(majorNameKey, item.relatedValues) ||
         (item.fieldKey === majorNameKey ? cleanText(item.value) : '');
-    if (educationMajorEntryExistsForFieldKey(documentRef, majorNameKey, expectedMajorName)) return true;
+    if (educationMajorEntryExistsForFieldKey(documentRef, majorNameKey, expectedMajorName, { allowBlankIndexFallback: false })) return true;
     const target = parseNestedEducationMajorFieldKey(majorNameKey);
     for (let attempt = 0; attempt < 2; attempt += 1) {
         if (!hasAutoFillTimeRemaining(deadlineAt)) return false;
@@ -3413,7 +3490,7 @@ async function waitForEducationMajorOpenState(documentRef, majorNameKey, expecte
 }
 
 function educationMajorOpenStateReached(documentRef, majorNameKey, expectedMajorName, target, previousEntryCount, previousNameInputCount) {
-    if (educationMajorEntryExistsForFieldKey(documentRef, majorNameKey, expectedMajorName)) return true;
+    if (educationMajorEntryExistsForFieldKey(documentRef, majorNameKey, expectedMajorName, { allowBlankIndexFallback: false })) return true;
     if (!target) return false;
     const currentEntryCount = educationMajorEntries(documentRef).length;
     if (currentEntryCount > previousEntryCount && currentEntryCount > target.majorIndex) return true;
@@ -3606,31 +3683,70 @@ async function setCustomSelectValueAsync(control, value, item = {}, deadlineAt =
     const preOpenOptions = new Set(customOptionCandidates(control.ownerDocument, control));
     const preOpenSearchInputs = new Set(customSelectSearchInputs(control.ownerDocument));
     const exactOptionOnly = shouldUseExactCustomOption(item.fieldKey);
-    activateElement(control);
-    if (control.hasAttribute('aria-expanded')) control.setAttribute('aria-expanded', 'true');
     for (const candidateValue of customSelectCandidateValues(control, value, item.fieldKey)) {
         if (!hasAutoFillTimeRemaining(deadlineAt)) return { success: false, reason: 'control_not_ready' };
-        const immediateOption = findMatchingCustomOption(control.ownerDocument, candidateValue, control, { ignoreElements: preOpenOptions, exactOptionOnly });
-        if (immediateOption) {
-            activateElement(immediateOption);
-            setChoiceState(immediateOption);
-            await settleAfterCustomOptionSelection(control, deadlineAt);
-            return { success: true, value: choiceElementText(immediateOption) || candidateValue };
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+            activateElement(control);
+            if (control.hasAttribute('aria-expanded')) control.setAttribute('aria-expanded', 'true');
+            const immediateOption = findMatchingCustomOption(control.ownerDocument, candidateValue, control, { ignoreElements: preOpenOptions, exactOptionOnly });
+            if (immediateOption) {
+                const result = await commitCustomSelectOption(control, immediateOption, candidateValue, exactOptionOnly, deadlineAt);
+                if (result.success) return result;
+                continue;
+            }
+            await fillCustomSelectSearchInput(control, candidateValue, { ignoredInputs: preOpenSearchInputs });
+            const option = await waitForValue(
+                () => findMatchingCustomOption(control.ownerDocument, candidateValue, control, { ignoreElements: preOpenOptions, exactOptionOnly }),
+                null,
+                boundedAutoFillWaitMs(AUTOFILL_CUSTOM_SELECT_WAIT_TIMEOUT_MS, deadlineAt)
+            );
+            if (!option) break;
+            const result = await commitCustomSelectOption(control, option, candidateValue, exactOptionOnly, deadlineAt);
+            if (result.success) return result;
         }
-        await fillCustomSelectSearchInput(control, candidateValue, { ignoredInputs: preOpenSearchInputs });
-        const option = await waitForValue(
-            () => findMatchingCustomOption(control.ownerDocument, candidateValue, control, { ignoreElements: preOpenOptions, exactOptionOnly }),
-            null,
-            boundedAutoFillWaitMs(AUTOFILL_CUSTOM_SELECT_WAIT_TIMEOUT_MS, deadlineAt)
-        ) ??
-            findMatchingCustomOption(control.ownerDocument, candidateValue, control, { exactOptionOnly });
-        if (!option) continue;
-        activateElement(option);
-        setChoiceState(option);
-        await settleAfterCustomOptionSelection(control, deadlineAt);
-        return { success: true, value: choiceElementText(option) || candidateValue };
     }
     return { success: false, reason: 'select_option_not_found' };
+}
+
+async function commitCustomSelectOption(control, option, candidateValue, exactOptionOnly = false, deadlineAt = Number.POSITIVE_INFINITY) {
+    const menuRoot = customOptionMenuRoot(option);
+    activateElement(option);
+    setChoiceState(option);
+    await settleAfterCustomOptionSelection(control, deadlineAt);
+    if (customSelectControlValueMatches(control, candidateValue, exactOptionOnly)) {
+        return { success: true, value: choiceElementText(option) || candidateValue };
+    }
+    menuRoot?.remove?.();
+    invalidateApplicationFormElementCache(control?.ownerDocument);
+    return { success: false, reason: 'select_option_not_committed' };
+}
+
+function customSelectControlValueMatches(control, value, exactOptionOnly = false) {
+    const expected = normalize(value);
+    if (!expected) return false;
+    const actual = normalize([
+        control?.value,
+        choiceElementText(control),
+        control?.getAttribute?.('data-value'),
+        control?.getAttribute?.('data-option'),
+        control?.getAttribute?.('value')
+    ].filter(Boolean).join(' '));
+    if (!actual) return false;
+    return exactOptionOnly ? actual === expected : (actual === expected || actual.includes(expected));
+}
+
+function customOptionMenuRoot(option) {
+    let current = option?.parentElement ?? null;
+    let fallback = null;
+    while (current && current !== option.ownerDocument?.body) {
+        const role = current.getAttribute?.('role');
+        const id = current.id ?? '';
+        if (role === 'listbox' || id === 'dropdown-body' || /(?:menu|options|dropdown)/i.test(id)) {
+            fallback = current;
+        }
+        current = current.parentElement;
+    }
+    return fallback ?? option?.closest?.('#dropdown-body, [role="listbox"]') ?? null;
 }
 
 async function settleAfterCustomOptionSelection(control, deadlineAt = Number.POSITIVE_INFINITY) {
@@ -3927,10 +4043,11 @@ async function setAutocompleteSearchValueAsync(control, value, item = {}, deadli
         }
         if (!committed) return { success: false, reason: 'select_option_not_found' };
     }
+    const extraFilled = await fillRelatedAutocompleteValues(control, item.relatedValues ?? [], { sourceFieldKey: item.fieldKey, deadlineAt, optionSelected: true });
     return {
         success: true,
         value: choiceElementText(option) || value,
-        extraFilled: await fillRelatedAutocompleteValues(control, item.relatedValues ?? [], { sourceFieldKey: item.fieldKey, deadlineAt, optionSelected: true })
+        extraFilled
     };
 }
 
@@ -3947,7 +4064,23 @@ function certificatePrimarySelectionCommitted(control, value, item = {}) {
     if (certificateEntryHasSelectedPrimaryChip(entry, value)) return true;
     return currentValue &&
         certificatePrimaryValuesMatch(value, currentValue) &&
-        certificateAutocompleteRelatedControlReadyNearSource(control, item);
+        (certificateAutocompleteRelatedControlReadyNearSource(control, item) ||
+            certificateSelectionDependentControlAvailable(control, item));
+}
+
+function certificateSelectionDependentControlAvailable(control, item = {}) {
+    if (!control?.ownerDocument) return false;
+    const expectedPrimary = cleanText(item.value);
+    return (item.relatedValues ?? []).filter(isCertificateSelectionDependentValue).some((value) => {
+        const target = parseCertificateDetailFieldKey(value.key);
+        if (!target) return false;
+        const detail = findCertificateDetailControl(control.ownerDocument, target, value.value, item.relatedValues ?? [], control);
+        if (!detail || (!canFillControlForField(detail, value.key) && !isBlockedCertificateDateControl(detail))) return false;
+        const wildcardKey = certificateFieldKey(target.group, target.field);
+        const detailEntry = closestCertificateEntry(detail, wildcardKey);
+        const selectedPrimary = selectedCertificatePrimaryTextFromEntry(detailEntry);
+        return !selectedPrimary || certificatePrimaryValuesMatch(expectedPrimary, selectedPrimary);
+    });
 }
 
 function autocompleteDropdownOpenForSource(control) {
@@ -4230,7 +4363,16 @@ async function fillRelatedAutocompleteValues(sourceControl, relatedValues, optio
 
         for (let index = 0; index < pending.length; index += 1) {
             const value = pending[index];
-            const target = findCurrentControlForFieldKey(sourceControl.ownerDocument, value.key, value.value, { relatedValues, sourceControl });
+            const target = findEducationRelatedControlByOwnSignature(sourceControl.ownerDocument, value.key) ??
+                findCurrentControlForFieldKey(sourceControl.ownerDocument, value.key, value.value, { relatedValues, sourceControl });
+            if (isCertificateAcquiredDateValue(value) &&
+                ((target && isBlockedCertificateDateControl(target)) ||
+                    certificateBlockedDateControlExists(sourceControl.ownerDocument, value, relatedValues, sourceControl))) {
+                pending.splice(index, 1);
+                index -= 1;
+                handledAny = true;
+                continue;
+            }
             if (!target || !canFillControlForField(target, value.key)) {
                 if (isOptionalDeferredEducationFieldKey(value.key)) {
                     pending.splice(index, 1);
@@ -4238,7 +4380,9 @@ async function fillRelatedAutocompleteValues(sourceControl, relatedValues, optio
                     continue;
                 }
                 const majorBase = educationMajorDetailBase(value.key);
-                if (majorBase && !openedMajorBases.has(majorBase) && !educationMajorEntryExistsForFieldKey(sourceControl.ownerDocument, value.key, expectedEducationMajorNameForFieldKey(value.key, relatedValues))) {
+                if (majorBase &&
+                    !openedMajorBases.has(majorBase) &&
+                    !educationMajorEntryExistsForFieldKey(sourceControl.ownerDocument, value.key, expectedEducationMajorNameForFieldKey(value.key, relatedValues), { allowBlankIndexFallback: false })) {
                     const opener = findEducationMajorOpenControl(sourceControl.ownerDocument, value.key);
                     if (opener && !isEffectivelyDisabled(opener)) {
                         openedMajorBases.add(majorBase);
@@ -4251,10 +4395,10 @@ async function fillRelatedAutocompleteValues(sourceControl, relatedValues, optio
             }
 
             const result = await setControlValueAsync(target, value.value, { fieldKey: value.key, waitForControlBeforeFill: true, relatedValues }, deadline);
-            pending.splice(index, 1);
-            index -= 1;
-            handledAny = true;
             if (result.success) {
+                pending.splice(index, 1);
+                index -= 1;
+                handledAny = true;
                 lastProgressAt = Date.now();
                 filled.push({ fieldKey: value.key, label: value.label, value: result.value });
             }
@@ -4262,6 +4406,7 @@ async function fillRelatedAutocompleteValues(sourceControl, relatedValues, optio
 
         if (!pending.length || Date.now() >= deadline) break;
         if (lastProgressAt &&
+            !hasEducationRelatedValues(pending) &&
             !hasRelatedControlWaitSignal(sourceControl.ownerDocument, pending) &&
             !shouldWaitForDeferredRelatedControl(sourceControl.ownerDocument, pending, relatedValues, sourceControl)) break;
         if (!handledAny && !lastProgressAt && Date.now() - startedAt >= initialIdleMs) break;
@@ -4271,8 +4416,29 @@ async function fillRelatedAutocompleteValues(sourceControl, relatedValues, optio
     return filled;
 }
 
+function findEducationRelatedControlByOwnSignature(documentRef, fieldKey) {
+    const match = String(fieldKey ?? '').match(/^education\.(highSchool|universities|graduateSchools)(?:\.(\d+))?\.([^.]+)$/);
+    if (!documentRef || !match) return null;
+    const [, group, , field] = match;
+    const controls = getApplicationFormElements(documentRef, 'input, textarea, select, [role="combobox"], [aria-haspopup="listbox"], [aria-haspopup="true"], button[type="button"], button:not([type]), [tabindex]:not(input):not(textarea):not(select)');
+    return controls.find((control) => {
+        const sectionGroup = educationGroupFromContext(normalize(educationSectionContextText(control)));
+        if (sectionGroup && sectionGroup !== group) return false;
+        const ownSignature = normalize([
+            control.getAttribute?.('name'),
+            control.id,
+            control.getAttribute?.('placeholder'),
+            control.getAttribute?.('aria-label'),
+            choiceElementText(control)
+        ].filter(Boolean).join(' '));
+        const ownKey = explicitEducationFieldKeyFromOwnSignature(group, ownSignature);
+        if (ownKey === fieldKey) return true;
+        return educationGroupWildcardControlMatchesFieldKey(fieldKey, ownKey) ||
+            (group === 'highSchool' && ownKey === `education.highSchool.${field}`);
+    }) ?? null;
+}
+
 function relatedInitialIdleMs(sourceControl, pendingValues, options = {}) {
-    if (pendingValues.length <= 1) return AUTOFILL_RELATED_INITIAL_IDLE_MS;
     if (hasEducationRelatedValues(pendingValues)) {
         if (options.optionSelected && pendingValues.every(isEducationMajorRelatedValue)) {
             return AUTOFILL_RELATED_MAJOR_DETAIL_IDLE_MS;
@@ -4284,6 +4450,7 @@ function relatedInitialIdleMs(sourceControl, pendingValues, options = {}) {
             ? AUTOFILL_RELATED_SCHOOL_GROUP_INITIAL_IDLE_MS
             : AUTOFILL_RELATED_SCHOOL_GROUP_FAST_IDLE_MS;
     }
+    if (pendingValues.length <= 1) return AUTOFILL_RELATED_INITIAL_IDLE_MS;
     return AUTOFILL_RELATED_GROUP_INITIAL_IDLE_MS;
 }
 
@@ -4332,6 +4499,7 @@ function isCertificateAcquiredDateFieldKey(fieldKey) {
 
 function canFillControlForField(control, fieldKey) {
     if (!control || isEffectivelyDisabled(control)) return false;
+    if (isActionButtonControl(control)) return false;
     if (!control.readOnly) return true;
     return canFillReadonlyControlForField(control, fieldKey);
 }
@@ -4388,13 +4556,52 @@ function schoolAutocompleteHasDeferredDetailContainer(sourceControl) {
     });
 }
 
+function certificateBlockedDateControlExists(documentRef, value, relatedValues = [], sourceControl = null) {
+    const target = parseCertificateDetailFieldKey(value?.key);
+    if (!target) return false;
+    const expectedPrimary = expectedCertificatePrimaryValueForTarget(target, relatedValues);
+    const entry = sourceControl
+        ? closestCertificateSourceEntry(sourceControl, target.group)
+        : certificateEntryForSelectedPrimary(documentRef, target.group, expectedPrimary);
+    if (entry && Array.from(entry.querySelectorAll?.('button, [role="button"], [aria-haspopup]') ?? [])
+        .some((control) => isBlockedCertificateDateControl(control))) {
+        return true;
+    }
+    return false;
+}
+
+function isBlockedCertificateDateControl(control) {
+    if (!control || isHiddenElement(control) || isEffectivelyDisabled(control)) return false;
+    if (control.querySelector?.('input, textarea, select')) return false;
+    const signature = normalize([
+        control.textContent,
+        control.getAttribute?.('aria-label'),
+        control.getAttribute?.('name'),
+        control.id,
+        control.getAttribute?.('aria-haspopup')
+    ].filter(Boolean).join(' '));
+    if (!signature) return false;
+    const isDateLike = signature.includes(normalize('\ucde8\ub4dd\uc77c')) ||
+        signature.includes(normalize('\uc2dc\ud5d8\uc77c')) ||
+        signature.includes('acquireddate') ||
+        signature.includes('issuedate') ||
+        signature.includes('testdate');
+    return isDateLike && (
+        signature.includes('dialog') ||
+        control.tagName?.toLowerCase() === 'button' ||
+        control.getAttribute?.('role') === 'button'
+    );
+}
+
 function hasRelatedControlWaitSignal(documentRef, pendingValues) {
     return pendingValues.some((value) => {
         if (!cleanText(value?.value)) return false;
         const target = findCurrentControlForFieldKey(documentRef, value.key, value.value, { relatedValues: pendingValues });
         if (target && canFillControlForField(target, value.key)) return true;
         const majorBase = educationMajorDetailBase(value.key);
-        return Boolean(majorBase && !educationMajorEntryExistsForFieldKey(documentRef, value.key, expectedEducationMajorNameForFieldKey(value.key, pendingValues)) && findEducationMajorOpenControl(documentRef, value.key));
+        return Boolean(majorBase &&
+            !educationMajorEntryExistsForFieldKey(documentRef, value.key, expectedEducationMajorNameForFieldKey(value.key, pendingValues), { allowBlankIndexFallback: false }) &&
+            findEducationMajorOpenControl(documentRef, value.key));
     });
 }
 
@@ -4403,10 +4610,10 @@ function dependentAutocompleteWaitTimeoutMs(relatedValues, sourceControl = null)
         return AUTOFILL_RELATED_MAJOR_DETAIL_WAIT_TIMEOUT_MS;
     }
     if (hasDeferredSchoolDetailValues(relatedValues)) {
-        return 1800;
+        return 5000;
     }
     if (relatedValues.length && relatedValues.every(isCertificateSelectionDependentValue)) {
-        return relatedValues.some(isCertificateAcquiredDateValue) ? 900 : 420;
+        return relatedValues.some(isCertificateAcquiredDateValue) ? 1800 : 900;
     }
     return relatedValues.some((value) => dependentControlWaitTimeoutMs(value.key) === AUTOFILL_DEPENDENT_CONTROL_WAIT_TIMEOUT_MS)
         ? AUTOFILL_DEPENDENT_CONTROL_WAIT_TIMEOUT_MS
@@ -4418,7 +4625,7 @@ function autocompleteOptionWaitTimeoutMs(fieldKey) {
         return AUTOFILL_EDUCATION_AUTOCOMPLETE_OPTION_WAIT_TIMEOUT_MS;
     }
     if (isCertificatePrimaryFieldKey(fieldKey)) {
-        return 520;
+        return 1200;
     }
     return AUTOFILL_ASYNC_WAIT_TIMEOUT_MS;
 }
@@ -4732,6 +4939,7 @@ function isCustomOptionCandidate(element, sourceControl) {
         !element.disabled &&
         element.getAttribute('aria-disabled') !== 'true' &&
         !isAutomationControl(element) &&
+        !isActionButtonControl(element) &&
         !belongsToOtherAutocompleteDropdown(element, sourceControl) &&
         !isPotentialCustomSelectControl(element) &&
         !isSelectedEducationMajorChipOption(element, sourceControl) &&
@@ -4754,7 +4962,7 @@ function plainCustomOptionCandidates(documentRef, sourceControl) {
         if (element.querySelector('input, textarea, select, button, [role="button"], [role="combobox"]')) return false;
         const text = choiceElementText(element);
         const normalized = normalize(text);
-        if (!text || text.length > 50 || ACTION_BUTTON_TERMS.includes(normalized)) return false;
+        if (!text || text.length > 50 || ACTION_BUTTON_TERMS.some((term) => normalized === term || normalized.includes(term))) return false;
         const interactiveParent = element.closest('button, [role="button"], [role="combobox"], [aria-haspopup="listbox"], [aria-haspopup="true"]');
         return !interactiveParent || interactiveParent !== sourceControl;
     });
@@ -4822,7 +5030,7 @@ async function resolveControlForFillAsync(item, deadlineAt = Number.POSITIVE_INF
     const majorNameKey = item.sectionOpenControl ? educationMajorNameKeyFromOpenFieldKey(item.fieldKey) : null;
     if (majorNameKey) {
         return await waitForValue(() => {
-            if (educationMajorEntryExistsForFieldKey(item.element?.ownerDocument, majorNameKey, expectedEducationMajorNameForFieldKey(majorNameKey, item.relatedValues))) return item.element;
+            if (educationMajorEntryExistsForFieldKey(item.element?.ownerDocument, majorNameKey, expectedEducationMajorNameForFieldKey(majorNameKey, item.relatedValues), { allowBlankIndexFallback: false })) return item.element;
             const opener = findEducationMajorOpenControl(item.element?.ownerDocument, majorNameKey);
             return opener && !isEffectivelyDisabled(opener) ? opener : null;
         }, item.element, boundedAutoFillWaitMs(AUTOFILL_DEPENDENT_CONTROL_WAIT_TIMEOUT_MS, deadlineAt));
@@ -4837,6 +5045,8 @@ async function resolveControlForFillAsync(item, deadlineAt = Number.POSITIVE_INF
         }, null, boundedAutoFillWaitMs(dependentControlWaitTimeoutMs(item.fieldKey), deadlineAt));
     }
     if (item.waitForControlBeforeFill) {
+        const stableCertificateDetail = stableCertificateDetailElementForItem(item) ?? immediateCertificateDetailElementForItem(item);
+        if (stableCertificateDetail) return stableCertificateDetail;
         return await waitForValue(() => {
             const current = findCurrentControlForFieldKey(item.element?.ownerDocument, item.fieldKey, item.value, { relatedValues: item.relatedValues });
             return current && canFillControlForField(current, item.fieldKey) ? current : null;
@@ -4848,6 +5058,25 @@ async function resolveControlForFillAsync(item, deadlineAt = Number.POSITIVE_INF
         const current = findCurrentControlForFieldKey(item.element?.ownerDocument, item.fieldKey, item.value, { relatedValues: item.relatedValues });
         return current && !isEffectivelyDisabled(current) ? current : null;
     }, item.element, boundedAutoFillWaitMs(AUTOFILL_ASYNC_WAIT_TIMEOUT_MS, deadlineAt));
+}
+
+function stableCertificateDetailElementForItem(item) {
+    const target = parseCertificateDetailFieldKey(item?.fieldKey);
+    const control = item?.element;
+    if (!target || !control?.isConnected || control === control.ownerDocument?.body) return null;
+    if (!canFillControlForField(control, item.fieldKey)) return null;
+    const wildcardKey = certificateFieldKey(target.group, target.field);
+    if (repeatedWildcardKeyForControl(control, wildcardKey) !== wildcardKey) return null;
+    if (certificateRecordIndexForControl(control, wildcardKey, target.field) !== target.index) return null;
+    return control;
+}
+
+function immediateCertificateDetailElementForItem(item) {
+    const target = parseCertificateDetailFieldKey(item?.fieldKey);
+    const documentRef = item?.element?.ownerDocument;
+    if (!target || !documentRef) return null;
+    const control = findCertificateDetailControl(documentRef, target, item.value, item.relatedValues ?? []);
+    return control && canFillControlForField(control, item.fieldKey) ? control : null;
 }
 
 function dependentControlWaitTimeoutMs(fieldKey) {
@@ -4886,6 +5115,7 @@ function findCurrentControlForFieldKey(documentRef, fieldKey, value = '', option
         ...getApplicationFormElements(documentRef, 'input[type="radio"], input[type="checkbox"], button[type="button"], button:not([type]), [role="button"], [role="radio"], [role="checkbox"], [role="switch"], [aria-pressed], [aria-selected], [data-value], [data-option]').filter(isChoiceButtonCandidate)
     ])));
     return controls.find((control) => {
+        if (/^certificates\./.test(String(fieldKey ?? '')) && isActionButtonControl(control)) return false;
         if (isTopLevelEducationMajorCategoryFieldKey(fieldKey) && closestEducationMajorEntry(control)) return false;
         const tagName = control.tagName.toLowerCase();
         const context = ['input', 'textarea', 'select'].includes(tagName)
@@ -4902,6 +5132,7 @@ function findCurrentControlForFieldKey(documentRef, fieldKey, value = '', option
             ...context,
             normalized: normalize([context.normalized, educationSectionContextText(control)].filter(Boolean).join(' '))
         };
+        if (educationGroupWildcardControlMatchesFieldKey(fieldKey, directKey)) return true;
         if (educationWildcardControlMatchesFieldKey(fieldKey, directKey, scopedContext)) return true;
         const match = directKey ? findDirectValueMatch([{ key: fieldKey, label: fieldKey, value: fieldKey, terms: [] }], directKey, scopedContext, control) : null;
         return match?.key === fieldKey;
@@ -4910,6 +5141,12 @@ function findCurrentControlForFieldKey(documentRef, fieldKey, value = '', option
 
 function isTopLevelEducationMajorCategoryFieldKey(fieldKey) {
     return /^education\.(?:universities|graduateSchools)\.\d+\.majorCategory$/.test(String(fieldKey ?? ''));
+}
+
+function educationGroupWildcardControlMatchesFieldKey(fieldKey, directKey) {
+    const directMatch = String(directKey ?? '').match(/^education\.(universities|graduateSchools)\.\*\.([^.]+)$/);
+    const targetMatch = String(fieldKey ?? '').match(/^education\.(universities|graduateSchools)\.\d+\.([^.]+)$/);
+    return Boolean(directMatch && targetMatch && directMatch[1] === targetMatch[1] && directMatch[2] === targetMatch[2]);
 }
 
 function sortElementsInDocumentOrder(elements) {
@@ -4955,7 +5192,10 @@ function findCertificatePrimaryControl(documentRef, target, value = '') {
     if (!documentRef || !target) return null;
     if (certificateEntryForSelectedPrimary(documentRef, target.group, value)) return null;
     const fastSlot = certificatePrimarySlotsFast(documentRef, target.group)[target.index];
-    if (fastSlot?.element && !fastSlot.selected && canFillControlForField(fastSlot.element, certificateFieldKey(target.group, target.field))) {
+    if (fastSlot?.element &&
+        !fastSlot.selected &&
+        !isActionButtonControl(fastSlot.element) &&
+        canFillControlForField(fastSlot.element, certificateFieldKey(target.group, target.field))) {
         const currentValue = cleanText(fastSlot.element.value || fastSlot.element.getAttribute?.('value') || choiceElementText(fastSlot.element));
         if (!currentValue || isPlaceholderProfileValue(currentValue) || certificatePrimaryValuesMatch(value, currentValue)) {
             return fastSlot.element;
@@ -4965,7 +5205,7 @@ function findCertificatePrimaryControl(documentRef, target, value = '') {
     const controls = Array.from(new Set([
         ...getApplicationFormElements(documentRef, 'input, textarea, select').filter(isFillableControl),
         ...getApplicationFormElements(documentRef, '[role="combobox"], [aria-haspopup="listbox"], [aria-haspopup="true"], button[type="button"], button:not([type]), [tabindex]:not(input):not(textarea):not(select)').filter(isCustomSelectLikeControl)
-    ]));
+    ])).filter((control) => !isActionButtonControl(control));
     const matches = controls
         .filter((control) => repeatedWildcardKeyForControl(control, wildcardKey) === wildcardKey)
         .filter((control) => certificateRecordIndexForControl(control, wildcardKey, target.field) === target.index);
@@ -5063,6 +5303,7 @@ function findIndexedCertificateDetailControl(documentRef, target, wildcardKey) {
     if (!documentRef || !target || target.index < 0) return null;
     const controls = getApplicationFormElements(documentRef, 'input, textarea, select, button[type="button"], button:not([type]), [role="button"], [aria-haspopup]')
         .filter((control) => !isHiddenElement(control))
+        .filter((control) => !isActionButtonControl(control))
         .filter((control) => isCertificateDetailInputCandidate(control, wildcardKey) || isCustomSelectLikeControl(control) || isChoiceButtonCandidate(control));
     return controls.find((control) => indexedCertificateDetailControlMatches(control, target)) ?? null;
 }
@@ -5484,6 +5725,8 @@ function findNestedEducationMajorControl(documentRef, target, value = '', option
         : null;
     const namedEntryControl = namedEntry ? educationMajorFieldControlInEntry(namedEntry, target.field, value) : null;
     if (namedEntryControl) return namedEntryControl;
+    const explicitRowControl = educationMajorExplicitRowControl(documentRef, target, value, expectedMajorName);
+    if (explicitRowControl) return explicitRowControl;
     const directKey = `education.${target.group}.${target.educationIndex}.majors.${target.majorIndex}.${target.field}`;
     const wildcardKey = `education.${target.group}.*.majors.${target.majorIndex}.${target.field}`;
     const legacyGroupKey = `education.${target.group}.${target.educationIndex}.${target.field}`;
@@ -5533,6 +5776,42 @@ function findNestedEducationMajorControl(documentRef, target, value = '', option
     }) ?? rowMatches[0] ?? null;
 }
 
+function educationMajorExplicitRowControl(documentRef, target, value = '', expectedMajorName = '') {
+    if (!documentRef || !target || target.field === 'majorName') return null;
+    const controls = Array.from(new Set([
+        ...getApplicationFormElements(documentRef, 'input, textarea, select').filter(isFillableControl),
+        ...getApplicationFormElements(documentRef, '[role="combobox"], [aria-haspopup="listbox"], [aria-haspopup="true"], button[type="button"], button:not([type]), [tabindex]:not(input):not(textarea):not(select)').filter(isCustomSelectLikeControl),
+        ...getApplicationFormElements(documentRef, 'input[type="radio"], input[type="checkbox"], button[type="button"], button:not([type]), [role="button"], [role="radio"], [role="checkbox"], [role="switch"], [aria-pressed], [aria-selected], [data-value], [data-option]').filter(isChoiceButtonCandidate)
+    ]));
+    const normalizedValue = normalize(value);
+    return controls.find((control) => {
+        if (educationMajorExplicitRowIndex(control) !== target.majorIndex) return false;
+        const entry = closestEducationMajorEntry(control);
+        if (entry && !educationMajorEntryIsUsableForTarget(entry, target, expectedMajorName, target.majorIndex, { allowBlankIndexFallback: false })) {
+            return false;
+        }
+        return educationMajorControlMatchesField(control, target.field, normalizedValue);
+    }) ?? null;
+}
+
+function educationMajorExplicitRowIndex(control) {
+    const candidates = [
+        control?.getAttribute?.('data-row'),
+        control?.dataset?.row,
+        control?.id,
+        control?.getAttribute?.('name'),
+        control?.closest?.('[data-row]')?.getAttribute?.('data-row')
+    ].filter(Boolean);
+    for (const candidate of candidates) {
+        const exact = String(candidate).match(/^\d+$/);
+        if (exact) return Number(exact[0]);
+        const indexed = String(candidate).match(/(?:^|[-_.])(?:major|row|index|category|type|daynight)[-_.]?(\d+)(?:$|[-_.])/i) ??
+            String(candidate).match(/(\d+)$/);
+        if (indexed) return Number(indexed[1]);
+    }
+    return null;
+}
+
 function educationMajorFieldControlInEntry(entry, field, value = '') {
     if (!entry || !EDUCATION_MAJOR_DETAIL_FIELDS.has(field) || field === 'majorName') return null;
     const controls = Array.from(new Set([
@@ -5552,22 +5831,25 @@ function educationMajorControlMatchesField(control, field, normalizedValue = '')
             ? collectCustomSelectText(control)
             : collectChoiceText(control, choiceCandidateText(control));
     const ownText = normalize(choiceCandidateText(control) || choiceElementText(control));
-    const text = normalize([
+    const controlText = normalize([
         choiceElementText(control),
-        context.displayLabel,
         control.getAttribute?.('placeholder'),
         control.getAttribute?.('aria-label'),
         control.getAttribute?.('name'),
         control.id
+    ].filter(Boolean).join(' '));
+    const text = normalize([
+        controlText,
+        context.displayLabel
     ].filter(Boolean).join(' '));
     if (normalizedValue) {
         const optionValue = normalize(control.getAttribute?.('data-value') || control.getAttribute?.('data-option') || control.getAttribute?.('value'));
         if (ownText === normalizedValue || optionValue === normalizedValue) return true;
     }
     if (normalizedValue && ['majorType', 'dayNight'].includes(field) && !isCustomSelectLikeControl(control)) return false;
-    if (field === 'majorCategory') return text.includes(normalize('\uc804\uacf5\uacc4\uc5f4')) || text.includes(normalize('\ud559\uacfc\uacc4\uc5f4')) || text.includes('majorcategory');
-    if (field === 'majorType') return text.includes(normalize('\uc804\uacf5\uad6c\ubd84')) || text.includes('majortype') || isChoiceText(choiceCandidateText(control));
-    if (field === 'dayNight') return text.includes(normalize('\uc8fc\uac04')) || text.includes(normalize('\uc57c\uac04')) || text.includes('daynight');
+    if (field === 'majorCategory') return controlText.includes(normalize('\uc804\uacf5\uacc4\uc5f4')) || controlText.includes(normalize('\ud559\uacfc\uacc4\uc5f4')) || controlText.includes('majorcategory');
+    if (field === 'majorType') return controlText.includes(normalize('\uc804\uacf5\uad6c\ubd84')) || controlText.includes('majortype') || isChoiceText(choiceElementText(control));
+    if (field === 'dayNight') return controlText.includes(normalize('\uc8fc\uac04')) || controlText.includes(normalize('\uc57c\uac04')) || controlText.includes('daynight') || isChoiceText(choiceElementText(control));
     return false;
 }
 
@@ -5632,28 +5914,28 @@ function educationMajorEntryHasDifferentSelectedName(entry, value) {
         !normalizedValue.includes(normalizedSelected);
 }
 
-function educationMajorEntryExistsForFieldKey(documentRef, fieldKey, value = '') {
-    return Boolean(educationMajorEntryForFieldKey(documentRef, fieldKey, value));
+function educationMajorEntryExistsForFieldKey(documentRef, fieldKey, value = '', options = {}) {
+    return Boolean(educationMajorEntryForFieldKey(documentRef, fieldKey, value, options));
 }
 
-function educationMajorEntryForFieldKey(documentRef, fieldKey, value = '') {
+function educationMajorEntryForFieldKey(documentRef, fieldKey, value = '', options = {}) {
     const target = parseNestedEducationMajorFieldKey(fieldKey);
     if (!target || !documentRef) return null;
-    return educationMajorEntryForTarget(documentRef, target, target.field === 'majorName' ? value : '');
+    return educationMajorEntryForTarget(documentRef, target, target.field === 'majorName' ? value : '', options);
 }
 
-function educationMajorEntryForTarget(documentRef, target, expectedMajorName = '') {
+function educationMajorEntryForTarget(documentRef, target, expectedMajorName = '', options = {}) {
     if (!target || !documentRef) return null;
-    const entries = educationMajorEntriesForTarget(documentRef, target, expectedMajorName);
+    const entries = educationMajorEntriesForTarget(documentRef, target, expectedMajorName, options);
     if (expectedMajorName) return entries[0] ?? null;
     return entries[target.majorIndex] ?? null;
 }
 
-function educationMajorEntriesForTarget(documentRef, target, expectedMajorName = '') {
-    return educationMajorEntries(documentRef).filter((entry, entryIndex) => educationMajorEntryIsUsableForTarget(entry, target, expectedMajorName, entryIndex));
+function educationMajorEntriesForTarget(documentRef, target, expectedMajorName = '', options = {}) {
+    return educationMajorEntries(documentRef).filter((entry, entryIndex) => educationMajorEntryIsUsableForTarget(entry, target, expectedMajorName, entryIndex, options));
 }
 
-function educationMajorEntryIsUsableForTarget(entry, target, expectedMajorName = '', entryIndex = -1) {
+function educationMajorEntryIsUsableForTarget(entry, target, expectedMajorName = '', entryIndex = -1, options = {}) {
     if (!entry || !target) return false;
     const selectedName = selectedEducationMajorNameTextFromEntry(entry);
     if (selectedName) {
@@ -5675,7 +5957,11 @@ function educationMajorEntryIsUsableForTarget(entry, target, expectedMajorName =
             return false;
         }
     }
-    if (expectedMajorName && entryIndex !== target.majorIndex) return false;
+    if (expectedMajorName && entryIndex !== target.majorIndex) {
+        const hasSelectedOrTypedName = Boolean(selectedName || cleanText(nameInput?.value));
+        if (hasSelectedOrTypedName) return false;
+        if (options.allowBlankIndexFallback === false) return false;
+    }
     return Boolean(nameInput && !isEffectivelyDisabled(nameInput) && !nameInput.readOnly);
 }
 
@@ -6651,13 +6937,18 @@ function isChoiceButtonCandidate(control) {
     const text = choiceCandidateText(control);
     if (isMilitaryServicePeriodChoiceText(text)) return false;
     if (!text || text.length > 20 || !isChoiceText(text)) return false;
-    return !ACTION_BUTTON_TERMS.includes(normalize(text));
+    const normalized = normalize(text);
+    return !ACTION_BUTTON_TERMS.some((term) => normalized === term || normalized.includes(term));
 }
 
 function isActionButtonControl(control) {
-    const normalized = normalize(choiceCandidateText(control) || choiceElementText(control));
-    if (!normalized) return false;
-    return ACTION_BUTTON_TERMS.some((term) => normalized === term || normalized.includes(term));
+    const signatures = [
+        normalize(choiceCandidateText(control)),
+        normalize(choiceElementText(control))
+    ].filter(Boolean);
+    return signatures.some((normalized) =>
+        ACTION_BUTTON_TERMS.some((term) => normalized === term || normalized.includes(term))
+    );
 }
 
 function isPotentialCustomSelectControl(control) {
@@ -6665,7 +6956,7 @@ function isPotentialCustomSelectControl(control) {
     if (isIconOnlyActionButton(control)) return false;
     const text = choiceElementText(control);
     const normalized = normalize(text);
-    if (!text || ACTION_BUTTON_TERMS.includes(normalized)) return false;
+    if (!text || ACTION_BUTTON_TERMS.some((term) => normalized === term || normalized.includes(term))) return false;
     if (normalized.includes(normalize('\uacc4\uae09')) || normalized.includes(normalize('\uc81c\ub300\uad6c\ubd84')) || normalized.includes(normalize('\uc804\uc5ed\uad6c\ubd84'))) return true;
     const directKey = directFieldKeyFromText(text);
     if (MILITARY_DEPENDENT_SELECT_KEYS.has(directKey)) return true;
@@ -6799,17 +7090,21 @@ function isTailoredActivityControl(control, context = {}) {
 }
 
 function closestSectionText(control) {
+    const cache = applicationFormTextCacheForElement(control);
+    if (cache?.closestSectionText.has(control)) return cache.closestSectionText.get(control);
     const section = control.closest('section, fieldset, [role="region"], article');
-    if (!section) return '';
-    return [
+    const text = section ? [
         section.getAttribute('aria-label'),
         section.querySelector('h1, h2, h3, h4, h5, legend')?.textContent
-    ].filter(Boolean).join(' ');
+    ].filter(Boolean).join(' ') : '';
+    cache?.closestSectionText.set(control, text);
+    return text;
 }
 
 function precedingHeadingText(control) {
-    const headings = Array.from(control?.ownerDocument?.querySelectorAll?.('h1, h2, h3, h4, h5, legend') ?? [])
-        .filter((heading) => !isHiddenElement(heading));
+    const cache = applicationFormTextCacheForElement(control);
+    if (cache?.precedingHeadingText.has(control)) return cache.precedingHeadingText.get(control);
+    const headings = cachedDocumentHeadings(control?.ownerDocument);
     let latest = '';
     for (const heading of headings) {
         if (heading === control || heading.compareDocumentPosition(control) & Node.DOCUMENT_POSITION_FOLLOWING) {
@@ -6818,7 +7113,22 @@ function precedingHeadingText(control) {
         }
         break;
     }
+    cache?.precedingHeadingText.set(control, latest);
     return latest;
+}
+
+function cachedDocumentHeadings(documentRef) {
+    const selector = 'h1, h2, h3, h4, h5, legend';
+    const cache = applicationFormTextCacheForDocument(documentRef);
+    if (cache) {
+        if (!cache.headings) {
+            cache.headings = Array.from(documentRef?.querySelectorAll?.(selector) ?? [])
+                .filter((heading) => !isHiddenElement(heading));
+        }
+        return cache.headings.filter((heading) => heading.isConnected);
+    }
+    return Array.from(documentRef?.querySelectorAll?.(selector) ?? [])
+        .filter((heading) => !isHiddenElement(heading));
 }
 
 function addTailoredActivityAssist(failed) {

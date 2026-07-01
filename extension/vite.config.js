@@ -1,3 +1,4 @@
+import { copyFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 
@@ -6,7 +7,7 @@ const reinjectableContentScripts = new Set([
     'assets/applicationAutoFill.js'
 ]);
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
     build: {
         emptyOutDir: true,
         rollupOptions: {
@@ -22,8 +23,8 @@ export default defineConfig({
             }
         }
     },
-    plugins: [wrapReinjectableContentScripts()]
-});
+    plugins: [wrapReinjectableContentScripts(), selectManifestForMode(mode)]
+}));
 
 function wrapReinjectableContentScripts() {
     return {
@@ -35,6 +36,18 @@ function wrapReinjectableContentScripts() {
                 }
                 chunk.code = `(() => {\n${chunk.code}\n})();\n`;
             }
+        }
+    };
+}
+
+function selectManifestForMode(mode) {
+    return {
+        name: 'select-manifest-for-mode',
+        closeBundle() {
+            if (mode !== 'localdev') {
+                return;
+            }
+            copyFileSync(resolve(__dirname, 'manifests/local.json'), resolve(__dirname, 'dist/manifest.json'));
         }
     };
 }

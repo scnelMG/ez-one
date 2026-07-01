@@ -22,11 +22,16 @@ public class VentureApiClient {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private final String apiKey;
+    private final String apiUrl;
 
-    public VentureApiClient(RestTemplate restTemplate, ObjectMapper objectMapper, @Value("${PUBLIC_DATA_API_KEY:}") String apiKey) {
+    public VentureApiClient(RestTemplate restTemplate,
+                            ObjectMapper objectMapper,
+                            @Value("${PUBLIC_DATA_API_KEY:}") String apiKey,
+                            @Value("${company-enrichment.venture-company.url}") String apiUrl) {
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
         this.apiKey = apiKey;
+        this.apiUrl = apiUrl == null ? "" : apiUrl.trim();
     }
 
     public static class VentureData {
@@ -49,8 +54,7 @@ public class VentureApiClient {
         }
 
         try {
-            // NOTE: Using a generic public data API URL for demonstration, as the exact endpoint requires specific docs.
-            URI uri = URI.create("http://apis.data.go.kr/1423000/VentureCompanyService/getVentureCompanyList" +
+            URI uri = URI.create(apiUrl +
                     "?serviceKey=" + apiKey +
                     "&pageNo=1" +
                     "&numOfRows=10" +

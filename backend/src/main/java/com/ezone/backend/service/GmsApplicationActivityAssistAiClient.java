@@ -26,7 +26,6 @@ import org.springframework.web.client.RestTemplate;
 public class GmsApplicationActivityAssistAiClient implements ApplicationActivityAssistAiClient {
 
     private static final Logger log = LoggerFactory.getLogger(GmsApplicationActivityAssistAiClient.class);
-    private static final String DEFAULT_BASE_URL = "https://gms.ssafy.io/gmsapi/api.openai.com/v1";
     private static final int MAX_CANDIDATES_FOR_AI = 8;
     private static final int MAX_FIELD_CHARS = 300;
     private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {
@@ -74,13 +73,13 @@ public class GmsApplicationActivityAssistAiClient implements ApplicationActivity
         RestTemplate restTemplate,
         ObjectMapper objectMapper,
         @Value("${gms.ai.api-key:}") String apiKey,
-        @Value("${gms.ai.base-url:" + DEFAULT_BASE_URL + "}") String baseUrl,
+        @Value("${gms.ai.base-url}") String baseUrl,
         @Value("${gms.ai.recommendation-model:gpt-4.1-mini}") String model
     ) {
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
         this.apiKey = apiKey == null ? "" : apiKey.trim();
-        this.baseUrl = trimTrailingSlash(baseUrl == null || baseUrl.isBlank() ? DEFAULT_BASE_URL : baseUrl);
+        this.baseUrl = trimTrailingSlash(baseUrl == null || baseUrl.isBlank() ? "" : baseUrl);
         this.model = model == null || model.isBlank() ? "gpt-4.1-mini" : model.trim();
     }
 

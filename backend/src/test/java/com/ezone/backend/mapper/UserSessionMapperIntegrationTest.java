@@ -53,7 +53,7 @@ class UserSessionMapperIntegrationTest {
             null,
             42L,
             refreshTokenHash,
-            Instant.parse("2026-07-01T00:00:00Z"),
+            Instant.parse("2099-07-01T00:00:00Z"),
             null
         ));
 

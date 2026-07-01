@@ -16,6 +16,10 @@
 | TC-AUTH-004 | Auth | refresh token 재발급 | 새 access token 발급 |
 | TC-AUTH-005 | Auth | logout 후 refresh 재사용 | token revoke로 재발급 거부 |
 | TC-AUTH-006 | Auth | 닉네임 수정 | 현재 사용자 DTO와 프론트 세션 갱신 |
+| TC-AUTH-COOKIE-001 | Auth | Web refresh token storage | Backend sets HttpOnly `ezone_refresh_token`, web auth bodies return `refreshToken: null`, and frontend does not persist refresh token in localStorage |
+| TC-AUTH-COOKIE-002 | Auth | Cookie refresh and extension body refresh | `POST /api/auth/refresh` accepts web cookie refresh and existing body refresh token for extension compatibility |
+| TC-AUTH-LOCAL-001 | Auth | local 개발 토큰 기본 차단 | `AUTH_LOCAL_DEV_TOKEN_ENABLED=true`가 아니면 `local-dev-access-token`은 401 |
+| TC-SEC-CORS-001 | Security | credential CORS exact origin 제한 | wildcard origin 거부, 실제 web/extension origin만 허용 |
 | TC-ONB-001 | Onboarding | 온보딩 저장 | 프로필 저장 |
 | TC-ONB-002 | Onboarding | 온보딩 건너뛰기 | 빈 editable profile 상태 유지 |
 | TC-DASH-001 | Dashboard | 상태 카드 클릭 | 장바구니가 예상 filter/sort로 열린다. |
@@ -27,6 +31,7 @@
 | TC-EXT-002 | Extension | 추출 실패 | 미지원 페이지 또는 추출 실패 시 오류 안내, 잘못된 저장 없음 |
 | TC-EXT-003 | Extension | 저장 전 수집 데이터 수정 | 회사명, 공고명, 마감일 수정값이 저장 API payload에 반영됨 |
 | TC-EXT-004 | Extension | 확장 설치 안내 | 웹 랜딩에서 Chrome 확장프로그램 로컬 설치 안내와 `dist` 경로 제공 |
+| TC-EXT-MANIFEST-001 | Extension | 운영 manifest 권한 축소 | production manifest는 local HTTP 권한과 broad web accessible resource를 포함하지 않음 |
 | TC-EXT-DOC-AUTOFILL-001 | Extension | 서류 정보 자동 입력 보조 | label, placeholder, name/id, table, nearby text 기반 기본/표준 문서 항목 입력 |
 | TC-EXT-DOC-AUTOFILL-002 | Extension | 자기소개서/장문 입력 제외 | essay/long-form textarea는 자동 입력하지 않고 수동 검토 대상으로 표시 |
 | TC-REC-001 | Recommendation | 추천 공고 별표 저장 | 장바구니 저장, 중복 처리 |
@@ -207,6 +212,16 @@ Requirement: `AI-003`, `AI-006`, `MM-009`.
 - `TC-AI-ACTIVITY-LENGTH-001`: `ApplicationActivityAssistServiceTest` verifies short AI activity drafts are expanded toward 90% of long character limits using saved activity facts without exceeding the limit.
 - `TC-AI-MM-PROMPT-001`: `GmsAiJobRecommendationClientTest` verifies Mattermost review-priority prompt wording, schema-constrained output request, token budget, and incomplete JSON fallback.
 - `TC-MM-REC-FRONTEND-003`: `MattermostRecommendationsPage.test.js` verifies readable Korean review-priority copy, pending state, and save actions.
+
+## 2026-06-28 Extension Auto-Fill Release Regressions
+
+Requirement: `EXT-031`, `EXT-032`.
+
+- `TC-EXT-AUTOFILL-031-MIDAS-SCHOOL-001`: `applicationAutoFill.test.js` verifies Midas school autocomplete options are selected before dependent education fields are filled.
+- `TC-EXT-AUTOFILL-031-MIDAS-MAJOR-001`: `applicationAutoFill.test.js` verifies university department controls do not shift nested Midas major row indexes.
+- `TC-EXT-AUTOFILL-032-MIXED-CERT-001`: `applicationAutoFill.test.js` verifies mixed Midas language/certificate sections do not click certificate add buttons repeatedly or fill the wrong section.
+- `TC-EXT-AUTOFILL-032-SQLD-001`: `applicationAutoFill.test.js` verifies SQLD can be committed after existing certificate rows without moving details into ADsP.
+- `TC-EXT-AUTOFILL-032-DELAYED-DATE-001`: `applicationAutoFill.test.js` verifies delayed Kakao ATS certificate date inputs are filled after certificate selection.
 
 ## 2026-06-20 Company Enrichment Tests Continued
 

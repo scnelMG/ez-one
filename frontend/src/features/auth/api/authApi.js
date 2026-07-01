@@ -15,9 +15,10 @@ export function createAuthApi(httpClient = defaultHttpClient) {
             return response.data.data;
         },
         async refresh(refreshToken) {
-            const response = await httpClient.post('/api/auth/refresh', {
-                refreshToken
-            });
+            const response = await httpClient.post(
+                '/api/auth/refresh',
+                refreshToken ? { refreshToken } : undefined
+            );
             return response.data.data;
         },
         async issueExtensionSession() {
@@ -25,7 +26,7 @@ export function createAuthApi(httpClient = defaultHttpClient) {
             return response.data.data;
         },
         async logout(refreshToken) {
-            await httpClient.post('/api/auth/logout', { refreshToken });
+            await httpClient.post('/api/auth/logout', refreshToken ? { refreshToken } : undefined);
         },
         async getCurrentUser() {
             const response = await httpClient.get('/api/me');

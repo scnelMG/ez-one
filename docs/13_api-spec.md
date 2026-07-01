@@ -42,6 +42,15 @@
 | GET | `/api/me/profile` | 온보딩/마이페이지 프로필 조회 |
 | PUT | `/api/me/profile` | 온보딩/마이페이지 프로필 저장 |
 
+### 2026-06-28 Auth Session Contract
+
+- Web signup/login/Google login set `Set-Cookie: ezone_refresh_token=...; HttpOnly` and return `data.refreshToken: null`.
+- Web `POST /api/auth/refresh` should send the HttpOnly cookie and no request body. The response rotates the cookie and returns `data.refreshToken: null`.
+- Extension `POST /api/auth/refresh` may continue to send `{ "refreshToken": "..." }` and receives the rotated refresh token in the response body.
+- `POST /api/auth/extension-session` is the explicit web-to-extension token handoff endpoint and returns extension access/refresh tokens in the response body.
+- Web `POST /api/auth/logout` clears the refresh cookie. Extension logout may continue to send `{ "refreshToken": "..." }`.
+- Production HTTPS deployments must set `AUTH_REFRESH_COOKIE_SECURE=true` and choose the deployed `AUTH_REFRESH_COOKIE_SAME_SITE` value intentionally.
+
 ## 대시보드 / 장바구니
 
 | 메서드 | 경로 | 목적 |

@@ -17,7 +17,6 @@ import java.util.Map;
 public class OpenAiClient {
 
     private static final Logger log = LoggerFactory.getLogger(OpenAiClient.class);
-    private static final String DEFAULT_BASE_URL = "https://gms.ssafy.io/gmsapi/api.openai.com/v1";
     private static final String DEFAULT_COMPARE_MODEL = "gpt-4.1-mini";
 
     private final RestTemplate restTemplate;
@@ -27,11 +26,11 @@ public class OpenAiClient {
 
     public OpenAiClient(
             RestTemplate restTemplate,
-            @Value("${gms.ai.base-url:" + DEFAULT_BASE_URL + "}") String baseUrl,
+            @Value("${gms.ai.base-url}") String baseUrl,
             @Value("${gms.ai.api-key:}") String apiKey,
             @Value("${dart.ai.compare-model:" + DEFAULT_COMPARE_MODEL + "}") String compareModel) {
         this.restTemplate = restTemplate;
-        this.baseUrl = trimTrailingSlash(StringUtils.hasText(baseUrl) ? baseUrl : DEFAULT_BASE_URL);
+        this.baseUrl = trimTrailingSlash(StringUtils.hasText(baseUrl) ? baseUrl : "");
         this.apiKey = apiKey == null ? "" : apiKey.trim();
         this.compareModel = normalizeCompareModel(compareModel);
     }

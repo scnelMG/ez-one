@@ -142,7 +142,7 @@
             id="active-application-empty"
             tone="navy"
             title="작성 중인 지원서가 없습니다"
-            body="공고를 저장하면 지원서 작성 공간이 자동으로 준비됩니다."
+            body="저장한 공고가 생기면 가장 최근에 작업한 지원서를 이어서 보여드립니다."
           />
           </section>
 
@@ -287,7 +287,7 @@
               id="main-basket-empty"
               tone="navy"
               title="바구니에 담긴 공고가 없습니다"
-              body="새로운 공고를 찾아 바구니에 담아보세요."
+              body="확장 프로그램으로 공고를 저장하거나 장바구니에서 직접 추가해 보세요."
             />
           </div>
           </section>

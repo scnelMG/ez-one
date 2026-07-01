@@ -182,7 +182,7 @@ import PageHeader from '@/shared/PageHeader.vue';
 import MyPageNav from '@/shared/MyPageNav.vue';
 import PreferenceForm from '@/features/profile/components/PreferenceForm.vue';
 import { authApi } from '@/features/auth/api/authApi';
-import { clearAuthSession, getCurrentUser, getRefreshToken, saveCurrentUser } from '@/features/auth/session/authSession';
+import { clearAuthSession, getCurrentUser, saveCurrentUser } from '@/features/auth/session/authSession';
 import { useProfileStore } from '@/stores/profileStore';
 import { showToast } from '@/shared/useToast';
 
@@ -389,11 +389,8 @@ function copyList(values) {
 }
 
 async function handleLogout() {
-  const refreshToken = getRefreshToken();
   try {
-    if (refreshToken) {
-      await authApi.logout(refreshToken);
-    }
+    await authApi.logout();
   } finally {
     clearAuthSession();
     await router.push('/login');

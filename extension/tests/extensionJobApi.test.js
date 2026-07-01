@@ -270,6 +270,6 @@ describe('extensionJobApi', () => {
             sourceUrl: 'https://www.jasoseol.com/recruit/1',
             roleOptions: ['Backend'],
             essayQuestions: []
-        })).rejects.toThrow(/EZ-ONE/);
+        })).rejects.toThrow('서버에 연결하지 못했습니다. EZ-ONE 서버가 켜져 있는지 확인해 주세요.');
     });
 });

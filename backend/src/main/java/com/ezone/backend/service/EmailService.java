@@ -2,6 +2,7 @@ package com.ezone.backend.service;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
@@ -11,9 +12,14 @@ import org.springframework.stereotype.Service;
 public class EmailService {
 
     private final JavaMailSender javaMailSender;
+    private final String publicBaseUrl;
 
-    public EmailService(JavaMailSender javaMailSender) {
+    public EmailService(
+        JavaMailSender javaMailSender,
+        @Value("${app.public-base-url:http://localhost:5173}") String publicBaseUrl
+    ) {
         this.javaMailSender = javaMailSender;
+        this.publicBaseUrl = trimTrailingSlash(publicBaseUrl);
     }
 
     @Async
@@ -29,7 +35,7 @@ public class EmailService {
                     + "<p>안녕하세요, <b>" + studyName + "</b> 스터디에서 귀하를 초대했습니다.</p>"
                     + "<p>지금 EZ-ONE 플랫폼에 접속하셔서 스터디 초대를 수락하고 팀원들과 자소서를 공유해보세요!</p>"
                     + "<br/>"
-                    + "<a href=\"http://localhost:5173/study\" style=\"padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;\">스터디 확인하러 가기</a>";
+                    + "<a href=\"" + publicBaseUrl + "/study\" style=\"padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;\">스터디 확인하러 가기</a>";
 
             helper.setText(htmlContent, true);
 
@@ -38,5 +44,12 @@ public class EmailService {
             // Log error
             System.err.println("Failed to send email to " + to + ": " + e.getMessage());
         }
+    }
+
+    private String trimTrailingSlash(String value) {
+        if (value == null || value.isBlank()) {
+            return "http://localhost:5173";
+        }
+        return value.replaceAll("/+$", "");
     }
 }

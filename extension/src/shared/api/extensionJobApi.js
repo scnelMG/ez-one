@@ -1,4 +1,4 @@
-const SERVER_UNAVAILABLE_MESSAGE = '\uC11C\uBC84\uC5D0 \uC5F0\uACB0\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. EZ-ONE \uC11C\uBC84\uAC00 \uCF1C\uC838 \uC788\uB294\uC9C0 \uD655\uC778\uD574 \uC8FC\uC138\uC694.';
+const SERVER_UNAVAILABLE_MESSAGE = '서버에 연결하지 못했습니다. EZ-ONE 서버가 켜져 있는지 확인해 주세요.';
 
 export function createExtensionJobApi({
     apiBaseUrl,
@@ -97,7 +97,7 @@ function callFetch(client, url, init) {
         if (error?.name === 'AbortError') {
             throw new Error('서버 응답이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.');
         }
-        throw new Error('서버에 연결하지 못했습니다. EZ-ONE 서버가 켜져 있는지 확인해 주세요.');
+        throw new Error(SERVER_UNAVAILABLE_MESSAGE);
     })
         .finally(() => clearTimeout(timeoutId));
 }
@@ -126,5 +126,5 @@ function isNetworkUnavailableError(error) {
     return message === SERVER_UNAVAILABLE_MESSAGE ||
         message.includes('Failed to fetch') ||
         message.includes('서버') ||
-        message.includes('쒕쾭');
+        message.includes('연결');
 }

@@ -44,4 +44,20 @@ class CurrentUserControllerAuthTest {
             .andExpect(jsonPath("$.success").value(false))
             .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"));
     }
+
+    @Test
+    void meRejectsLocalDevAccessTokenUnlessExplicitlyEnabled() throws Exception {
+        mockMvc.perform(get("/api/me").header("Authorization", "Bearer local-dev-access-token"))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"));
+    }
+
+    @Test
+    void swaggerEndpointsAreNotPublicByDefault() throws Exception {
+        mockMvc.perform(get("/swagger-ui/index.html"))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"));
+    }
 }

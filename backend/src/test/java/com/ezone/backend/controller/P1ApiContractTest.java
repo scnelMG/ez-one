@@ -390,7 +390,7 @@ class P1ApiContractTest {
                     {
                       "companyName": "Mistaken Basket Company",
                       "positionTitle": "Backend Developer",
-                      "deadlineLabel": "2026.06.30",
+                      "deadlineLabel": "2099.06.30",
                       "sourceUrl": "https://example.com/jobs/mistaken-basket",
                       "savedSource": "DIRECT"
                     }
@@ -637,7 +637,7 @@ class P1ApiContractTest {
                     {
                       "companyName": "Status Company",
                       "positionTitle": "Backend Developer",
-                      "deadlineLabel": "2026.06.30",
+                      "deadlineLabel": "2099.06.30",
                       "sourceUrl": "https://example.com/jobs/status",
                       "savedSource": "DIRECT"
                     }

@@ -17,8 +17,6 @@ import org.springframework.web.client.RestTemplate;
 @Service
 public class GmsDartAiAnalysisClient implements DartAiAnalysisClient {
 
-    private static final String DEFAULT_BASE_URL = "https://gms.ssafy.io/gmsapi/api.openai.com/v1";
-
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private final String apiKey;
@@ -29,13 +27,13 @@ public class GmsDartAiAnalysisClient implements DartAiAnalysisClient {
         RestTemplate restTemplate,
         ObjectMapper objectMapper,
         @Value("${gms.ai.api-key:}") String apiKey,
-        @Value("${gms.ai.base-url:" + DEFAULT_BASE_URL + "}") String baseUrl,
+        @Value("${gms.ai.base-url}") String baseUrl,
         @Value("${dart.ai.analysis-model:gpt-4.1}") String analysisModel
     ) {
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
         this.apiKey = apiKey;
-        this.baseUrl = StringUtils.hasText(baseUrl) ? baseUrl : DEFAULT_BASE_URL;
+        this.baseUrl = StringUtils.hasText(baseUrl) ? trimTrailingSlash(baseUrl) : "";
         this.analysisModel = StringUtils.hasText(analysisModel) ? analysisModel : "gpt-4.1";
     }
 
@@ -204,4 +202,11 @@ public class GmsDartAiAnalysisClient implements DartAiAnalysisClient {
         return output.toString();
     }
 
+    private String trimTrailingSlash(String value) {
+        String trimmed = value.trim();
+        while (trimmed.endsWith("/")) {
+            trimmed = trimmed.substring(0, trimmed.length() - 1);
+        }
+        return trimmed;
+    }
 }

@@ -40,15 +40,18 @@ public class SecurityConfig {
     }
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain securityFilterChain(
+        HttpSecurity http,
+        @Value("${app.docs.enabled:false}") boolean docsEnabled
+    ) throws Exception {
         http.csrf(csrf -> csrf.disable())
             .cors(cors -> {})
             .httpBasic(httpBasic -> httpBasic.disable())
             .formLogin(formLogin -> formLogin.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers(
+            .authorizeHttpRequests(auth -> {
+                auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll();
+                auth.requestMatchers(
                     "/api/auth/signup",
                     "/api/auth/login",
                     "/api/auth/google",
@@ -56,14 +59,19 @@ public class SecurityConfig {
                     "/api/auth/logout",
                     "/api/integrations/mattermost/webhook",
                     "/api/health",
-                    "/swagger-ui/**",
-                    "/swagger-ui.html",
-                    "/v3/api-docs/**",
-                    "/swagger-resources/**",
-                    "/webjars/**",
                     "/uploads/**"
-                ).permitAll()
-                .anyRequest().authenticated())
+                ).permitAll();
+                if (docsEnabled) {
+                    auth.requestMatchers(
+                        "/swagger-ui/**",
+                        "/swagger-ui.html",
+                        "/v3/api-docs/**",
+                        "/swagger-resources/**",
+                        "/webjars/**"
+                    ).permitAll();
+                }
+                auth.anyRequest().authenticated();
+            })
             .exceptionHandling(exception -> exception
                 .authenticationEntryPoint((request, response, authException) ->
                     writeError(response, HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Authentication is required."))
@@ -87,10 +95,10 @@ public class SecurityConfig {
 
     @Bean
     CorsConfigurationSource corsConfigurationSource(
-        @Value("${app.cors.allowed-origins:http://localhost:5173,http://127.0.0.1:5173,chrome-extension://*}") String allowedOrigins
+        @Value("${app.cors.allowed-origins:http://localhost:5173,http://127.0.0.1:5173,http://[::1]:5173}") String allowedOrigins
     ) {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(parseCsv(allowedOrigins));
+        configuration.setAllowedOrigins(parseExactOrigins(allowedOrigins));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
@@ -98,6 +106,16 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", configuration);
         return source;
+    }
+
+    private static List<String> parseExactOrigins(String value) {
+        List<String> origins = parseCsv(value);
+        if (origins.stream().anyMatch(origin -> origin.contains("*"))) {
+            throw new IllegalArgumentException(
+                "Wildcard CORS origins are not allowed while credentials are enabled. Configure exact web and extension origins."
+            );
+        }
+        return origins;
     }
 
     private static List<String> parseCsv(String value) {

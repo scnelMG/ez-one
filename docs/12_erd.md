@@ -2,7 +2,7 @@
 
 기준 원본: Notion `12. ERD`
 
-이 문서는 P1 데이터 모델 기준이다. 실제 SQL 파일명과 세부 타입은 구현 중 확정하며, 변경 시 이 문서와 `docs/13_api-spec.md`를 함께 갱신한다. DB migration 도구는 현재 보류 상태다.
+이 문서는 P1 데이터 모델 기준이다. 실제 SQL 파일명과 세부 타입은 `backend/src/main/resources/db/migration`의 Flyway versioned migration과 함께 관리하며, 변경 시 이 문서와 `docs/13_api-spec.md`를 함께 갱신한다.
 
 ## 관계 다이어그램
 

@@ -1,47 +1,28 @@
-# 29. 의사결정 기록
+# 29. Decision Log
 
-이 문서는 EZ-ONE 개발 중 확정한 주요 기술/운영 결정을 기록한다.
+This document records approved technical and operational decisions for EZ-ONE.
+For deployment-specific gates, use `docs/39_production-deployment-runbook.md`.
 
-## DEC-001: Monorepo 사용
+## Approved Decisions
 
-| 항목 | 내용 |
-| --- | --- |
-| 상태 | 승인됨 |
-| 일자 | 2026-05-31 |
-| 결정 | `backend`, `frontend`, `extension`, `docs`, `infra`를 한 repository에서 관리한다. |
-| 이유 | backend, frontend, extension의 API 계약을 강하게 연결하고 문서와 계약을 한 곳에서 관리하기 위함이다. |
+| ID | Decision | Status | Date | Rationale |
+| --- | --- | --- | --- | --- |
+| DEC-001 | Use a monorepo containing `backend`, `frontend`, `extension`, `docs`, and `infra`. | Approved | 2026-05-31 | Keeps API contracts, application code, extension code, and release docs close together. |
+| DEC-002 | Use MyBatis with MySQL for persistence. | Approved | 2026-05-31 | Fits the approved stack and avoids introducing JPA without explicit scope approval. |
+| DEC-003 | Store refresh token hashes in `user_sessions`. | Approved | 2026-05-31 | Supports the single-server MVP without adding Redis while still allowing session revocation. |
+| DEC-004 | Store raw Mattermost messages before parsing. | Approved | 2026-05-31 | Preserves source data for parser fixes, deduplication, and auditability. |
+| DEC-005 | Use Flyway as the active backend schema migration tool. | Approved | 2026-06-29 | Production deploys need ordered, repeatable schema history. Before production deploy, collect MySQL backup, restore rehearsal, and Flyway rehearsal evidence on staging or a restored-backup database. |
 
-## DEC-002: MyBatis + MySQL 사용
+## Pending Decisions
 
-| 항목 | 내용 |
-| --- | --- |
-| 상태 | 승인됨 |
-| 일자 | 2026-05-31 |
-| 결정 | 영속성 계층은 MyBatis와 MySQL을 사용한다. |
-| 이유 | 현재 학습/프로젝트 범위와 맞고, 승인되지 않은 JPA 도입을 피한다. |
-
-## DEC-003: Refresh Token Hash DB 저장
-
-| 항목 | 내용 |
-| --- | --- |
-| 상태 | 승인됨 |
-| 일자 | 2026-05-31 |
-| 결정 | `user_sessions`에 refresh token hash를 저장한다. |
-| 이유 | 단일 서버 MVP에 충분하며 Redis를 불필요하게 앞당기지 않는다. |
-
-## DEC-004: mm Raw Message 원본 저장
-
-| 항목 | 내용 |
-| --- | --- |
-| 상태 | 승인됨 |
-| 일자 | 2026-05-31 |
-| 결정 | mm 메시지는 원문 저장 후 후보 공고로 선별한다. |
-| 이유 | mm에는 다양한 메시지가 섞여 있으므로 parser 오류와 재처리를 고려한다. |
-
-## 보류 중인 결정
-
-| ID | 필요한 결정 | 현재 기준 |
+| ID | Decision Needed | Current Direction |
 | --- | --- | --- |
-| PEND-001 | DB migration tool | 보류. 초기에는 ERD와 SQL 파일 기준으로 시작하고, 첫 배포 전 Flyway 등 도구 도입을 재검토한다. |
 | PEND-002 | GitHub repository name | `job-application-workspace` |
 | PEND-003 | Repository visibility | Private |
+
+## Release Notes
+
+- Flyway migration files live under `backend/src/main/resources/db/migration`.
+- Do not edit migrations that have already run in a shared, staging, or production database.
+- Do not run production Flyway `-Apply` without explicit `-AllowProductionMigration` approval and release evidence.
+- Do not run production DB restore without explicit `-AllowProductionRestore` approval and release evidence.

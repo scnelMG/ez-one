@@ -124,7 +124,7 @@ import { useRouter } from 'vue-router';
 import bellIconUrl from '@/assets/bell.svg';
 import logoUrl from '@/assets/ez-one-logo-final.png';
 import { authApi } from '@/features/auth/api/authApi';
-import { clearAuthSession, getCurrentUser, getRefreshToken } from '@/features/auth/session/authSession';
+import { clearAuthSession, getCurrentUser } from '@/features/auth/session/authSession';
 import ToastNotification from './ToastNotification.vue';
 import { useProfileStore } from '@/stores/profileStore';
 
@@ -189,11 +189,8 @@ async function logout() {
 }
 
 async function endCurrentSession(nextPath) {
-  const refreshToken = getRefreshToken();
   try {
-    if (refreshToken) {
-      await authApi.logout(refreshToken);
-    }
+    await authApi.logout();
   } finally {
     if (profileMenuCloseTimer) {
       clearTimeout(profileMenuCloseTimer);

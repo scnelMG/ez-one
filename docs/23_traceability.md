@@ -11,12 +11,15 @@
 | 요구사항 | Use Case | 화면 | API | DB | 테스트 |
 | --- | --- | --- | --- | --- | --- |
 | AUTH-001 | UC-01 | 로그인 | `POST /api/auth/google`, `POST /api/auth/refresh`, `POST /api/auth/logout`, `GET /api/me`, `PATCH /api/me` | `users`, `user_sessions` | TC-AUTH-001~006 |
+| AUTH-001 | UC-01 | Web/Extension session hardening | `POST /api/auth/refresh`, `POST /api/auth/logout`, `POST /api/auth/extension-session` | `user_sessions`, HttpOnly `ezone_refresh_token` cookie | TC-AUTH-COOKIE-001, TC-AUTH-COOKIE-002 |
+| AUTH-001 | UC-01 | 배포 전 인증 하드닝 | `GET /api/me`, CORS preflight | `user_sessions` | TC-AUTH-LOCAL-001, TC-SEC-CORS-001 |
 | ONB-001 | UC-02, UC-15 | 온보딩, 마이페이지 | `GET/PUT /api/me/profile` | `user_profiles` | TC-ONB-001, TC-ONB-002 |
 | ONB-002 | UC-02 | 온보딩, 마이페이지 | `GET/PUT /api/me/profile` | `user_profiles` | TC-ONB-001 |
 | DASH-001 | UC-03, UC-04 | 메인 대시보드, 장바구니 | `GET /api/dashboard/summary`, `GET /api/basket/jobs` | `basket_jobs`, `jobs` | TC-DASH-001 |
 | JOB-001 | UC-06, UC-07 | 공고 장바구니 | `POST /api/basket/jobs`, `GET /api/basket/jobs` | `jobs`, `basket_jobs` | TC-JOB-001, TC-JOB-002 |
 | JOB-002 | UC-06, UC-08 | 공고 장바구니, 워크스페이스 | `POST /api/basket/jobs`, `GET /api/workspaces/{id}` | `workspaces` | TC-JOB-001, TC-WS-001 |
 | EXT-001 | UC-06 | Chrome Extension | `/api/extension/jobs/*` | `jobs`, `basket_jobs`, `workspaces` | TC-EXT-001, TC-EXT-002, TC-EXT-003, TC-EXT-004 |
+| EXT-001 | UC-06 | Chrome Extension release manifest | `manifest.json` | Chrome extension permissions | TC-EXT-MANIFEST-001 |
 | PROFILE-001 | UC-12, UC-13 | 서류 입력 정보 | `/api/document-profile/*` | `document_profile_sections`, `document_custom_fields` | TC-PROFILE-001, TC-PROFILE-CUSTOM-001 |
 | WS-001 | UC-08 | 지원 워크스페이스 | `GET /api/workspaces/{id}` | `workspaces`, `basket_jobs`, `companies` | TC-WS-001 |
 | WS-002 | UC-09 | 도화지 | `PATCH /api/workspaces/{id}/drafts/{draftId}` | `essay_drafts` | TC-WS-002, TC-WS-003 |

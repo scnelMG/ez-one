@@ -34,15 +34,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtAccessTokenVerifier tokenVerifier;
     private final ObjectMapper objectMapper;
     private final String appEnv;
+    private final boolean localDevTokenEnabled;
 
     public JwtAuthenticationFilter(
         JwtAccessTokenVerifier tokenVerifier,
         ObjectMapper objectMapper,
-        @Value("${APP_ENV:local}") String appEnv
+        @Value("${APP_ENV:local}") String appEnv,
+        @Value("${auth.local-dev-token-enabled:false}") boolean localDevTokenEnabled
     ) {
         this.tokenVerifier = tokenVerifier;
         this.objectMapper = objectMapper;
         this.appEnv = appEnv;
+        this.localDevTokenEnabled = localDevTokenEnabled;
     }
 
     @Override
@@ -87,7 +90,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private JwtAuthenticatedUser verifiedUser(String token) {
-        if ("local".equalsIgnoreCase(appEnv) && "local-dev-access-token".equals(token)) {
+        if (localDevTokenEnabled && "local".equalsIgnoreCase(appEnv) && "local-dev-access-token".equals(token)) {
             return new JwtAuthenticatedUser(1L, "demo@ez-one.local");
         }
         return tokenVerifier.verify(token);

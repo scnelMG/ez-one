@@ -174,6 +174,15 @@ describe('MainPage', () => {
     expect(image.classes()).toContain('hero-face-character');
   });
 
+  it('COMMON-007: explains empty dashboard states with the next user action', async () => {
+    vi.mocked(basketApi.listJobs).mockResolvedValueOnce([]);
+
+    const wrapper = await mountMain();
+
+    expect(wrapper.text()).toContain('저장한 공고가 생기면 가장 최근에 작업한 지원서를 이어서 보여드립니다.');
+    expect(wrapper.text()).toContain('확장 프로그램으로 공고를 저장하거나 장바구니에서 직접 추가해 보세요.');
+  });
+
   it('shows a focused draft card from the recently visited workspace first', async () => {
     localStorage.setItem('ezone.recentWorkspaces', JSON.stringify(['102']));
     const wrapper = await mountMain();

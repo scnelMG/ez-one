@@ -12,10 +12,7 @@ export default defineConfig({
         environment: 'jsdom',
         globals: true,
         pool: 'threads',
-        poolOptions: {
-            threads: {
-                singleThread: true
-            }
-        }
+        maxWorkers: 1,
+        fileParallelism: false
     }
 });

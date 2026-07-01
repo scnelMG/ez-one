@@ -197,6 +197,15 @@ describe('BasketPage', () => {
         expect(wrapper.find('[data-testid="calendar-job"] .status-tag').exists()).toBe(true);
     });
 
+    it('JOB-014: wraps the job calendar in a mobile scroll region', async () => {
+        const wrapper = await mountBasket('/basket?sort=deadline');
+
+        const scrollRegion = wrapper.get('[data-testid="basket-calendar-scroll"]');
+        expect(scrollRegion.attributes('aria-label')).toBe('모바일 공고 캘린더 좌우 스크롤 영역');
+        expect(scrollRegion.find('.job-calendar').exists()).toBe(true);
+        expect(wrapper.get('[data-testid="basket-calendar-mobile-hint"]').text()).toBe('좁은 화면에서는 캘린더를 좌우로 밀어서 볼 수 있습니다.');
+    });
+
     it('JOB-005/JOB-012: filters jobs in deadline order', async () => {
         const deadlineWrapper = await mountBasket('/basket?sort=deadline');
         expect(deadlineWrapper.find('[data-testid="basket-sort-deadline"]').exists()).toBe(false);
@@ -219,6 +228,15 @@ describe('BasketPage', () => {
         expect(rowCompanies(savedWrapper)).toEqual(['KakaoPay']);
         await savedWrapper.get('[data-testid="basket-search"]').setValue('서');
         expect(rowCompanies(savedWrapper)).toEqual(['서브원']);
+    });
+
+    it('COMMON-007/JOB-005: explains the first empty basket action path', async () => {
+        mocks.listJobs.mockResolvedValueOnce([]);
+        const wrapper = await mountBasket('/basket');
+
+        expect(wrapper.get('[data-testid="basket-empty-state"]').text()).toContain('아직 저장한 공고가 없습니다.');
+        expect(wrapper.get('[data-testid="basket-empty-state"]').text()).toContain('확장 프로그램으로 지원 중인 공고를 저장하거나 직접 추가해 보세요.');
+        expect(wrapper.get('[data-testid="basket-empty-state"]').text()).toContain('저장하면 마감일, 지원 상태, 워크스페이스가 이곳에 정리됩니다.');
     });
 
     it('JOB-004/JOB-010/JOB-008: creates jobs from the inline table row, updates status, and archives jobs', async () => {

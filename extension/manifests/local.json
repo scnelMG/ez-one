@@ -1,0 +1,62 @@
+{
+  "manifest_version": 3,
+  "name": "EZ-ONE Job Saver",
+  "version": "0.0.2",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuHiQsSxwXA0i1a9xFwO6BJ+KLZNibQGuXQh+FRoNlCoxc4Z4saGyRbIHiHZusw3+sNCVsZKOk2CFgFTWkQP2jWBiwlfpVxmIB0bn4LQmKvmiUThLr4eBMWrcbkAn5S+cSzMP3T4jZgw9Q/aSESqNzHtjOpA66VjbCauNKVD+1huWuqK0zZrYVsnXinn7qVmupQMhHh6alTsdighKbPTGX5IDBo9xqhlOaJ7zaSedoVMYCym/x6Xnb0kWNM9T9rxEZYiVk2SMBHnwewQ/cXcbKMWcAOpMEqmz89v9/SbJjrGH09BAxi5SGklKa51GFl65FeU5uXNc9WKawV2sE2DG8wIDAQAB",
+  "description": "Preview and save supported job postings to EZ-ONE.",
+  "icons": {
+    "16": "icon-16.png",
+    "32": "icon-32.png",
+    "48": "icon-48.png",
+    "128": "icon-128.png"
+  },
+  "action": {
+    "default_title": "EZ-ONE 열기",
+    "default_icon": {
+      "16": "icon-16.png",
+      "32": "icon-32.png",
+      "48": "icon-48.png",
+      "128": "icon-128.png"
+    }
+  },
+  "permissions": ["activeTab", "storage", "scripting"],
+  "host_permissions": [
+    "https://www.jasoseol.com/*",
+    "https://jasoseol.com/*",
+    "https://*.recruiter.co.kr/*",
+    "http://www.jasoseol.com/*",
+    "http://jasoseol.com/*",
+    "http://localhost:8080/*",
+    "http://127.0.0.1:8080/*"
+  ],
+  "background": {
+    "service_worker": "assets/background.js",
+    "type": "module"
+  },
+  "externally_connectable": {
+    "matches": ["http://localhost/*", "http://127.0.0.1/*"]
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["popup.html", "assets/*.js", "assets/*.css", "ez-one-logo-final.png"],
+      "matches": [
+        "https://www.jasoseol.com/*",
+        "https://jasoseol.com/*",
+        "https://*.recruiter.co.kr/*",
+        "http://www.jasoseol.com/*",
+        "http://jasoseol.com/*"
+      ]
+    }
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.jasoseol.com/*",
+        "https://jasoseol.com/*",
+        "http://www.jasoseol.com/*",
+        "http://jasoseol.com/*"
+      ],
+      "js": ["assets/jobExtractor.js"]
+    }
+  ]
+}

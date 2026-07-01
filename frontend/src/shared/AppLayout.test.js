@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils';
 import { createPinia } from 'pinia';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import bellIconUrl from '@/assets/bell.svg';
 import AppLayout from './AppLayout.vue';
 
 const mocks = vi.hoisted(() => ({
@@ -183,7 +184,7 @@ describe('AppLayout', () => {
         const alertEntry = wrapper.get('[data-testid="reserved-alerts"]');
 
         expect(alertEntry.text()).toBe('');
-        expect(alertEntry.get('[data-testid="reserved-alerts-icon"]').attributes('src')).toContain('bell.svg');
+        expect(alertEntry.get('[data-testid="reserved-alerts-icon"]').attributes('src')).toBe(bellIconUrl);
     });
 });
 

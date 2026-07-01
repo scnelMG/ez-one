@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Locale;
 import org.junit.jupiter.api.Test;
 
@@ -40,6 +42,20 @@ class CompanyProfileDataFoundationContractTest {
         assertThat(migration).contains("create table if not exists company_financial_snapshots");
         assertThat(migration).contains("create table if not exists company_raw_documents");
         assertThat(migration).contains("on delete cascade");
+    }
+
+    @Test
+    void companySyncMapperUpsertsProfilesWhenAsyncSyncRaces() throws IOException {
+        String mapper = Files.readString(Path.of(
+            "src/main/java/com/ezone/backend/mapper/CompanySyncMapper.java"
+        )).toLowerCase(Locale.ROOT);
+
+        assertThat(mapper).contains("insert into company_profiles");
+        assertThat(mapper).contains("on duplicate key update");
+        assertThat(mapper).contains("source_updated_at = current_timestamp");
+        assertThat(mapper).doesNotContain("values(address)");
+        assertThat(mapper).doesNotContain("values(employee_count)");
+        assertThat(mapper).doesNotContain("values(homepage_url)");
     }
 
     private String readResource(String resourcePath) throws IOException {
