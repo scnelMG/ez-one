@@ -19,6 +19,7 @@ secrets/
 logs/
 .codex-run-logs/
 docs/superpowers/
+.omo/
 
 # Release operations
 backups/
