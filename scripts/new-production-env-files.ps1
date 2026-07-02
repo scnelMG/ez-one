@@ -5,7 +5,7 @@ param(
   [Parameter(Mandatory = $true)]
   [string]$Origin,
 
-  [string]$ExtensionId = "ikpeibohnopmikegoogggmdipmhmiadi",
+  [string]$ExtensionId = "oamnhdoaefndncadifgaidefcjaomgdo",
 
   [switch]$Force
 )
@@ -114,6 +114,9 @@ function Write-EnvFile {
 Assert-HttpsOrigin $Origin
 Assert-ChromeExtensionId $ExtensionId
 
+$extensionOrigin = "chrome-extension://$ExtensionId"
+$extensionInstallUrl = "https://chromewebstore.google.com/detail/ez-one-job-saver/$ExtensionId"
+
 $backend = Read-EnvValues "backend/.env.example"
 Set-EnvValue $backend "APP_ENV" "prod"
 Set-EnvValue $backend "SPRING_PROFILES_ACTIVE" "mysql"
@@ -124,7 +127,7 @@ Set-EnvValue $backend "APP_DOCS_ENABLED" "false"
 Set-EnvValue $backend "AUTH_REFRESH_COOKIE_SECURE" "true"
 Set-EnvValue $backend "AUTH_REFRESH_COOKIE_SAME_SITE" "Lax"
 Set-EnvValue $backend "AUTH_REFRESH_COOKIE_MAX_AGE_SECONDS" "2592000"
-Set-EnvValue $backend "CORS_ALLOWED_ORIGINS" $Origin
+Set-EnvValue $backend "CORS_ALLOWED_ORIGINS" "$Origin,$extensionOrigin"
 Set-EnvValue $backend "APP_PUBLIC_BASE_URL" $Origin
 Set-EnvValue $backend "DB_HOST" "CHANGE_ME_DB_HOST"
 Set-EnvValue $backend "DB_PORT" "3306"
@@ -162,7 +165,7 @@ Set-EnvValue $backend "MIDDLE_MARKET_API_URL" ""
 $frontend = Read-EnvValues "frontend/.env.example"
 Set-EnvValue $frontend "VITE_API_BASE_URL" "$Origin/api"
 Set-EnvValue $frontend "VITE_API_FALLBACK_BASE_URLS" ""
-Set-EnvValue $frontend "VITE_EXTENSION_INSTALL_URL" "CHANGE_ME_EXTENSION_INSTALL_URL"
+Set-EnvValue $frontend "VITE_EXTENSION_INSTALL_URL" $extensionInstallUrl
 Set-EnvValue $frontend "VITE_EXTENSION_ID" $ExtensionId
 Set-EnvValue $frontend "VITE_GOOGLE_CLIENT_ID" "CHANGE_ME_GOOGLE_CLIENT_ID"
 Set-EnvValue $frontend "VITE_GOOGLE_REDIRECT_URI" "$Origin/login/callback"

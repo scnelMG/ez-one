@@ -7,6 +7,8 @@ HEALTH_PATH="${HEALTH_PATH:-/api/health}"
 REQUIRE_NGINX="${REQUIRE_NGINX:-true}"
 HEALTH_TIMEOUT_SECONDS="${HEALTH_TIMEOUT_SECONDS:-60}"
 HEALTH_INTERVAL_SECONDS="${HEALTH_INTERVAL_SECONDS:-2}"
+EXPECTED_WEB_ORIGIN="${EXPECTED_WEB_ORIGIN:-https://ez-one.o-r.kr}"
+EXPECTED_EXTENSION_ORIGIN="${EXPECTED_EXTENSION_ORIGIN:-chrome-extension://oamnhdoaefndncadifgaidefcjaomgdo}"
 
 fail() {
   printf '[FAIL] %s\n' "$*" >&2
@@ -77,6 +79,8 @@ validate_https_origin "$BASE_URL"
 require_command systemctl
 require_command curl
 require_command stat
+require_command sed
+require_command awk
 
 unit_state="$(systemctl is-active "$SERVICE_NAME" 2>/dev/null || true)"
 [[ "$unit_state" == "active" ]] || fail "$SERVICE_NAME is not active: $unit_state"
@@ -129,6 +133,55 @@ info "environment_files=$environment_files"
 env_file="${environment_files%% *}"
 [[ -n "$env_file" && "$env_file" != "-" ]] || fail "$SERVICE_NAME must declare an EnvironmentFile"
 sudo test -f "$env_file" || fail "EnvironmentFile does not exist: $env_file"
+
+read_env_value() {
+  local key="$1"
+  sudo awk -F= -v key="$key" '$1 == key { print substr($0, index($0, "=") + 1) }' "$env_file" | tail -n 1
+}
+
+assert_runtime_cors_allowed_origins() {
+  local value="$1"
+  local origin
+  local has_web_origin=false
+  local has_extension_origin=false
+
+  [[ -n "$value" ]] || fail "CORS_ALLOWED_ORIGINS must be present in the EnvironmentFile"
+
+  IFS=',' read -r -a origins <<< "$value"
+  for raw_origin in "${origins[@]}"; do
+    origin="$(printf '%s' "$raw_origin" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+    [[ -n "$origin" ]] || continue
+    [[ "$origin" != *"*"* && "$origin" != "<all_urls>" ]] || fail "CORS_ALLOWED_ORIGINS must not contain wildcards or <all_urls>"
+
+    case "$origin" in
+      https://*)
+        rest="${origin#https://}"
+        rest_lower="$(printf '%s' "$rest" | tr '[:upper:]' '[:lower:]')"
+        [[ "$origin" != */ ]] || fail "CORS_ALLOWED_ORIGINS HTTPS origins must not include trailing slashes"
+        [[ "$rest" != */* && "$rest" != *\?* && "$rest" != *\#* ]] || fail "CORS_ALLOWED_ORIGINS HTTPS entries must be origins only"
+        case "$rest_lower" in
+          localhost|localhost:*|127.*|0.0.0.0|0.0.0.0:*|\[::1\]|\[::1\]:*)
+            fail "CORS_ALLOWED_ORIGINS must not contain local web origins"
+            ;;
+        esac
+        [[ "$origin" == "$EXPECTED_WEB_ORIGIN" ]] && has_web_origin=true
+        ;;
+      chrome-extension://*)
+        [[ "$origin" == "$EXPECTED_EXTENSION_ORIGIN" ]] || fail "CORS_ALLOWED_ORIGINS must use the exact production Chrome extension origin"
+        has_extension_origin=true
+        ;;
+      *)
+        fail "CORS_ALLOWED_ORIGINS entries must be HTTPS web origins or the exact production Chrome extension origin"
+        ;;
+    esac
+  done
+
+  [[ "$has_web_origin" == "true" ]] || fail "CORS_ALLOWED_ORIGINS must include the production web origin"
+  [[ "$has_extension_origin" == "true" ]] || fail "CORS_ALLOWED_ORIGINS must include the production Chrome extension origin"
+  pass "CORS_ALLOWED_ORIGINS includes required web and extension origins"
+}
+
+assert_runtime_cors_allowed_origins "$(read_env_value "CORS_ALLOWED_ORIGINS")"
 
 env_file_mode="$(sudo stat -c '%a' "$env_file")"
 env_file_owner="$(sudo stat -c '%U' "$env_file")"

@@ -8,6 +8,9 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
+$ExpectedProductionExtensionId = "oamnhdoaefndncadifgaidefcjaomgdo"
+$ExpectedProductionExtensionInstallUrl = "https://chromewebstore.google.com/detail/ez-one-job-saver/oamnhdoaefndncadifgaidefcjaomgdo"
+
 function Read-EnvFile {
   param([string]$Path)
 
@@ -234,6 +237,20 @@ function Assert-ExtensionInstallUrlMatchesId {
   }
 }
 
+function Assert-ProductionExtensionIdentity {
+  param([System.Collections.IDictionary]$Values)
+
+  Assert-Present $Values "VITE_EXTENSION_ID"
+  if ($Values["VITE_EXTENSION_ID"] -ne $ExpectedProductionExtensionId) {
+    throw "VITE_EXTENSION_ID must be the production Chrome Web Store extension ID: $ExpectedProductionExtensionId"
+  }
+
+  Assert-Present $Values "VITE_EXTENSION_INSTALL_URL"
+  if ((Normalize-Url $Values["VITE_EXTENSION_INSTALL_URL"]) -ne $ExpectedProductionExtensionInstallUrl) {
+    throw "VITE_EXTENSION_INSTALL_URL must be the production Chrome Web Store URL: $ExpectedProductionExtensionInstallUrl"
+  }
+}
+
 function Assert-ChromeWebStoreInstallUrl {
   param([System.Collections.IDictionary]$Values)
 
@@ -259,6 +276,7 @@ function Assert-FrontendEnv {
   Assert-ChromeExtensionId $Values "VITE_EXTENSION_ID"
   Assert-ChromeWebStoreInstallUrl $Values
   Assert-ExtensionInstallUrlMatchesId $Values
+  Assert-ProductionExtensionIdentity $Values
   Assert-NotPlaceholder $Values "VITE_GOOGLE_CLIENT_ID"
   Assert-HttpsUrl -Values $Values -Key "VITE_GOOGLE_REDIRECT_URI" -Required -RequiredExactPath "/login/callback"
   Assert-NotPlaceholder $Values "VITE_NOTION_CLIENT_ID"

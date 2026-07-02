@@ -26,6 +26,10 @@ Assert-Contains $runtimeSource 'sudo test -f "\$env_file"' "check-ec2-runtime.sh
 Assert-Contains $runtimeSource 'sudo stat -c ''%a'' "\$env_file"' "check-ec2-runtime.sh must read locked EnvironmentFile mode with sudo."
 Assert-Contains $runtimeSource 'sudo stat -c ''%U'' "\$env_file"' "check-ec2-runtime.sh must read locked EnvironmentFile owner with sudo."
 Assert-Contains $runtimeSource 'sudo stat -c ''%G'' "\$env_file"' "check-ec2-runtime.sh must read locked EnvironmentFile group with sudo."
+Assert-Contains $runtimeSource 'EXPECTED_WEB_ORIGIN="\$\{EXPECTED_WEB_ORIGIN:-https://ez-one\.o-r\.kr\}"' "check-ec2-runtime.sh must default to the production web origin contract."
+Assert-Contains $runtimeSource 'EXPECTED_EXTENSION_ORIGIN="\$\{EXPECTED_EXTENSION_ORIGIN:-chrome-extension://oamnhdoaefndncadifgaidefcjaomgdo\}"' "check-ec2-runtime.sh must default to the exact Chrome Web Store extension origin."
+Assert-Contains $runtimeSource 'assert_runtime_cors_allowed_origins' "check-ec2-runtime.sh must validate runtime CORS origins from the EnvironmentFile."
+Assert-Contains $runtimeSource 'CORS_ALLOWED_ORIGINS includes required web and extension origins' "check-ec2-runtime.sh must report CORS success without printing secret environment values."
 Assert-Contains $runtimeSource 'sudo nginx -t' "check-ec2-runtime.sh must validate nginx with sudo so protected certificate files are readable."
 
 Write-Host "[PASS] EC2 runtime contract test passed."

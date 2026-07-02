@@ -16,8 +16,8 @@ function Write-EnvFile {
     [string]$FallbackBaseUrls = "https://fallback.example.com/api",
     [string]$GoogleClientId = "1234567890-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com",
     [string]$NotionClientId = "notionprod_7d2f3a4b5c6d7e8f90123456789abcdef",
-    [string]$ExtensionInstallUrl = "https://chromewebstore.google.com/detail/ez-one/ikpeibohnopmikegoogggmdipmhmiadi",
-    [string]$ExtensionId = "ikpeibohnopmikegoogggmdipmhmiadi"
+    [string]$ExtensionInstallUrl = "https://chromewebstore.google.com/detail/ez-one-job-saver/oamnhdoaefndncadifgaidefcjaomgdo",
+    [string]$ExtensionId = "oamnhdoaefndncadifgaidefcjaomgdo"
   )
 
   @(
@@ -349,6 +349,24 @@ try {
 
   if (-not $failedPlaceholderExtensionIdAsExpected) {
     throw "Expected repeated-character extension ID to fail production client env validation."
+  }
+
+  $localDevExtensionId = Join-Path $tempRoot "frontend.local-dev-extension-id.env"
+  Write-EnvFile `
+    -Path $localDevExtensionId `
+    -NotionRedirectUri "https://app.example.com/mypage/notion" `
+    -ExtensionInstallUrl "https://chromewebstore.google.com/detail/ez-one-job-saver/ikpeibohnopmikegoogggmdipmhmiadi" `
+    -ExtensionId "ikpeibohnopmikegoogggmdipmhmiadi"
+
+  $failedLocalDevExtensionIdAsExpected = $false
+  try {
+    Invoke-ClientEnvCheck -FrontendEnvPath $localDevExtensionId
+  } catch {
+    $failedLocalDevExtensionIdAsExpected = $true
+  }
+
+  if (-not $failedLocalDevExtensionIdAsExpected) {
+    throw "Expected local unpacked extension ID to fail production client env validation."
   }
 
   Write-Host "[PASS] client production env route contract test passed."

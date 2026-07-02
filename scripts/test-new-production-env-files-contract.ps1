@@ -103,8 +103,11 @@ if (-not (Test-Path -LiteralPath $scriptPath)) {
 
 $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("ez-one-prod-env-contract-" + [System.Guid]::NewGuid().ToString("N"))
 try {
-  $origin = "https://ez-one.kr"
-  & powershell -NoProfile -ExecutionPolicy Bypass -File $scriptPath -OutputDirectory $tempRoot -Origin $origin -ExtensionId "ikpeibohnopmikegoogggmdipmhmiadi"
+  $origin = "https://ez-one.o-r.kr"
+  $extensionId = "oamnhdoaefndncadifgaidefcjaomgdo"
+  $extensionOrigin = "chrome-extension://$extensionId"
+  $extensionInstallUrl = "https://chromewebstore.google.com/detail/ez-one-job-saver/$extensionId"
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $scriptPath -OutputDirectory $tempRoot -Origin $origin -ExtensionId $extensionId
   if ($LASTEXITCODE -ne 0) {
     throw "new-production-env-files.ps1 failed with exit code $LASTEXITCODE"
   }
@@ -129,7 +132,7 @@ try {
   Assert-Equals $backend["AUTH_REFRESH_COOKIE_SECURE"] "true" "Refresh cookie must be Secure."
   Assert-Equals $backend["FLYWAY_ENABLED"] "true" "Flyway must be enabled."
   Assert-Equals $backend["SQL_INIT_MODE"] "never" "Production env must not enable SQL schema initialization."
-  Assert-Equals $backend["CORS_ALLOWED_ORIGINS"] $origin "CORS must use the production origin."
+  Assert-Equals $backend["CORS_ALLOWED_ORIGINS"] "$origin,$extensionOrigin" "CORS must allow the production web origin and exact Chrome Web Store extension origin."
   Assert-Equals $backend["APP_PUBLIC_BASE_URL"] $origin "Backend public links must use the production origin."
   Assert-True ($backend["JWT_ACCESS_SECRET"].Length -ge 64) "JWT_ACCESS_SECRET must be generated with strong entropy."
   Assert-True ($backend["JWT_REFRESH_SECRET"].Length -ge 64) "JWT_REFRESH_SECRET must be generated with strong entropy."
@@ -158,8 +161,8 @@ try {
   Assert-Equals $frontend["VITE_API_FALLBACK_BASE_URLS"] "" "Frontend production fallback URL must start empty."
   Assert-Equals $frontend["VITE_GOOGLE_REDIRECT_URI"] "$origin/login/callback" "Frontend Google redirect must target production."
   Assert-Equals $frontend["VITE_NOTION_REDIRECT_URI"] "$origin/mypage/notion" "Frontend Notion redirect must target production."
-  Assert-Equals $frontend["VITE_EXTENSION_INSTALL_URL"] "CHANGE_ME_EXTENSION_INSTALL_URL" "Generated frontend env must mark extension install URL as a required human value."
-  Assert-Equals $frontend["VITE_EXTENSION_ID"] "ikpeibohnopmikegoogggmdipmhmiadi" "Frontend extension ID must be copied from input."
+  Assert-Equals $frontend["VITE_EXTENSION_INSTALL_URL"] $extensionInstallUrl "Generated frontend env must point at the Chrome Web Store listing for the production extension."
+  Assert-Equals $frontend["VITE_EXTENSION_ID"] $extensionId "Frontend extension ID must be copied from input."
   Assert-Equals $extension["VITE_EXTENSION_API_BASE_URL"] "$origin/api" "Extension API URL must target production."
   Assert-Equals $extension["VITE_EXTENSION_API_FALLBACK_BASE_URLS"] "" "Extension production fallback URL must start empty."
   Assert-Equals $extension["VITE_EXTENSION_WEB_APP_URL"] $origin "Extension web app URL must target production."
@@ -167,11 +170,6 @@ try {
   Assert-ScriptFails `
     -ScriptPath $backendEnvCheckPath `
     -Arguments @("-EnvFile", $backendPath) `
-    -ExpectedMessage "must not look like a placeholder"
-
-  Assert-ScriptFails `
-    -ScriptPath $clientEnvCheckPath `
-    -Arguments @("-FrontendEnvFile", $frontendPath, "-ExtensionEnvFile", $extensionPath) `
     -ExpectedMessage "must not look like a placeholder"
 
   Assert-CommandFails `

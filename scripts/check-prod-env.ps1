@@ -10,6 +10,10 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
+$ExpectedProductionWebOrigin = "https://ez-one.o-r.kr"
+$ExpectedProductionExtensionOrigin = "chrome-extension://oamnhdoaefndncadifgaidefcjaomgdo"
+$LocalUnpackedExtensionOrigin = "chrome-extension://ikpeibohnopmikegoogggmdipmhmiadi"
+
 function Read-EnvFile {
   param([string]$Path)
 
@@ -419,8 +423,11 @@ function Assert-OptionalHttpsNonLocalUrlWithMessage {
   }
 }
 
-function Assert-ExactHttpsOrigins {
-  param([System.Collections.IDictionary]$Values)
+function Assert-ExactProductionCorsOrigins {
+  param(
+    [System.Collections.IDictionary]$Values,
+    [string]$ExpectedAppEnv
+  )
 
   Assert-EnvPresent $Values "CORS_ALLOWED_ORIGINS"
   $origins = @($Values["CORS_ALLOWED_ORIGINS"].Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ })
@@ -428,24 +435,50 @@ function Assert-ExactHttpsOrigins {
     throw "CORS_ALLOWED_ORIGINS must contain at least one exact origin."
   }
   foreach ($origin in $origins) {
-    if ($origin.Contains("*")) {
-      throw "CORS_ALLOWED_ORIGINS must not contain wildcards."
+    if ($origin.Contains("*") -or $origin -eq "<all_urls>") {
+      throw "CORS_ALLOWED_ORIGINS must not contain wildcards or <all_urls>."
     }
-    if (-not $origin.StartsWith("https://")) {
-      throw "CORS_ALLOWED_ORIGINS must use HTTPS origins in production."
+
+    if ($origin.StartsWith("https://")) {
+      if ($origin.EndsWith("/")) {
+        throw "CORS_ALLOWED_ORIGINS must not contain trailing slashes: $origin"
+      }
+      $uri = $null
+      if (-not [System.Uri]::TryCreate($origin, [System.UriKind]::Absolute, [ref]$uri)) {
+        throw "CORS_ALLOWED_ORIGINS contains an invalid origin: $origin"
+      }
+      if (Test-LocalHost $uri.Host) {
+        throw "CORS_ALLOWED_ORIGINS must not contain local origins in production."
+      }
+      if ($uri.AbsolutePath -ne "/" -or -not [string]::IsNullOrEmpty($uri.Query) -or -not [string]::IsNullOrEmpty($uri.Fragment)) {
+        throw "CORS_ALLOWED_ORIGINS must contain origins only, without paths, query strings, fragments, or trailing slashes: $origin"
+      }
+      continue
     }
-    if ($origin.EndsWith("/")) {
-      throw "CORS_ALLOWED_ORIGINS must not contain trailing slashes: $origin"
+
+    if ($origin.StartsWith("chrome-extension://")) {
+      $extensionId = $origin.Substring("chrome-extension://".Length)
+      if ($extensionId -notmatch "^[a-p]{32}$") {
+        throw "CORS_ALLOWED_ORIGINS contains an invalid Chrome extension origin: $origin"
+      }
+      if ($ExpectedAppEnv -eq "prod" -and $origin -ne $ExpectedProductionExtensionOrigin) {
+        throw "CORS_ALLOWED_ORIGINS must use the exact production Chrome extension origin: $ExpectedProductionExtensionOrigin"
+      }
+      continue
     }
-    $uri = $null
-    if (-not [System.Uri]::TryCreate($origin, [System.UriKind]::Absolute, [ref]$uri)) {
-      throw "CORS_ALLOWED_ORIGINS contains an invalid origin: $origin"
+
+    throw "CORS_ALLOWED_ORIGINS must use HTTPS web origins or exact chrome-extension origins: $origin"
+  }
+
+  if ($ExpectedAppEnv -eq "prod") {
+    if ($origins -notcontains $ExpectedProductionWebOrigin) {
+      throw "CORS_ALLOWED_ORIGINS must include the production web origin: $ExpectedProductionWebOrigin"
     }
-    if (Test-LocalHost $uri.Host) {
-      throw "CORS_ALLOWED_ORIGINS must not contain local origins in production."
+    if ($origins -notcontains $ExpectedProductionExtensionOrigin) {
+      throw "CORS_ALLOWED_ORIGINS must include the production Chrome extension origin: $ExpectedProductionExtensionOrigin"
     }
-    if ($uri.AbsolutePath -ne "/" -or -not [string]::IsNullOrEmpty($uri.Query) -or -not [string]::IsNullOrEmpty($uri.Fragment)) {
-      throw "CORS_ALLOWED_ORIGINS must contain origins only, without paths, query strings, fragments, or trailing slashes: $origin"
+    if ($origins -contains $LocalUnpackedExtensionOrigin) {
+      throw "CORS_ALLOWED_ORIGINS must not include the local unpacked extension origin in production."
     }
   }
 }
@@ -467,7 +500,7 @@ Assert-PositiveInteger $values "AUTH_REFRESH_COOKIE_MAX_AGE_SECONDS"
 Assert-EnvEquals $values "FLYWAY_ENABLED" "true"
 Assert-EnvEquals $values "SQL_INIT_MODE" "never"
 Assert-EnvEquals $values "SERVER_ADDRESS" "127.0.0.1"
-Assert-ExactHttpsOrigins $values
+Assert-ExactProductionCorsOrigins $values $ExpectedAppEnv
 Assert-HttpsNonLocalOrigin $values "APP_PUBLIC_BASE_URL"
 
 Assert-EnvPresent $values "DB_HOST"
