@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -17,5 +17,16 @@ describe('extension vite config', () => {
         expect(packageJson.scripts['build:local']).toContain('--mode localdev');
         expect(config).toContain("mode !== 'localdev'");
         expect(packageJson.scripts['build:local']).not.toMatch(/--mode\s+local(?:\s|$)/);
+    });
+
+    it('hardens production builds with explicit EZ-ONE runtime URL defaults and a dist validator', () => {
+        const validatorPath = resolve(__dirname, '../../scripts/assert-extension-dist-production-config.ps1');
+
+        expect(config).toContain('PRODUCTION_EXTENSION_WEB_APP_URL');
+        expect(config).toContain('https://ez-one.o-r.kr');
+        expect(config).toContain('PRODUCTION_EXTENSION_API_BASE_URL');
+        expect(config).toContain('https://ez-one.o-r.kr/api');
+        expect(config).toContain('resolveExtensionRuntimeEnv(mode)');
+        expect(existsSync(validatorPath)).toBe(true);
     });
 });

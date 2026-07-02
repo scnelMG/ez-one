@@ -7,7 +7,12 @@ const reinjectableContentScripts = new Set([
     'assets/applicationAutoFill.js'
 ]);
 
+const PRODUCTION_EXTENSION_WEB_APP_URL = 'https://ez-one.o-r.kr';
+const PRODUCTION_EXTENSION_API_BASE_URL = 'https://ez-one.o-r.kr/api';
+const PRODUCTION_EXTENSION_API_FALLBACK_BASE_URLS = '';
+
 export default defineConfig(({ mode }) => ({
+    define: resolveExtensionRuntimeEnv(mode),
     build: {
         emptyOutDir: true,
         rollupOptions: {
@@ -25,6 +30,23 @@ export default defineConfig(({ mode }) => ({
     },
     plugins: [wrapReinjectableContentScripts(), selectManifestForMode(mode)]
 }));
+
+function resolveExtensionRuntimeEnv(mode) {
+    if (mode === 'localdev') {
+        return {};
+    }
+    return {
+        'import.meta.env.VITE_EXTENSION_WEB_APP_URL': JSON.stringify(
+            process.env.VITE_EXTENSION_WEB_APP_URL?.trim() || PRODUCTION_EXTENSION_WEB_APP_URL
+        ),
+        'import.meta.env.VITE_EXTENSION_API_BASE_URL': JSON.stringify(
+            process.env.VITE_EXTENSION_API_BASE_URL?.trim() || PRODUCTION_EXTENSION_API_BASE_URL
+        ),
+        'import.meta.env.VITE_EXTENSION_API_FALLBACK_BASE_URLS': JSON.stringify(
+            process.env.VITE_EXTENSION_API_FALLBACK_BASE_URLS?.trim() || PRODUCTION_EXTENSION_API_FALLBACK_BASE_URLS
+        )
+    };
+}
 
 function wrapReinjectableContentScripts() {
     return {
