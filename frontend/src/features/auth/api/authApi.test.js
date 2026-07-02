@@ -125,4 +125,15 @@ describe('authApi', () => {
             redirectUri: 'http://localhost:5173/login/callback'
         })).rejects.toThrow('Google 인증 코드 교환에 실패했습니다. 다시 로그인해 주세요.');
     });
+    it('AUTH-001: hides internal env variable names from network failure messages', async () => {
+        const post = vi.fn().mockRejectedValue({
+            isAxiosError: true
+        });
+        const api = createAuthApi({ get: vi.fn(), post, patch: vi.fn(), delete: vi.fn() });
+
+        await expect(api.loginWithGoogle({
+            authorizationCode: 'google-oauth-code',
+            redirectUri: 'http://localhost:5173/login/callback'
+        })).rejects.toThrow('인증 서버에 연결하지 못했습니다. 서버 주소 설정과 네트워크 상태를 확인해 주세요.');
+    });
 });

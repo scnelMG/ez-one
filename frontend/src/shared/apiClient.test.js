@@ -19,21 +19,21 @@ describe('apiClient', () => {
         expect(resolveApiBaseUrl('http://localhost:8080')).toBe('http://localhost:8080');
     });
 
-    it('normalizes configured fallback API base URLs and local development candidates', () => {
+    it('normalizes configured fallback API base URLs without implicit local candidates', () => {
         expect(resolveApiBaseUrlCandidates('http://localhost:8081/api', 'http://10.91.22.212:8080/api,http://localhost:8080/api'))
-            .toEqual(expect.arrayContaining([
+            .toEqual([
                 'http://localhost:8081',
                 'http://10.91.22.212:8080',
                 'http://localhost:8080'
-            ]));
+            ]);
     });
 
-    it('keeps implicit local API fallback candidates out of production mode', () => {
-        expect(resolveApiBaseUrlCandidates('https://ez-one.kr/api', '', { includeLocalDevelopment: false }))
+    it('requires local fallback candidates to be configured explicitly', () => {
+        expect(resolveApiBaseUrlCandidates('https://ez-one.kr/api', ''))
             .toEqual(['https://ez-one.kr']);
     });
 
-    it('retries the next local API base URL when the configured backend is unreachable', async () => {
+    it('retries the next configured API base URL when the current backend is unreachable', async () => {
         const seenBaseUrls = [];
         defaultHttpClient.defaults.baseURL = 'http://localhost:8081';
         defaultHttpClient.defaults.adapter = async (config) => {

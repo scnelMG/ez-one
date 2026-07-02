@@ -49,7 +49,7 @@ const statusMessage = computed(() => {
 onMounted(async () => {
     const extensionIds = extensionIdCandidates(import.meta.env.VITE_EXTENSION_ID);
     if (extensionIds.length === 0) {
-        errorMessage.value = '확장프로그램 ID가 설정되지 않았습니다. VITE_EXTENSION_ID를 설정해 주세요.';
+        errorMessage.value = '확장프로그램 연결 설정이 완료되지 않았습니다. 잠시 후 다시 시도해 주세요.';
         return;
     }
     if (!getAccessToken()) {

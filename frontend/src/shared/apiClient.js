@@ -61,14 +61,12 @@ export function resolveApiBaseUrl(value) {
     return value.replace(/\/api\/?$/, '');
 }
 
-export function resolveApiBaseUrlCandidates(primaryValue, fallbackValue = '', options = {}) {
-    const includeLocalDevelopment = options.includeLocalDevelopment ?? import.meta.env.DEV;
+export function resolveApiBaseUrlCandidates(primaryValue, fallbackValue = '') {
     const candidates = [
         resolveApiBaseUrl(primaryValue),
         ...String(fallbackValue)
             .split(',')
-            .map((value) => resolveApiBaseUrl(value.trim())),
-        ...(includeLocalDevelopment ? localDevelopmentApiBaseUrls() : [])
+            .map((value) => resolveApiBaseUrl(value.trim()))
     ].filter(Boolean);
     return [...new Set(candidates)];
 }
@@ -111,20 +109,6 @@ function nextFallbackApiBaseUrl(currentBaseUrl, previousIndex, attemptedBaseUrls
     return null;
 }
 
-function localDevelopmentApiBaseUrls() {
-    if (typeof window === 'undefined') {
-        return [];
-    }
-    const hostnames = new Set([
-        window.location.hostname,
-        '127.0.0.1',
-        'localhost'
-    ]);
-    return [...hostnames].flatMap((hostname) => [
-        `http://${hostname}:8080`,
-        `http://${hostname}:8081`
-    ]);
-}
 function isAuthRefreshExcludedEndpoint(url) {
     return isPublicAuthEndpoint(url);
 }

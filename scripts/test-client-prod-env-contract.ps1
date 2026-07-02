@@ -168,6 +168,23 @@ try {
     throw "Expected loopback frontend API URL to fail production client env validation."
   }
 
+  $loopbackFrontendFallback = Join-Path $tempRoot "frontend.loopback-fallback.env"
+  Write-EnvFile `
+    -Path $loopbackFrontendFallback `
+    -NotionRedirectUri "https://app.example.com/mypage/notion" `
+    -FallbackBaseUrls "http://localhost:8080/api,https://fallback.example.com/api"
+
+  $failedLoopbackFrontendFallbackAsExpected = $false
+  try {
+    Invoke-ClientEnvCheck -FrontendEnvPath $loopbackFrontendFallback
+  } catch {
+    $failedLoopbackFrontendFallbackAsExpected = $true
+  }
+
+  if (-not $failedLoopbackFrontendFallbackAsExpected) {
+    throw "Expected loopback frontend API fallback URL to fail production client env validation."
+  }
+
   $zeroExtensionWeb = Join-Path $tempRoot "extension.zero-web.env"
   Write-ExtensionEnvFile -Path $zeroExtensionWeb -WebAppUrl "https://0.0.0.0"
 
@@ -197,6 +214,22 @@ try {
 
   if (-not $failedLoopbackExtensionOnlyAsExpected) {
     throw "Expected loopback-only extension production env to fail validation."
+  }
+
+  $loopbackExtensionFallback = Join-Path $tempRoot "extension.loopback-fallback.env"
+  Write-ExtensionEnvFile `
+    -Path $loopbackExtensionFallback `
+    -FallbackBaseUrls "http://127.0.0.1:8081/api,https://fallback.example.com/api"
+
+  $failedLoopbackExtensionFallbackAsExpected = $false
+  try {
+    Invoke-ClientEnvCheck -ExtensionEnvPath $loopbackExtensionFallback
+  } catch {
+    $failedLoopbackExtensionFallbackAsExpected = $true
+  }
+
+  if (-not $failedLoopbackExtensionFallbackAsExpected) {
+    throw "Expected loopback extension API fallback URL to fail production client env validation."
   }
 
   $placeholderGoogleClientId = Join-Path $tempRoot "frontend.placeholder-google-client.env"
