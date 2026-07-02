@@ -11,10 +11,40 @@ import {
 } from '../shared/auth/extensionAuth';
 import './popup.css';
 
-const apiBaseUrl = import.meta.env.VITE_EXTENSION_API_BASE_URL ?? 'http://localhost:8080/api';
-const apiFallbackBaseUrls = import.meta.env.VITE_EXTENSION_API_FALLBACK_BASE_URLS ?? 'http://127.0.0.1:8080/api';
-const webAppUrl = import.meta.env.VITE_EXTENSION_WEB_APP_URL ?? 'http://localhost:5173';
+const webAppUrl = resolveExtensionWebAppUrl(import.meta.env.VITE_EXTENSION_WEB_APP_URL);
+const apiBaseUrl = resolveExtensionApiBaseUrl(import.meta.env.VITE_EXTENSION_API_BASE_URL, webAppUrl);
+const apiFallbackBaseUrls = import.meta.env.VITE_EXTENSION_API_FALLBACK_BASE_URLS ?? '';
 const AUTH_EXPIRED_MESSAGE = '\uB85C\uADF8\uC778\uC774 \uB9CC\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4';
+
+function resolveExtensionWebAppUrl(configuredUrl) {
+    return String(configuredUrl ?? '').trim();
+}
+
+function resolveExtensionApiBaseUrl(configuredApiBaseUrl, configuredWebAppUrl) {
+    const explicitApiBaseUrl = String(configuredApiBaseUrl ?? '').trim();
+    if (explicitApiBaseUrl) {
+        return explicitApiBaseUrl;
+    }
+    const webAppOrigin = parseHttpOrigin(configuredWebAppUrl);
+    return webAppOrigin ? `${webAppOrigin}/api` : '';
+}
+
+function parseHttpOrigin(value) {
+    const rawUrl = String(value ?? '').trim();
+    if (!rawUrl) {
+        return '';
+    }
+    try {
+        const url = new URL(rawUrl);
+        if (url.protocol === 'http:' || url.protocol === 'https:') {
+            return url.origin;
+        }
+    }
+    catch {
+        return '';
+    }
+    return '';
+}
 const UNSUPPORTED_JOB_PAGE_MESSAGE = '채용공고 목록이나 캘린더에서는 저장할 공고를 정확히 찾을 수 없어요.';
 const JOB_EXTRACTOR_VERSION = '2026-06-19-jasoseol-selected-root-v13';
 const POSTING_WATCH_INTERVAL_MS = 1200;

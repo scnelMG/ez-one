@@ -5,10 +5,15 @@ import { describe, expect, it } from 'vitest';
 describe('extension popup script', () => {
     const script = readFileSync(resolve(__dirname, '../src/popup/popup.js'), 'utf-8');
 
-    it('starts the web login handoff on the default local frontend port used by dev', () => {
-        expect(script).toContain("const webAppUrl = import.meta.env.VITE_EXTENSION_WEB_APP_URL ?? 'http://localhost:5173'");
+    it('requires configured extension origins instead of hardcoded local runtime fallbacks', () => {
+        expect(script).toContain('function resolveExtensionApiBaseUrl');
+        expect(script).toContain('function parseHttpOrigin');
+        expect(script).toContain("const apiFallbackBaseUrls = import.meta.env.VITE_EXTENSION_API_FALLBACK_BASE_URLS ?? ''");
         expect(script).toContain("for (const id of ['home-link', 'web-link', 'feature-web-link'])");
+        expect(script).not.toContain("VITE_EXTENSION_WEB_APP_URL ?? 'http://localhost:5173'");
         expect(script).not.toContain("VITE_EXTENSION_WEB_APP_URL ?? 'http://localhost:5174'");
+        expect(script).not.toContain("'http://localhost:8080/api'");
+        expect(script).not.toContain("'http://127.0.0.1:8080/api'");
         expect(script).not.toContain("'result-web-link'");
     });
 

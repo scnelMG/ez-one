@@ -56,6 +56,18 @@ describe('extensionDocumentProfileApi', () => {
         expect(Object.keys(api)).toEqual(['getDocumentProfile', 'recommendActivities']);
     });
 
+    it('does not silently call a local server when extension API base URL is missing', async () => {
+        const fetcher = vi.fn();
+        const api = createExtensionDocumentProfileApi({
+            apiBaseUrl: '',
+            getAccessToken: async () => 'access-token',
+            fetcher
+        });
+
+        await expect(api.getDocumentProfile()).rejects.toThrow('확장프로그램 서버 주소가 설정되지 않았습니다.');
+        expect(fetcher).not.toHaveBeenCalled();
+    });
+
     it('posts activity recommendation requests with a longer AI timeout', async () => {
         const fetcher = vi.fn(async () => ({
             ok: true,

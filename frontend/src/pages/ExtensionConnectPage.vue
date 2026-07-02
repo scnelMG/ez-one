@@ -32,7 +32,7 @@ import { useRoute } from 'vue-router';
 import { authApi } from '@/features/auth/api/authApi';
 import { getAccessToken } from '@/features/auth/session/authSession';
 
-const DEFAULT_LOCAL_EXTENSION_ID = 'ikpeibohnopmikegoogggmdipmhmiadi';
+const DEFAULT_LOCAL_EXTENSION_ID = import.meta.env.DEV ? 'ikpeibohnopmikegoogggmdipmhmiadi' : '';
 const route = useRoute();
 const errorMessage = ref('');
 const completed = ref(false);

@@ -307,22 +307,34 @@
             <RouterLink class="study-more-link" data-testid="study-more-link" to="/study">더보기</RouterLink>
           </div>
 
-          <article v-for="study in featuredStudies" :key="study.id" class="study-card">
-            <div>
-              <strong>{{ study.name }}</strong>
-              <div class="study-tag-list" :aria-label="`${study.name} 요약`">
-                <span v-for="tag in study.stats" :key="tag" class="study-stat-tag" data-testid="study-stat-tag">{{ tag }}</span>
+          <div v-if="isStudyLoading" class="study-empty-card" data-testid="study-loading-state">
+            <strong>스터디를 불러오는 중입니다</strong>
+            <p>참여 중인 스터디 정보를 확인하고 있습니다.</p>
+          </div>
+
+          <template v-else-if="featuredStudies.length > 0">
+            <article v-for="study in featuredStudies" :key="study.id" class="study-card">
+              <div>
+                <strong>{{ study.name }}</strong>
+                <div class="study-tag-list" :aria-label="`${study.name} 요약`">
+                  <span v-for="tag in study.stats" :key="tag" class="study-stat-tag" data-testid="study-stat-tag">{{ tag }}</span>
+                </div>
               </div>
-            </div>
-            <RouterLink
-              class="primary-gradient-action compact-action"
-              data-testid="study-card-link"
-              :to="`/study/${study.id}`"
-              :aria-label="`${study.name} 이어서 하기`"
-            >
-              <span class="action-arrow" aria-hidden="true">›</span>
-            </RouterLink>
-          </article>
+              <RouterLink
+                class="primary-gradient-action compact-action"
+                data-testid="study-card-link"
+                :to="`/study/${study.id}`"
+                :aria-label="`${study.name} 이어서 하기`"
+              >
+                <span class="action-arrow" aria-hidden="true">›</span>
+              </RouterLink>
+            </article>
+          </template>
+
+          <div v-else class="study-empty-card" data-testid="study-empty-state">
+            <strong>참여 중인 스터디가 없습니다</strong>
+            <p>스터디를 만들거나 초대를 수락하면 여기에 표시됩니다.</p>
+          </div>
         </aside>
       </div>
 
@@ -355,26 +367,16 @@ import { requiresOnboarding } from '@/features/auth/session/authSession';
 import { getRecentWorkspaceWithTime } from '@/features/basket/recentWorkspaces';
 import { useBasketStore } from '@/stores/basketStore';
 import { useDashboardStore } from '@/stores/dashboardStore';
+import { useStudyStore } from '@/stores/studyStore';
 import { dashboardApi } from '@/features/dashboard/api/dashboardApi';
 
 const basketStore = useBasketStore();
 const dashboardStore = useDashboardStore();
+const studyStore = useStudyStore();
 const showOnboardingModal = ref(requiresOnboarding());
 const failedLogos = ref(new Set());
 const openStatusJobId = ref(null);
 const activities = ref([]);
-const featuredStudies = [
-  {
-    id: 'data-job-prep',
-    name: '데이터 취준 스터디',
-    stats: ['공유 자소서 4개', '추천 공고 2개', '새 피드백 3개']
-  },
-  {
-    id: 'service-interview',
-    name: '서비스기획 면접 스터디',
-    stats: ['진행중 공고 7개', '새 피드백 1개']
-  }
-];
 
 const statusOptions = [
   { value: 'READY', label: '지원 전' },
@@ -426,6 +428,8 @@ const metricCards = computed(() => {
 });
 
 const safeJobs = computed(() => basketStore.jobs.filter(Boolean));
+const featuredStudies = computed(() => studyStore.myStudies.slice(0, 2).map(toFeaturedStudy));
+const isStudyLoading = computed(() => studyStore.status === 'loading' && featuredStudies.value.length === 0);
 
 const basketPreviewJobs = computed(() => {
   return [...safeJobs.value]
@@ -455,7 +459,8 @@ const activeApplication = computed(() => {
 onMounted(async () => {
   await Promise.all([
     basketStore.loadJobs(),
-    dashboardStore.loadSummary()
+    dashboardStore.loadSummary(),
+    studyStore.loadMyStudies()
   ]);
 
   try {
@@ -497,6 +502,34 @@ function displayStatusLabel(status, fallback) {
     COMPLETED: '제출 완료',
     NOT_APPLIED: '미지원'
   }[status] ?? fallback ?? '미지원';
+}
+
+function toFeaturedStudy(study) {
+  return {
+    id: study.id,
+    name: study.name || '이름 없는 스터디',
+    stats: studyStats(study)
+  };
+}
+
+function studyStats(study) {
+  const stats = [];
+  const memberCount = toPositiveInteger(study.memberCount ?? study.members?.length);
+  const sharedEssayCount = toPositiveInteger(study.sharedEssayCount ?? study.essayCount);
+  const sharedJobCount = toPositiveInteger(study.sharedJobCount ?? study.recommendedJobCount ?? study.jobCount);
+  const unreadFeedbackCount = toPositiveInteger(study.unreadFeedbackCount ?? study.feedbackCount);
+
+  if (memberCount > 0) stats.push(`멤버 ${memberCount}명`);
+  if (sharedEssayCount > 0) stats.push(`공유 자소서 ${sharedEssayCount}개`);
+  if (sharedJobCount > 0) stats.push(`추천 공고 ${sharedJobCount}개`);
+  if (unreadFeedbackCount > 0) stats.push(`새 피드백 ${unreadFeedbackCount}개`);
+
+  return stats.length > 0 ? stats : ['최근 활동 없음'];
+}
+
+function toPositiveInteger(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
 }
 
 function draftStateLabel(job) {
@@ -1404,6 +1437,32 @@ async function archiveJob(id) {
   font-size: 0.98rem;
   font-weight: 850;
   line-height: 1.25;
+}
+
+.study-empty-card {
+  display: grid;
+  align-content: center;
+  gap: 6px;
+  min-height: 86px;
+  border: 1px dashed #dbe2ee;
+  border-radius: 12px;
+  background: #f8fafc;
+  padding: 16px;
+}
+
+.study-empty-card strong {
+  color: #111827;
+  font-size: 0.9rem;
+  font-weight: 850;
+  line-height: 1.3;
+}
+
+.study-empty-card p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1.45;
 }
 
 .study-tag-list {

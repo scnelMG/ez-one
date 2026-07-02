@@ -1,3 +1,5 @@
+import { requireApiBaseUrlCandidates, resolveApiBaseUrlCandidates } from './extensionApiBaseUrl';
+
 const SERVER_UNAVAILABLE_MESSAGE = '서버에 연결하지 못했습니다. EZ-ONE 서버가 켜져 있는지 확인해 주세요.';
 
 export function createExtensionJobApi({
@@ -9,9 +11,10 @@ export function createExtensionJobApi({
     clearSession,
     fetcher = (...args) => fetch(...args)
 }) {
+    const apiBaseUrls = resolveApiBaseUrlCandidates(apiBaseUrl, apiFallbackBaseUrls);
     const client = {
-        apiBaseUrl,
-        apiBaseUrls: resolveApiBaseUrlCandidates(apiBaseUrl, apiFallbackBaseUrls),
+        apiBaseUrl: apiBaseUrls[0] ?? '',
+        apiBaseUrls,
         getAccessToken,
         getRefreshToken,
         saveSession,
@@ -24,6 +27,7 @@ export function createExtensionJobApi({
     };
 }
 async function request(client, path, payload, retrying = false) {
+    requireApiBaseUrlCandidates(client.apiBaseUrls);
     const token = await client.getAccessToken();
     if (!token) {
         throw new Error('로그인이 필요합니다.');
@@ -48,6 +52,7 @@ async function request(client, path, payload, retrying = false) {
     return envelope.data;
 }
 async function refreshExtensionSession(client, apiBaseUrl = client.apiBaseUrl) {
+    requireApiBaseUrlCandidates([apiBaseUrl].filter(Boolean));
     const refreshToken = await client.getRefreshToken?.();
     if (!refreshToken) {
         await client.clearSession?.();
@@ -109,16 +114,6 @@ async function readEnvelope(response) {
     catch {
         throw new Error(SERVER_UNAVAILABLE_MESSAGE);
     }
-}
-
-function resolveApiBaseUrlCandidates(apiBaseUrl, fallbackBaseUrls) {
-    const candidates = [
-        apiBaseUrl,
-        ...(Array.isArray(fallbackBaseUrls) ? fallbackBaseUrls : String(fallbackBaseUrls).split(','))
-    ]
-        .map((value) => String(value ?? '').trim())
-        .filter(Boolean);
-    return [...new Set(candidates)];
 }
 
 function isNetworkUnavailableError(error) {

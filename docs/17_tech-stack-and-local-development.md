@@ -42,7 +42,7 @@
 | Extension env example | `extension/.env.example` |
 | DB schema source | [12. ERD](./12_erd.md), `backend/src/main/resources/db/migration` |
 
-Local Chrome extension testing uses the fixed unpacked extension ID `ikpeibohnopmikegoogggmdipmhmiadi`, derived from `extension/public/manifest.json` `key`. `frontend/.env.example` includes the same value, and `/extension/connect` falls back to it when `VITE_EXTENSION_ID` is not provided.
+Local Chrome extension testing uses the fixed unpacked extension ID `ikpeibohnopmikegoogggmdipmhmiadi`, derived from `extension/public/manifest.json` `key`. `frontend/.env.example` includes the same value for local development. Production builds must set `VITE_EXTENSION_ID` explicitly; `/extension/connect` only falls back to the local unpacked extension ID in dev mode.
 
 Notion OAuth access tokens are stored only as AES-GCM ciphertext. `NOTION_TOKEN_ENCRYPTION_KEY` must be a Base64-encoded 32-byte key in backend environment configuration and must never be committed.
 

@@ -6,6 +6,7 @@ import { basketApi } from '@/features/basket/api/basketApi';
 import { dashboardApi } from '@/features/dashboard/api/dashboardApi';
 import { profileApi } from '@/features/profile/api/profileApi';
 import { recommendationApi } from '@/features/recommendations/api/recommendationApi';
+import { studyApi } from '@/features/study/api/studyApi';
 import MainPage from './MainPage.vue';
 
 vi.mock('@/features/basket/api/basketApi', () => ({
@@ -36,6 +37,13 @@ vi.mock('@/features/recommendations/api/recommendationApi', () => ({
   recommendationApi: {
     listMattermostJobs: vi.fn(),
     saveMattermostJob: vi.fn()
+  }
+}));
+
+vi.mock('@/features/study/api/studyApi', () => ({
+  studyApi: {
+    getMyStudies: vi.fn(),
+    getMyInvites: vi.fn()
   }
 }));
 
@@ -135,6 +143,10 @@ describe('MainPage', () => {
     vi.mocked(recommendationApi.listMattermostJobs).mockReset();
     vi.mocked(recommendationApi.listMattermostJobs).mockResolvedValue([]);
     vi.mocked(recommendationApi.saveMattermostJob).mockReset();
+    vi.mocked(studyApi.getMyStudies).mockReset();
+    vi.mocked(studyApi.getMyStudies).mockResolvedValue([]);
+    vi.mocked(studyApi.getMyInvites).mockReset();
+    vi.mocked(studyApi.getMyInvites).mockResolvedValue([]);
     vi.stubGlobal('confirm', vi.fn(() => true));
   });
 
@@ -225,28 +237,47 @@ describe('MainPage', () => {
     vi.useRealTimers();
   });
 
-  it('renders the study panel and the responsive application list', async () => {
+  it('renders real study memberships instead of hardcoded sample cards', async () => {
+    vi.mocked(studyApi.getMyStudies).mockResolvedValueOnce([
+      {
+        id: 91,
+        name: '운영 테스트 스터디',
+        memberCount: 3,
+        sharedEssayCount: 2,
+        sharedJobCount: 1,
+        unreadFeedbackCount: 4
+      }
+    ]);
     const wrapper = await mountMain();
 
     expect(wrapper.get('[data-testid="study-panel"]').text()).toContain('취업 스터디');
-    expect(wrapper.get('[data-testid="study-panel"]').text()).not.toContain('입장');
-    expect(wrapper.get('[data-testid="study-panel"]').text()).not.toContain('이어서 하기');
     const studyLinks = wrapper.findAll('[data-testid="study-card-link"]');
-    expect(studyLinks).toHaveLength(2);
-    expect(studyLinks.map((link) => link.classes())).toEqual([
-      expect.arrayContaining(['primary-gradient-action', 'compact-action']),
-      expect.arrayContaining(['primary-gradient-action', 'compact-action'])
-    ]);
-    expect(studyLinks.map((link) => link.text())).toEqual(['›', '›']);
+    expect(studyLinks).toHaveLength(1);
+    expect(studyLinks[0].classes()).toEqual(expect.arrayContaining(['primary-gradient-action', 'compact-action']));
+    expect(studyLinks.map((link) => link.text())).toEqual(['›']);
     expect(wrapper.findAll('[data-testid="study-stat-tag"]').map((tag) => tag.text())).toEqual([
-      '공유 자소서 4개',
-      '추천 공고 2개',
-      '새 피드백 3개',
-      '진행중 공고 7개',
-      '새 피드백 1개'
+      '멤버 3명',
+      '공유 자소서 2개',
+      '추천 공고 1개',
+      '새 피드백 4개'
     ]);
-    expect(studyLinks.map((link) => link.attributes('href'))).toEqual(['/study/data-job-prep', '/study/service-interview']);
+    expect(wrapper.get('[data-testid="study-panel"]').text()).toContain('운영 테스트 스터디');
+    expect(wrapper.get('[data-testid="study-panel"]').text()).not.toContain('데이터 취준 스터디');
+    expect(wrapper.get('[data-testid="study-panel"]').text()).not.toContain('서비스기획 면접 스터디');
+    expect(studyLinks.map((link) => link.attributes('href'))).toEqual(['/study/91']);
     expect(wrapper.get('[data-testid="study-more-link"]').attributes('href')).toBe('/study');
+  });
+
+  it('renders a study empty state when there are no joined studies', async () => {
+    const wrapper = await mountMain();
+
+    expect(wrapper.get('[data-testid="study-panel"]').text()).toContain('참여 중인 스터디가 없습니다');
+    expect(wrapper.get('[data-testid="study-panel"]').text()).toContain('스터디를 만들거나 초대를 수락하면 여기에 표시됩니다.');
+  });
+
+  it('renders the responsive application list', async () => {
+    const wrapper = await mountMain();
+
     expect(wrapper.get('[data-testid="basket-panel"]').text()).toContain('공고 장바구니');
     expect(wrapper.get('[data-testid="basket-panel"]').text()).not.toContain('지원 공고 리스트');
     expect(wrapper.get('[data-testid="basket-panel"]').classes()).toContain('basket-panel');
@@ -292,7 +323,8 @@ describe('MainPage', () => {
     expect(wrapper.get('.main-metric-toolbar').text()).not.toContain('공고 장바구니 바로가기');
     expect(basketCta.text()).toContain('공고 장바구니 바로가기');
     expect(basketCta.text()).toContain('›');
-    expect(wrapper.findAll('[data-testid="study-card-link"]')).toHaveLength(2);
+    expect(wrapper.findAll('[data-testid="study-card-link"]')).toHaveLength(0);
+    expect(wrapper.get('[data-testid="study-empty-state"]').text()).toContain('참여 중인 스터디가 없습니다');
 
     const honeyPanel = wrapper.get('[data-testid="honey-panel"]');
     expect(honeyPanel.text()).toContain('꿀통 채우기');
