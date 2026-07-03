@@ -33,6 +33,17 @@ class OpenDartCompanyOverviewProvider implements RealtimeCompanyEnrichmentProvid
     private static final String SOURCE_TYPE = "OPENDART_COMPANY_OVERVIEW";
     private static final String SOURCE_NAME = "OpenDART 기업개황";
     private static final String SOURCE_NOTE = "OpenDART 기업개황 기준";
+    private static final List<String> ENGLISH_LEGAL_SUFFIXES = List.of(
+        "corporation",
+        "incorporated",
+        "company",
+        "corp",
+        "limited",
+        "ltd",
+        "inc",
+        "llc",
+        "co"
+    );
     private static final Map<String, String> INDUSTRY_LABELS_BY_CODE = Map.of(
         "63120", "포털 및 기타 인터넷 정보매개 서비스업",
         "64121", "국내은행",
@@ -42,18 +53,6 @@ class OpenDartCompanyOverviewProvider implements RealtimeCompanyEnrichmentProvid
         "4791", "통신 판매업",
         "64999", "그 외 기타 분류 안된 금융업",
         "64201", "신탁업 및 집합투자업"
-    );
-    private static final Map<String, String> CANONICAL_COMPANY_NAMES = aliases(
-        alias("NAVER", "NAVER"),
-        alias("네이버", "NAVER"),
-        alias("네이버 주식회사", "NAVER"),
-        alias("Naver Corp", "NAVER"),
-        alias("NaverCorp", "NAVER"),
-        alias("DB Inc", "DB Inc"),
-        alias("DB Inc.", "DB Inc"),
-        alias("DBInc", "DB Inc"),
-        alias("DB아이엔씨", "DB Inc"),
-        alias("디비아이엔씨", "DB Inc")
     );
 
     private final RestTemplate restTemplate;
@@ -252,33 +251,39 @@ class OpenDartCompanyOverviewProvider implements RealtimeCompanyEnrichmentProvid
         return StringUtils.hasText(value) ? value.trim() : null;
     }
 
-    private static Map.Entry<String, String> alias(String alias, String canonicalName) {
-        return Map.entry(normalize(alias), normalize(canonicalName));
-    }
-
-    @SafeVarargs
-    private static Map<String, String> aliases(Map.Entry<String, String>... entries) {
-        Map<String, String> aliases = new HashMap<>();
-        for (Map.Entry<String, String> entry : entries) {
-            aliases.putIfAbsent(entry.getKey(), entry.getValue());
-        }
-        return Map.copyOf(aliases);
-    }
-
     private static String canonicalCompanyName(String value) {
-        String normalized = normalize(value);
-        return CANONICAL_COMPANY_NAMES.getOrDefault(normalized, normalized);
+        return normalize(value);
     }
 
     private static String normalize(String value) {
-        return value == null
+        String normalized = value == null
             ? ""
             : value
                 .replace("㈜", "")
                 .replace("(주)", "")
+                .replace("주)", "")
                 .replace("주식회사", "")
+                .replace("유한회사", "")
+                .replace("합자회사", "")
+                .replace("합명회사", "")
                 .replaceAll("[\\s.\\-_()]+", "")
                 .toLowerCase(Locale.ROOT);
+        return stripEnglishLegalSuffixes(normalized);
+    }
+
+    private static String stripEnglishLegalSuffixes(String normalized) {
+        String current = normalized;
+        boolean changed = true;
+        while (changed) {
+            changed = false;
+            for (String suffix : ENGLISH_LEGAL_SUFFIXES) {
+                if (current.length() > suffix.length() + 1 && current.endsWith(suffix)) {
+                    current = current.substring(0, current.length() - suffix.length());
+                    changed = true;
+                }
+            }
+        }
+        return current;
     }
 
     private boolean hasHttpScheme(String value) {

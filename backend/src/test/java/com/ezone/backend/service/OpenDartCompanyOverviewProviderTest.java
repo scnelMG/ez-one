@@ -217,7 +217,7 @@ class OpenDartCompanyOverviewProviderTest {
     }
 
     @Test
-    void resolvesNaverAliasesToOfficialNaverCorpCode() throws Exception {
+    void resolvesEnglishLegalSuffixesWithoutCompanySpecificAliases() throws Exception {
         String corpCodeXml = """
             <result>
               <list><corp_code>00266961</corp_code><corp_name>NAVER</corp_name><stock_code>035420</stock_code></list>
@@ -227,13 +227,14 @@ class OpenDartCompanyOverviewProviderTest {
             """;
 
         assertThat(enrichWithCorpFixture("NAVER", corpCodeXml).get().corpCode()).isEqualTo("00266961");
-        assertThat(enrichWithCorpFixture("네이버", corpCodeXml).get().corpCode()).isEqualTo("00266961");
-        assertThat(enrichWithCorpFixture("네이버 주식회사", corpCodeXml).get().corpCode()).isEqualTo("00266961");
         assertThat(enrichWithCorpFixture("Naver Corp", corpCodeXml).get().corpCode()).isEqualTo("00266961");
+        assertThat(enrichWithCorpFixture("Naver Corporation", corpCodeXml).get().corpCode()).isEqualTo("00266961");
+        assertThat(enrichWithCorpFixture("Naver, Inc.", corpCodeXml).get().corpCode()).isEqualTo("00266961");
+        assertThat(enrichWithCorpFixture("네이버", corpCodeXml)).isEmpty();
     }
 
     @Test
-    void resolvesDbIncAliasesToOfficialDbIncCorpCode() throws Exception {
+    void resolvesDbIncByGenericEnglishLegalSuffixNormalization() throws Exception {
         String corpCodeXml = """
             <result>
               <list><corp_code>00112345</corp_code><corp_name>DB Inc.</corp_name><stock_code>012030</stock_code></list>
@@ -242,8 +243,19 @@ class OpenDartCompanyOverviewProviderTest {
 
         assertThat(enrichWithCorpFixture("DB Inc", corpCodeXml).get().corpCode()).isEqualTo("00112345");
         assertThat(enrichWithCorpFixture("DB Inc.", corpCodeXml).get().corpCode()).isEqualTo("00112345");
-        assertThat(enrichWithCorpFixture("DB아이엔씨", corpCodeXml).get().corpCode()).isEqualTo("00112345");
-        assertThat(enrichWithCorpFixture("디비아이엔씨", corpCodeXml).get().corpCode()).isEqualTo("00112345");
+        assertThat(enrichWithCorpFixture("DB Incorporated", corpCodeXml).get().corpCode()).isEqualTo("00112345");
+    }
+
+    @Test
+    void resolvesKoreanLegalPrefixesWithoutCompanySpecificAliases() throws Exception {
+        String corpCodeXml = """
+            <result>
+              <list><corp_code>00126380</corp_code><corp_name>삼성전자</corp_name><stock_code>005930</stock_code></list>
+            </result>
+            """;
+
+        assertThat(enrichWithCorpFixture("(주)삼성전자", corpCodeXml).get().corpCode()).isEqualTo("00126380");
+        assertThat(enrichWithCorpFixture("삼성전자 주식회사", corpCodeXml).get().corpCode()).isEqualTo("00126380");
     }
 
     @Test

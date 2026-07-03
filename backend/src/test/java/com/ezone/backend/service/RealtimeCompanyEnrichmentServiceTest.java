@@ -2,6 +2,7 @@ package com.ezone.backend.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -61,5 +62,38 @@ class RealtimeCompanyEnrichmentServiceTest {
 
         assertThat(new RealtimeCompanyEnrichmentService(List.of(partialProvider), false).enrich("네이버")).isEmpty();
         assertThat(new RealtimeCompanyEnrichmentService(List.of(partialProvider), true).enrich(" ")).isEmpty();
+    }
+
+    @Test
+    void triesOfficialDomainNameCandidateWhenOriginalCompanyNameDoesNotMatchProvider() {
+        List<String> requestedNames = new ArrayList<>();
+        RealtimeCompanyEnrichmentProvider provider = companyName -> {
+            requestedNames.add(companyName);
+            if (!"naver".equals(companyName)) {
+                return Optional.empty();
+            }
+            return Optional.of(new RealtimeCompanyEnrichment(
+                "navercorp.com",
+                "유가증권시장",
+                "유가증권시장",
+                "포털 및 기타 인터넷 정보매개 서비스업",
+                "https://www.navercorp.com",
+                "1999-06-02",
+                null,
+                null,
+                null,
+                "OPENDART_COMPANY_OVERVIEW",
+                "OpenDART 기업개황",
+                "https://opendart.fss.or.kr/guide/detail.do?apiGrpCd=DS001&apiId=2019002",
+                "OpenDART 기업개황 기준"
+            ));
+        };
+
+        Optional<RealtimeCompanyEnrichment> enrichment = new RealtimeCompanyEnrichmentService(List.of(provider), true)
+            .enrich("네이버");
+
+        assertThat(enrichment).isPresent();
+        assertThat(enrichment.get().sourceName()).isEqualTo("OpenDART 기업개황");
+        assertThat(requestedNames).containsExactly("네이버", "naver");
     }
 }
