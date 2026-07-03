@@ -180,6 +180,7 @@
           WHEN #{domain} IS NULL OR #{domain} = '' THEN domain
           WHEN domain IS NULL OR domain = '' OR domain = 'unknown' THEN #{domain}
           WHEN domain = 'jasoseol.com' OR domain = 'www.jasoseol.com' OR domain LIKE '%.jasoseol.com' THEN #{domain}
+          WHEN domain = 'recruiter.co.kr' OR domain = 'www.recruiter.co.kr' OR domain LIKE '%.recruiter.co.kr' THEN #{domain}
           ELSE domain
         END,
         company_type = COALESCE(NULLIF(#{companyType}, ''), company_type),

@@ -6313,13 +6313,15 @@ li {
   font-weight: 700;
   line-height: 1.4;
   text-align: right;
+  word-break: keep-all;
 }
 
 .company-source-status {
   color: #111827;
 }
 
-.company-source-names {
+.company-source-names,
+.company-source-updated {
   max-width: 260px;
   overflow-wrap: anywhere;
 }
@@ -6338,6 +6340,13 @@ li {
   gap: 12px;
   border-bottom: 1px solid #eef2f6;
   padding-bottom: 10px;
+  min-width: 0;
+}
+
+.info-grid.compact dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
 }
 
 .info-grid.compact .wide-info-row {
@@ -10189,6 +10198,11 @@ li {
   .info-grid.compact > div {
     grid-template-columns: 1fr;
     gap: 4px;
+  }
+
+  .company-source-meta {
+    justify-content: flex-start;
+    text-align: left;
   }
 
   .workspace-side-rail button {

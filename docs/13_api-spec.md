@@ -281,6 +281,7 @@ Requirement: `DATA-002`, `DATA-004`, `JOB-016`, `WS-028`.
 - 기업 보강 우선순위는 `FINANCIAL_COMMISSION_COMPANY_BASIC` -> `OPENDART_COMPANY_OVERVIEW` -> 기존 공식 registry/내부 기본값이다. OpenDART는 금융위 결과의 누락 필드를 보강한다.
 - `GET /api/workspaces/{workspaceId}`의 `companyDetails`는 기존 필드를 유지하고 `sourceStatus`, `sourceNames`, `lastUpdatedAt`을 추가로 내려줄 수 있다.
 - `sourceStatus`는 `OFFICIAL`, `PARTIAL`, `UNVERIFIED` 중 하나다. 공식 출처에서 유효 필드가 2개 이상이면 `OFFICIAL`, 출처는 있으나 핵심 필드가 부족하면 `PARTIAL`, 공식 API 매칭이 없으면 `UNVERIFIED`다.
+- `companyDetails.capital` and `companyDetails.revenue` remain in the response contract, but the current realtime upsert path does not populate them unless a later provider supplies financial amounts into the existing schema. This is deferred; no production migration is part of this addendum.
 - Runtime configuration: `PUBLIC_DATA_API_KEY`, `FINANCIAL_COMPANY_BASIC_INFO_URL`, `OPENDART_API_KEY`, `COMPANY_ENRICHMENT_REALTIME_ENABLED`, `COMPANY_DATA_STARTUP_SYNC_ENABLED`, `COMPANY_DATA_BATCH_SYNC_ENABLED`.
 - Bulk company sync is disabled by default. Set `COMPANY_DATA_STARTUP_SYNC_ENABLED=true` only when an operator intentionally wants to backfill company data during backend startup, and set `COMPANY_DATA_BATCH_SYNC_ENABLED=true` only when an operator intentionally wants the scheduled public API batch. External public API failures must remain non-blocking.
 

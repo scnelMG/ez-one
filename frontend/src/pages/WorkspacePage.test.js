@@ -87,7 +87,10 @@ describe('WorkspacePage', () => {
                 size: '1,000명 이상',
                 financialStatus: 'collected',
                 industry: '대기업집단',
+                employeeCount: 4300,
                 foundedAt: '1999.06.02',
+                revenue: 987654321000,
+                capital: 164813395000,
                 representative: '최수연',
                 homepage: 'https://www.navercorp.com',
                 business: '기업집단: 네이버',
@@ -299,18 +302,23 @@ describe('WorkspacePage', () => {
         expect(wrapper.get('.workspace-info-panel').text()).toContain('지원정보');
         expect(wrapper.get('.workspace-info-panel').text()).toContain('기업정보');
         expect(wrapper.get('.workspace-info-panel').text()).toContain('공식 확인됨');
-        expect(wrapper.get('.workspace-info-panel').text()).toContain('금융위원회 기업기본정보');
+        expect(wrapper.get('.workspace-info-panel').text()).toContain('출처: 금융위원회 기업기본정보, OpenDART 기업개황');
+        expect(wrapper.get('.workspace-info-panel').text()).toContain('최근 업데이트: 2026.06.20 09:00');
         expect(wrapper.get('.workspace-info-panel').text()).toContain('기업유형');
         expect(wrapper.get('.workspace-info-panel').text()).toContain('대기업');
         expect(wrapper.get('.workspace-info-panel').text()).toContain('기업집단: 네이버');
-        expect(wrapper.get('.workspace-info-panel').text()).not.toContain('산업/분야');
-        expect(wrapper.get('.workspace-info-panel').text()).not.toContain('최수연');
-        expect(wrapper.get('.workspace-info-panel').text()).not.toContain('사원수');
+        expect(wrapper.get('.workspace-info-panel').text()).toContain('산업/분야');
+        expect(wrapper.get('.workspace-info-panel').text()).toContain('최수연');
+        expect(wrapper.get('.workspace-info-panel').text()).toContain('4,300명');
+        expect(wrapper.get('.workspace-info-panel').text()).toContain('9,877억원');
+        expect(wrapper.get('.workspace-info-panel').text()).toContain('1,648억원');
+        expect(wrapper.get('.workspace-info-panel').text()).toContain('공시 기반 수집됨');
+        expect(wrapper.get('.workspace-info-panel').text()).not.toContain('확인되지 않은 항목');
         expect(wrapper.get('[data-testid="workspace-bottom-tabs"]').text()).toContain('도화지');
         expect(wrapper.get('[data-testid="workspace-bottom-tabs"]').text()).toContain('자소서 버전관리');
     });
 
-    it('DATA-002: hides unavailable company fields instead of rendering placeholder rows', async () => {
+    it('DATA-002/DATA-004/WS-028: renders unverified company details as Korean guidance without placeholder rows', async () => {
         mocks.getWorkspace.mockResolvedValueOnce({
             id: '102',
             companyName: 'Unknown Labs',
@@ -333,13 +341,15 @@ describe('WorkspacePage', () => {
         const wrapper = await mountWorkspace();
 
         const companyPanel = wrapper.findAll('.workspace-info-section')[1];
-        expect(companyPanel.text()).toContain('공식 API에서 확인된 기업 상세 정보가 아직 없습니다.');
+        expect(companyPanel.text()).toContain('미확인');
+        expect(companyPanel.text()).toContain('공식 출처에서 확인된 기업 상세 정보가 아직 없습니다.');
+        expect(companyPanel.text()).toContain('확인된 항목만 표시하며, 부족한 정보는 공고 저장에는 영향을 주지 않습니다.');
         expect(companyPanel.text()).toContain('미확인');
         expect(companyPanel.text()).not.toContain('기업유형');
         expect(companyPanel.text()).not.toContain('홈페이지');
     });
 
-    it('DATA-004/WS-028: marks partially confirmed company profiles', async () => {
+    it('DATA-004/WS-028: marks partially confirmed company profiles and names missing official fields', async () => {
         mocks.getWorkspace.mockResolvedValueOnce({
             id: '102',
             companyName: 'Partial Labs',
@@ -351,8 +361,12 @@ describe('WorkspacePage', () => {
                 domain: 'partial.example.com',
                 companyType: '스타트업',
                 homepage: 'https://partial.example.com',
+                employeeCount: null,
+                revenue: 0,
+                capital: undefined,
                 sourceStatus: 'PARTIAL',
-                sourceNames: ['OpenDART 기업개황']
+                sourceNames: ['OpenDART 기업개황'],
+                lastUpdatedAt: null
             },
             questions: [],
             references: []
@@ -362,8 +376,40 @@ describe('WorkspacePage', () => {
 
         const companyPanel = wrapper.findAll('.workspace-info-section')[1];
         expect(companyPanel.text()).toContain('일부 확인됨');
-        expect(companyPanel.text()).toContain('OpenDART 기업개황');
+        expect(companyPanel.text()).toContain('출처: OpenDART 기업개황');
+        expect(companyPanel.text()).not.toContain('최근 업데이트');
         expect(companyPanel.text()).toContain('스타트업');
+        expect(companyPanel.text()).toContain('확인되지 않은 항목: 사원수, 매출액, 자본금');
+        expect(companyPanel.text()).not.toContain('0원');
+        expect(companyPanel.text()).not.toContain('0명');
+    });
+
+    it('DATA-004/WS-028: treats missing companyDetails and external text safely', async () => {
+        mocks.getWorkspace.mockResolvedValueOnce({
+            id: '102',
+            companyName: 'Unsafe Labs',
+            positionTitle: 'Data Analyst',
+            deadlineLabel: 'D-3',
+            statusLabel: '진행 중',
+            sourceUrl: 'https://www.jasoseol.com/',
+            companyDetails: {
+                sourceStatus: 'PARTIAL',
+                sourceNames: ['<img src=x onerror=alert(1)>'],
+                business: '<script>alert(1)</script>공식 자료 확인 필요',
+                address: '<b>서울시</b>'
+            },
+            questions: [],
+            references: []
+        });
+
+        const wrapper = await mountWorkspace();
+
+        const companyPanel = wrapper.findAll('.workspace-info-section')[1];
+        expect(companyPanel.text()).toContain('출처: <img src=x onerror=alert(1)>');
+        expect(companyPanel.text()).toContain('<script>alert(1)</script>공식 자료 확인 필요');
+        expect(companyPanel.text()).toContain('<b>서울시</b>');
+        expect(companyPanel.find('script').exists()).toBe(false);
+        expect(companyPanel.find('img[src="x"]').exists()).toBe(false);
     });
 
     it('WS-011: keeps draft editing on auto-save and removes explicit header save actions', async () => {

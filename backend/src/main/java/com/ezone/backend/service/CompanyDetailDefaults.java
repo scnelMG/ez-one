@@ -24,6 +24,15 @@ final class CompanyDetailDefaults {
         "programmers.co.kr"
     );
 
+    private static final Map<String, String> CANONICAL_COMPANY_NAMES = aliases(
+        alias("NAVER", "네이버"),
+        alias("Naver Corp", "네이버"),
+        alias("네이버 주식회사", "네이버"),
+        alias("DB Inc.", "DB Inc"),
+        alias("DB아이엔씨", "DB Inc"),
+        alias("디비아이엔씨", "DB Inc")
+    );
+
     private static final Map<String, CompanyDefaults> KNOWN_COMPANIES = knownCompanies(
         known("한국산업은행", "kdb.co.kr", "금융권", "공공기관", "금융/AI"),
         known("KDB산업은행", "kdb.co.kr", "금융권", "공공기관", "금융/AI"),
@@ -46,6 +55,7 @@ final class CompanyDetailDefaults {
         known("HL만도", "hlmando.com", "대기업", "대기업", "모빌리티"),
         known("아이엠티", "imt-c.co.kr", "중소기업", "중소기업", "반도체"),
         known("마이다스그룹", "midas.co.kr", "중견기업", "중견기업", "IT"),
+        known("카카오", "kakao.com", "대기업", "대기업", "IT/플랫폼"),
         known("카카오뱅크", "kakaobank.com", "대기업", "대기업", "금융"),
         known("KB국민은행", "kbstar.com", "금융권", "대기업", "금융"),
         known("국민은행", "kbstar.com", "금융권", "대기업", "금융"),
@@ -65,6 +75,10 @@ final class CompanyDetailDefaults {
         known("한국교통안전공단", "kotsa.or.kr", "공공기관", "공공기관", "공공"),
         known("한국교통안전공단(KOTSA)", "kotsa.or.kr", "공공기관", "공공기관", "공공"),
         known("한국평가데이터", "kodata.co.kr", "금융권", "중견기업", "금융/데이터"),
+        known("DB Inc", "dbinc.co.kr", "유가증권시장", "대기업", "IT서비스/무역"),
+        known("DB Inc.", "dbinc.co.kr", "유가증권시장", "대기업", "IT서비스/무역"),
+        known("DB아이엔씨", "dbinc.co.kr", "유가증권시장", "대기업", "IT서비스/무역"),
+        known("디비아이엔씨", "dbinc.co.kr", "유가증권시장", "대기업", "IT서비스/무역"),
         known("저축은행중앙회", "fsb.or.kr", "금융권", "중견기업", "금융"),
         known("AXA손해보험", "axa.co.kr", "금융권", "대기업", "금융"),
         known("NHN Cloud", "nhncloud.com", "대기업", "대기업", "IT/클라우드"),
@@ -111,7 +125,7 @@ final class CompanyDetailDefaults {
     }
 
     static CompanyDefaults resolve(String companyName, String sourceUrl) {
-        CompanyDefaults known = KNOWN_COMPANIES.get(normalizeCompanyName(companyName));
+        CompanyDefaults known = KNOWN_COMPANIES.get(canonicalCompanyName(companyName));
         if (known != null) {
             return known;
         }
@@ -152,7 +166,11 @@ final class CompanyDetailDefaults {
         String size,
         String industry
     ) {
-        return Map.entry(normalizeCompanyName(companyName), new CompanyDefaults(domain, companyType, size, industry));
+        return Map.entry(canonicalCompanyName(companyName), new CompanyDefaults(domain, companyType, size, industry));
+    }
+
+    private static Map.Entry<String, String> alias(String alias, String canonicalName) {
+        return Map.entry(normalizeCompanyName(alias), normalizeCompanyName(canonicalName));
     }
 
     @SafeVarargs
@@ -164,6 +182,20 @@ final class CompanyDetailDefaults {
         return Map.copyOf(companies);
     }
 
+    @SafeVarargs
+    private static Map<String, String> aliases(Map.Entry<String, String>... entries) {
+        Map<String, String> aliases = new LinkedHashMap<>();
+        for (Map.Entry<String, String> entry : entries) {
+            aliases.putIfAbsent(entry.getKey(), entry.getValue());
+        }
+        return Map.copyOf(aliases);
+    }
+
+    private static String canonicalCompanyName(String companyName) {
+        String normalized = normalizeCompanyName(companyName);
+        return CANONICAL_COMPANY_NAMES.getOrDefault(normalized, normalized);
+    }
+
     private static String normalizeCompanyName(String companyName) {
         return String.valueOf(companyName)
             .trim()
@@ -171,7 +203,7 @@ final class CompanyDetailDefaults {
             .replace("(주)", "")
             .replace("주)", "")
             .replace("주식회사", "")
-            .replaceAll("\\s+", "")
+            .replaceAll("[\\s.\\-_()]+", "")
             .toLowerCase(Locale.ROOT);
     }
 

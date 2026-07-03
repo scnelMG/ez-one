@@ -73,11 +73,13 @@ class FinancialCommissionCompanyInfoProviderTest {
         assertThat(enrichment.get().employeeCount()).isEqualTo(4123);
         assertThat(enrichment.get().businessSummary()).isEqualTo("인터넷 검색 포털 운영");
         assertThat(enrichment.get().sourceType()).isEqualTo("FINANCIAL_COMMISSION_COMPANY_BASIC");
+        assertThat(enrichment.get().sourceName()).isEqualTo("금융위원회 기업기본정보");
+        assertThat(enrichment.get().sourceNote()).isEqualTo("공공데이터포털 금융위원회 기업기본정보 기준");
         server.verify();
     }
 
     @Test
-    void returnsEmptyWhenApiKeyIsMissingOrResponseHasNoExactMatch() {
+    void returnsEmptyWhenApiKeyEndpointIsMissingOrResponseHasNoExactMatch() {
         RestTemplate restTemplate = new RestTemplate();
         FinancialCommissionCompanyInfoProvider missingKeyProvider = new FinancialCommissionCompanyInfoProvider(
             restTemplate,
@@ -87,6 +89,15 @@ class FinancialCommissionCompanyInfoProviderTest {
         );
 
         assertThat(missingKeyProvider.enrich("네이버")).isEmpty();
+
+        FinancialCommissionCompanyInfoProvider missingEndpointProvider = new FinancialCommissionCompanyInfoProvider(
+            restTemplate,
+            new ObjectMapper(),
+            "service-key",
+            ""
+        );
+
+        assertThat(missingEndpointProvider.enrich("네이버")).isEmpty();
 
         MockRestServiceServer server = MockRestServiceServer.bindTo(restTemplate).build();
         FinancialCommissionCompanyInfoProvider provider = new FinancialCommissionCompanyInfoProvider(

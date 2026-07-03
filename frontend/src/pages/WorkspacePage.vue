@@ -74,7 +74,8 @@
             <h2>기업정보</h2>
             <div class="company-source-meta">
               <span class="company-source-status">{{ companySourceStatusLabel }}</span>
-              <span v-if="companySourceNamesLabel" class="company-source-names">{{ companySourceNamesLabel }}</span>
+              <span v-if="companySourceNamesLabel" class="company-source-names">출처: {{ companySourceNamesLabel }}</span>
+              <span v-if="companyLastUpdatedLabel" class="company-source-updated">최근 업데이트: {{ companyLastUpdatedLabel }}</span>
             </div>
           </div>
           <dl v-if="availableCompanyInfoRows.length" class="info-grid compact">
@@ -98,7 +99,8 @@
               </dd>
             </div>
           </dl>
-          <p v-else class="company-info-empty">{{ companySourceStatusLabel }} · 공식 API에서 확인된 기업 상세 정보가 아직 없습니다.</p>
+          <p v-if="missingCompanyInfoLabel" class="company-info-empty">{{ missingCompanyInfoLabel }}</p>
+          <p v-else-if="!availableCompanyInfoRows.length" class="company-info-empty">{{ companyInfoEmptyLabel }}</p>
         </article>
       </section>
 
@@ -763,6 +765,20 @@ const companySourceNamesLabel = computed(() => {
   }
   return normalizeCompanyValue(names);
 });
+const companyLastUpdatedLabel = computed(() => formatCompanyTimestamp(companyDetails.value.lastUpdatedAt ?? companyDetails.value.sourceUpdatedAt));
+const missingCompanyInfoLabel = computed(() => {
+  if (!availableCompanyInfoRows.value.length) return '';
+  const missingLabels = [
+    ['사원수', formatEmployeeCount(companyDetails.value.employeeCount)],
+    ['매출액', formatKrwAmount(companyDetails.value.revenue)],
+    ['자본금', formatKrwAmount(companyDetails.value.capital)]
+  ]
+    .filter(([, value]) => !visibleCompanyInfoValue(value))
+    .map(([label]) => label);
+  if (!missingLabels.length) return '';
+  return `확인되지 않은 항목: ${missingLabels.join(', ')}`;
+});
+const companyInfoEmptyLabel = computed(() => `${companySourceStatusLabel.value} · 공식 출처에서 확인된 기업 상세 정보가 아직 없습니다. 확인된 항목만 표시하며, 부족한 정보는 공고 저장에는 영향을 주지 않습니다.`);
 const availableCompanyInfoRows = computed(() => [
   {
     key: 'type',
@@ -770,14 +786,39 @@ const availableCompanyInfoRows = computed(() => [
     value: companyTypeLabel.value
   },
   {
+    key: 'industry',
+    label: '산업/분야',
+    value: normalizeCompanyValue(companyDetails.value.industry)
+  },
+  {
     key: 'employeeCount',
     label: '사원수',
     value: formatEmployeeCount(companyDetails.value.employeeCount)
   },
   {
+    key: 'representative',
+    label: '대표자',
+    value: normalizeCompanyValue(companyDetails.value.representative)
+  },
+  {
     key: 'foundedAt',
     label: '설립일',
     value: normalizeCompanyValue(companyDetails.value.foundedAt)
+  },
+  {
+    key: 'revenue',
+    label: '매출액',
+    value: formatKrwAmount(companyDetails.value.revenue)
+  },
+  {
+    key: 'capital',
+    label: '자본금',
+    value: formatKrwAmount(companyDetails.value.capital)
+  },
+  {
+    key: 'financialStatus',
+    label: '재무정보',
+    value: formatFinancialStatus(companyDetails.value.financialStatus)
   },
   {
     key: 'homepage',
@@ -974,15 +1015,54 @@ function visibleCompanyInfoValue(value) {
   const normalized = normalizeCompanyValue(value);
   if (!normalized) return '';
   const lowered = normalized.toLowerCase();
-  if (['-', '미확인', 'unverified', 'unknown'].includes(lowered)) return '';
+  if (['-', '미확인', 'unverified', 'unknown', 'n/a'].includes(lowered)) return '';
+  if (['jasoseol.com', 'www.jasoseol.com'].includes(lowered)) return '';
   return normalized;
 }
 
 function formatEmployeeCount(value) {
   const normalized = normalizeCompanyValue(value);
   if (!normalized) return '';
-  const numeric = Number(normalized);
+  const numeric = Number(normalized.replace(/,/g, ''));
+  if (Number.isFinite(numeric) && numeric <= 0) return '';
   return Number.isFinite(numeric) ? `${numeric.toLocaleString('ko-KR')}명` : normalized;
+}
+
+function formatKrwAmount(value) {
+  const normalized = normalizeCompanyValue(value);
+  if (!normalized) return '';
+  const numeric = Number(normalized.replace(/,/g, ''));
+  if (Number.isFinite(numeric) && numeric <= 0) return '';
+  if (!Number.isFinite(numeric)) return normalized;
+  const eok = numeric / 100000000;
+  if (eok >= 1) {
+    return `${Math.round(eok).toLocaleString('ko-KR')}억원`;
+  }
+  const man = numeric / 10000;
+  if (man >= 1) {
+    return `${Math.round(man).toLocaleString('ko-KR')}만원`;
+  }
+  return `${numeric.toLocaleString('ko-KR')}원`;
+}
+
+function formatCompanyTimestamp(value) {
+  const normalized = normalizeCompanyValue(value);
+  if (!normalized) return '';
+  const match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2}))?/u);
+  if (!match) return normalized;
+  const [, year, month, day, hour, minute] = match;
+  return hour && minute
+    ? `${year}.${month}.${day} ${hour}:${minute}`
+    : `${year}.${month}.${day}`;
+}
+
+function formatFinancialStatus(value) {
+  const normalized = normalizeCompanyValue(value);
+  if (!normalized) return '';
+  const status = normalized.toLowerCase();
+  if (status === 'collected') return '공시 기반 수집됨';
+  if (status === 'unverified') return '';
+  return normalized;
 }
 
 function statusClassFromLabel(label) {
