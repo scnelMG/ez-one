@@ -8,11 +8,41 @@
   <strong>채용 공고 저장부터 자기소개서 준비까지 한곳에서 관리하는 취업 준비 워크스페이스</strong>
 </p>
 
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-Backend-6DB33F?logo=springboot&logoColor=white)](./backend)
+[![Vue](https://img.shields.io/badge/Vue%203-Frontend-4FC08D?logo=vuedotjs&logoColor=white)](./frontend)
+[![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-4285F4?logo=googlechrome&logoColor=white)](./extension)
+[![Portfolio](https://img.shields.io/badge/Portfolio-Service%20Project-2ea44f)](./docs/37_final-submission-report.md)
+
 ## 프로젝트 소개
 
 EZ-ONE은 취업 준비자가 여러 채용 공고와 지원 준비 과정을 공고 단위로 관리할 수 있도록 만든 웹 서비스입니다.
 
 사용자는 관심 공고를 저장하고, 공고별 워크스페이스에서 자기소개서 문항, 초안, 참고자료, 기업 정보, 반복 입력하는 서류 정보를 함께 관리할 수 있습니다. Chrome Extension으로 공고를 빠르게 저장하고, 선택한 공고 정보는 Notion에 `JOB_ONLY` 범위로 동기화할 수 있습니다.
+
+이 저장소는 최종 제출 기능, 아키텍처, 요구사항 추적, 테스트 근거, 발표 자료를 함께 확인할 수 있도록 정리한 포트폴리오 버전입니다.
+
+## 포트폴리오 리뷰 경로
+
+| 먼저 볼 것 | 확인할 내용 |
+| --- | --- |
+| [docs/presentations/ez-one-final-presentation.pdf](./docs/presentations/ez-one-final-presentation.pdf) | 프로젝트 문제 정의, 서비스 흐름, 최종 발표 요약 |
+| [docs/37_final-submission-report.md](./docs/37_final-submission-report.md) | 최종 제출 범위, 구현 결과, 검증 요약 |
+| [docs/16_system-architecture.md](./docs/16_system-architecture.md) | 백엔드, 프론트엔드, 확장 프로그램, 외부 API 연동 구조 |
+| [docs/13_api-spec.md](./docs/13_api-spec.md) | REST API 명세와 요청/응답 구조 |
+| [docs/23_traceability.md](./docs/23_traceability.md) | 요구사항과 구현/검증 산출물 연결 |
+
+## 직무 연결점
+
+- **은행 IT / 디지털**: 사용자 업무 흐름을 공고 단위 workspace로 구조화하고, 인증, 데이터 저장, 외부 서비스 연동을 포함한 웹 서비스를 구현했습니다.
+- **금융권 데이터·서비스 개발**: OpenDART와 금융위원회 기업기본정보를 활용해 기업 참고자료를 보강하는 흐름을 설계했습니다.
+- **공기업 전산직**: 요구사항, API 명세, ERD, 테스트 계획, 추적성 문서까지 남겨 협업과 운영 관점의 산출물을 정리했습니다.
+
+## 발표 자료
+
+| 자료 | 설명 |
+| --- | --- |
+| [최종 발표 PDF](./docs/presentations/ez-one-final-presentation.pdf) | GitHub에서 바로 열어볼 수 있는 발표 자료 |
+| [최종 발표 PPTX](./docs/presentations/ez-one-final-presentation.pptx) | 편집 가능한 원본 발표 파일 |
 
 ## 핵심 사용자 흐름
 
@@ -61,7 +91,7 @@ Google 로그인
 | `backend/` | Spring Boot REST API, 인증/인가, MyBatis mapper, 외부 API 연동 |
 | `frontend/` | Vue 3 웹 앱, 라우터, Pinia store, API client, 화면 컴포넌트 |
 | `extension/` | Chrome Extension popup, content script, 공고 추출과 입력 보조 |
-| `docs/` | 요구사항, 화면 설계, API 명세, ERD, 테스트 계획, 최종 제출 보고서 |
+| `docs/` | 요구사항, 화면 설계, API 명세, ERD, 테스트 계획, 최종 제출 보고서, 발표 자료 |
 | `infra/` | 배포와 운영 관련 설정 |
 | `tools/` | 로컬 개발, 데이터 수집, 검증 보조 스크립트 |
 
