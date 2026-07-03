@@ -242,6 +242,9 @@ frontend/src/features/document-profile/
 | `/document-profile` | DocumentProfilePage | Yes | 메인 카드, nav | `GET /api/document-profile` |
 | `/mypage` | MyPage | Partial | nav | `GET /api/me`, `GET /api/me/profile` |
 | `/mypage/notion` | NotionSettingsPage | Yes | 마이페이지 | `/api/integrations/notion/*` |
+| `/extension` | ExtensionPage | Yes | 공개/Chrome Web Store | none |
+| `/privacy` | PrivacyPage | Yes | 공개/Chrome Web Store | none |
+| `/support` | SupportPage | Yes | 공개/Chrome Web Store/footer | none |
 | `/mypage/support` | SupportPage | No | IA only | P2 |
 | `/history` | PastHistoryPage | No | IA only | P2 |
 | `/alerts` | AlertsPage 또는 dropdown | No | IA only | P2 |
@@ -377,6 +380,7 @@ frontend/src/features/document-profile/
 | SSAFY 사용자 전용 Mattermost 추천 후보 | 활성 |
 | 과거 지원 내역, 알림, 추천 hover 기업 정보 | P2/IA only |
 | 확장 프로그램 서류 자동 입력 보조 | P1. 제출 자동화 없이 입력 보조와 수동 검토만 제공 |
+| 공개 확장 설치/개인정보/도움말 페이지 | P1. Chrome Web Store 심사와 설치 신뢰를 위한 정적 공개 안내만 제공 |
 
 ## UI 상태 기준
 
@@ -452,7 +456,7 @@ frontend/src/
 ## MVP 화면 반영 메모
 
 - `MAIN-013`: 공통 상단바는 서비스 로고를 메인 이동 링크로 사용하고, `공고 장바구니`, `서류 입력 정보`, `취업 스터디`, `과거 지원 내역`을 넓게 배치한다. `MM 추천공고`는 SSAFY 교육생(`ssafy=true`)에게만 `취업 스터디`와 `과거 지원 내역` 사이에 조건부 노출한다. 로그아웃과 다른 계정 로그인은 별도 외부 버튼이 아니라 마이페이지 프로필 드롭다운 안에 둔다.
-- `MAIN-013`: 공통 푸터는 서비스 설명, 이용약관/개인정보 처리 기준 링크, 운영 문의 메일, 저작권 및 상표 고지만 제공한다. 임시 사업자 정보나 미구현 고객지원 링크는 노출하지 않는다.
+- `MAIN-013/EXT-024/SUPPORT-001`: 공통 푸터는 서비스 설명, 공개 개인정보 처리 기준(`/privacy`), 공개 도움말(`/support`), 운영 문의 메일, 저작권 및 상표 고지만 제공한다. 임시 사업자 정보나 인증형 1:1 문의 기능은 노출하지 않는다.
 - `MAIN-013/AUTH-008`: 마이페이지 트리거는 로그인 계정의 프로필 사진과 표시 이름을 보여준다. 사진이 없으면 이름 첫 글자 아바타를 사용한다.
 - `DASH-001`: 메인 페이지는 왼쪽 사이드바와 상단 필터를 제거하고, 대시보드 통계 카드 다음에 장바구니 썸네일을 배치한다. 추천공고 썸네일은 제공하지 않는다.
 - `MAIN-006/MAIN-007`: 메인 장바구니 미리보기는 마감 임박순 상위 공고만 보여준다. 워크스페이스에 최근 진입한 공고는 메인 미리보기와 장바구니 목록 모두에서 `최근 방문` 태그를 표시한다.
@@ -468,7 +472,7 @@ frontend/src/
 - `MY-001`: 내 계정 화면은 프로필 이름 수정, Google 로그인 계정, 노션 연동 계정과 EZ-ONE 로그인 계정이 다를 수 있다는 안내, 로그아웃/회원 탈퇴 동선을 제공한다.
 - `NOTION-001`: 노션 연동 관리 화면은 Google 로그인 계정과 연결된 Notion 계정을 분리해 보여주고, 공고 정보/자소서·도화지/과거 지원 내역 자동 동기화 토글과 대상 위치를 제공한다.
 - `MY-003/ONB-002`: 온보딩 정보 화면은 기본 선택값 없이 시작하며, 관심 직무군을 먼저 선택한 뒤 세부 포지션과 기술/키워드 추천 칩을 고를 수 있다. 실제 온보딩 모달과 마이페이지 온보딩 정보 수정 화면은 같은 `PreferenceForm`을 사용하고, 저장 값은 `/api/me/profile`을 통해 `user_profiles`에 보존된다.
-- `SUPPORT-001`: QnA와 이용약관은 마이페이지 하위의 독립 지원 페이지로 제공한다. QnA는 계정, Notion, 공고/바구니, 워크스페이스, 서류/확장 범주를 버튼 필터와 검색으로 제공한다. 1:1 문의 화면은 제공하지 않고, 운영 문의는 공통 푸터의 메일 링크로 안내한다.
+- `SUPPORT-001/EXT-024`: 공개 `/extension`, `/privacy`, `/support`는 Chrome Web Store와 비로그인 사용자가 접근할 수 있는 정적 신뢰/도움말 화면이다. `/extension`은 공고 저장과 서류 입력 보조 두 기능을 설명하고, `/support`는 FAQ성 안내와 공통 푸터와 같은 운영 문의 메일만 제공한다. 인증형 1:1 문의 화면은 제공하지 않는다.
 ## 2026-06-16 History Page Implementation Note
 
 - `/history` is now an active authenticated route rendered by `PastHistoryPage`.

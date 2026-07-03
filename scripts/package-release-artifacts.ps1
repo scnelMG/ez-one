@@ -4,6 +4,8 @@ param(
 
   [string]$OutputDirectory = ".\release-artifacts",
 
+  [string]$BackendEnvFile = "",
+
   [string]$FrontendEnvFile = "",
 
   [string]$ExtensionEnvFile = "",
@@ -16,11 +18,13 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
+# SIZE_OK: Single-purpose release packaging orchestrator; split after release workflow stabilizes. Todo 6 delta is backend env validation/redacted logging only.
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $backendDir = Join-Path $repoRoot "backend"
 $frontendDir = Join-Path $repoRoot "frontend"
 $extensionDir = Join-Path $repoRoot "extension"
 $clientEnvCheckScript = Join-Path $PSScriptRoot "check-client-prod-env.ps1"
+$backendEnvCheckScript = Join-Path $PSScriptRoot "check-prod-env.ps1"
 
 Add-Type -AssemblyName System.IO.Compression
 Add-Type -AssemblyName System.IO.Compression.FileSystem
@@ -104,6 +108,20 @@ function Invoke-ClientEnvPolicyCheck {
   & powershell -NoProfile -ExecutionPolicy Bypass -File $clientEnvCheckScript @arguments
   if ($LASTEXITCODE -ne 0) {
     throw "check-client-prod-env.ps1 failed with exit code $LASTEXITCODE"
+  }
+}
+
+function Invoke-BackendEnvPolicyCheck {
+  param([string]$BackendPath)
+
+  if ([string]::IsNullOrWhiteSpace($BackendPath)) {
+    return
+  }
+
+  Write-Host "[RUN] powershell -NoProfile -ExecutionPolicy Bypass -File $backendEnvCheckScript -EnvFile <redacted-backend-env>"
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $backendEnvCheckScript -EnvFile $BackendPath
+  if ($LASTEXITCODE -ne 0) {
+    throw "check-prod-env.ps1 failed with exit code $LASTEXITCODE"
   }
 }
 
@@ -329,6 +347,7 @@ if ([string]::IsNullOrWhiteSpace($FrontendEnvFile) -or [string]::IsNullOrWhiteSp
   throw "Production artifact packaging requires -FrontendEnvFile and -ExtensionEnvFile so local .env values cannot leak into release bundles."
 }
 
+Invoke-BackendEnvPolicyCheck -BackendPath $BackendEnvFile
 Invoke-ClientEnvPolicyCheck -FrontendPath $FrontendEnvFile -ExtensionPath $ExtensionEnvFile
 
 if (-not $SkipBuild) {

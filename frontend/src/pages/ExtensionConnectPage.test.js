@@ -174,6 +174,61 @@ describe('ExtensionConnectPage', () => {
         await new Promise((resolve) => setTimeout(resolve));
         expect(replace).toHaveBeenCalledWith('https://jasoseol.com/?campaignid=15830248521');
     });
+    it('EXT-003: ignores arbitrary external sourceUrl values instead of redirecting or handing them to the extension', async () => {
+        vi.stubEnv('VITE_EXTENSION_ID', 'extension-id');
+        const replace = vi.fn();
+        vi.stubGlobal('location', { replace });
+        const sendMessage = vi.fn((_extensionId, _message, callback) => callback({ accepted: true }));
+        vi.stubGlobal('chrome', {
+            runtime: {
+                sendMessage
+            }
+        });
+        localStorage.setItem('ezone.accessToken', 'access-token');
+        mocks.routeQuery = {
+            sourceUrl: 'https://evil.example/phishing'
+        };
+
+        mount(ExtensionConnectPage, {
+            global: {
+                stubs: ['RouterLink']
+            }
+        });
+        await new Promise((resolve) => setTimeout(resolve));
+
+        expect(sendMessage.mock.calls[0][1]).not.toHaveProperty('sourceUrl');
+        expect(replace).not.toHaveBeenCalled();
+    });
+    it('EXT-003: allows safe internal source paths for app handoff redirects', async () => {
+        vi.stubEnv('VITE_EXTENSION_ID', 'extension-id');
+        const replace = vi.fn();
+        vi.stubGlobal('location', {
+            origin: 'https://ez-one.o-r.kr',
+            replace
+        });
+        const sendMessage = vi.fn((_extensionId, _message, callback) => callback({ accepted: true }));
+        vi.stubGlobal('chrome', {
+            runtime: {
+                sendMessage
+            }
+        });
+        localStorage.setItem('ezone.accessToken', 'access-token');
+        mocks.routeQuery = {
+            sourceUrl: '/extension?connected=1#done'
+        };
+
+        mount(ExtensionConnectPage, {
+            global: {
+                stubs: ['RouterLink']
+            }
+        });
+        await new Promise((resolve) => setTimeout(resolve));
+
+        expect(sendMessage.mock.calls[0][1]).toMatchObject({
+            sourceUrl: '/extension?connected=1#done'
+        });
+        expect(replace).toHaveBeenCalledWith('/extension?connected=1#done');
+    });
     it('EXT-003: does not redirect the web login tab when the extension can focus the source tab', async () => {
         vi.stubEnv('VITE_EXTENSION_ID', 'extension-id');
         const replace = vi.fn();

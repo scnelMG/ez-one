@@ -42,7 +42,7 @@
 
         <div class="landing-sub-actions" aria-label="보조 이동">
           <a href="#features">기능 보기</a>
-          <a href="#extension-install">확장 설치</a>
+          <RouterLink to="/extension">확장 설치</RouterLink>
         </div>
 
         <div v-if="isAccountSwitchFlow" class="account-switch-callout" data-testid="account-switch-callout">
@@ -246,7 +246,7 @@ const authMode = ref('login');
 const isSubmitting = ref(false);
 const showEmailAuth = ref(false);
 const isAccountSwitchFlow = computed(() => route.query.switch === 'account');
-const extensionInstallUrl = import.meta.env.VITE_EXTENSION_INSTALL_URL || 'https://chromewebstore.google.com/';
+const extensionInstallUrl = import.meta.env.VITE_EXTENSION_INSTALL_URL || '/extension';
 const landingSections = [
     { id: 'login-hero', label: '첫 화면으로 이동' },
     { id: 'extension-install', label: '확장 프로그램 섹션으로 이동' },

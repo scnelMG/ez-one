@@ -30,10 +30,11 @@
 | TC-EXT-001 | Extension | 지원 사이트 공고 저장 | 자소설닷컴 공고에서 로그인 후 기능 선택, 미리보기, 직무 다중 선택, 저장 완료와 workspace 생성 |
 | TC-EXT-002 | Extension | 추출 실패 | 미지원 페이지 또는 추출 실패 시 오류 안내, 잘못된 저장 없음 |
 | TC-EXT-003 | Extension | 저장 전 수집 데이터 수정 | 회사명, 공고명, 마감일 수정값이 저장 API payload에 반영됨 |
-| TC-EXT-004 | Extension | 확장 설치 안내 | 웹 랜딩에서 Chrome 확장프로그램 로컬 설치 안내와 `dist` 경로 제공 |
+| TC-EXT-004 | Extension | 확장 설치 안내 | 웹 랜딩과 공개 `/extension`에서 Chrome Web Store 설치 CTA와 설치 도움말을 제공하고, 운영 URL은 `VITE_EXTENSION_INSTALL_URL` 계약을 따른다 |
 | TC-EXT-MANIFEST-001 | Extension | 운영 manifest 권한 축소 | production manifest는 local HTTP 권한과 broad web accessible resource를 포함하지 않음 |
 | TC-EXT-DOC-AUTOFILL-001 | Extension | 서류 정보 자동 입력 보조 | label, placeholder, name/id, table, nearby text 기반 기본/표준 문서 항목 입력 |
 | TC-EXT-DOC-AUTOFILL-002 | Extension | 자기소개서/장문 입력 제외 | essay/long-form textarea는 자동 입력하지 않고 수동 검토 대상으로 표시 |
+| TC-PUBLIC-001 | Public Web | 공개 신뢰 페이지 | `/extension`, `/privacy`, `/support`는 미인증 상태에서도 렌더링되고 Chrome Web Store용 기능/개인정보/지원 안내를 제공한다 |
 | TC-REC-001 | Recommendation | 추천 공고 별표 저장 | 장바구니 저장, 중복 처리 |
 | TC-PROFILE-001 | Document Profile | 표준 섹션 저장 | 사용자별 데이터 저장 |
 | TC-PROFILE-SECTION-001 | Document Profile | 표준 섹션 저장 | 재사용 가능한 서류 입력 섹션 저장 |
@@ -54,7 +55,7 @@
 | TC-ALERT-P2 | Alert | 알림 채널 |
 | TC-HISTORY-P2 | Past History | 기간별 통계/공고 |
 | TC-CALENDAR-P2 | Basket Calendar | 마감 캘린더/주간 일정 |
-| TC-SUPPORT-P2 | Support | 운영 문의 화면 |
+| TC-SUPPORT-P2 | Support | 인증형 1:1 운영 문의 화면 |
 | TC-REC-P2 | Recommendation | hover 기업 정보 |
 | TC-MM-ACTIVE | Mattermost | raw 저장, 후보 공고 생성, SSAFY 전용 추천 노출 |
 | TC-REF-AUTO-P2 | References | 자동 JD/news/DART/인재상 수집 |

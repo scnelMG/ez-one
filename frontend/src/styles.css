@@ -4,6 +4,9 @@
   --blue-strong: #4338CA;
   --blue-soft: #EEF2FF;
   --blue-line: #C7D2FE;
+  --public-accent: #6D4DFF;
+  --public-primary-hover: #263244;
+  --public-line: #DBE3EE;
   --ink: #0F172A;
   --text: #334155;
   --muted: #64748B;
@@ -16,6 +19,16 @@
   --warning: #B45309;
   --warning-soft: #FEF3C7;
   --green: #059669;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
   
   /* Shadows & Depth */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
@@ -1007,12 +1020,18 @@ textarea {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
+  min-width: 0;
   min-height: 34px;
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.82rem;
   font-weight: 900;
-  white-space: nowrap;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  text-align: center;
+  white-space: normal;
+  transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, color 0.16s ease, transform 0.16s ease;
 }
 
 .primary-button {
@@ -1029,6 +1048,21 @@ textarea {
 
 .primary-button:hover {
   background: var(--blue-strong);
+  border-color: var(--blue-strong);
+  box-shadow: 0 8px 18px rgba(79, 70, 229, 0.16);
+}
+
+.primary-button:active,
+.ghost-button:active,
+.text-button:active {
+  transform: translateY(1px);
+}
+
+.primary-button:focus-visible,
+.ghost-button:focus-visible,
+.text-button:focus-visible {
+  outline: 3px solid rgba(79, 70, 229, 0.22);
+  outline-offset: 2px;
 }
 
 .ghost-button,
@@ -1037,6 +1071,13 @@ textarea {
   background: var(--surface);
   color: var(--text);
   padding: 0 11px;
+}
+
+.ghost-button:hover,
+.text-button:hover {
+  border-color: var(--line-strong);
+  background: #f8fafc;
+  color: var(--ink);
 }
 
 .status-chip,
@@ -1091,7 +1132,7 @@ h1 {
   margin-bottom: 6px;
   color: var(--ink);
   font-size: 1.28rem;
-  letter-spacing: -0.035em;
+  letter-spacing: 0;
   line-height: 1.2;
   text-wrap: balance;
 }
@@ -1100,7 +1141,7 @@ h2 {
   margin-bottom: 7px;
   color: var(--ink);
   font-size: 0.96rem;
-  letter-spacing: -0.025em;
+  letter-spacing: 0;
   line-height: 1.35;
   text-wrap: balance;
 }
@@ -1108,7 +1149,7 @@ h2 {
 h3 {
   color: var(--ink);
   font-size: 0.9rem;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   line-height: 1.4;
   text-wrap: balance;
 }
@@ -1118,7 +1159,7 @@ li {
   color: var(--muted);
   font-size: 0.84rem;
   line-height: 1.5;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
   text-wrap: pretty;
 }
 
@@ -2424,7 +2465,7 @@ li {
 .landing-hero-copy h1 {
   max-width: 620px;
   font-size: clamp(2.3rem, 5.4vw, 4.9rem);
-  letter-spacing: -0.055em;
+  letter-spacing: 0;
   line-height: 1.03;
 }
 
@@ -3935,7 +3976,7 @@ li {
 .landing-hero-copy h1 {
   max-width: 680px;
   font-size: clamp(2.3rem, 5.4vw, 4.9rem);
-  letter-spacing: -0.055em;
+  letter-spacing: 0;
   line-height: 1.03;
 }
 
@@ -4107,7 +4148,7 @@ li {
   color: #111827;
   font-size: clamp(1.35rem, 2.2vw, 1.8rem);
   font-weight: 900;
-  letter-spacing: -0.035em;
+  letter-spacing: 0;
   line-height: 1.22;
 }
 
@@ -4298,7 +4339,7 @@ li {
 .landing-hero-copy h1 {
   max-width: 760px;
   font-size: clamp(2.45rem, 4.4vw, 4.25rem);
-  letter-spacing: -0.052em;
+  letter-spacing: 0;
   line-height: 1.08;
 }
 
@@ -4356,7 +4397,7 @@ li {
   font-size: 0.95rem;
   font-weight: 800;
   white-space: nowrap;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .header-actions {
@@ -11057,7 +11098,7 @@ main, .study-dashboard, .workspace-layout {
   font-weight: 800;
   color: #1a1a1a;
   margin: 0 0 12px 0;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   background: linear-gradient(135deg, #111827 0%, #3b82f6 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -14559,4 +14600,35 @@ button.history-metric:hover {
 .diff-row-line.removed .diff-indicator {
   color: #cb2431;
   opacity: 1;
+}
+
+@media (max-width: 700px) {
+  .landing-page .landing-hero {
+    width: 100%;
+    padding-right: 20px !important;
+    padding-left: 24px !important;
+    overflow-x: clip;
+  }
+
+  .landing-page .landing-hero-copy,
+  .landing-page .landing-product-story {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .landing-page .landing-brand-hero img {
+    max-width: calc(100vw - 48px);
+  }
+
+  .landing-page .landing-hero-copy h1,
+  .landing-page .landing-hero-copy > p {
+    max-width: calc(100vw - 48px);
+  }
+
+  .landing-page .landing-hero-actions,
+  .landing-page .landing-primary,
+  .landing-page .landing-secondary {
+    width: 100%;
+    min-width: 0;
+  }
 }

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { applyAutoFillPlan, applyAutoFillPlanAsync, applyAutoFillPlanFast, applyAutoFillPlanFastAsync, buildAutoFillPlan, flattenDocumentProfileValues, previewAutoFillPlan, resetApplicationAutoFillRuntimeForTests } from '../src/content/applicationAutoFill';
 
+// allow: SIZE_OK - Regression fixture pack for one high-risk content-script adapter; split when adapter modules are extracted.
 const profile = {
     sections: {
         basicInfo: {

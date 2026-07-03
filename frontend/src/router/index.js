@@ -5,7 +5,10 @@ import DocumentProfilePage from '@/pages/DocumentProfilePage.vue';
 import { isAuthenticated, requiresOnboarding } from '@/features/auth/session/authSession';
 import LoginPage from '@/pages/LoginPage.vue';
 import LoginCallbackPage from '@/pages/LoginCallbackPage.vue';
+import ExtensionPage from '@/pages/ExtensionPage.vue';
 import ExtensionConnectPage from '@/pages/ExtensionConnectPage.vue';
+import PrivacyPage from '@/pages/PrivacyPage.vue';
+import SupportPage from '@/pages/SupportPage.vue';
 import MainPage from '@/pages/MainPage.vue';
 import MyPage from '@/pages/MyPage.vue';
 import NotionSettingsPage from '@/pages/NotionSettingsPage.vue';
@@ -33,6 +36,21 @@ export const router = createRouter({
             path: '/login/callback',
             name: 'login-callback',
             component: LoginCallbackPage
+        },
+        {
+            path: '/extension',
+            name: 'extension',
+            component: ExtensionPage
+        },
+        {
+            path: '/privacy',
+            name: 'privacy',
+            component: PrivacyPage
+        },
+        {
+            path: '/support',
+            name: 'support',
+            component: SupportPage
         },
         {
             path: '/extension/connect',

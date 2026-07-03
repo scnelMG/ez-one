@@ -33,6 +33,7 @@ import { authApi } from '@/features/auth/api/authApi';
 import { getAccessToken } from '@/features/auth/session/authSession';
 
 const DEFAULT_LOCAL_EXTENSION_ID = import.meta.env.DEV ? 'ikpeibohnopmikegoogggmdipmhmiadi' : '';
+const SUPPORTED_SOURCE_HOST = 'jasoseol.com';
 const route = useRoute();
 const errorMessage = ref('');
 const completed = ref(false);
@@ -173,9 +174,22 @@ function parseSourceUrl(value) {
     if (typeof value !== 'string') {
         return null;
     }
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return null;
+    }
+    if (trimmed.startsWith('/') && !trimmed.startsWith('//')) {
+        try {
+            const url = new URL(trimmed, globalThis.location?.origin ?? 'https://ez-one.o-r.kr');
+            return `${url.pathname}${url.search}${url.hash}`;
+        }
+        catch {
+            return null;
+        }
+    }
     try {
-        const url = new URL(value);
-        if (url.protocol === 'http:' || url.protocol === 'https:') {
+        const url = new URL(trimmed);
+        if ((url.protocol === 'http:' || url.protocol === 'https:') && isSupportedSourceHost(url.hostname)) {
             return url.href;
         }
     }
@@ -184,11 +198,17 @@ function parseSourceUrl(value) {
     }
     return null;
 }
+
+function isSupportedSourceHost(hostname) {
+    const normalizedHostname = hostname.toLowerCase();
+    return normalizedHostname === SUPPORTED_SOURCE_HOST ||
+        normalizedHostname.endsWith(`.${SUPPORTED_SOURCE_HOST}`);
+}
 </script>
 
 <style scoped>
 .extension-connect-help {
-  color: #475569;
+  color: var(--muted);
   line-height: 1.6;
   margin: 0;
 }
@@ -202,9 +222,9 @@ function parseSourceUrl(value) {
 
 .secondary-button {
   align-items: center;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--line-strong);
   border-radius: 6px;
-  color: #334155;
+  color: var(--text);
   display: inline-flex;
   font-weight: 800;
   justify-content: center;

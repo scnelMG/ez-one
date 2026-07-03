@@ -74,8 +74,8 @@ try {
   @(
     "VITE_API_BASE_URL=https://app.example.com/api",
     "VITE_API_FALLBACK_BASE_URLS=https://fallback.example.com/api",
-    "VITE_EXTENSION_INSTALL_URL=https://chromewebstore.google.com/detail/ez-one/ikpeibohnopmikegoogggmdipmhmiadi",
-    "VITE_EXTENSION_ID=ikpeibohnopmikegoogggmdipmhmiadi",
+    "VITE_EXTENSION_INSTALL_URL=https://chromewebstore.google.com/detail/ez-one-job-saver/oamnhdoaefndncadifgaidefcjaomgdo",
+    "VITE_EXTENSION_ID=oamnhdoaefndncadifgaidefcjaomgdo",
     "VITE_GOOGLE_CLIENT_ID=1234567890-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com",
     "VITE_GOOGLE_REDIRECT_URI=https://app.example.com/login/callback",
     "VITE_NOTION_CLIENT_ID=notionprod_7d2f3a4b5c6d7e8f90123456789abcdef",

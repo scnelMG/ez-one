@@ -76,6 +76,38 @@
         </div>
       </section>
 
+      <section class="main-panel main-extension-cta" data-testid="main-extension-cta" aria-label="EZ-ONE 확장 프로그램 설치">
+        <div class="main-extension-cta-copy">
+          <span class="main-extension-eyebrow">EZ-ONE 확장 프로그램</span>
+          <h2>공고 저장을 브라우저에서 바로 시작하세요</h2>
+          <p>자소설닷컴 공고를 바로 저장하고 지원서 입력도 이어갈 수 있어요.</p>
+          <small v-if="!extensionInstallUrl">스토어 설치 링크가 준비되지 않았습니다. 설치 안내 페이지에서 다음 단계를 확인해 주세요.</small>
+        </div>
+        <div class="main-extension-actions">
+          <a
+            v-if="extensionInstallUrl"
+            class="primary-gradient-action extension-install-action"
+            data-testid="main-extension-install-link"
+            :href="extensionInstallUrl"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Chrome에 설치
+          </a>
+          <RouterLink
+            v-else
+            class="primary-gradient-action extension-install-action"
+            data-testid="main-extension-install-fallback-link"
+            to="/extension"
+          >
+            설치 방법 보기
+          </RouterLink>
+          <RouterLink class="extension-help-link" data-testid="main-extension-help-link" to="/extension">
+            설치 도움말
+          </RouterLink>
+        </div>
+      </section>
+
       <div class="main-content-grid">
         <div class="main-left-column">
           <section class="main-panel active-application-panel" aria-label="작성 중인 지원서">
@@ -377,6 +409,7 @@ const showOnboardingModal = ref(requiresOnboarding());
 const failedLogos = ref(new Set());
 const openStatusJobId = ref(null);
 const activities = ref([]);
+const extensionInstallUrl = computed(() => String(import.meta.env.VITE_EXTENSION_INSTALL_URL ?? '').trim());
 
 const statusOptions = [
   { value: 'READY', label: '지원 전' },
@@ -873,7 +906,9 @@ async function archiveJob(id) {
 .priority-heart:focus-visible,
 .delete-job-button:focus-visible,
 .status-select:focus-visible,
-.status-option:focus-visible {
+.status-option:focus-visible,
+.extension-install-action:focus-visible,
+.extension-help-link:focus-visible {
   outline: 3px solid rgba(103, 76, 255, 0.36);
   outline-offset: 3px;
 }
@@ -902,6 +937,84 @@ async function archiveJob(id) {
 
 .hero-face-character {
   transform-origin: center;
+}
+
+.main-extension-cta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 15px 18px;
+  background:
+    linear-gradient(135deg, #ffffff 0%, #f7f4ff 56%, #f8fbff 100%);
+}
+
+.main-extension-cta-copy {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.main-extension-eyebrow {
+  color: #5a35f0;
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0;
+}
+
+.main-extension-cta h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 1rem;
+  font-weight: 850;
+  line-height: 1.25;
+}
+
+.main-extension-cta p,
+.main-extension-cta small {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.45;
+  word-break: keep-all;
+}
+
+.main-extension-cta small {
+  color: #8a5b14;
+}
+
+.main-extension-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+}
+
+.extension-install-action {
+  white-space: normal;
+}
+
+.extension-help-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  border: 1px solid #d9def0;
+  border-radius: 10px;
+  color: #334155;
+  font-size: 0.78rem;
+  font-weight: 820;
+  line-height: 1.2;
+  padding: 0 13px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.extension-help-link:hover {
+  border-color: #b8c0d4;
+  background: #ffffff;
 }
 
 .main-content-grid {
@@ -1553,8 +1666,13 @@ async function archiveJob(id) {
 
 @media (max-width: 1080px) {
   .main-hero,
+  .main-extension-cta,
   .main-content-grid {
     grid-template-columns: 1fr;
+  }
+
+  .main-extension-actions {
+    justify-content: flex-start;
   }
 
   .active-application-panel,
@@ -1588,6 +1706,19 @@ async function archiveJob(id) {
 
   .hero-side-cta:hover {
     transform: translateY(-2px);
+  }
+
+  .main-extension-cta {
+    padding: 15px;
+  }
+
+  .main-extension-actions {
+    align-items: stretch;
+  }
+
+  .extension-install-action,
+  .extension-help-link {
+    width: 100%;
   }
 
   .main-metric-strip {

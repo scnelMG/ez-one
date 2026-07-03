@@ -94,8 +94,9 @@
         </div>
 
         <nav class="app-footer-links" aria-label="서비스 하단 링크">
-          <RouterLink to="/mypage/terms">이용약관</RouterLink>
-          <RouterLink :to="{ path: '/mypage/terms', hash: '#privacy' }">개인정보 처리 기준</RouterLink>
+          <RouterLink to="/extension">확장 프로그램</RouterLink>
+          <RouterLink to="/privacy">개인정보 처리 기준</RouterLink>
+          <RouterLink to="/support">도움말</RouterLink>
         </nav>
 
         <address class="app-footer-contact" aria-label="운영 문의">

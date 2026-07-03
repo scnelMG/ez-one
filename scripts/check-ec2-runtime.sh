@@ -44,6 +44,14 @@ validate_https_origin() {
   esac
 }
 
+validate_expected_runtime_origins() {
+  validate_https_origin "$EXPECTED_WEB_ORIGIN"
+  [[ "$EXPECTED_EXTENSION_ORIGIN" != *"*"* && "$EXPECTED_EXTENSION_ORIGIN" != "<all_urls>" ]] ||
+    fail "EXPECTED_EXTENSION_ORIGIN must be an exact Chrome extension origin"
+  [[ "$EXPECTED_EXTENSION_ORIGIN" =~ ^chrome-extension://[a-p]{32}$ ]] ||
+    fail "EXPECTED_EXTENSION_ORIGIN must be an exact Chrome extension origin"
+}
+
 join_url() {
   local root="${1%/}"
   local path="/${2#/}"
@@ -75,6 +83,7 @@ if [[ -z "$BASE_URL" ]]; then
 fi
 
 validate_https_origin "$BASE_URL"
+validate_expected_runtime_origins
 
 require_command systemctl
 require_command curl

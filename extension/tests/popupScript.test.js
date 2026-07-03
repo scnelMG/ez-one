@@ -1,510 +1,280 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resolveApiBaseUrlCandidates } from '../src/shared/api/extensionApiBaseUrl';
 
-describe('extension popup script', () => {
-    const script = readFileSync(resolve(__dirname, '../src/popup/popup.js'), 'utf-8');
+const popupMarkup = readFileSync(resolve(__dirname, '../popup.html'), 'utf-8');
+const bodyMarkup = popupMarkup.match(/<body>([\s\S]*?)<\/body>/)?.[1] ?? '';
+const session = { accessToken: 'access-token', refreshToken: 'refresh-token', user: { id: 1 } };
+const supportedTab = { id: 42, url: 'https://jasoseol.com/recruit/1?campaignid=15830248521' };
+const posting = {
+    companyName: 'Naver',
+    positionTitle: 'Backend Developer',
+    deadlineLabel: 'D-10',
+    sourceUrl: supportedTab.url,
+    roleOptions: ['신입 · Backend', '경력 · Platform'],
+    essayQuestions: []
+};
+const documentProfile = { sections: { basicInfo: { nameKo: 'Kim One' } }, customFields: [] };
+const previewAutoFill = {
+    mode: 'preview',
+    planned: [{ label: 'Name', fieldKey: 'basicInfo.nameKo', value: 'Kim One', displayOrder: 1 }],
+    failed: [{ label: 'Essay', fieldKey: 'essay.0', reason: 'manual_free_text', displayOrder: 2 }],
+    copyCandidates: []
+};
+const appliedAutoFill = {
+    mode: 'apply',
+    filled: [{ label: 'Name', fieldKey: 'basicInfo.nameKo', value: 'Kim One', displayOrder: 1 }],
+    failed: [],
+    copyCandidates: []
+};
 
-    it('requires configured extension origins instead of hardcoded local runtime fallbacks', () => {
-        expect(script).toContain('function resolveExtensionApiBaseUrl');
-        expect(script).toContain('function parseHttpOrigin');
-        expect(script).toContain("const apiFallbackBaseUrls = import.meta.env.VITE_EXTENSION_API_FALLBACK_BASE_URLS ?? ''");
-        expect(script).toContain("for (const id of ['home-link', 'web-link', 'feature-web-link'])");
-        expect(script).not.toContain("VITE_EXTENSION_WEB_APP_URL ?? 'http://localhost:5173'");
-        expect(script).not.toContain("VITE_EXTENSION_WEB_APP_URL ?? 'http://localhost:5174'");
-        expect(script).not.toContain("'http://localhost:8080/api'");
-        expect(script).not.toContain("'http://127.0.0.1:8080/api'");
-        expect(script).not.toContain("'result-web-link'");
+describe('extension popup script behavior', () => {
+    beforeEach(() => {
+        vi.stubEnv('VITE_EXTENSION_WEB_APP_URL', 'https://ez-one.o-r.kr');
+        vi.stubEnv('VITE_EXTENSION_API_BASE_URL', 'https://ez-one.o-r.kr/api');
+        vi.resetModules();
+        vi.useFakeTimers();
     });
 
-    it('loads the job extractor on demand before reading the current tab', () => {
-        expect(script).toContain('async function ensureContentScriptLoaded');
-        expect(script).toContain('files: [file]');
-        expect(script).toContain("ensureContentScriptLoaded(tabId, 'assets/jobExtractor.js'");
-        expect(script).toContain('window.ezOneExtractJobPosting');
-        expect(script).toContain('JOB_EXTRACTOR_VERSION');
-        expect(script).toContain('window.ezOneJobExtractorVersion === JOB_EXTRACTOR_VERSION');
-        expect(script).toContain('void loadEssayQuestionsForSelectedRole();');
-        expect(script).toContain('function loadEssayQuestionsForSelectedRole');
-        expect(script).toContain('function extractEssayQuestionsForRole');
-        expect(script).toContain('withEssayQuestions: true');
-        expect(script).toContain('targetRoles: [targetRole]');
-        expect(script).toContain('hoverDelayMs: 50');
-        expect(script).toContain('maxEssayTriggers: 1');
-        expect(script).not.toContain("type: 'EZONE_EXTRACT_JOB'");
+    afterEach(() => {
+        vi.clearAllTimers();
+        vi.useRealTimers();
+        vi.unstubAllEnvs();
+        vi.unstubAllGlobals();
+        vi.resetModules();
+        vi.doUnmock('../src/shared/auth/extensionAuth');
+        vi.doUnmock('../src/shared/api/extensionJobApi');
+        vi.doUnmock('../src/shared/api/extensionDocumentProfileApi');
+        document.body.innerHTML = '';
     });
 
-    it('does not inject content scripts again when they are already loaded', () => {
-        expect(script).toContain('loaded?.result');
-        expect(script).toContain('const contentScriptLoadPromises = new Map();');
-        expect(script).toContain('contentScriptLoadPromises.has(loadKey)');
-        expect(script).toContain('async function loadContentScript');
-        expect(script).toContain("ensureContentScriptLoaded(tab.id, 'assets/applicationAutoFill.js'");
-        expect(script).toContain('window.ezOneAutoFillApplicationLoaded');
+    it('EXT-003: shows the login handoff and opens the web login continuation when no session exists', async () => {
+        const popup = await mountPopup({ sessionQueue: [null] });
+
+        expect(document.getElementById('login-panel').hidden).toBe(false);
+        document.getElementById('login-button').click();
+        await flushPromises();
+
+        expect(document.getElementById('status-panel').hidden).toBe(false);
+        expect(popup.storage.remove).toHaveBeenCalledWith(['ezonePendingExtensionContinuation']);
+        expect(popup.chrome.tabs.create).toHaveBeenCalledTimes(1);
+        const loginUrl = new URL(popup.chrome.tabs.create.mock.calls[0][0].url);
+        expect(loginUrl.origin).toBe('https://ez-one.o-r.kr');
+        expect(loginUrl.pathname).toBe('/login');
+        expect(loginUrl.searchParams.get('redirect')).toContain('/extension/connect');
+        expect(loginUrl.searchParams.get('redirect')).toContain('sourceTabId=42');
+        expect(loginUrl.searchParams.get('redirect')).toContain('jasoseol.com');
     });
 
-    it('retries transient tab/frame failures while loading and messaging autofill content scripts', () => {
-        expect(script).toContain('async function withTransientTabRetry');
-        expect(script).toContain('function isTransientTabError');
-        expect(script).toContain('function sendContentScriptMessage');
-        expect(script).toContain('Frame with ID 0 was removed');
-        expect(script).toContain('Receiving end does not exist');
-        expect(script).toContain('await sleep(120)');
-        expect(script).toContain('withTransientTabRetry(() => loadContentScript');
-        expect(script).toContain('sendContentScriptMessage(tab.id, {');
-        expect(script).toContain('type: \'EZONE_PREVIEW_APPLICATION_AUTOFILL\'');
-        expect(script).toContain('type: \'EZONE_APPLY_APPLICATION_AUTOFILL\'');
-        expect(script).not.toContain('chrome.tabs.sendMessage(tab.id, {');
+    it('uses configured production origins for popup links and API clients without localhost fallback', async () => {
+        const popup = await mountPopup();
+
+        expect(resolveApiBaseUrlCandidates('https://ez-one.o-r.kr/api', '')).toEqual(['https://ez-one.o-r.kr/api']);
+        expect(document.getElementById('home-link').href).toBe('https://ez-one.o-r.kr/');
+        expect(document.getElementById('web-link').href).toBe('https://ez-one.o-r.kr/');
+        expect(popup.createExtensionJobApi).toHaveBeenCalledWith(expect.objectContaining({
+            apiBaseUrl: 'https://ez-one.o-r.kr/api',
+            apiFallbackBaseUrls: ''
+        }));
+        expect(popup.createExtensionDocumentProfileApi).toHaveBeenCalledWith(expect.objectContaining({
+            apiBaseUrl: 'https://ez-one.o-r.kr/api'
+        }));
     });
 
-    it('previews document autofill before applying values to the page', () => {
-        expect(script).toContain("requireElement('autofill-apply-button')");
-        expect(script).toContain("requireElement('autofill-rescan-button')");
-        expect(script).toContain("documentInputModeButton.addEventListener('click', () => {");
-        expect(script).toContain("void runAuthenticatedAction('documentAutoFill', () => previewDocumentAutoFill());");
-        expect(script).toContain("autofillApplyButton.addEventListener('click'");
-        expect(script).toContain("void runAuthenticatedAction('documentAutoFill', () => applyDocumentAutoFill());");
-        expect(script).toContain("autofillRescanButton.addEventListener('click'");
-        expect(script).toContain('pendingDocumentAutoFillProfile = null;');
-        expect(script).toContain("type: 'EZONE_PREVIEW_APPLICATION_AUTOFILL'");
-        expect(script).toContain("type: 'EZONE_APPLY_APPLICATION_AUTOFILL'");
-        expect(script).not.toContain('void runDocumentAutoFill();');
+    it('previews the current supported posting, disables while saving, and shows saved jobs on success', async () => {
+        const saveDeferred = deferred();
+        const save = vi.fn(() => saveDeferred.promise);
+        const popup = await mountPopup({ save });
+
+        await openJobPreview();
+        const firstRole = document.querySelector('#role-options input');
+        firstRole.checked = true;
+        document.getElementById('company-name-input').value = 'Edited Co';
+        document.getElementById('save-button').click();
+        await flushPromises();
+
+        expect(document.getElementById('preview-panel').hidden).toBe(false);
+        expect(document.getElementById('save-button').disabled).toBe(true);
+        saveDeferred.resolve([{ basketJobId: 10, workspaceId: 20, companyName: 'Edited Co', positionTitle: 'Backend' }]);
+        await flushPromises();
+
+        expect(popup.jobApi.preview).toHaveBeenCalledWith(expect.objectContaining({ companyName: 'Naver' }));
+        expect(save).toHaveBeenCalledWith(expect.objectContaining({
+            companyName: 'Edited Co',
+            selectedRoles: ['신입 · Backend']
+        }));
+        expect(document.getElementById('result-panel').hidden).toBe(false);
+        expect(document.getElementById('saved-job-list').textContent).toContain('Edited Co');
+        expect(document.getElementById('basket-link').href).toBe('https://ez-one.o-r.kr/basket');
     });
 
-    it('does not refresh document autofill preview automatically when the application page changes', () => {
-        expect(script).not.toContain("const APPLICATION_FORM_CHANGED_MESSAGE = 'EZONE_APPLICATION_FORM_CHANGED'");
-        expect(script).not.toContain('chrome.runtime.onMessage?.addListener(handleRuntimeMessage);');
-        expect(script).not.toContain('function handleRuntimeMessage(message, sender)');
-        expect(script).not.toContain('scheduleDocumentAutoFillRefresh');
-        expect(script).not.toContain('refreshDocumentAutoFillPreview');
-        expect(script).toContain("autofillRescanButton.addEventListener('click'");
-        expect(script).toContain("void runAuthenticatedAction('documentAutoFill'");
+    it('keeps the save surface recoverable when the extension save API fails', async () => {
+        await mountPopup({ save: vi.fn().mockRejectedValue(new Error('save failed')) });
+
+        await openJobPreview();
+        document.querySelector('#role-options input').checked = true;
+        document.getElementById('save-button').click();
+        await flushPromises();
+
+        expect(document.getElementById('status-panel').hidden).toBe(false);
+        expect(document.getElementById('status-message').textContent).toBe('save failed');
+        expect(document.getElementById('save-button').disabled).toBe(false);
     });
 
-    it('explains address fields that require the site address-search flow', () => {
-        expect(script).toContain('...getAutofillFailureDisplay(item)');
-        expect(script).toContain('function getAutofillFailureDisplay');
-        expect(script).toContain("fieldKey.includes('address')");
-        expect(script).not.toContain("badge: '\\uC8FC\\uC18C \\uAC80\\uC0C9 \\uD544\\uC694'");
-        expect(script).toContain('\\uC8FC\\uC18C \\uAC80\\uC0C9 \\uD6C4 \\uBCF5\\uC0AC \\uD6C4\\uBCF4\\uC5D0\\uC11C');
-        expect(script).toContain("item.className = 'is-empty'");
-        expect(script).toContain('autofill-result-value');
-        expect(script).toContain('autofill-result-note');
-        expect(script).not.toContain("valueLabel: '\\uBD99\\uC5EC\\uB123\\uC744 \\uAC12'");
-        expect(script).not.toContain('\\uC790\\uB3D9 \\uC785\\uB825\\uC744 \\uBA48\\uCD84\\uC2B5\\uB2C8\\uB2E4');
-        expect(script).not.toMatch(/actionAriaLabel: `\$\{item\?\.label \?\? '\\uC8FC\\uC18C'\}/);
+    it('returns to login and remembers the selected action when the session expires before a feature action', async () => {
+        const popup = await mountPopup({ sessionQueue: [session, null] });
+
+        document.getElementById('job-save-mode-button').click();
+        await flushPromises();
+
+        expect(document.getElementById('login-panel').hidden).toBe(false);
+        expect(popup.storage.set).toHaveBeenCalledWith({ ezonePendingExtensionContinuation: 'jobPreview' });
+        expect(popup.storage.remove).toHaveBeenCalledWith(expect.arrayContaining(['ezoneAccessToken', 'ezoneRefreshToken']));
     });
 
-    it('explains fields that are recognized but missing from the document profile', () => {
-        expect(script).toContain("reason === 'missing_profile_value'");
-        expect(script).toContain('\\uC11C\\uB958 \\uC785\\uB825 \\uC815\\uBCF4\\uC5D0 \\uAC12\\uC744 \\uCD94\\uAC00');
+    it('shows a job-page notice without extracting data on unsupported pages', async () => {
+        const popup = await mountPopup({ tab: { id: 43, url: 'https://example.com/jobs/1' } });
+
+        document.getElementById('job-save-mode-button').click();
+        await flushPromises();
+
+        expect(document.getElementById('status-panel').hidden).toBe(false);
+        expect(document.getElementById('status-panel').classList.contains('is-guidance')).toBe(true);
+        expect(popup.jobApi.preview).not.toHaveBeenCalled();
+        expect(popup.chrome.scripting.executeScript).not.toHaveBeenCalled();
     });
 
-    it('explains certificate autocomplete failures without blaming the profile value', () => {
-        expect(script).toContain("reason === 'select_option_not_found'");
-        expect(script).toContain('^certificates\\.certificates\\.\\d+\\.certificateName$');
-        expect(script).toContain('자격증 검색 결과에서 같은 자격증명을 선택하지 못했습니다.');
-        expect(script).not.toContain('선택 가능한 옵션과 내 서류 정보가 맞지 않습니다.');
+    it('previews document profile autofill and applies it only after the user confirms', async () => {
+        const popup = await mountPopup();
+
+        document.getElementById('document-input-mode-button').click();
+        await flushPromises();
+
+        expect(popup.documentProfileApi.getDocumentProfile).toHaveBeenCalledTimes(1);
+        expect(popup.chrome.tabs.sendMessage).toHaveBeenCalledWith(42, {
+            type: 'EZONE_PREVIEW_APPLICATION_AUTOFILL',
+            profile: documentProfile
+        });
+        expect(document.getElementById('document-result-panel').hidden).toBe(false);
+        expect(document.getElementById('autofill-filled-count').textContent).toBe('1');
+        expect(document.getElementById('autofill-review-count').textContent).toBe('1');
+        expect(document.getElementById('autofill-apply-button').hidden).toBe(false);
+
+        document.getElementById('autofill-apply-button').click();
+        await flushPromises();
+
+        expect(popup.chrome.tabs.sendMessage).toHaveBeenLastCalledWith(42, {
+            type: 'EZONE_APPLY_APPLICATION_AUTOFILL',
+            profile: documentProfile
+        });
+        expect(document.getElementById('document-result-title').textContent).toContain('입력');
+        expect(document.getElementById('autofill-filled-count').textContent).toBe('1');
     });
 
-    it('separates fields that cannot be filled because the service profile has no value', () => {
-        expect(script).toContain("variant: 'profile-missing'");
-        expect(script).toContain("\\uC11C\\uBE44\\uC2A4\\uC5D0 \\uC5C6\\uB294 \\uC815\\uBCF4");
-        expect(script).toContain('\\uB0B4 \\uC11C\\uBE44\\uC2A4\\uC5D0\\uC11C \\uC785\\uB825\\uD558\\uC9C0 \\uC54A\\uC740 \\uC815\\uBCF4');
-    });
+    it('retries transient autofill messaging failures before showing the document preview', async () => {
+        const sendMessage = vi.fn()
+            .mockRejectedValueOnce(new Error('Frame with ID 0 was removed'))
+            .mockRejectedValueOnce(new Error('Receiving end does not exist'))
+            .mockResolvedValue(previewAutoFill);
+        const popup = await mountPopup({ sendMessage });
 
-    it('explains application-specific fields that the document profile does not model', () => {
-        expect(script).toContain("reason === 'unsupported_profile_field'");
-        expect(script).toContain('\\uC9C0\\uC6D0\\uC11C\\uC5D0\\uC11C \\uC9C1\\uC811 \\uC785\\uB825');
-    });
+        document.getElementById('document-input-mode-button').click();
+        await vi.advanceTimersByTimeAsync(240);
+        await flushPromises();
 
-    it('explains required application fields as manual review items', () => {
-        expect(script).toContain("reason === 'required_field'");
-        expect(script).toContain('지원서의 필수 입력 항목입니다. 직접 입력하거나 확인해 주세요.');
-    });
-
-    it('explains optional free-text and addable sections as manual review items', () => {
-        expect(script).toContain("reason === 'manual_free_text'");
-        expect(script).toContain("reason === 'manual_add_section'");
-        expect(script).toContain('기업/직무에 맞춰 직접 작성해 주세요.');
-        expect(script).toContain('필요하면 화면에서 추가해 주세요.');
-    });
-
-    it('adds copy buttons to document autofill copy candidates', () => {
-        expect(script).toContain("actionLabel: '\\uBCF5\\uC0AC'");
-        expect(script).toContain("actionDoneLabel: '\\uBCF5\\uC0AC\\uB428'");
-        expect(script).toContain('actionValue: item.value');
-        expect(script).toContain('autofill-result-copy-button');
-        expect(script).toContain('async function copyTextToClipboard');
-        expect(script).toContain('window.parent !== window && copyTextWithFallback(text)');
-        expect(script).toContain('navigator.clipboard.writeText(text)');
-        expect(script).toContain('function copyTextWithFallback');
-    });
-
-    it('removes planned or filled items from copy candidates while keeping manual review values copyable', () => {
-        expect(script).toContain('primaryCoverage');
-        expect(script).toContain('createPrimaryAutoFillCoverage(primaryItems)');
-        expect(script).toContain('visibleFailed');
-        expect(script).toContain('visibleCopyCandidates');
-        expect(script).toContain('groupActivityCopyCandidates');
-        expect(script).toContain('buildManualReviewItems(visibleFailed)');
-        expect(script).not.toContain('buildManualReviewItems(visibleFailed, groupedCopyCandidates)');
-        expect(script).not.toContain("reason: 'manual_copy_candidate'");
-        expect(script).not.toContain('formatManualCopyReviewDisplay(item)');
-        expect(script).toContain('확인 필요 항목이 없습니다.');
-        expect(script).toContain('shouldShowCopyCandidate');
-        expect(script).toContain('isCoveredByPrimaryAutoFillItem');
-        expect(script).toContain('autoFillCoverageSignature');
-        expect(script).toContain("item?.key === 'basicInfo.address' || item?.key === 'basicInfo.addressDetail'");
-        expect(script).toContain('autofillCopyCount.textContent = String(groupedCopyCandidates.length)');
-        expect(script).toContain('renderResultList(autofillCopyList, groupedCopyCandidates, formatCopyCandidateDisplay');
-        expect(script).not.toContain('groupedCopyCandidates.slice(0, 12)');
-        expect(script).toContain('formatActivityCopyCandidate');
-    });
-
-    it('uses clear document autofill status and action labels', () => {
-        expect(script).toContain('복사 필요');
-        expect(script).toContain('자동 입력 시작');
-        expect(script).not.toContain('확인 후 자동 입력');
-        expect(script).not.toContain('복사 후보');
-    });
-
-    it('keeps copy-needed items out of the manual review list', () => {
-        expect(script).toContain('function buildManualReviewItems(failed)');
-        expect(script).toContain('const seenKeys = new Set()');
-        expect(script).not.toContain('hasAddressSearchReview');
-        expect(script).not.toContain("key === 'basicInfo.addressDetail' && hasAddressSearchReview");
-    });
-
-    it('sorts autofill result sections by the source page display order', () => {
-        expect(script).toContain('sortByDisplayOrder');
-        expect(script).toContain('displayOrder');
-        expect(script).toContain('const primaryItems = sortByDisplayOrder');
-        expect(script).toContain('const visibleFailed = sortByDisplayOrder');
-        expect(script).toContain('const groupedCopyCandidates = sortByDisplayOrder');
-        expect(script).toContain('const manualReviewItems = sortByDisplayOrder');
-    });
-
-    it('groups education autofill items into compact profile-based summary cards', () => {
-        expect(script).toContain('renderPrimaryAutoFillList(autofillFilledList, primaryItems, isPreview)');
-        expect(script).toContain('function renderPrimaryAutoFillList');
-        expect(script).toContain('function groupPrimaryAutoFillItems');
-        expect(script).toContain('function createEducationAutoFillGroups');
-        expect(script).toContain('function createAutoFillGroupCard');
-        expect(script).toContain('autofill-group-card');
-        expect(script).toContain('autofill-group-summary');
-        expect(script).toContain('autofill-group-details');
-        expect(script).toContain("'\\uACE0\\uB4F1\\uD559\\uAD50'");
-        expect(script).toContain("'\\uB300\\uD559\\uAD50'");
-        expect(script).toContain("'\\uC804\\uACF5'");
-        expect(script).toContain("'\\uC131\\uC801'");
-        expect(script).toContain('education.highSchool.schoolName');
-        expect(script).toContain('^education\\.universities\\.\\d+\\.majors');
-        expect(script).toContain('function isEducationGradeField');
-    });
-
-    it('groups certificate autofill items into compact certificate summary cards', () => {
-        expect(script).toContain('function createCertificateAutoFillGroups');
-        expect(script).toContain('^certificates\\.certificates\\.(\\d+)\\.(.+)$');
-        expect(script).toContain("'\\uC790\\uACA9\\uC99D'");
-        expect(script).toContain('certificateName');
-        expect(script).toContain('issuingOrganization');
-        expect(script).toContain('registrationNumber');
-        expect(script).toContain('acquisitionDate');
-    });
-
-    it('groups basic info autofill items into one compact basic info summary card', () => {
-        expect(script).toContain('function createBasicInfoAutoFillGroups');
-        expect(script).toContain("type: 'basic-info-group'");
-        expect(script).toContain("'\\uAE30\\uBCF8 \\uC815\\uBCF4'");
-        expect(script).toContain('basicInfo.nameKo');
-        expect(script).toContain('basicInfo.birthdate');
-        expect(script).toContain('basicInfo.gender');
-        expect(script).toContain('basicInfo.email');
-        expect(script).toContain('basicInfo.phone');
-        expect(script).toContain('createBasicInfoSummary');
-    });
-
-    it('groups military autofill items into one compact military summary card', () => {
-        expect(script).toContain('function createMilitaryAutoFillGroups');
-        expect(script).toContain("type: 'military-group'");
-        expect(script).toContain("'\\uBCD1\\uC5ED'");
-        expect(script).toContain('military.status');
-        expect(script).toContain('military.branch');
-        expect(script).toContain('military.enlistmentDate');
-        expect(script).toContain('military.dischargeDate');
-        expect(script).toContain('military.rank');
-        expect(script).toContain('military.dischargeType');
-        expect(script).toContain('createMilitarySummary');
-    });
-
-    it('groups career autofill items into compact career summary cards', () => {
-        expect(script).toContain('function createCareerAutoFillGroups');
-        expect(script).toContain("type: 'career-group'");
-        expect(script).toContain("'\\uACBD\\uB825'");
-        expect(script).toContain('^career\\.careers\\.(\\d+)\\.(.+)$');
-        expect(script).toContain('companyName');
-        expect(script).toContain('employmentType');
-        expect(script).toContain('roleName');
-        expect(script).toContain('createCareerSummaryLine');
-    });
-
-    it('groups language test autofill items into compact language summary cards', () => {
-        expect(script).toContain('function createLanguageTestAutoFillGroups');
-        expect(script).toContain("type: 'language-test-group'");
-        expect(script).toContain("'\\uC5B4\\uD559'");
-        expect(script).toContain('^certificates\\.languageTests\\.(\\d+)\\.(.+)$');
-        expect(script).toContain('testName');
-        expect(script).toContain('score');
-        expect(script).toContain('createLanguageTestSummaryLine');
-    });
-
-    it('groups activity copy candidates by activity instead of showing every field as a flat row', () => {
-        expect(script).toContain('function groupActivityCopyCandidates');
-        expect(script).toContain('/^activities\\.(\\d+)\\.(.+)$/');
-        expect(script).toContain('activityGroupOrder');
-        expect(script).toContain('function formatActivityCopyCandidate');
-        expect(script).toContain('activityType');
-        expect(script).toContain('description');
-    });
-
-    it('explains tailored activity fields as copy-assisted manual input', () => {
-        expect(script).toContain("reason === 'tailored_activity_required'");
-        expect(script).toContain('\uC9C1\uBB34 \uB9DE\uCDA4 \uD544\uC694');
-        expect(script).toContain('\uD65C\uB3D9\uC740 \uC9C0\uC6D0 \uC9C1\uBB34\uC5D0 \uB9DE\uAC8C \uC120\uD0DD\uD574 \uBD99\uC5EC\uB123\uC5B4 \uC8FC\uC138\uC694.');
-    });
-
-    it('shows job-fit activity recommendations in the document autofill result panel', () => {
-        expect(script).toContain("requireElement('activity-assist-section')");
-        expect(script).toContain("requireElement('activity-assist-button')");
-        expect(script).toContain('ACTIVITY_ASSIST_BUTTON_LABEL');
-        expect(script).toContain('AI\uB85C \uD65C\uB3D9 \uCD94\uCC9C \uB9CC\uB4E4\uAE30');
-        expect(script).toContain('AI\uAC00 \uC790\uB3D9\uC73C\uB85C \uD65C\uB3D9\uC744 \uC9C1\uBB34 \uC801\uD569\uB3C4 \uC21C\uC11C\uB85C \uC815\uB82C\uD558\uACE0 \uC788\uC2B5\uB2C8\uB2E4.');
-        expect(script).toContain('AI\uAC00 \uD65C\uB3D9\uC744 \uC9C1\uBB34 \uC801\uD569\uB3C4 \uC21C\uC11C\uB85C \uC815\uB82C\uD558\uACE0 \uC788\uC2B5\uB2C8\uB2E4.');
-        expect(script).toContain('function scheduleAutomaticActivityAssistRequest');
-        expect(script).toContain('activityAssistAutoRequestKey');
-        expect(script).toContain('requestActivityAssist({ automatic: true })');
-        expect(script).toContain('AI \uCD94\uCC9C\uB3C4');
-        expect(script).toContain('\uAE00\uC790\uC218 \uB9DE\uCDA4');
-        expect(script).toContain('documentProfileApi.recommendActivities');
-        expect(script).toContain('function shouldShowActivityAssist');
-        expect(script).toContain('function renderActivityAssistResult');
-        expect(script).toContain('function formatActivityAssistCounter');
-    });
-
-    it('does not ship mojibake in user-facing popup script strings', () => {
-        expect(script).not.toMatch(/[\u8A5B\u6028\u5A9B\u00C3\uFFFD\uF9DE\u7570\u8E30\u63F6]/);
-        expect(script).not.toContain(['?'.repeat(2), '?'.repeat(2), '?'.repeat(2)].join(' '));
-    });
-
-    it('hides internal section-opening steps from user-facing autofill results', () => {
-        expect(script).toContain('function getPrimaryAutoFillDisplay');
-        expect(script).toContain('function isUserVisibleAutoFillItem');
-        expect(script).toContain('function isSectionOpenItem');
-        expect(script).toContain('item?.sectionOpenControl');
-        expect(script).toContain('.filter(isUserVisibleAutoFillItem)');
-        expect(script).toContain('return !isSectionOpenItem(item);');
-        expect(script).not.toContain("variant: 'section-open'");
-        expect(script).not.toContain('1\\uB2E8\\uACC4');
-        expect(script).not.toContain('\\uC790\\uB3D9 \\uC785\\uB825 \\uBC84\\uD2BC \\uD55C \\uBC88\\uC73C\\uB85C \\uCC98\\uB9AC\\uB429\\uB2C8\\uB2E4.');
-        expect(script).toContain('endsWith(\'.open\')');
-    });
-
-    it('shows a job-page notice before extraction on unsupported pages', () => {
-        expect(script).toContain('function isSupportedJobPostingPage');
-        expect(script).toContain('const UNSUPPORTED_JOB_PAGE_MESSAGE');
-        expect(script).toContain("parsedUrl.hostname.endsWith('jasoseol.com')");
-        expect(script).toContain("parsedUrl.pathname.startsWith('/recruit/')");
-        expect(script).toContain("parsedUrl.pathname === '/'");
-        expect(script).toContain('function hasMinimumPostingData');
-        expect(script).not.toContain("parsedUrl.pathname.startsWith('/recruit') ||");
-        expect(script).toContain("parsedUrl.searchParams.has('campaignid')");
-        expect(script).toContain('setStatus(UNSUPPORTED_JOB_PAGE_MESSAGE, true)');
-    });
-
-    it('returns to the login panel when the extension session expires', () => {
-        expect(script).toContain('AUTH_EXPIRED_MESSAGE');
-        expect(script).toContain('async function handleAuthExpired(error, continuation = null)');
-        expect(script).toContain('await clearExtensionSession();');
-        expect(script).toContain('await rememberPendingLoginContinuation(continuation);');
-        expect(script).toContain('showPanel(loginPanel);');
-    });
-
-    it('EXT-003: validates stored extension sessions before showing feature selection', () => {
-        expect(script).toContain('validateStoredSession');
-        expect(script).toContain('const session = await validateStoredSession(chrome.storage.local');
-        expect(script).toContain('requireFreshSession: true');
-        expect(script).not.toContain('const session = await getStoredSession(chrome.storage.local);');
-        expect(script).toContain('hasExtensionSession = false;');
-        expect(script).toContain('showPanel(loginPanel);');
-        expect(script).not.toContain('hasExtensionSession = true;\\n    await resumePendingExtensionAction();');
-    });
-
-    it('EXT-003: revalidates the extension session before running feature actions', () => {
-        expect(script).toContain("void runAuthenticatedAction('jobPreview'");
-        expect(script).toContain("void runAuthenticatedAction('documentAutoFill'");
-        expect(script).toContain('async function runAuthenticatedAction(continuation, action)');
-        expect(script).toContain('async function ensureAuthenticatedExtensionSession(continuation = null)');
-        expect(script).toContain('const session = await readValidatedExtensionSession();');
-        expect(script).toContain('await clearExtensionSession();');
-        expect(script).toContain('await rememberPendingLoginContinuation(continuation);');
-        expect(script).toContain('showPanel(loginPanel);');
-    });
-
-    it('EXT-003: preserves the active tab and requested action before starting web login', () => {
-        expect(script).toContain('await rememberPendingLoginContinuation(pendingLoginContinuation ?? inferVisibleLoginContinuation())');
-        expect(script).toContain('sourceTabId: tab.id');
-        expect(script).toContain('currentUrl: tab.url ??');
-        expect(script).toContain("const LOGIN_CONTINUATIONS = new Set(['jobPreview', 'documentAutoFill'])");
-    });
-
-    it('automatically resumes the selected extension task after web login stores the session', () => {
-        expect(script).toContain('let waitingForWebLogin = false;');
-        expect(script).toContain('let pendingLoginContinuation = null;');
-        expect(script).toContain('PENDING_EXTENSION_CONTINUATION_KEY');
-        expect(script).toContain('const LOGIN_CONTINUATIONS = new Set');
-        expect(script).toContain('const LOGIN_SESSION_POLL_INTERVAL_MS');
-        expect(script).toContain('chrome.storage.onChanged?.addListener(handleSessionStorageChanged);');
-        expect(script).toContain('startLoginSessionPolling();');
-        expect(script).toContain('await rememberPendingLoginContinuation(pendingLoginContinuation ?? inferVisibleLoginContinuation())');
-        expect(script).toContain('async function reconcileWebLoginSession');
-        expect(script).toContain('async function handleSessionStorageChanged(changes, areaName)');
-        expect(script).toContain('waitingForWebLogin = false;');
-        expect(script).toContain('async function resumeAfterWebLogin');
-        expect(script).toContain('await resumePendingExtensionAction();');
-        expect(script).toContain('async function resumePendingExtensionAction');
-        expect(script).toContain('pendingLoginContinuation ?? await readPendingLoginContinuation()');
-        expect(script).toContain('await rememberPendingLoginContinuation(null);');
-        expect(script).toContain('async function rememberPendingLoginContinuation');
-        expect(script).toContain('async function readPendingLoginContinuation');
-        expect(script).toContain('function normalizeLoginContinuation');
-        expect(script).toContain("continuation === 'documentAutoFill'");
-        expect(script).toContain('await previewDocumentAutoFill();');
-        expect(script).toContain("continuation === 'jobPreview'");
-        expect(script).toContain('await loadPreview({ force: true, showUnsupportedMessage: true });');
-        expect(script).toContain('showFeatureSelection();');
-        expect(script).toContain("handleAuthExpired(error, 'documentAutoFill')");
-        expect(script).toContain("handleAuthExpired(error, 'jobPreview')");
-        expect(script).not.toContain('pendingLoginContinuation = continuation;');
-        expect(script).not.toContain('await loadPreview({ force: true, fallbackPanel: featurePanel });');
-        expect(script).not.toContain('로그인 완료 후 팝업을 다시 열어 주세요.');
-    });
-
-    it('shows feature selection only after a stored or newly completed login session', () => {
-        expect(script).toContain('function showFeatureSelection');
-        expect(script).toContain('showPanel(featurePanel);');
-        expect(script).toContain('!featurePanel.hidden');
-        expect(script).not.toContain('await loadPreview({ fallbackPanel: featurePanel });');
-    });
-
-    it('reports embedded popup height so the in-page panel can fit its current content', () => {
-        expect(script).toContain("const PANEL_RESIZE_MESSAGE = 'EZONE_PANEL_RESIZE'");
-        expect(script).toContain('setupPanelAutoResize();');
-        expect(script).toContain('function setupPanelAutoResize');
-        expect(script).toContain('new ResizeObserver');
-        expect(script).toContain('function schedulePanelResize');
-        expect(script).toContain('function reportPanelHeight');
-        expect(script).toContain('window.parent.postMessage');
-        expect(script).toContain('const PANEL_RESIZE_EPSILON_PX = 2');
-        expect(script).toContain('let lastReportedPanelHeight = 0');
-        expect(script).toContain("document.querySelector('.popup-header')");
-        expect(script).toContain('].filter(Boolean).forEach((item) => observer.observe(item));');
-        expect(script).toContain('const measuredPanelHeight = measureIntrinsicPanelHeight(activePanel)');
-        expect(script).toContain('activePanel === previewPanel');
-        expect(script).toContain('Math.max(measuredPanelHeight, activePanel.scrollHeight)');
-        expect(script).toContain('function measureIntrinsicPanelHeight');
-        expect(script).toContain('child.getBoundingClientRect()');
-        expect(script).toContain('Math.abs(height - lastReportedPanelHeight) < PANEL_RESIZE_EPSILON_PX');
-        expect(script).toContain('height');
-        expect(script).not.toContain('document.body,');
-        expect(script).not.toContain('const panelHeight = activePanel.scrollHeight');
-        expect(script).not.toContain('Math.max(activePanel.scrollHeight, activePanel.getBoundingClientRect().height)');
-    });
-
-    it('includes manually entered essay questions in the save payload', () => {
-        expect(script).toContain("requireElement('essay-question-list')");
-        expect(script).toContain('renderEssayQuestionInputs(questions, { showFallback: !hasNoEssayQuestions })');
-        expect(script).toContain('createEssayQuestionInput');
-        expect(script).toContain("document.createElement('details')");
-        expect(script).toContain('essay-question-summary');
-        expect(script).toContain('essay-question-preview');
-        expect(script).toContain("item.addEventListener('toggle'");
-        expect(script).toContain('function autoResizeEssayQuestionInput');
-        expect(script).toContain("textarea.addEventListener('input'");
-        expect(script).toContain('textarea.scrollHeight + 2');
-        expect(script).toContain("item.scrollIntoView({ block: 'nearest', behavior: 'smooth' })");
-        expect(script).toContain('getEssayQuestionRows');
-        expect(script).toContain("data-max-length");
-        expect(script).toContain("data-max-length-unit");
-        expect(script).toContain('formatEssayQuestionLimit');
-        expect(script).toContain("'.essay-question-input'");
-        expect(script).toContain('collectEssayQuestions()');
-        expect(script).toContain('function collectEssayQuestions()');
-        expect(script).toContain('essayQuestions: collectEssayQuestions()');
-    });
-
-    it('updates the visible essay questions when the selected role changes', () => {
-        expect(script).toContain("requireElement('essay-question-status')");
-        expect(script).toContain('function updateEssayQuestionsForSelectedRoles');
-        expect(script).toContain('function renderEssayQuestionLoading');
-        expect(script).toContain('자소서 문항을 확인하고 있습니다');
-        expect(script).toContain('currentPosting.roleEssayQuestions');
-        expect(script).toContain('currentPosting.essayQuestionAvailability');
-        expect(script).toContain('자소서 문항이 없는 공고입니다');
-        expect(script).toContain('showFallback: !hasNoEssayQuestions');
-        expect(script).toContain('roleEssayQuestions: buildRoleEssayQuestionsPayload(selectedRoles)');
-    });
-
-    it('renders employment type as a separate role badge', () => {
-        expect(script).toContain('function parseDisplayRole');
-        expect(script).toContain('role-employment-badge');
-        expect(script).toContain('getEmploymentBadgeClass');
-        expect(script).toContain('role-employment-badge--new');
-        expect(script).toContain('role-employment-badge--career');
-        expect(script).toContain('role-employment-badge--mixed');
-        expect(script).toContain('role-title');
-        expect(script).toContain('role-option-text');
-        expect(script).toContain('계약직');
-    });
-
-    it('EXT-017: does not preselect the first role option in the save preview', () => {
-        expect(script).toContain("const selectedRoles = Array.from(roleOptions.querySelectorAll('input:checked'))");
-        expect(script).toContain('if (selectedRoles.length === 0)');
-        expect(script).not.toContain('input.checked = index === 0');
-    });
-
-    it('EXT-017: hides essay questions until a role is selected, then shows the role questions', () => {
-        expect(script).toContain("const essayFieldset = requireElement('essay-fieldset');");
-        expect(script).toContain('hideEssayQuestions();');
-        expect(script).toContain('function hideEssayQuestions()');
-        expect(script).toContain('essayFieldset.hidden = true;');
-        expect(script).toContain('if (selectedRoles.length === 0) {');
-        expect(script).toContain('showEssayQuestions();');
-        expect(script).toContain('function showEssayQuestions()');
-        expect(script).toContain('essayFieldset.hidden = false;');
-        expect(script).not.toContain('const ESSAY_QUESTION_PREVIEW_ENABLED = false;');
-    });
-
-    it('keeps manual autofill guidance short and action-oriented', () => {
-        expect(script).toContain('기업/직무에 맞춰 직접 작성해 주세요.');
-        expect(script).toContain('필요하면 화면에서 추가해 주세요.');
-        expect(script).not.toContain('기업/직무에 맞춰 직접 작성하면 좋은 장문 항목입니다.');
-        expect(script).not.toContain('필요하면 화면에서 추가하고 내용을 직접 작성해 주세요.');
-    });
-
-    it('can read another posting without closing and reopening the extension panel', () => {
-        expect(script).toContain("requireElement('reload-preview-button')");
-        expect(script).not.toContain("requireElement('save-another-button')");
-        expect(script).toContain("reloadPreviewButton.addEventListener('click'");
-        expect(script).not.toContain("saveAnotherButton.addEventListener('click'");
-        expect(script).toContain('const POSTING_WATCH_INTERVAL_MS = 1200;');
-        expect(script).toContain('startPostingChangeWatcher();');
-        expect(script).toContain('function startPostingChangeWatcher');
-        expect(script).toContain('async function refreshPreviewWhenPostingChanges');
-        expect(script).toContain('currentUrl === lastObservedPostingUrl');
-        expect(script).toContain("statusMessage: '새 공고를 읽고 있습니다.'");
-        expect(script).toContain("void runAuthenticatedAction('jobPreview', () => loadPreview({ force: true, showUnsupportedMessage: true }));");
-        expect(script).toContain('essayQuestionRequestId += 1;');
-        expect(script).toContain('(posting.essayQuestions ?? []).length > 0');
+        expect(popup.chrome.tabs.sendMessage).toHaveBeenCalledTimes(3);
+        expect(document.getElementById('document-result-panel').hidden).toBe(false);
     });
 });
+
+async function mountPopup(options = {}) {
+    document.body.innerHTML = bodyMarkup;
+    const storedValues = { ...(options.storage ?? {}) };
+    const sessionQueue = [...(options.sessionQueue ?? [options.session ?? session])];
+    const validateStoredSession = vi.fn(async () => sessionQueue.length > 0 ? sessionQueue.shift() : options.session ?? session);
+    const storage = createStorage(storedValues);
+    const chromeMock = createChromeMock({ ...options, storage });
+    const jobApi = {
+        preview: options.preview ?? vi.fn().mockResolvedValue({ saveable: true }),
+        save: options.save ?? vi.fn().mockResolvedValue([{ basketJobId: 1, workspaceId: 2, companyName: posting.companyName, positionTitle: posting.positionTitle }])
+    };
+    const documentProfileApi = {
+        getDocumentProfile: options.getDocumentProfile ?? vi.fn().mockResolvedValue(documentProfile),
+        recommendActivities: vi.fn().mockResolvedValue({ recommendations: [] })
+    };
+    const createExtensionJobApi = vi.fn(() => jobApi);
+    const createExtensionDocumentProfileApi = vi.fn(() => documentProfileApi);
+
+    vi.doMock('../src/shared/auth/extensionAuth', async () => ({
+        ...await vi.importActual('../src/shared/auth/extensionAuth'),
+        validateStoredSession
+    }));
+    vi.doMock('../src/shared/api/extensionJobApi', () => ({ createExtensionJobApi }));
+    vi.doMock('../src/shared/api/extensionDocumentProfileApi', () => ({ createExtensionDocumentProfileApi }));
+    vi.stubGlobal('chrome', chromeMock);
+
+    await import('../src/popup/popup.js');
+    await flushPromises();
+    return { chrome: chromeMock, storage, validateStoredSession, jobApi, documentProfileApi, createExtensionJobApi, createExtensionDocumentProfileApi };
+}
+
+function createStorage(storedValues) {
+    return {
+        get: vi.fn(async (keys) => {
+            const normalizedKeys = Array.isArray(keys) ? keys : [keys];
+            return Object.fromEntries(normalizedKeys.map((key) => [key, storedValues[key]]));
+        }),
+        set: vi.fn(async (values) => {
+            Object.assign(storedValues, values);
+        }),
+        remove: vi.fn(async (keys) => {
+            for (const key of keys) delete storedValues[key];
+        })
+    };
+}
+
+function createChromeMock(options) {
+    const sendMessage = options.sendMessage ?? vi.fn(async (_tabId, message) => (
+        message.type === 'EZONE_APPLY_APPLICATION_AUTOFILL' ? appliedAutoFill : previewAutoFill
+    ));
+    return {
+        storage: {
+            local: options.storage,
+            onChanged: { addListener: vi.fn() }
+        },
+        tabs: {
+            query: vi.fn().mockResolvedValue([options.tab ?? supportedTab]),
+            create: vi.fn().mockResolvedValue(undefined),
+            sendMessage
+        },
+        scripting: {
+            executeScript: vi.fn(async (details) => {
+                if (details.files) return [{ result: undefined }];
+                if (String(details.func).includes('ezOneExtractJobPosting')) return [{ result: options.posting ?? posting }];
+                return [{ result: false }];
+            })
+        }
+    };
+}
+
+async function openJobPreview() {
+    document.getElementById('job-save-mode-button').click();
+    await flushPromises();
+}
+
+async function flushPromises() {
+    for (let index = 0; index < 20; index += 1) {
+        await Promise.resolve();
+    }
+}
+
+function deferred() {
+    let resolvePromise;
+    let rejectPromise;
+    const promise = new Promise((resolve, reject) => {
+        resolvePromise = resolve;
+        rejectPromise = reject;
+    });
+    return { promise, resolve: resolvePromise, reject: rejectPromise };
+}

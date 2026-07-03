@@ -6,6 +6,9 @@ describe('router', () => {
     it('registers P1 route shells before API-backed slices', () => {
         const routeNames = router.getRoutes().map((route) => route.name);
         expect(routeNames).toContain('login');
+        expect(routeNames).toContain('extension');
+        expect(routeNames).toContain('privacy');
+        expect(routeNames).toContain('support');
         expect(routeNames).toContain('extension-connect');
         expect(routeNames).not.toContain('onboarding');
         expect(routeNames).toContain('main');
@@ -27,6 +30,9 @@ describe('router', () => {
         const routes = router.getRoutes();
         expect(routes.find((route) => route.path === '/')?.name).toBe('main');
         expect(routes.find((route) => route.path === '/login')?.name).toBe('login');
+        expect(routes.find((route) => route.path === '/extension')?.name).toBe('extension');
+        expect(routes.find((route) => route.path === '/privacy')?.name).toBe('privacy');
+        expect(routes.find((route) => route.path === '/support')?.name).toBe('support');
         expect(routes.find((route) => route.path === '/main')?.redirect).toBe('/');
         expect(routes.find((route) => route.path === '/basket/:basketJobId')?.name).toBe('basket-detail');
         expect(routes.find((route) => route.path === '/recommendations/mattermost')?.name).toBe('recommendations-mattermost');
@@ -50,6 +56,14 @@ describe('router', () => {
         await router.push('/basket');
         expect(router.currentRoute.value.name).toBe('login');
         expect(router.currentRoute.value.query.redirect).toBe('/basket');
+    });
+    it('EXT-004/SUPPORT-001: allows public trust pages without authentication', async () => {
+        for (const path of ['/extension', '/privacy', '/support']) {
+            await router.push(path);
+            expect(router.currentRoute.value.path).toBe(path);
+            expect(router.currentRoute.value.name).not.toBe('login');
+            expect(router.currentRoute.value.meta.requiresAuth).not.toBe(true);
+        }
     });
     it('allows protected P1 pages when an access token exists', async () => {
         localStorage.setItem('ezone.accessToken', 'test-token');

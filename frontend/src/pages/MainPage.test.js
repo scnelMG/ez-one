@@ -75,6 +75,9 @@ const makeRouter = () => createRouter({
     { path: '/mypage/notion', component: { template: '<div>notion</div>' } },
     { path: '/mypage/terms', component: { template: '<div>terms</div>' } },
     { path: '/mypage/partnership', component: { template: '<div>partnership</div>' } },
+    { path: '/extension', component: { template: '<div>extension</div>' } },
+    { path: '/privacy', component: { template: '<div>privacy</div>' } },
+    { path: '/support', component: { template: '<div>support</div>' } },
     { path: '/recommendations/mattermost', component: { template: '<div>mattermost</div>' } }
   ]
 });
@@ -147,6 +150,10 @@ describe('MainPage', () => {
     vi.mocked(studyApi.getMyStudies).mockResolvedValue([]);
     vi.mocked(studyApi.getMyInvites).mockReset();
     vi.mocked(studyApi.getMyInvites).mockResolvedValue([]);
+    vi.stubEnv(
+      'VITE_EXTENSION_INSTALL_URL',
+      'https://chromewebstore.google.com/detail/ez-one-job-saver/oamnhdoaefndncadifgaidefcjaomgdo'
+    );
     vi.stubGlobal('confirm', vi.fn(() => true));
   });
 
@@ -340,6 +347,37 @@ describe('MainPage', () => {
     const honeyCharacter = wrapper.get('[data-testid="honey-status-character"]');
     expect(honeyCharacter.attributes('src')).toContain('bee-honey-jar-cutout');
     expect(wrapper.findAll('.honey-pot-week').length).toBeLessThanOrEqual(27);
+  });
+
+  it('EXT-001/TC-EXT-004: shows a logged-in extension install CTA from the main page', async () => {
+    const wrapper = await mountMain();
+
+    const extensionCta = wrapper.get('[data-testid="main-extension-cta"]');
+    const installLink = wrapper.get('[data-testid="main-extension-install-link"]');
+    const helpLink = wrapper.get('[data-testid="main-extension-help-link"]');
+
+    expect(extensionCta.text()).toContain('EZ-ONE 확장 프로그램');
+    expect(extensionCta.text()).toContain('자소설닷컴 공고를 바로 저장하고 지원서 입력도 이어갈 수 있어요.');
+    expect(installLink.text()).toContain('Chrome에 설치');
+    expect(installLink.attributes('href')).toBe('https://chromewebstore.google.com/detail/ez-one-job-saver/oamnhdoaefndncadifgaidefcjaomgdo');
+    expect(installLink.attributes('target')).toBe('_blank');
+    expect(installLink.attributes('rel')).toBe('noreferrer');
+    expect(helpLink.text()).toContain('설치 도움말');
+    expect(helpLink.attributes('href')).toBe('/extension');
+    expect(wrapper.find('[data-testid="main-extension-connect-link"]').exists()).toBe(false);
+  });
+
+  it('EXT-001/TC-EXT-004: falls back to safe extension help when the install URL is missing', async () => {
+    vi.stubEnv('VITE_EXTENSION_INSTALL_URL', '');
+
+    const wrapper = await mountMain();
+    const extensionCta = wrapper.get('[data-testid="main-extension-cta"]');
+    const fallbackLink = wrapper.get('[data-testid="main-extension-install-fallback-link"]');
+
+    expect(extensionCta.text()).toContain('스토어 설치 링크가 준비되지 않았습니다.');
+    expect(fallbackLink.text()).toContain('설치 방법 보기');
+    expect(fallbackLink.attributes('href')).toBe('/extension');
+    expect(wrapper.find('[data-testid="main-extension-install-link"]').exists()).toBe(false);
   });
 
   it('shows honey score reason logs in the graph-side panel after clicking a honey day', async () => {

@@ -52,6 +52,9 @@ function makeRouter() {
             { path: '/history', component: { template: '<div>history</div>' } },
             { path: '/study', component: { template: '<div>study</div>' } },
             { path: '/recommendations/mattermost', component: { template: '<div>mattermost</div>' } },
+            { path: '/extension', component: { template: '<div>extension</div>' } },
+            { path: '/privacy', component: { template: '<div>privacy</div>' } },
+            { path: '/support', component: { template: '<div>support</div>' } },
             { path: '/mypage', component: { template: '<div>mypage</div>' } },
             { path: '/mypage/notion', component: { template: '<div>notion</div>' } },
             { path: '/mypage/onboarding', component: { template: '<div>onboarding</div>' } },
@@ -141,8 +144,9 @@ describe('AppLayout', () => {
         expect(footer.text()).not.toContain('사업자 정보는 정식 출시 전 확정 예정입니다.');
         expect(footer.text()).not.toContain('제휴' + ' 문의');
         expect(footerLinks).toEqual([
-            '/mypage/terms',
-            '/mypage/terms#privacy',
+            '/extension',
+            '/privacy',
+            '/support',
             'mailto:qkralsrb4407@naver.com',
             'mailto:eunjaelee058@gmail.com'
         ]);

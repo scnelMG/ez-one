@@ -20,6 +20,7 @@
 | JOB-002 | UC-06, UC-08 | 공고 장바구니, 워크스페이스 | `POST /api/basket/jobs`, `GET /api/workspaces/{id}` | `workspaces` | TC-JOB-001, TC-WS-001 |
 | EXT-001 | UC-06 | Chrome Extension | `/api/extension/jobs/*` | `jobs`, `basket_jobs`, `workspaces` | TC-EXT-001, TC-EXT-002, TC-EXT-003, TC-EXT-004 |
 | EXT-001 | UC-06 | Chrome Extension release manifest | `manifest.json` | Chrome extension permissions | TC-EXT-MANIFEST-001 |
+| EXT-024, SUPPORT-001 | UC-06 | Public extension/privacy/support pages | none | none | TC-EXT-004, TC-PUBLIC-001 |
 | PROFILE-001 | UC-12, UC-13 | 서류 입력 정보 | `/api/document-profile/*` | `document_profile_sections`, `document_custom_fields` | TC-PROFILE-001, TC-PROFILE-CUSTOM-001 |
 | WS-001 | UC-08 | 지원 워크스페이스 | `GET /api/workspaces/{id}` | `workspaces`, `basket_jobs`, `companies` | TC-WS-001 |
 | WS-002 | UC-09 | 도화지 | `PATCH /api/workspaces/{id}/drafts/{draftId}` | `essay_drafts` | TC-WS-002, TC-WS-003 |
@@ -49,7 +50,7 @@
 | 항목 | 상태 |
 | --- | --- |
 | 장바구니 캘린더/주간 일정 | P2 후보. 요구사항 확정 전 구현 제외 |
-| 고객지원 | P2 후보. 운영 범위 확정 전 구현 제외 |
+| 고객지원 | 공개 `/support`는 Chrome Web Store/푸터 안내용 정적 페이지로 제공. 인증형 1:1 문의 기능은 P2 후보로 제외 |
 ## 2026-06-06 Traceability Addendum
 
 | Requirement | Use Case | Surface | API | DB | Tests |

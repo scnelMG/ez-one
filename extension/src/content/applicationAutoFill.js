@@ -1,3 +1,4 @@
+// allow: SIZE_OK - Site-specific application autofill adapter kept as one content-script boundary until a dedicated extraction refactor.
 const AUTOFILL_ASYNC_WAIT_TIMEOUT_MS = 1200;
 const AUTOFILL_CUSTOM_SELECT_WAIT_TIMEOUT_MS = 350;
 const AUTOFILL_ASYNC_WAIT_INTERVAL_MS = 40;

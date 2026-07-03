@@ -29,6 +29,7 @@ const makeRouter = () => createRouter({
     routes: [
         { path: '/', component: { template: '<div>main</div>' } },
         { path: '/login', component: LoginPage },
+        { path: '/extension', component: { template: '<div>extension</div>' } },
         { path: '/main', component: { template: '<div>main</div>' } }
     ]
 });
@@ -166,7 +167,7 @@ describe('LoginPage', () => {
         expect(wrapper.text()).toContain('Chrome 웹 스토어에서 설치');
         expect(wrapper.text()).toContain('Chrome 웹 스토어에서 설치하기');
         expect(wrapper.text()).toContain('EZ-ONE에 저장');
-        expect(wrapper.find('a[href="#extension-install"]').exists()).toBe(true);
+        expect(wrapper.find('a[href="/extension"]').exists()).toBe(true);
         expect(wrapper.find('.extension-screenshot-card img').exists()).toBe(true);
     });
     it('PAGE-001: shows section navigation without overlaying the hero screenshot', async () => {
