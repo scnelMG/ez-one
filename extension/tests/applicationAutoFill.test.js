@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { applyAutoFillPlan, applyAutoFillPlanAsync, applyAutoFillPlanFast, applyAutoFillPlanFastAsync, buildAutoFillPlan, flattenDocumentProfileValues, previewAutoFillPlan, resetApplicationAutoFillRuntimeForTests } from '../src/content/applicationAutoFill';
+import { applyAutoFillPlan, applyAutoFillPlanAsync, applyAutoFillPlanFast, applyAutoFillPlanFastAsync, buildApplicationFormSignature, buildAutoFillPlan, flattenDocumentProfileValues, previewAutoFillPlan, resetApplicationAutoFillRuntimeForTests } from '../src/content/applicationAutoFill';
 
 // allow: SIZE_OK - Regression fixture pack for one high-risk content-script adapter; split when adapter modules are extracted.
 const profile = {
@@ -94,6 +94,135 @@ describe('applicationAutoFill', () => {
         expect(result.failed).toEqual([
             expect.objectContaining({ fieldKey: 'education.universities.0.majors.0.majorName', reason: 'control_not_ready' })
         ]);
+    });
+
+    it('EXT-021 autofill stabilization: reports failure when a controlled input rejects the filled value', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = '<form><label>Name<input id="name" /></label></form>';
+        const nameInput = doc.getElementById('name');
+        nameInput.addEventListener('input', () => {
+            nameInput.value = '';
+        });
+
+        const result = applyAutoFillPlan(buildAutoFillPlan(doc, profile));
+
+        expect(nameInput.value).toBe('');
+        expect(result.filledCount).toBe(0);
+        expect(result.filled).not.toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'basicInfo.nameKo' })
+        ]));
+        expect(result.failed).toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'basicInfo.nameKo', reason: 'value_not_applied' })
+        ]));
+        expect(result.copyCandidates).toEqual(expect.arrayContaining([
+            expect.objectContaining({ key: 'basicInfo.nameKo', value: 'Hong Gil Dong' })
+        ]));
+    });
+
+    it('EXT-022 malformed DOM: does not report a detached stale planned control as filled', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = '<form><label>Name<input id="name" /></label></form>';
+        const staleInput = doc.getElementById('name');
+        const plan = buildAutoFillPlan(doc, profile);
+
+        staleInput.remove();
+        const result = applyAutoFillPlanFast(plan);
+
+        expect(staleInput.value).toBe('');
+        expect(result.filledCount).toBe(0);
+        expect(result.filled).not.toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'basicInfo.nameKo' })
+        ]));
+        expect(result.failed).toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'basicInfo.nameKo', reason: 'control_not_ready' })
+        ]));
+        expect(result.copyCandidates).toEqual(expect.arrayContaining([
+            expect.objectContaining({ key: 'basicInfo.nameKo', value: 'Hong Gil Dong' })
+        ]));
+    });
+
+    it('final stale async: reports a detached planned input as a copyable failure', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = '<form><label>Name<input id="name" /></label></form>';
+        const staleInput = doc.getElementById('name');
+        const plan = buildAutoFillPlan(doc, profile);
+
+        staleInput.remove();
+        const result = await applyAutoFillPlanAsync(plan);
+
+        expect(staleInput.value).toBe('');
+        expect(result.filledCount).toBe(0);
+        expect(result.filled).not.toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'basicInfo.nameKo' })
+        ]));
+        expect(result.failed).toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'basicInfo.nameKo', reason: 'control_not_ready' })
+        ]));
+        expect(result.copyCandidates).toEqual(expect.arrayContaining([
+            expect.objectContaining({ key: 'basicInfo.nameKo', value: 'Hong Gil Dong' })
+        ]));
+    });
+
+    it('Task 4 stale plan guard: same-markup DOM replacement invalidates the cached form signature', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = '<form><label>Name<input id="name" /></label></form>';
+        const stalePlan = buildAutoFillPlan(doc, profile);
+        const staleSignature = buildApplicationFormSignature(doc);
+
+        doc.body.innerHTML = '<form><label>Name<input id="name" /></label></form>';
+        const currentInput = doc.getElementById('name');
+        const currentSignature = buildApplicationFormSignature(doc);
+        const staleResult = applyAutoFillPlanFast(stalePlan);
+
+        expect(currentSignature).not.toBe(staleSignature);
+        expect(currentInput.value).toBe('');
+        expect(staleResult.filledCount).toBe(0);
+        expect(staleResult.failed).toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'basicInfo.nameKo', reason: 'control_not_ready' })
+        ]));
+
+        const rebuiltResult = applyAutoFillPlanFast(buildAutoFillPlan(doc, profile));
+        expect(currentInput.value).toBe('Hong Gil Dong');
+        expect(rebuiltResult.filled).toEqual([
+            expect.objectContaining({ fieldKey: 'basicInfo.nameKo', value: 'Hong Gil Dong' })
+        ]);
+    });
+
+    it('Task 4 duplicate filledCount guard: skips repeated field keys before filling duplicate controls', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <label>Name<input id="primary-name" /></label>
+        <label>Applicant name<input id="duplicate-name" /></label>
+      </form>
+    `;
+        const primaryInput = doc.getElementById('primary-name');
+        const duplicateInput = doc.getElementById('duplicate-name');
+
+        const result = applyAutoFillPlan({
+            fillable: [{
+                element: primaryInput,
+                fieldKey: 'basicInfo.nameKo',
+                label: 'Name',
+                value: 'Hong Gil Dong'
+            }, {
+                element: duplicateInput,
+                fieldKey: 'basicInfo.nameKo',
+                label: 'Applicant name',
+                value: 'Hong Gil Dong'
+            }],
+            failed: [],
+            skipped: [],
+            copyCandidates: []
+        });
+
+        expect(primaryInput.value).toBe('Hong Gil Dong');
+        expect(duplicateInput.value).toBe('');
+        expect(result.filledCount).toBe(1);
+        expect(result.filled).toEqual([
+            expect.objectContaining({ fieldKey: 'basicInfo.nameKo', value: 'Hong Gil Dong' })
+        ]);
+        expect(result.failed).toEqual([]);
     });
 
     it('EXT-013: matches label, placeholder, name/id, table header, and nearby text controls', () => {
@@ -4569,6 +4698,7 @@ describe('applicationAutoFill', () => {
         </section>
       </form>
     `;
+        const sequencingEvents = [];
         const addSchoolSearchBehavior = (input, optionText, detailTargetId, detailMarkup, onDetailReady = () => {}) => {
             input.addEventListener('input', () => {
                 if (doc.getElementById(`${input.id}-option`)) return;
@@ -4578,6 +4708,7 @@ describe('applicationAutoFill', () => {
                 option.textContent = optionText;
                 option.addEventListener('mousedown', () => {
                     input.value = optionText;
+                    sequencingEvents.push(`${input.id}:committed`);
                     option.remove();
                     setTimeout(() => {
                         doc.getElementById(detailTargetId).innerHTML = detailMarkup;
@@ -4596,6 +4727,7 @@ describe('applicationAutoFill', () => {
                 menu.querySelectorAll('button').forEach((optionButton) => {
                     optionButton.addEventListener('mousedown', () => {
                         trigger.querySelector('p').textContent = optionButton.textContent.trim();
+                        sequencingEvents.push(`${trigger.id}:filled`);
                         menu.remove();
                     });
                 });
@@ -4611,7 +4743,12 @@ describe('applicationAutoFill', () => {
           <button id="high-school-graduation-status" type="button" aria-haspopup="listbox"><p>\uC878\uC5C5\uAD6C\uBD84\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</p></button>
         `
             ,
-            () => addSelectBehavior(doc.getElementById('high-school-graduation-status'), ['\uC878\uC5C5', '\uC878\uC5C5\uC608\uC815'])
+            () => {
+                doc.getElementById('high-school-graduation-date').addEventListener('input', () => {
+                    sequencingEvents.push('high-school-graduation-date:filled');
+                });
+                addSelectBehavior(doc.getElementById('high-school-graduation-status'), ['\uC878\uC5C5', '\uC878\uC5C5\uC608\uC815']);
+            }
         );
         addSchoolSearchBehavior(
             doc.getElementById('university-name'),
@@ -4624,6 +4761,9 @@ describe('applicationAutoFill', () => {
         `
             ,
             () => {
+                doc.getElementById('university-graduation-date').addEventListener('input', () => {
+                    sequencingEvents.push('university-graduation-date:filled');
+                });
                 addSelectBehavior(doc.getElementById('university-graduation-status'), ['\uC878\uC5C5', '\uC878\uC5C5\uC608\uC815']);
                 addSelectBehavior(doc.getElementById('university-degree-type'), ['\uD559\uC0AC', '\uC11D\uC0AC']);
             }
@@ -4652,6 +4792,10 @@ describe('applicationAutoFill', () => {
         expect(result.failed).toEqual([]);
         expect(doc.getElementById('high-school-name-option')).toBeNull();
         expect(doc.getElementById('university-name-option')).toBeNull();
+        expect(sequencingEvents.indexOf('high-school-name:committed')).toBeLessThan(sequencingEvents.indexOf('high-school-graduation-date:filled'));
+        expect(sequencingEvents.indexOf('high-school-name:committed')).toBeLessThan(sequencingEvents.indexOf('high-school-graduation-status:filled'));
+        expect(sequencingEvents.indexOf('university-name:committed')).toBeLessThan(sequencingEvents.indexOf('university-graduation-date:filled'));
+        expect(sequencingEvents.indexOf('university-name:committed')).toBeLessThan(sequencingEvents.indexOf('university-degree-type:filled'));
         expect(doc.getElementById('high-school-graduation-date').value).toBe('2020.02.28');
         expect(doc.getElementById('high-school-graduation-status').textContent).toContain('\uC878\uC5C5');
         expect(doc.getElementById('university-graduation-date').value).toBe('2026.02.20');
@@ -8967,12 +9111,27 @@ describe('applicationAutoFill', () => {
         const result = await applyAutoFillPlanFastAsync(plan);
 
         expect(result.failed).toEqual([]);
-        expect(doc.getElementById('certificate-registration-0').value).toBe('ADsP-049026379');
-        expect(doc.getElementById('certificate-registration-1').value).toBe('24202030579W');
-        expect(doc.getElementById('certificate-registration-2').value).toBe('BAE-007005143');
-        expect(doc.getElementById('certificate-registration-3').value).toBe('SQLD-046012160');
-        expect(doc.getElementById('certificate-issuer-3').value).toBe('\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0');
-        expect(doc.getElementById('certificate-date-3').value).toBe('2022-09-30');
+        expect([0, 1, 2, 3].map((index) => ({
+            issuer: doc.getElementById(`certificate-issuer-${index}`).value,
+            acquiredDate: doc.getElementById(`certificate-date-${index}`).value,
+            registrationNumber: doc.getElementById(`certificate-registration-${index}`).value
+        }))).toEqual([{
+            issuer: '\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0',
+            acquiredDate: '2026-06-05',
+            registrationNumber: 'ADsP-049026379'
+        }, {
+            issuer: '\uD55C\uAD6D\uC0B0\uC5C5\uC778\uB825\uACF5\uB2E8',
+            acquiredDate: '2024-09-10',
+            registrationNumber: '24202030579W'
+        }, {
+            issuer: '\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0',
+            acquiredDate: '2023-12-22',
+            registrationNumber: 'BAE-007005143'
+        }, {
+            issuer: '\uD55C\uAD6D\uB370\uC774\uD130\uC0B0\uC5C5\uC9C4\uD765\uC6D0',
+            acquiredDate: '2022-09-30',
+            registrationNumber: 'SQLD-046012160'
+        }]);
     });
 
     it('EXT-032: selects SQLD in the fourth Kakao ATS certificate row without explicit row classes', async () => {
@@ -9815,6 +9974,44 @@ describe('applicationAutoFill', () => {
         ]));
     });
 
+    it('EXT-022 malformed DOM: reports unsupported unlabeled fields without false filling manual controls', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        const detachedRoot = doc.createElement('form');
+        detachedRoot.innerHTML = '<label>Name<input id="detached-name" /></label>';
+        doc.body.innerHTML = `
+      <form>
+        <nav style="display: none">
+          <button type="button">\uC790\uACA9\uC99D</button>
+          <button type="button">\uC9C0\uC6D0\uBD84\uC57C</button>
+        </nav>
+        <label for="duplicate-field">Name</label>
+        <input id="duplicate-field" type="hidden" value="shadow" />
+        <input id="duplicate-field" aria-label="Name" />
+        <div class="field">
+          <span>\uC9C1\uC811 \uC785\uB825</span>
+          <input id="salary-field" name="desiredCompensation" required />
+          <button type="button" role="option">\uC9C1\uC811 \uB4F1\uB85D</button>
+        </div>
+      </form>
+    `;
+
+        const detachedResult = applyAutoFillPlan(buildAutoFillPlan(detachedRoot, profile));
+        const result = applyAutoFillPlan(buildAutoFillPlan(doc, profile));
+
+        expect(detachedRoot.querySelector('#detached-name').value).toBe('');
+        expect(detachedResult.filledCount).toBe(0);
+        expect(doc.getElementById('salary-field').value).toBe('');
+        expect(result.filled).toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'basicInfo.nameKo', value: 'Hong Gil Dong' })
+        ]));
+        expect(result.failed).toEqual(expect.arrayContaining([
+            expect.objectContaining({ label: '\uD76C\uB9DD\uC5F0\uBD09', reason: 'unsupported_profile_field' })
+        ]));
+        expect(result.failed).not.toEqual(expect.arrayContaining([
+            expect.objectContaining({ label: '\uC9C1\uC811 \uC785\uB825', reason: 'required_field' })
+        ]));
+    });
+
     it('EXT-022: does not plan section-scoped fields when only unrelated page navigation is visible', () => {
         const doc = document.implementation.createHTMLDocument('application');
         doc.body.innerHTML = `
@@ -10435,6 +10632,62 @@ describe('applicationAutoFill', () => {
             expect(result.mode).toBe('applied');
             expect(result.failed.some((item) => ['autofill_timeout', 'control_not_ready'].includes(item.reason))).toBe(true);
             expect(result.failedCount).toBeGreaterThan(0);
+        }
+        finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('EXT-031: returns a partial result when school autocomplete never renders deferred controls before timeout', async () => {
+        vi.useFakeTimers();
+        try {
+            const doc = document.implementation.createHTMLDocument('application');
+            doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uB300\uD559\uAD50">
+          <h3>\uB300\uD559\uAD50</h3>
+          <label>\uD559\uAD50\uC815\uBCF4<input id="university-name" placeholder="\uD559\uAD50\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694." /></label>
+          <div id="university-detail"></div>
+        </section>
+      </form>
+    `;
+            const schoolInput = doc.getElementById('university-name');
+            const plan = {
+                fillable: [{
+                    element: schoolInput,
+                    fieldKey: 'education.universities.0.schoolName',
+                    label: '\uD559\uAD50\uBA85',
+                    value: '\uBD80\uC0B0\uB300\uD559\uAD50',
+                    autocompleteSearchControl: true,
+                    relatedValues: [{
+                        key: 'education.universities.0.startDate',
+                        label: '\uC785\uD559\uC77C',
+                        value: '2020.03.02'
+                    }, {
+                        key: 'education.universities.0.endDate',
+                        label: '\uC878\uC5C5\uC77C',
+                        value: '2026.02.20'
+                    }]
+                }],
+                failed: [],
+                skipped: [],
+                copyCandidates: []
+            };
+
+            const resultPromise = applyAutoFillPlanAsync(plan);
+            await vi.advanceTimersByTimeAsync(8000);
+            const result = await resultPromise;
+
+            expect(schoolInput.value).toBe('\uBD80\uC0B0\uB300\uD559\uAD50');
+            expect(result.filled).not.toEqual(expect.arrayContaining([
+                expect.objectContaining({ fieldKey: 'education.universities.0.schoolName' })
+            ]));
+            expect(result.failed).toEqual(expect.arrayContaining([
+                expect.objectContaining({ fieldKey: 'education.universities.0.schoolName', reason: 'control_not_ready' })
+            ]));
+            expect(result.copyCandidates).toEqual(expect.arrayContaining([
+                expect.objectContaining({ key: 'education.universities.0.schoolName', value: '\uBD80\uC0B0\uB300\uD559\uAD50' })
+            ]));
         }
         finally {
             vi.useRealTimers();

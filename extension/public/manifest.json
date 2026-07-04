@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "EZ-ONE Job Saver",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Preview and save supported job postings to EZ-ONE.",
   "icons": {
     "16": "icon-16.png",

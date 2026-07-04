@@ -30,6 +30,8 @@ let applicationFormElementCaches = new WeakMap();
 const activeApplicationFormElementCacheDocuments = new Set();
 let applicationFormElementCacheDepth = 0;
 let applicationAutoFillPlanCache = null;
+let applicationFormSignatureElementIds = new WeakMap();
+let applicationFormSignatureNextElementId = 1;
 
 export function resetApplicationAutoFillRuntimeForTests() {
     for (const documentRef of activeApplicationFormElementCacheDocuments) {
@@ -41,6 +43,8 @@ export function resetApplicationAutoFillRuntimeForTests() {
     activeApplicationFormElementCacheDocuments.clear();
     applicationFormElementCacheDepth = 0;
     applicationAutoFillPlanCache = null;
+    applicationFormSignatureElementIds = new WeakMap();
+    applicationFormSignatureNextElementId = 1;
 }
 
 const BASIC_FIELDS = [
@@ -258,7 +262,7 @@ function buildAutoFillPlanInternal(documentRef = document, profile) {
             addMissingProfileValueForAvailableProfileScope(failed, directKey, values);
         }
         else {
-            const unsupported = unsupportedProfileFieldFromText(context.displayLabel);
+            const unsupported = unsupportedProfileFieldFromText([context.displayLabel, context.normalized].filter(Boolean).join(' '));
             if (!unsupported && isRequiredApplicationControl(control, context)) {
                 failed.push({ label: cleanRequiredFieldLabel(context.displayLabel || control.name || control.id || '입력칸'), reason: 'required_field' });
                 continue;
@@ -385,13 +389,19 @@ export function applyAutoFillPlan(plan) {
 function applyAutoFillPlanInternal(plan) {
     const filled = [];
     const failed = [...plan.failed];
+    const completedFieldKeys = new Set();
     for (const item of plan.fillable) {
+        if (hasCompletedAutoFillItem(completedFieldKeys, item)) continue;
         const result = setControlValue(resolveControlForFill(item), item.value, item);
         if (result.success) {
             filled.push(autoFillResultItem(item, result.value));
+            completedFieldKeys.add(autoFillCompletionKey(item));
         }
         else {
-            if (shouldIgnoreMissingControl(item, result.reason)) continue;
+            if (shouldIgnoreMissingControl(item, result.reason)) {
+                completedFieldKeys.add(autoFillCompletionKey(item));
+                continue;
+            }
             failed.push(autoFillFailureItem(item, result.reason));
         }
     }
@@ -416,6 +426,31 @@ function autoFillResultItem(item, value) {
     };
 }
 
+function autoFillCompletionKey(item) {
+    if (item?.completionKey) return `completion:${item.completionKey}`;
+    if (!item?.element || usesFieldLevelDuplicateCompletion(item.element)) {
+        return autoFillFieldCompletionKey(item?.fieldKey);
+    }
+    return `control:${item.fieldKey}|${applicationFormSignatureElementId(item.element)}`;
+}
+
+function hasCompletedAutoFillItem(completedKeys, item) {
+    return completedKeys.has(autoFillCompletionKey(item)) ||
+        completedKeys.has(autoFillFieldCompletionKey(item?.fieldKey));
+}
+
+function autoFillFieldCompletionKey(fieldKey) {
+    return `field:${fieldKey ?? ''}`;
+}
+
+function usesFieldLevelDuplicateCompletion(control) {
+    const tagName = control?.tagName?.toLowerCase();
+    if (tagName === 'textarea' || isAutocompleteSearchControl(control)) return true;
+    if (tagName !== 'input') return false;
+    const type = (control.getAttribute('type') ?? 'text').toLowerCase();
+    return !['radio', 'checkbox', 'file', 'button', 'submit', 'reset', 'hidden'].includes(type);
+}
+
 function autoFillFailureItem(item, reason) {
     return {
         fieldKey: item.fieldKey,
@@ -438,7 +473,7 @@ export function applyAutoFillPlanFast(plan) {
         const blockedSectionPrefixes = [];
 
         for (const item of plan.fillable) {
-            if (completedFieldKeys.has(item.fieldKey)) continue;
+            if (hasCompletedAutoFillItem(completedFieldKeys, item)) continue;
             if (blockedSectionPrefixes.some((prefix) => String(item.fieldKey ?? '').startsWith(prefix))) {
                 failed.push(autoFillFailureItem(item, 'control_not_ready'));
                 continue;
@@ -446,7 +481,7 @@ export function applyAutoFillPlanFast(plan) {
             const element = resolveControlForFastFill(item);
             if (!element) {
                 if (shouldIgnoreMissingControl(item, 'control_not_ready')) {
-                    completedFieldKeys.add(item.fieldKey);
+                    completedFieldKeys.add(autoFillCompletionKey(item));
                     continue;
                 }
                 failed.push(autoFillFailureItem(item, 'control_not_ready'));
@@ -456,7 +491,7 @@ export function applyAutoFillPlanFast(plan) {
             const result = setControlValueFast(element, item.value, item);
             if (!result.success) {
                 if (shouldIgnoreMissingControl(item, result.reason)) {
-                    completedFieldKeys.add(item.fieldKey);
+                    completedFieldKeys.add(autoFillCompletionKey(item));
                     continue;
                 }
                 failed.push(autoFillFailureItem(item, result.reason));
@@ -464,7 +499,7 @@ export function applyAutoFillPlanFast(plan) {
                 continue;
             }
             filled.push(autoFillResultItem(item, result.value));
-            completedFieldKeys.add(item.fieldKey);
+            completedFieldKeys.add(autoFillCompletionKey(item));
         }
 
         const visibleFilled = uniqueAutoFillResultItems(filled);
@@ -488,7 +523,7 @@ export async function applyAutoFillPlanFastAsync(plan) {
         const deadlineAt = Date.now() + AUTOFILL_APPLY_MAX_DURATION_MS;
 
         for (const item of plan.fillable) {
-            if (completedFieldKeys.has(item.fieldKey)) continue;
+            if (hasCompletedAutoFillItem(completedFieldKeys, item)) continue;
             if (blockedSectionPrefixes.some((prefix) => String(item.fieldKey ?? '').startsWith(prefix))) {
                 failed.push(autoFillFailureItem(item, 'control_not_ready'));
                 continue;
@@ -496,7 +531,7 @@ export async function applyAutoFillPlanFastAsync(plan) {
             const element = await resolveControlForFastFillAsync(item, deadlineAt);
             if (!element) {
                 if (shouldIgnoreMissingControl(item, 'control_not_ready')) {
-                    completedFieldKeys.add(item.fieldKey);
+                    completedFieldKeys.add(autoFillCompletionKey(item));
                     continue;
                 }
                 failed.push(autoFillFailureItem(item, 'control_not_ready'));
@@ -506,7 +541,7 @@ export async function applyAutoFillPlanFastAsync(plan) {
             const result = await setControlValueFastAsync(element, item.value, item, deadlineAt);
             if (!result.success) {
                 if (shouldIgnoreMissingControl(item, result.reason)) {
-                    completedFieldKeys.add(item.fieldKey);
+                    completedFieldKeys.add(autoFillCompletionKey(item));
                     await yieldToBrowser();
                     continue;
                 }
@@ -516,10 +551,10 @@ export async function applyAutoFillPlanFastAsync(plan) {
                 continue;
             }
             filled.push(autoFillResultItem(item, result.value));
-            completedFieldKeys.add(item.fieldKey);
+            completedFieldKeys.add(autoFillCompletionKey(item));
             if (Array.isArray(result.extraFilled)) {
                 filled.push(...result.extraFilled);
-                result.extraFilled.forEach((extraItem) => completedFieldKeys.add(extraItem.fieldKey));
+                result.extraFilled.forEach((extraItem) => completedFieldKeys.add(autoFillCompletionKey(extraItem)));
             }
             await yieldToBrowser();
         }
@@ -569,14 +604,14 @@ async function applyAutoFillPlanAsyncInternal(plan) {
     const deadlineAt = Date.now() + AUTOFILL_APPLY_MAX_DURATION_MS;
     for (let index = 0; index < plan.fillable.length; index += 1) {
         const item = plan.fillable[index];
-        if (completedFieldKeys.has(item.fieldKey)) continue;
+        if (hasCompletedAutoFillItem(completedFieldKeys, item)) continue;
         if (!hasAutoFillTimeRemaining(deadlineAt)) {
             addAutofillTimeoutFailures(failed, plan.fillable.slice(index), completedFieldKeys);
             break;
         }
         if (certificatePrimaryAlreadySelected(item.element?.ownerDocument, item.fieldKey, item.value)) {
             filled.push(autoFillResultItem(item, item.value));
-            completedFieldKeys.add(item.fieldKey);
+            completedFieldKeys.add(autoFillCompletionKey(item));
             continue;
         }
         const element = await resolveControlForFillAsync(item, deadlineAt);
@@ -586,31 +621,31 @@ async function applyAutoFillPlanAsyncInternal(plan) {
             break;
         }
         if (!element && shouldIgnoreMissingControl(item, 'control_not_ready')) {
-            completedFieldKeys.add(item.fieldKey);
+            completedFieldKeys.add(autoFillCompletionKey(item));
             continue;
         }
         if (!element && educationMajorDetailAlreadySelected(item.element?.ownerDocument, item.fieldKey, item.value, item.relatedValues)) {
             filled.push(autoFillResultItem(item, item.value));
-            completedFieldKeys.add(item.fieldKey);
+            completedFieldKeys.add(autoFillCompletionKey(item));
             continue;
         }
         const result = await setControlValueAsync(element, item.value, item, deadlineAt);
         if (result.success) {
             filled.push(autoFillResultItem(item, result.value));
-            completedFieldKeys.add(item.fieldKey);
+            completedFieldKeys.add(autoFillCompletionKey(item));
             if (Array.isArray(result.extraFilled)) {
                 filled.push(...result.extraFilled);
-                result.extraFilled.forEach((extraItem) => completedFieldKeys.add(extraItem.fieldKey));
+                result.extraFilled.forEach((extraItem) => completedFieldKeys.add(autoFillCompletionKey(extraItem)));
             }
         }
         else {
             if (shouldIgnoreMissingControl(item, result.reason)) {
-                completedFieldKeys.add(item.fieldKey);
+                completedFieldKeys.add(autoFillCompletionKey(item));
                 continue;
             }
             if (result.reason === 'control_not_ready' && educationMajorDetailAlreadySelected(item.element?.ownerDocument, item.fieldKey, item.value, item.relatedValues)) {
                 filled.push(autoFillResultItem(item, item.value));
-                completedFieldKeys.add(item.fieldKey);
+                completedFieldKeys.add(autoFillCompletionKey(item));
                 continue;
             }
             const reason = !hasAutoFillTimeRemaining(deadlineAt) && result.reason === 'control_not_ready'
@@ -635,7 +670,7 @@ async function applyAutoFillPlanAsyncInternal(plan) {
 }
 
 function resolveControlForFastFill(item) {
-    if (!item.waitForControlBeforeFill && !item.requiresEnabledBeforeFill) return item.element ?? null;
+    if (!item.waitForControlBeforeFill && !item.requiresEnabledBeforeFill) return item.element?.isConnected ? item.element : null;
     if (item.element?.isConnected && (isEffectivelyDisabled(item.element) || (item.element.readOnly && !canFillReadonlyControlForField(item.element, item.fieldKey)))) return null;
     const nestedMajorNameKey = educationMajorNameKeyForNestedFieldKey(item.fieldKey);
     if (nestedMajorNameKey && item.waitForControlBeforeFill) return null;
@@ -644,7 +679,7 @@ function resolveControlForFastFill(item) {
 }
 
 async function resolveControlForFastFillAsync(item, deadlineAt = Number.POSITIVE_INFINITY) {
-    if (!item.waitForControlBeforeFill && !item.requiresEnabledBeforeFill) return item.element ?? null;
+    if (!item.waitForControlBeforeFill && !item.requiresEnabledBeforeFill) return item.element?.isConnected ? item.element : null;
     if (item.waitForControlBeforeFill) {
         return await resolveControlForFillAsync(item, deadlineAt);
     }
@@ -715,7 +750,7 @@ function setAutocompleteSearchValueFast(control, value, item = {}) {
 
 function addAutofillTimeoutFailures(failed, items, completedFieldKeys) {
     for (const item of items) {
-        if (completedFieldKeys.has(item.fieldKey)) continue;
+        if (hasCompletedAutoFillItem(completedFieldKeys, item)) continue;
         if (failed.some((failure) => failure.fieldKey === item.fieldKey && failure.reason === 'autofill_timeout')) continue;
         failed.push(autofillTimeoutFailure(item));
     }
@@ -761,6 +796,7 @@ export function buildApplicationFormSignature(documentRef = document) {
         .filter((element) => !isAutomationControl(element))
         .slice(0, 120)
         .map((element) => [
+            applicationFormSignatureElementId(element),
             element.tagName,
             element.getAttribute('type'),
             element.getAttribute('name'),
@@ -773,6 +809,16 @@ export function buildApplicationFormSignature(documentRef = document) {
             cleanText(choiceElementText(element))
         ].map((value) => value ?? '').join(':'))
         .join('|');
+}
+
+function applicationFormSignatureElementId(element) {
+    let id = applicationFormSignatureElementIds.get(element);
+    if (!id) {
+        id = applicationFormSignatureNextElementId;
+        applicationFormSignatureNextElementId += 1;
+        applicationFormSignatureElementIds.set(element, id);
+    }
+    return id;
 }
 
 function sortAutoFillItems(items) {
@@ -3144,6 +3190,8 @@ function setControlValue(control, value, item = {}) {
     if (!control) return { success: false, reason: 'control_not_ready' };
     if (isEffectivelyDisabled(control) && item.requiresEnabledBeforeFill) return { success: false, reason: 'control_not_ready' };
     let displayValue = value;
+    let expectedNativeValue = null;
+    let expectedCheckedValue = null;
     if (item.fileUploadControl) {
         const result = setFileInputValue(control, item.fileValue ?? value);
         if (!result.success) return result;
@@ -3176,18 +3224,27 @@ function setControlValue(control, value, item = {}) {
     else if (control.tagName.toLowerCase() === 'input' && ['radio', 'checkbox'].includes((control.getAttribute('type') ?? '').toLowerCase())) {
         clickElementWithoutScroll(control);
         control.checked = true;
+        expectedCheckedValue = true;
         displayValue = cleanText(labelText(control)) || cleanText(control.getAttribute('value')) || value;
     }
     else if (control.tagName.toLowerCase() === 'select') {
         const selectedValue = findMatchingSelectValue(control, value);
         if (selectedValue === null) return { success: false, reason: 'select_option_not_found' };
         setNativeControlValue(control, selectedValue);
+        expectedNativeValue = selectedValue;
         displayValue = value;
     }
     else {
         setNativeControlValue(control, value);
+        expectedNativeValue = value;
     }
     dispatchInputEvents(control);
+    if (expectedNativeValue !== null && cleanText(control.value) !== cleanText(expectedNativeValue)) {
+        return { success: false, reason: 'value_not_applied' };
+    }
+    if (expectedCheckedValue !== null && control.checked !== expectedCheckedValue) {
+        return { success: false, reason: 'value_not_applied' };
+    }
     return { success: true, value: displayValue };
 }
 
@@ -4001,12 +4058,18 @@ async function setAutocompleteSearchValueAsync(control, value, item = {}, deadli
                 extraFilled: await fillRelatedAutocompleteValues(control, item.relatedValues ?? [], { sourceFieldKey: item.fieldKey, deadlineAt })
             };
         }
-        if (schoolAutocompleteCanUseTypedValue(control, value, item) || schoolAutocompleteCanUseDeferredTypedValue(control, value, item)) {
+        if (schoolAutocompleteCanUseTypedValue(control, value, item)) {
             return {
                 success: true,
                 value,
                 extraFilled: await fillRelatedAutocompleteValues(control, item.relatedValues ?? [], { sourceFieldKey: item.fieldKey, deadlineAt })
             };
+        }
+        if (schoolAutocompleteCanUseDeferredTypedValue(control, value, item)) {
+            const extraFilled = await fillRelatedAutocompleteValues(control, item.relatedValues ?? [], { sourceFieldKey: item.fieldKey, deadlineAt });
+            return extraFilled.length > 0
+                ? { success: true, value, extraFilled }
+                : { success: false, reason: 'control_not_ready' };
         }
         if (certificateAutocompleteCanUseTypedValue(control, value, item)) {
             if (isCertificateNameFieldKey(item.fieldKey)) {
@@ -5022,7 +5085,7 @@ function resolveControlForFill(item) {
     if (isNestedEducationMajorValueKey(item.fieldKey)) {
         return findCurrentControlForFieldKey(item.element?.ownerDocument, item.fieldKey, item.value, { relatedValues: item.relatedValues }) ?? item.element;
     }
-    if (!item.requiresEnabledBeforeFill) return item.element;
+    if (!item.requiresEnabledBeforeFill) return item.element?.isConnected ? item.element : null;
     if (item.element?.isConnected && !item.element.disabled) return item.element;
     return findCurrentControlForFieldKey(item.element?.ownerDocument, item.fieldKey, item.value) ?? item.element;
 }
@@ -5053,7 +5116,7 @@ async function resolveControlForFillAsync(item, deadlineAt = Number.POSITIVE_INF
             return current && canFillControlForField(current, item.fieldKey) ? current : null;
         }, null, boundedAutoFillWaitMs(missingControlWaitTimeoutMs(item), deadlineAt));
     }
-    if (!item.requiresEnabledBeforeFill) return item.element;
+    if (!item.requiresEnabledBeforeFill) return item.element?.isConnected ? item.element : null;
     if (item.element?.isConnected && !isEffectivelyDisabled(item.element)) return item.element;
     return await waitForValue(() => {
         const current = findCurrentControlForFieldKey(item.element?.ownerDocument, item.fieldKey, item.value, { relatedValues: item.relatedValues });
@@ -6403,6 +6466,7 @@ function addSplitPhoneItems(controls, values, fillable, consumedControls) {
             fillable.push({
                 element: control,
                 fieldKey: phoneValue.key,
+                completionKey: `${phoneValue.key}.${index}`,
                 label: labelTextWithoutControl(label).trim() || phoneValue.label,
                 value: phoneSegments[index]
             });
@@ -7144,7 +7208,7 @@ function addTailoredActivityAssist(failed) {
 function unsupportedProfileFieldFromText(text) {
     const normalized = normalize(text);
     if (!normalized) return null;
-    if (normalized.includes('expectedsalary') || normalized.includes(normalize('희망연봉')) || normalized === 'salary') return '희망연봉';
+    if (normalized.includes('expectedsalary') || normalized.includes('desiredcompensation') || normalized.includes(normalize('희망연봉')) || normalized === 'salary') return '희망연봉';
     if (normalized.includes(normalize('지원분야')) || normalized.includes(normalize('모집분야')) || normalized.includes('applicationfield')) return '지원분야';
     if (normalized.includes(normalize('우편번호')) || normalized.includes('zipcode') || normalized.includes('postalcode')) return '우편번호';
     return null;
@@ -7310,7 +7374,7 @@ function mergeCopyCandidates(...groups) {
 }
 
 function isManualCopyCandidate(item) {
-    return Boolean(item?.fieldKey && cleanText(item.value) && ['disabled_control', 'control_not_ready', 'autofill_timeout', 'apply_failed', 'select_option_not_found'].includes(item.reason));
+    return Boolean(item?.fieldKey && cleanText(item.value) && ['disabled_control', 'control_not_ready', 'autofill_timeout', 'apply_failed', 'select_option_not_found', 'value_not_applied'].includes(item.reason));
 }
 
 function uniqueAutoFillResultItems(items) {

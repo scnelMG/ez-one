@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>EZ-ONE Autofill Stabilization Fixture</title>
+  </head>
+  <body>
+    <main>
+      <h1>Autofill Stabilization Fixture</h1>
+      <p>Submit attempts: <output data-qa="autofill-submit-count">0</output></p>
+
+      <form data-qa="autofill-fixture-form" aria-label="EZ-ONE controlled autofill form">
+        <section aria-label="Basic profile">
+          <label for="basic-name">Name</label>
+          <input id="basic-name" name="applicantName" autocomplete="name" data-qa="basic-name" />
+
+          <label for="basic-email">Email</label>
+          <input id="basic-email" name="email" type="email" autocomplete="email" data-qa="basic-email" />
+        </section>
+
+        <section aria-label="대학교 Education profile">
+          <h2>대학교</h2>
+          <label for="school-name">학교정보 School name</label>
+          <input
+            id="school-name"
+            name="schoolName"
+            list="education-autocomplete"
+            autocomplete="organization"
+            aria-label="학교정보 School name"
+            data-qa="school-name"
+          />
+          <datalist id="education-autocomplete" data-qa="education-autocomplete">
+            <option value="Korea University"></option>
+            <option value="Seoul National University"></option>
+          </datalist>
+
+          <label for="major-name">Major</label>
+          <input id="major-name" name="majorName" autocomplete="off" data-qa="major-name" />
+        </section>
+
+        <section aria-label="Credential profile">
+          <label for="language-name">Language</label>
+          <input id="language-name" name="languageName" autocomplete="off" data-qa="language-name" />
+
+          <label for="certificate-name">Certificate</label>
+          <input
+            id="certificate-name"
+            name="certificateName"
+            list="certificate-autocomplete"
+            autocomplete="off"
+            data-qa="certificate-name"
+          />
+          <datalist id="certificate-autocomplete" data-qa="certificate-autocomplete">
+            <option value="SQLD"></option>
+            <option value="OPIc IH"></option>
+          </datalist>
+        </section>
+
+        <section aria-label="Unsupported and excluded fields">
+          <label for="unsupported-field">Unsupported manual field</label>
+          <input id="unsupported-field" name="unsupportedField" data-qa="unsupported-field" />
+
+          <label for="essay-field">Essay answer</label>
+          <textarea id="essay-field" name="essayAnswer" data-qa="essay-field"></textarea>
+        </section>
+
+        <button type="submit" data-qa="fixture-submit-button">Submit</button>
+      </form>
+    </main>
+
+    <script>
+      (() => {
+        const form = document.querySelector('[data-qa="autofill-fixture-form"]');
+        const submitCount = document.querySelector('[data-qa="autofill-submit-count"]');
+        let attempts = 0;
+
+        form.addEventListener('submit', (event) => {
+          event.preventDefault();
+          attempts += 1;
+          submitCount.value = String(attempts);
+          submitCount.textContent = String(attempts);
+        });
+
+        window.__ezoneAutofillFixture = {
+          getSubmitCount: () => attempts
+        };
+      })();
+    </script>
+  </body>
+</html>
