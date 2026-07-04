@@ -11,10 +11,40 @@ import {
 } from '../shared/auth/extensionAuth';
 import './popup.css';
 
-const apiBaseUrl = import.meta.env.VITE_EXTENSION_API_BASE_URL ?? 'http://localhost:8080/api';
-const apiFallbackBaseUrls = import.meta.env.VITE_EXTENSION_API_FALLBACK_BASE_URLS ?? 'http://127.0.0.1:8080/api';
-const webAppUrl = import.meta.env.VITE_EXTENSION_WEB_APP_URL ?? 'http://localhost:5173';
+const webAppUrl = resolveExtensionWebAppUrl(import.meta.env.VITE_EXTENSION_WEB_APP_URL);
+const apiBaseUrl = resolveExtensionApiBaseUrl(import.meta.env.VITE_EXTENSION_API_BASE_URL, webAppUrl);
+const apiFallbackBaseUrls = import.meta.env.VITE_EXTENSION_API_FALLBACK_BASE_URLS ?? '';
 const AUTH_EXPIRED_MESSAGE = '\uB85C\uADF8\uC778\uC774 \uB9CC\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4';
+
+function resolveExtensionWebAppUrl(configuredUrl) {
+    return String(configuredUrl ?? '').trim();
+}
+
+function resolveExtensionApiBaseUrl(configuredApiBaseUrl, configuredWebAppUrl) {
+    const explicitApiBaseUrl = String(configuredApiBaseUrl ?? '').trim();
+    if (explicitApiBaseUrl) {
+        return explicitApiBaseUrl;
+    }
+    const webAppOrigin = parseHttpOrigin(configuredWebAppUrl);
+    return webAppOrigin ? `${webAppOrigin}/api` : '';
+}
+
+function parseHttpOrigin(value) {
+    const rawUrl = String(value ?? '').trim();
+    if (!rawUrl) {
+        return '';
+    }
+    try {
+        const url = new URL(rawUrl);
+        if (url.protocol === 'http:' || url.protocol === 'https:') {
+            return url.origin;
+        }
+    }
+    catch {
+        return '';
+    }
+    return '';
+}
 const UNSUPPORTED_JOB_PAGE_MESSAGE = '채용공고 목록이나 캘린더에서는 저장할 공고를 정확히 찾을 수 없어요.';
 const JOB_EXTRACTOR_VERSION = '2026-06-19-jasoseol-selected-root-v13';
 const POSTING_WATCH_INTERVAL_MS = 1200;
@@ -1531,7 +1561,7 @@ function createLanguageTestAutoFillGroups(items) {
         title: '\uC5B4\uD559',
         items: languageItems,
         itemCount: languageGroups.size,
-        summaryLines: summaryLines.length > 0 ? summaryLines : [`${languageGroups.size}媛??댄븰`],
+        summaryLines: summaryLines.length > 0 ? summaryLines : [`${languageGroups.size}개 어학`],
         displayOrder: Math.min(...languageItems.map(normalizedDisplayOrder))
     }];
 }
@@ -1606,7 +1636,7 @@ function createCareerAutoFillGroups(items) {
         title: '\uACBD\uB825',
         items: careerItems,
         itemCount: careerGroups.size,
-        summaryLines: summaryLines.length > 0 ? summaryLines : [`${careerGroups.size}媛??쎈젰`],
+        summaryLines: summaryLines.length > 0 ? summaryLines : [`${careerGroups.size}개 경력`],
         displayOrder: Math.min(...careerItems.map(normalizedDisplayOrder))
     }];
 }
@@ -1806,7 +1836,7 @@ function createAutoFillResultListItem(source, mapper) {
         const valueLabel = document.createElement('small');
         const valueText = document.createElement('code');
         valueRow.className = 'autofill-result-value';
-        valueLabel.textContent = mapped.valueLabel ?? '\uAC12';
+        valueLabel.textContent = mapped.valueLabel ?? '값';
         valueText.textContent = mapped.value;
         valueRow.append(valueLabel, valueText);
         item.append(valueRow);
@@ -1860,7 +1890,7 @@ function getAutofillFailureMessage(itemOrReason) {
             : '\uC9C0\uC6D0\uC11C\uC5D0\uC11C \uC9C1\uC811 \uD655\uC778\uD574 \uC8FC\uC138\uC694.';
     }
     if (reason === 'essay_or_long_text') {
-        return '자기소개서 또는 장문 입력칸은 자동 입력하지 않았습니다. 직접 검토해 주세요.';
+        return '자기소개서 또는 긴 문항 입력칸은 자동 입력하지 않습니다. 직접 검토해 주세요.';
     }
     if (reason === 'manual_free_text') {
         return '기업/직무에 맞춰 직접 작성해 주세요.';

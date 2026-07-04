@@ -18,6 +18,8 @@ import java.util.stream.Collectors;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.util.StringUtils;
 
 @Service
 @Transactional
@@ -27,13 +29,21 @@ public class StudyService {
     private final UserAccountMapper userAccountMapper;
     private final EmailService emailService;
     private final P1WorkspaceService p1WorkspaceService;
+    private final String publicBaseUrl;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public StudyService(StudyMapper studyMapper, UserAccountMapper userAccountMapper, EmailService emailService, P1WorkspaceService p1WorkspaceService) {
+    public StudyService(
+        StudyMapper studyMapper,
+        UserAccountMapper userAccountMapper,
+        EmailService emailService,
+        P1WorkspaceService p1WorkspaceService,
+        @Value("${app.public-base-url:http://localhost:5173}") String publicBaseUrl
+    ) {
         this.studyMapper = studyMapper;
         this.userAccountMapper = userAccountMapper;
         this.emailService = emailService;
         this.p1WorkspaceService = p1WorkspaceService;
+        this.publicBaseUrl = trimTrailingSlash(publicBaseUrl);
     }
 
     public UserSearchDto searchUserByEmail(String email) {
@@ -453,7 +463,7 @@ public class StudyService {
         requireStudyLeader(studyId, userEmail);
         
         try {
-            String fileName = java.util.UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
+            String fileName = java.util.UUID.randomUUID().toString() + "_" + sanitizeUploadFileName(file.getOriginalFilename());
             java.nio.file.Path uploadDir = java.nio.file.Paths.get("uploads", "study_images");
             if (!java.nio.file.Files.exists(uploadDir)) {
                 java.nio.file.Files.createDirectories(uploadDir);
@@ -461,7 +471,7 @@ public class StudyService {
             java.nio.file.Path filePath = uploadDir.resolve(fileName);
             java.nio.file.Files.copy(file.getInputStream(), filePath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
 
-            String imageUrl = "http://localhost:8080/uploads/study_images/" + fileName;
+            String imageUrl = publicBaseUrl + "/uploads/study_images/" + fileName;
             studyMapper.updateStudyImageUrl(studyId, imageUrl);
         } catch (java.io.IOException e) {
             throw new RuntimeException("이미지 업로드에 실패했습니다.", e);
@@ -554,5 +564,18 @@ public class StudyService {
         } catch (NumberFormatException exception) {
             throw new IllegalArgumentException("Workspace not found");
         }
+    }
+
+    private String sanitizeUploadFileName(String originalFilename) {
+        String cleanedName = StringUtils.cleanPath(originalFilename == null ? "study-image" : originalFilename);
+        String fileName = java.nio.file.Paths.get(cleanedName).getFileName().toString();
+        return fileName.replaceAll("[^A-Za-z0-9._-]", "_");
+    }
+
+    private String trimTrailingSlash(String value) {
+        if (value == null || value.isBlank()) {
+            return "http://localhost:5173";
+        }
+        return value.replaceAll("/+$", "");
     }
 }

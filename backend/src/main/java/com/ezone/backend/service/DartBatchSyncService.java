@@ -22,6 +22,9 @@ public class DartBatchSyncService {
     @Value("${OPENDART_API_KEY:}")
     private String apiKey;
 
+    @Value("${opendart.api-base-url}")
+    private String apiBaseUrl;
+
     public DartBatchSyncService(DartBatchMapper dartBatchMapper) {
         this.dartBatchMapper = dartBatchMapper;
         this.restTemplate = new RestTemplate();
@@ -52,7 +55,7 @@ public class DartBatchSyncService {
     }
 
     private void syncCompanyDetails(String corpCode) {
-        String url = String.format("https://opendart.fss.or.kr/api/company.json?crtfc_key=%s&corp_code=%s", apiKey, corpCode);
+        String url = String.format("%s/company.json?crtfc_key=%s&corp_code=%s", trimTrailingSlash(apiBaseUrl), apiKey, corpCode);
         
         try {
             @SuppressWarnings("unchecked")
@@ -102,5 +105,16 @@ public class DartBatchSyncService {
             domain = domain.substring(0, slashIndex);
         }
         return domain;
+    }
+
+    private String trimTrailingSlash(String value) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+        String trimmed = value.trim();
+        while (trimmed.endsWith("/")) {
+            trimmed = trimmed.substring(0, trimmed.length() - 1);
+        }
+        return trimmed;
     }
 }

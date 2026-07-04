@@ -45,8 +45,17 @@ class DartGmsLiveSmokeEvaluationTest {
         assertThat(env.gmsApiKey()).as("GMS_API_KEY is required for live smoke evaluation").isNotBlank();
 
         RestTemplate restTemplate = restTemplate();
-        OpenDartClient openDartClient = new OpenDartHttpClient(restTemplate, env.openDartApiKey());
-        GmsKeyStatus keyStatus = new GmsKeyInfoHttpClient(restTemplate, env.gmsApiKey()).getKeyStatus();
+        OpenDartClient openDartClient = new OpenDartHttpClient(
+            restTemplate,
+            env.openDartApiKey(),
+            env.openDartApiBaseUrl(),
+            env.openDartViewerBaseUrl()
+        );
+        GmsKeyStatus keyStatus = new GmsKeyInfoHttpClient(
+            restTemplate,
+            env.gmsApiKey(),
+            env.gmsKeyInfoUrl()
+        ).getKeyStatus();
 
         List<LiveSmokeResult> results = new ArrayList<>();
         if (!keyStatus.available()) {
@@ -285,7 +294,10 @@ class DartGmsLiveSmokeEvaluationTest {
 
     private record LiveSmokeEnv(
         String openDartApiKey,
+        String openDartApiBaseUrl,
+        String openDartViewerBaseUrl,
         String gmsApiKey,
+        String gmsKeyInfoUrl,
         String gmsBaseUrl,
         String analysisModel
     ) {
@@ -305,7 +317,10 @@ class DartGmsLiveSmokeEvaluationTest {
             System.getenv().forEach(values::put);
             return new LiveSmokeEnv(
                 values.getOrDefault("OPENDART_API_KEY", ""),
+                values.getOrDefault("OPENDART_API_BASE_URL", "https://opendart.fss.or.kr/api"),
+                values.getOrDefault("OPENDART_VIEWER_BASE_URL", "https://dart.fss.or.kr/dsaf001/main.do"),
                 values.getOrDefault("GMS_API_KEY", ""),
+                values.getOrDefault("GMS_KEY_INFO_URL", "https://gms.ssafy.io/gmsapi/key-info"),
                 values.getOrDefault("GMS_AI_BASE_URL", "https://gms.ssafy.io/gmsapi/api.openai.com/v1"),
                 values.getOrDefault("DART_AI_ANALYSIS_MODEL", "gpt-4.1")
             );

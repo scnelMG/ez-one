@@ -20,6 +20,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -32,7 +33,6 @@ import org.xml.sax.InputSource;
 @Service
 public class OpenDartHttpClient implements OpenDartClient {
 
-    private static final String BASE_URL = "https://opendart.fss.or.kr/api";
     private static final int DOCUMENT_TEXT_LIMIT = 24000;
     private static final int KEYWORD_WINDOW_SIZE = 5000;
     private static final List<String> JOB_APPLICATION_SIGNAL_KEYWORDS = List.of(
@@ -49,14 +49,25 @@ public class OpenDartHttpClient implements OpenDartClient {
 
     private final RestTemplate restTemplate;
     private final String apiKey;
+    private final String apiBaseUrl;
+    private final String viewerBaseUrl;
     private volatile Map<String, CorpCode> corpCodeCache;
 
+    @Autowired
     public OpenDartHttpClient(
         RestTemplate restTemplate,
-        @Value("${opendart.api-key:}") String apiKey
+        @Value("${opendart.api-key:}") String apiKey,
+        @Value("${opendart.api-base-url}") String apiBaseUrl,
+        @Value("${opendart.viewer-base-url}") String viewerBaseUrl
     ) {
         this.restTemplate = restTemplate;
         this.apiKey = apiKey;
+        this.apiBaseUrl = trimTrailingSlash(apiBaseUrl);
+        this.viewerBaseUrl = StringUtils.hasText(viewerBaseUrl) ? viewerBaseUrl.trim() : "";
+    }
+
+    OpenDartHttpClient(RestTemplate restTemplate, String apiKey) {
+        this(restTemplate, apiKey, "", "");
     }
 
     @Override
@@ -91,7 +102,7 @@ public class OpenDartHttpClient implements OpenDartClient {
         String threeYearsAgo = LocalDate.now(ZoneId.of("Asia/Seoul"))
             .minusYears(3)
             .format(DateTimeFormatter.BASIC_ISO_DATE);
-        String uri = UriComponentsBuilder.fromHttpUrl(BASE_URL + "/list.json")
+        String uri = UriComponentsBuilder.fromUriString(apiBaseUrl + "/list.json")
             .queryParam("crtfc_key", apiKey)
             .queryParam("corp_code", corpCode.corpCode())
             .queryParam("bgn_de", threeYearsAgo)
@@ -118,7 +129,9 @@ public class OpenDartHttpClient implements OpenDartClient {
                 row.path("rcept_dt").asText(""),
                 row.path("corp_name").asText(StringUtils.hasText(corpCode.corpName()) ? corpCode.corpName() : fallbackCompanyName),
                 false,
-                "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=" + rceptNo
+                UriComponentsBuilder.fromUriString(viewerBaseUrl)
+                    .queryParam("rcpNo", rceptNo)
+                    .toUriString()
             ));
         }
         return disclosures;
@@ -156,7 +169,7 @@ public class OpenDartHttpClient implements OpenDartClient {
         if (!StringUtils.hasText(apiKey) || !StringUtils.hasText(rceptNo)) {
             return "";
         }
-        String uri = UriComponentsBuilder.fromHttpUrl(BASE_URL + "/document.xml")
+        String uri = UriComponentsBuilder.fromUriString(apiBaseUrl + "/document.xml")
             .queryParam("crtfc_key", apiKey)
             .queryParam("rcept_no", rceptNo)
             .toUriString();
@@ -207,7 +220,7 @@ public class OpenDartHttpClient implements OpenDartClient {
     }
 
     private Map<String, CorpCode> loadCorpCodes() {
-        String uri = UriComponentsBuilder.fromHttpUrl(BASE_URL + "/corpCode.xml")
+        String uri = UriComponentsBuilder.fromUriString(apiBaseUrl + "/corpCode.xml")
             .queryParam("crtfc_key", apiKey)
             .toUriString();
         byte[] zipped = restTemplate.getForObject(uri, byte[].class);
@@ -301,6 +314,17 @@ public class OpenDartHttpClient implements OpenDartClient {
             return "";
         }
         return matches.item(0).getTextContent();
+    }
+
+    private static String trimTrailingSlash(String value) {
+        if (!StringUtils.hasText(value)) {
+            return "";
+        }
+        String trimmed = value.trim();
+        while (trimmed.endsWith("/")) {
+            trimmed = trimmed.substring(0, trimmed.length() - 1);
+        }
+        return trimmed;
     }
 
     private static DocumentBuilderFactory documentBuilderFactory() throws Exception {

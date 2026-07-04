@@ -148,7 +148,7 @@ describe('DocumentProfilePage', () => {
             '경력',
             '프로젝트',
             '자격증 / 어학',
-            '수상 / 교육 / 대외활동'
+            '수상 / 교육 / 학내외 활동'
         ]);
     });
 
@@ -951,15 +951,15 @@ describe('DocumentProfilePage', () => {
         }));
     });
 
-    it('PROFILE-021: separates projects from external activities', async () => {
+    it('PROFILE-021: labels school activities and includes team projects as an activity type', async () => {
         const wrapper = await mountPage();
 
         await wrapper.get('[data-testid="section-other"]').trigger('click');
         const activityType = wrapper.get('[data-testid="activities-0-activityType"]');
 
-        expect(wrapper.get('h2').text()).toContain('수상 / 교육 / 대외활동');
-        expect(wrapper.text()).toContain('대외활동');
-        expect(activityType.text()).not.toContain('프로젝트');
+        expect(wrapper.get('h2').text()).toContain('수상 / 교육 / 학내외 활동');
+        expect(wrapper.text()).toContain('학내외 활동');
+        expect(activityType.text()).toContain('팀 프로젝트');
         expect(activityType.text()).toContain('동아리');
         expect(activityType.text()).toContain('서포터즈');
         expect(wrapper.get('[data-testid="activities-0-organization"]').element.closest('label')?.textContent)

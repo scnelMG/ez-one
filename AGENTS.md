@@ -38,6 +38,23 @@ Before implementing, identify the requirement ID. If there is no requirement ID,
 | Stack/setup decisions | `docs/17_tech-stack-and-local-development.md` |
 | External collection/sync | `docs/06_policies.md`, `docs/28_data-collection-mm.md` |
 
+## Init-Deep Project Map
+
+Generated on 2026-07-01 from branch `codex/post-release-ux-polish` at commit `7034e186`.
+
+This repository is a multi-surface product: Spring Boot API, Vue SPA, Chrome extension, MySQL/Flyway data model, EC2/Nginx/systemd deployment scripts, and numbered product docs. Generated outputs and operational state exist in-tree, so distinguish source from artifacts before editing.
+
+| Area | Primary Paths | Notes |
+| --- | --- | --- |
+| Backend API | `backend/src/main/java/com/ezone/backend`, `backend/src/main/resources` | Layered Spring MVC/MyBatis service with migrations under `db/migration`. |
+| Frontend SPA | `frontend/src/pages`, `frontend/src/features`, `frontend/src/stores`, `frontend/src/shared` | Route pages compose feature modules and shared UI. |
+| Chrome Extension | `extension/src/background.js`, `extension/src/content`, `extension/src/popup`, `extension/src/shared` | Multi-entry Vite extension with job extraction and document input assistance. |
+| Product Specs | `docs` | Numbered docs are source-of-truth, not passive notes. |
+| Release/Ops | `scripts`, `infra` | Release gates, artifact packaging, EC2 deploy, rollback, canary, Nginx/systemd templates. |
+| Do Not Treat As Source | `backend/target`, `frontend/dist`, `extension/dist`, `release-artifacts`, `.codex-run-logs`, `secrets` | Build outputs, run logs, artifacts, or private environment files. |
+
+Code map centrality is currently unmeasured because no LSP server is installed in this Codex environment and no codegraph MCP tools are available. Use the directory-specific `AGENTS.md` files for local orientation and the docs table above for requirement authority.
+
 ## Non-Negotiables
 
 - Do not change the approved stack without explicit user approval.

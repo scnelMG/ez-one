@@ -27,7 +27,11 @@ public interface CompanySyncMapper {
     Boolean hasCompleteProfile(@Param("companyId") Long companyId);
 
     @Insert("INSERT INTO company_profiles (company_id, address, employee_count, founded_at, homepage_url, company_category, source_priority) " +
-            "VALUES (#{companyId}, #{address}, #{employeeCount}, #{foundedAt}, #{homepageUrl}, #{companyCategory}, #{sourcePriority})")
+            "VALUES (#{companyId}, #{address}, #{employeeCount}, #{foundedAt}, #{homepageUrl}, #{companyCategory}, #{sourcePriority}) " +
+            "ON DUPLICATE KEY UPDATE address = #{address}, employee_count = #{employeeCount}, " +
+            "founded_at = COALESCE(#{foundedAt}, founded_at), homepage_url = #{homepageUrl}, " +
+            "company_category = #{companyCategory}, source_priority = #{sourcePriority}, " +
+            "source_updated_at = CURRENT_TIMESTAMP")
     void insertCompanyProfile(
             @Param("companyId") Long companyId,
             @Param("address") String address,

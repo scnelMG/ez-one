@@ -146,7 +146,7 @@ class StudyServiceAuthorizationTest {
     }
 
     private StudyService service() {
-        return new StudyService(studyMapper, userAccountMapper, emailService, p1WorkspaceService);
+        return new StudyService(studyMapper, userAccountMapper, emailService, p1WorkspaceService, "https://ez-one.o-r.kr");
     }
 
     private StudyGroupRow study(String id) {

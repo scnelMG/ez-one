@@ -54,6 +54,6 @@ flowchart TB
 | --- | --- | --- |
 | Frontend -> Backend | `docs/13_api-spec.md` | endpoint, request, response, error contract를 먼저 갱신한다. |
 | Extension -> Backend | `docs/13_api-spec.md` | 추출 검증과 중복 저장 응답을 안정적으로 유지한다. |
-| Backend -> DB | `docs/12_erd.md` | schema 변경은 ERD와 SQL 파일 기준으로 관리한다. migration 도구는 보류 상태다. |
+| Backend -> DB | `docs/12_erd.md`, `docs/34_database-migration-policy.md` | schema 변경은 ERD와 Flyway versioned migration 파일 기준으로 관리한다. |
 | Backend -> Notion | `docs/13_api-spec.md` | sync 실패는 core save transaction 밖에서 처리한다. |
 | mm Input -> Backend | `docs/28_data-collection-mm.md` | Should/P2. 파싱 전 raw payload를 먼저 저장한다. |

@@ -3,7 +3,7 @@ const REFRESH_TOKEN_KEY = 'ezone.refreshToken';
 const CURRENT_USER_KEY = 'ezone.currentUser';
 export function saveAuthSession(response) {
     localStorage.setItem(ACCESS_TOKEN_KEY, response.accessToken);
-    localStorage.setItem(REFRESH_TOKEN_KEY, response.refreshToken);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
     saveCurrentUser(response.user);
 }
 export function saveCurrentUser(user) {
@@ -20,7 +20,7 @@ export function getAccessToken() {
     return localStorage.getItem(ACCESS_TOKEN_KEY);
 }
 export function getRefreshToken() {
-    return localStorage.getItem(REFRESH_TOKEN_KEY);
+    return null;
 }
 export function getCurrentUser() {
     const rawUser = localStorage.getItem(CURRENT_USER_KEY);

@@ -15,9 +15,10 @@ export function createAuthApi(httpClient = defaultHttpClient) {
             return response.data.data;
         },
         async refresh(refreshToken) {
-            const response = await httpClient.post('/api/auth/refresh', {
-                refreshToken
-            });
+            const response = await httpClient.post(
+                '/api/auth/refresh',
+                refreshToken ? { refreshToken } : undefined
+            );
             return response.data.data;
         },
         async issueExtensionSession() {
@@ -25,7 +26,7 @@ export function createAuthApi(httpClient = defaultHttpClient) {
             return response.data.data;
         },
         async logout(refreshToken) {
-            await httpClient.post('/api/auth/logout', { refreshToken });
+            await httpClient.post('/api/auth/logout', refreshToken ? { refreshToken } : undefined);
         },
         async getCurrentUser() {
             const response = await httpClient.get('/api/me');
@@ -52,7 +53,7 @@ async function postAuthRequest(url, body, httpClient) {
                 throw new Error(normalizeAuthErrorMessage(message));
             }
             if (!error.response) {
-                throw new Error('인증 서버에 연결하지 못했습니다. 백엔드 서버와 VITE_API_BASE_URL 설정을 확인해 주세요.');
+                throw new Error('인증 서버에 연결하지 못했습니다. 서버 주소 설정과 네트워크 상태를 확인해 주세요.');
             }
         }
         throw error;

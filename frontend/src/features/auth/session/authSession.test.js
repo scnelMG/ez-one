@@ -4,7 +4,7 @@ describe('authSession', () => {
     beforeEach(() => {
         localStorage.clear();
     });
-    it('AUTH-001: stores and clears issued auth tokens and current user', () => {
+    it('AUTH-001: stores access token and current user without persisting the refresh token', () => {
         saveAuthSession({
             accessToken: 'access-token',
             refreshToken: 'refresh-token',
@@ -20,7 +20,8 @@ describe('authSession', () => {
             }
         });
         expect(getAccessToken()).toBe('access-token');
-        expect(getRefreshToken()).toBe('refresh-token');
+        expect(getRefreshToken()).toBeNull();
+        expect(localStorage.getItem('ezone.refreshToken')).toBeNull();
         expect(getCurrentUser()?.email).toBe('user@example.com');
         expect(requiresOnboarding()).toBe(true);
         clearAuthSession();
@@ -52,7 +53,7 @@ describe('authSession', () => {
             onboardingRequired: false
         });
         expect(getAccessToken()).toBe('access-token');
-        expect(getRefreshToken()).toBe('refresh-token');
+        expect(getRefreshToken()).toBeNull();
         expect(getCurrentUser()?.nickname).toBe('길동');
     });
 });

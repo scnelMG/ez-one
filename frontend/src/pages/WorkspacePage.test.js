@@ -53,6 +53,7 @@ const makeRouter = () => createRouter({
         { path: '/workspaces/:workspaceId', component: WorkspacePage },
         { path: '/main', component: { template: '<div>main</div>' } },
         { path: '/basket', component: { template: '<div>basket</div>' } },
+        { path: '/history', component: { template: '<div>history</div>' } },
         { path: '/mypage', component: { template: '<div>mypage</div>' } },
         { path: '/study', component: { template: '<div>study</div>' } },
         { path: '/mypage/terms', component: { template: '<div>terms</div>' } },
@@ -384,6 +385,23 @@ describe('WorkspacePage', () => {
         expect(mocks.saveDraft).not.toHaveBeenCalledWith('102', '103', 'auto saved body');
         await vi.advanceTimersByTimeAsync(1);
         expect(mocks.saveDraft).toHaveBeenCalledWith('102', '103', 'auto saved body');
+    });
+
+    it('WS-002/WS-009: shows reassuring auto-save detail while editing', async () => {
+        const wrapper = await mountWorkspace();
+
+        expect(wrapper.get('[data-testid="auto-save-status-detail"]').text()).toContain('초안을 수정하면 2초 뒤 자동 저장됩니다.');
+
+        vi.useFakeTimers();
+        await setDraftText(wrapper, 'auto saved body');
+        expect(wrapper.get('[data-testid="auto-save-status"]').text()).toContain('자동 저장 대기');
+        expect(wrapper.get('[data-testid="auto-save-status-detail"]').text()).toContain('입력이 멈추면 자동 저장합니다.');
+
+        await vi.advanceTimersByTimeAsync(2000);
+        await Promise.resolve();
+
+        expect(wrapper.get('[data-testid="auto-save-status"]').text()).toContain('저장완료');
+        expect(wrapper.get('[data-testid="auto-save-status-detail"]').text()).toContain('방금 저장했습니다.');
     });
 
     it('REF-001/REF-002: opens side panel boards as a push layout, not a route change', async () => {

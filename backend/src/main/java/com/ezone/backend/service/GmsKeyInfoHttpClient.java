@@ -1,6 +1,7 @@
 package com.ezone.backend.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -13,17 +14,23 @@ import org.springframework.web.client.RestTemplate;
 @Service
 public class GmsKeyInfoHttpClient implements GmsKeyInfoClient {
 
-    private static final String KEY_INFO_URL = "https://gms.ssafy.io/gmsapi/key-info";
-
     private final RestTemplate restTemplate;
     private final String apiKey;
+    private final String keyInfoUrl;
 
+    @Autowired
     public GmsKeyInfoHttpClient(
         RestTemplate restTemplate,
-        @Value("${gms.ai.api-key:}") String apiKey
+        @Value("${gms.ai.api-key:}") String apiKey,
+        @Value("${gms.key-info-url}") String keyInfoUrl
     ) {
         this.restTemplate = restTemplate;
         this.apiKey = apiKey;
+        this.keyInfoUrl = StringUtils.hasText(keyInfoUrl) ? keyInfoUrl.trim() : "";
+    }
+
+    GmsKeyInfoHttpClient(RestTemplate restTemplate, String apiKey) {
+        this(restTemplate, apiKey, "");
     }
 
     @Override
@@ -35,7 +42,7 @@ public class GmsKeyInfoHttpClient implements GmsKeyInfoClient {
             HttpHeaders headers = new HttpHeaders();
             headers.setBearerAuth(apiKey);
             ResponseEntity<JsonNode> response = restTemplate.exchange(
-                KEY_INFO_URL,
+                keyInfoUrl,
                 HttpMethod.GET,
                 new HttpEntity<>(headers),
                 JsonNode.class
@@ -54,4 +61,5 @@ public class GmsKeyInfoHttpClient implements GmsKeyInfoClient {
             return new GmsKeyStatus(true, null, null, "GMS key status could not be checked.");
         }
     }
+
 }

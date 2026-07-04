@@ -110,6 +110,13 @@ describe('workspaceApi', () => {
             references: [expect.objectContaining({ id: '104', type: 'JD' })]
         });
     });
+    it('WS-001: propagates workspace load failures instead of returning bundled mock data', async () => {
+        const get = vi.fn().mockRejectedValue(new Error('network down'));
+        const api = createWorkspaceApi({ get, patch: vi.fn(), post: vi.fn() });
+
+        await expect(api.getWorkspace('102')).rejects.toThrow('network down');
+        expect(get).toHaveBeenCalledWith('/api/workspaces/102');
+    });
     it('WS-002: saves a draft through the workspace draft endpoint', async () => {
         const patch = vi.fn().mockResolvedValue({
             data: {

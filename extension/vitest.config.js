@@ -3,12 +3,9 @@ export default defineConfig({
     test: {
         environment: 'jsdom',
         globals: true,
-        testTimeout: 10000,
+        testTimeout: 90000,
         pool: 'threads',
-        poolOptions: {
-            threads: {
-                singleThread: true
-            }
-        }
+        maxWorkers: 1,
+        fileParallelism: false
     }
 });

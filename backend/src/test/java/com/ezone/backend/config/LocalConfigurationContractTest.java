@@ -43,6 +43,35 @@ class LocalConfigurationContractTest {
     }
 
     @Test
+    void localDevAccessTokenIsOptInAndCorsDoesNotDefaultToExtensionWildcard() throws IOException {
+        String applicationYaml = Files.readString(Path.of("src/main/resources/application.yml"), StandardCharsets.UTF_8);
+
+        assertThat(applicationYaml)
+            .contains("local-dev-token-enabled: ${AUTH_LOCAL_DEV_TOKEN_ENABLED:false}")
+            .contains("secure: ${AUTH_REFRESH_COOKIE_SECURE:false}")
+            .contains("same-site: ${AUTH_REFRESH_COOKIE_SAME_SITE:Lax}")
+            .contains("enabled: ${APP_DOCS_ENABLED:false}")
+            .doesNotContain("chrome-extension://*");
+    }
+
+    @Test
+    void userFacingBackendLinksUseConfigurablePublicBaseUrl() throws IOException {
+        String applicationYaml = Files.readString(Path.of("src/main/resources/application.yml"), StandardCharsets.UTF_8);
+        String emailService = Files.readString(
+            Path.of("src/main/java/com/ezone/backend/service/EmailService.java"),
+            StandardCharsets.UTF_8
+        );
+        String studyService = Files.readString(
+            Path.of("src/main/java/com/ezone/backend/service/StudyService.java"),
+            StandardCharsets.UTF_8
+        );
+
+        assertThat(applicationYaml).contains("public-base-url: ${APP_PUBLIC_BASE_URL:http://localhost:5173}");
+        assertThat(emailService).doesNotContain("http://localhost:5173/study");
+        assertThat(studyService).doesNotContain("http://localhost:8080/uploads");
+    }
+
+    @Test
     void applicationDoesNotProvideCredentialFallbackValues() throws IOException {
         String applicationYaml = Files.readString(Path.of("src/main/resources/application.yml"), StandardCharsets.UTF_8);
 
@@ -68,7 +97,8 @@ class LocalConfigurationContractTest {
         String applicationYaml = Files.readString(Path.of("src/main/resources/application.yml"), StandardCharsets.UTF_8);
 
         assertThat(applicationYaml)
-            .contains("analysis-model: ${DART_AI_ANALYSIS_MODEL:gpt-4.1}");
+            .contains("analysis-model: ${DART_AI_ANALYSIS_MODEL:gpt-4.1}")
+            .contains("compare-model: ${DART_AI_COMPARE_MODEL:gpt-4.1-mini}");
     }
 
     @Test

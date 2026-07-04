@@ -46,7 +46,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         }
         catch (error) {
             status.value = 'ready';
-            alert(messageFromError(error, '초안을 저장하지 못했습니다.'));
+            setActionError(error, '초안을 저장하지 못했습니다.');
         }
     }
     async function createQuestion(workspaceId, payload) {
@@ -65,7 +65,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         }
         catch (error) {
             status.value = 'ready';
-            alert(messageFromError(error, '문항을 생성하지 못했습니다.'));
+            setActionError(error, '문항을 생성하지 못했습니다.');
             return null;
         }
     }
@@ -84,7 +84,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         }
         catch (error) {
             status.value = 'ready';
-            alert(messageFromError(error, '문항을 수정하지 못했습니다.'));
+            setActionError(error, '문항을 수정하지 못했습니다.');
         }
     }
     async function deleteQuestion(workspaceId, questionId) {
@@ -103,7 +103,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         }
         catch (error) {
             status.value = 'ready';
-            alert(messageFromError(error, '문항을 삭제하지 못했습니다.'));
+            setActionError(error, '문항을 삭제하지 못했습니다.');
             return false;
         }
     }
@@ -118,7 +118,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         }
         catch (error) {
             status.value = 'ready';
-            alert(messageFromError(error, '버전을 저장하지 못했습니다.'));
+            setActionError(error, '버전을 저장하지 못했습니다.');
             return null;
         }
     }
@@ -132,7 +132,6 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         }
         catch (error) {
             errorMessage.value = messageFromError(error, '버전을 비교하지 못했습니다.');
-            alert(errorMessage.value);
             return null;
         }
         finally {
@@ -155,7 +154,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         }
         catch (error) {
             status.value = 'ready';
-            alert(messageFromError(error, '참고자료를 저장하지 못했습니다.'));
+            setActionError(error, '참고자료를 저장하지 못했습니다.');
         }
     }
     async function openReference(referenceId) {
@@ -189,7 +188,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         }
         catch (error) {
             status.value = 'ready';
-            alert(messageFromError(error, '참고자료를 수정하지 못했습니다.'));
+            setActionError(error, '참고자료를 수정하지 못했습니다.');
         }
     }
     async function deleteReference(referenceId) {
@@ -210,8 +209,11 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         }
         catch (error) {
             status.value = 'ready';
-            alert(messageFromError(error, '참고자료를 삭제하지 못했습니다.'));
+            setActionError(error, '참고자료를 삭제하지 못했습니다.');
         }
+    }
+    function setActionError(error, fallbackMessage) {
+        errorMessage.value = messageFromError(error, fallbackMessage);
     }
     return {
         status,

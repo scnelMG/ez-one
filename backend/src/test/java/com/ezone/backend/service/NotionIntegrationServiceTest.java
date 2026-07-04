@@ -26,10 +26,10 @@ class NotionIntegrationServiceTest {
             emptyWorkspaceService()
         );
 
-        var connection = service.connect(1L, "oauth-code", "http://localhost:5173/mypage/notion/callback");
+        var connection = service.connect(1L, "oauth-code", "http://localhost:5173/mypage/notion");
 
         assertThat(notionClient.lastAuthorizationCode).isEqualTo("oauth-code");
-        assertThat(notionClient.lastRedirectUri).isEqualTo("http://localhost:5173/mypage/notion/callback");
+        assertThat(notionClient.lastRedirectUri).isEqualTo("http://localhost:5173/mypage/notion");
         assertThat(connection.connected()).isTrue();
         assertThat(connection.notionAccountEmail()).isEqualTo("notion-user@example.com");
         assertThat(connection.syncEnabled()).isTrue();
@@ -59,7 +59,7 @@ class NotionIntegrationServiceTest {
             false,
             "https://example.com/logo2.png",
             "https://example.com/jobs/11",
-            "포트폴리오 확인"
+            "?????????類ㅼ뵥"
         );
         when(workspaceService.listBasketJobs(1L, null, null)).thenReturn(java.util.List.of(firstJob, secondJob));
         NotionIntegrationService service = new NotionIntegrationService(
@@ -69,7 +69,7 @@ class NotionIntegrationServiceTest {
             workspaceService
         );
 
-        service.connect(1L, "oauth-code", "http://localhost:5173/mypage/notion/callback");
+        service.connect(1L, "oauth-code", "http://localhost:5173/mypage/notion");
 
         assertThat(notionClient.createdJobs)
             .extracting(NotionJobPageRequest::basketJobId)
@@ -93,7 +93,7 @@ class NotionIntegrationServiceTest {
             new PrefixNotionTokenCipher(),
             emptyWorkspaceService()
         );
-        service.connect(1L, "oauth-code", "http://localhost:5173/mypage/notion/callback");
+        service.connect(1L, "oauth-code", "http://localhost:5173/mypage/notion");
         service.updateSettings(1L, true, SyncScope.JOB_ONLY);
 
         service.recordJobOnlySync(1L, basketJob());
@@ -129,7 +129,7 @@ class NotionIntegrationServiceTest {
             new PrefixNotionTokenCipher(),
             emptyWorkspaceService()
         );
-        service.connect(1L, "oauth-code", "http://localhost:5173/mypage/notion/callback");
+        service.connect(1L, "oauth-code", "http://localhost:5173/mypage/notion");
         service.recordJobOnlySync(1L, basketJob());
 
         service.recordJobOnlySync(1L, basketJob());
@@ -154,7 +154,7 @@ class NotionIntegrationServiceTest {
             new PrefixNotionTokenCipher(),
             emptyWorkspaceService()
         );
-        service.connect(1L, "oauth-code", "http://localhost:5173/mypage/notion/callback");
+        service.connect(1L, "oauth-code", "http://localhost:5173/mypage/notion");
         repository.upsertJobSyncRecord(new NotionJobSyncRecordRow(10L, 1L, "archived-page-10"));
 
         service.recordJobOnlySync(1L, basketJob());
@@ -178,7 +178,7 @@ class NotionIntegrationServiceTest {
             new PrefixNotionTokenCipher(),
             emptyWorkspaceService()
         );
-        service.connect(1L, "oauth-code", "http://localhost:5173/mypage/notion/callback");
+        service.connect(1L, "oauth-code", "http://localhost:5173/mypage/notion");
 
         service.recordJobOnlySync(1L, basketJob());
 
@@ -198,7 +198,7 @@ class NotionIntegrationServiceTest {
             new PrefixNotionTokenCipher(),
             emptyWorkspaceService()
         );
-        service.connect(1L, "oauth-code", "http://localhost:5173/mypage/notion/callback");
+        service.connect(1L, "oauth-code", "http://localhost:5173/mypage/notion");
         notionClient.createdJobs.clear();
 
         service.recordJobOnlySync(1L, basketJob());
@@ -222,7 +222,7 @@ class NotionIntegrationServiceTest {
             new PrefixNotionTokenCipher(),
             workspaceService
         );
-        service.connect(1L, "oauth-code", "http://localhost:5173/mypage/notion/callback");
+        service.connect(1L, "oauth-code", "http://localhost:5173/mypage/notion");
         notionClient.createdJobs.clear();
 
         service.syncCurrentBasketJobs(1L);
@@ -253,7 +253,7 @@ class NotionIntegrationServiceTest {
             new PrefixNotionTokenCipher(),
             emptyWorkspaceService()
         );
-        service.connect(1L, "oauth-code", "http://localhost:5173/mypage/notion/callback");
+        service.connect(1L, "oauth-code", "http://localhost:5173/mypage/notion");
         service.updateSettings(1L, true, SyncScope.JOB_ONLY);
 
         assertThatCode(() -> service.recordJobOnlySync(1L, basketJob()))
@@ -285,7 +285,7 @@ class NotionIntegrationServiceTest {
             new PrefixNotionTokenCipher(),
             emptyWorkspaceService()
         );
-        firstService.connect(1L, "oauth-code", "http://localhost:5173/mypage/notion/callback");
+        firstService.connect(1L, "oauth-code", "http://localhost:5173/mypage/notion");
         firstService.updateSettings(1L, true, SyncScope.JOB_ONLY);
 
         FakeNotionClient restartedClient = new FakeNotionClient();

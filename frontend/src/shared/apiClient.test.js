@@ -19,16 +19,21 @@ describe('apiClient', () => {
         expect(resolveApiBaseUrl('http://localhost:8080')).toBe('http://localhost:8080');
     });
 
-    it('normalizes configured fallback API base URLs and local development candidates', () => {
+    it('normalizes configured fallback API base URLs without implicit local candidates', () => {
         expect(resolveApiBaseUrlCandidates('http://localhost:8081/api', 'http://10.91.22.212:8080/api,http://localhost:8080/api'))
-            .toEqual(expect.arrayContaining([
+            .toEqual([
                 'http://localhost:8081',
                 'http://10.91.22.212:8080',
                 'http://localhost:8080'
-            ]));
+            ]);
     });
 
-    it('retries the next local API base URL when the configured backend is unreachable', async () => {
+    it('requires local fallback candidates to be configured explicitly', () => {
+        expect(resolveApiBaseUrlCandidates('https://ez-one.kr/api', ''))
+            .toEqual(['https://ez-one.kr']);
+    });
+
+    it('retries the next configured API base URL when the current backend is unreachable', async () => {
         const seenBaseUrls = [];
         defaultHttpClient.defaults.baseURL = 'http://localhost:8081';
         defaultHttpClient.defaults.adapter = async (config) => {
@@ -101,6 +106,7 @@ describe('apiClient', () => {
             }
         });
         const calls = [];
+        const refreshBodies = [];
         const adapter = async (config) => {
             calls.push(`${config.method?.toUpperCase()} ${config.url}`);
             if (config.url === '/api/me' && calls.length === 1) {
@@ -112,6 +118,7 @@ describe('apiClient', () => {
                 throw new AxiosError('Unauthorized', 'ERR_BAD_REQUEST', config, null, response);
             }
             if (config.url === '/api/auth/refresh') {
+                refreshBodies.push(config.data);
                 return makeResponse(config, 200, {
                     success: true,
                     data: {
@@ -146,6 +153,7 @@ describe('apiClient', () => {
         const response = await defaultHttpClient.get('/api/me');
         expect(response.data.data.email).toBe('user@example.com');
         expect(getAccessToken()).toBe('new-access-token');
+        expect(refreshBodies).toEqual([undefined]);
         expect(calls).toEqual(['GET /api/me', 'POST /api/auth/refresh', 'GET /api/me']);
     });
     it('EXT-003/AUTH-007: refreshes before retrying extension session issuance after a 401', async () => {
@@ -163,6 +171,7 @@ describe('apiClient', () => {
             }
         });
         const calls = [];
+        const refreshBodies = [];
         const adapter = async (config) => {
             calls.push(`${config.method?.toUpperCase()} ${config.url}`);
             if (config.url === '/api/auth/extension-session' && calls.length === 1) {
@@ -174,6 +183,7 @@ describe('apiClient', () => {
                 throw new AxiosError('Unauthorized', 'ERR_BAD_REQUEST', config, null, response);
             }
             if (config.url === '/api/auth/refresh') {
+                refreshBodies.push(config.data);
                 return makeResponse(config, 200, {
                     success: true,
                     data: {
@@ -214,6 +224,7 @@ describe('apiClient', () => {
         const response = await defaultHttpClient.post('/api/auth/extension-session');
         expect(response.data.data.accessToken).toBe('extension-access-token');
         expect(getAccessToken()).toBe('new-access-token');
+        expect(refreshBodies).toEqual([undefined]);
         expect(calls).toEqual([
             'POST /api/auth/extension-session',
             'POST /api/auth/refresh',

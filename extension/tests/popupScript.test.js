@@ -5,10 +5,15 @@ import { describe, expect, it } from 'vitest';
 describe('extension popup script', () => {
     const script = readFileSync(resolve(__dirname, '../src/popup/popup.js'), 'utf-8');
 
-    it('starts the web login handoff on the default local frontend port used by dev', () => {
-        expect(script).toContain("const webAppUrl = import.meta.env.VITE_EXTENSION_WEB_APP_URL ?? 'http://localhost:5173'");
+    it('requires configured extension origins instead of hardcoded local runtime fallbacks', () => {
+        expect(script).toContain('function resolveExtensionApiBaseUrl');
+        expect(script).toContain('function parseHttpOrigin');
+        expect(script).toContain("const apiFallbackBaseUrls = import.meta.env.VITE_EXTENSION_API_FALLBACK_BASE_URLS ?? ''");
         expect(script).toContain("for (const id of ['home-link', 'web-link', 'feature-web-link'])");
+        expect(script).not.toContain("VITE_EXTENSION_WEB_APP_URL ?? 'http://localhost:5173'");
         expect(script).not.toContain("VITE_EXTENSION_WEB_APP_URL ?? 'http://localhost:5174'");
+        expect(script).not.toContain("'http://localhost:8080/api'");
+        expect(script).not.toContain("'http://127.0.0.1:8080/api'");
         expect(script).not.toContain("'result-web-link'");
     });
 
@@ -265,26 +270,31 @@ describe('extension popup script', () => {
 
     it('explains tailored activity fields as copy-assisted manual input', () => {
         expect(script).toContain("reason === 'tailored_activity_required'");
-        expect(script).toContain('직무 맞춤 필요');
-        expect(script).toContain('아래 복사 필요 항목에서 활동을 골라 지원 직무에 맞게 붙여넣어 주세요.');
+        expect(script).toContain('\uC9C1\uBB34 \uB9DE\uCDA4 \uD544\uC694');
+        expect(script).toContain('\uD65C\uB3D9\uC740 \uC9C0\uC6D0 \uC9C1\uBB34\uC5D0 \uB9DE\uAC8C \uC120\uD0DD\uD574 \uBD99\uC5EC\uB123\uC5B4 \uC8FC\uC138\uC694.');
     });
 
     it('shows job-fit activity recommendations in the document autofill result panel', () => {
         expect(script).toContain("requireElement('activity-assist-section')");
         expect(script).toContain("requireElement('activity-assist-button')");
         expect(script).toContain('ACTIVITY_ASSIST_BUTTON_LABEL');
-        expect(script).toContain('AI로 활동 추천 만들기');
-        expect(script).toContain('AI가 활동을 직무 적합도 순서로 정렬하고 있습니다.');
-        expect(script).toContain('AI가 자동으로 활동을 직무 적합도 순서로 정렬하고 있습니다.');
+        expect(script).toContain('AI\uB85C \uD65C\uB3D9 \uCD94\uCC9C \uB9CC\uB4E4\uAE30');
+        expect(script).toContain('AI\uAC00 \uC790\uB3D9\uC73C\uB85C \uD65C\uB3D9\uC744 \uC9C1\uBB34 \uC801\uD569\uB3C4 \uC21C\uC11C\uB85C \uC815\uB82C\uD558\uACE0 \uC788\uC2B5\uB2C8\uB2E4.');
+        expect(script).toContain('AI\uAC00 \uD65C\uB3D9\uC744 \uC9C1\uBB34 \uC801\uD569\uB3C4 \uC21C\uC11C\uB85C \uC815\uB82C\uD558\uACE0 \uC788\uC2B5\uB2C8\uB2E4.');
         expect(script).toContain('function scheduleAutomaticActivityAssistRequest');
         expect(script).toContain('activityAssistAutoRequestKey');
         expect(script).toContain('requestActivityAssist({ automatic: true })');
-        expect(script).toContain('AI 추천도');
-        expect(script).toContain('글자수 맞춤');
+        expect(script).toContain('AI \uCD94\uCC9C\uB3C4');
+        expect(script).toContain('\uAE00\uC790\uC218 \uB9DE\uCDA4');
         expect(script).toContain('documentProfileApi.recommendActivities');
         expect(script).toContain('function shouldShowActivityAssist');
         expect(script).toContain('function renderActivityAssistResult');
         expect(script).toContain('function formatActivityAssistCounter');
+    });
+
+    it('does not ship mojibake in user-facing popup script strings', () => {
+        expect(script).not.toMatch(/[\u8A5B\u6028\u5A9B\u00C3\uFFFD\uF9DE\u7570\u8E30\u63F6]/);
+        expect(script).not.toContain(['?'.repeat(2), '?'.repeat(2), '?'.repeat(2)].join(' '));
     });
 
     it('hides internal section-opening steps from user-facing autofill results', () => {

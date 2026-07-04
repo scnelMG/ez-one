@@ -1,0 +1,76 @@
+{
+  "releaseId": "",
+  "owner": "",
+  "decision": "",
+  "decisionTimestamp": "",
+  "gates": {
+    "localReleaseGate": {
+      "commandTimestamp": "",
+      "backendTestsPackage": "",
+      "frontendAuditTestBuild": "",
+      "extensionAuditTestBuild": "",
+      "diffSecretMojibakeGuards": ""
+    },
+    "productionEnvPolicy": {
+      "envPolicyCheckOutput": "",
+      "clientEnvPolicyCheckOutput": "",
+      "ec2EnvFilePath": "",
+      "secretOwnerRotationNote": ""
+    },
+    "dbBackupMigrationRehearsal": {
+      "backupFileAndChecksum": "",
+      "restoreDryRunOutput": "",
+      "restoreApplyOutput": "",
+      "flywayInfoOutput": "",
+      "flywayValidateOutput": "",
+      "flywayMigrateOutput": "",
+      "rollbackRestoreRehearsalOutput": ""
+    },
+    "artifactBuildInstall": {
+      "releaseArtifactDirectory": "",
+      "releaseManifestContent": "",
+      "sha256SumsContent": "",
+      "backendJarChecksum": "",
+      "frontendZipChecksum": "",
+      "extensionZipChecksum": "",
+      "previousArtifactPathsPreserved": "",
+      "ec2DeployDryRunOutput": "",
+      "ec2DeployApplyOutput": ""
+    },
+    "ec2Runtime": {
+      "systemdPreflightOutput": "",
+      "reverseProxyOutput": "",
+      "securityHeadersOutput": "",
+      "logPaths": "",
+      "healthOutput": ""
+    },
+    "realIntegrationSmoke": {
+      "googleLoginCookieRotation": "",
+      "onboardingProfileSaveRead": "",
+      "jobSaveBasketWorkspaceRead": "",
+      "essayDraftVersionFlow": "",
+      "referenceCrud": "",
+      "documentProfileSaveRead": "",
+      "notionJobOnlySyncIsolation": "",
+      "loadedExtensionJobSave": "",
+      "loadedExtensionAutofill": ""
+    },
+    "canary": {
+      "thirtyMinuteCanaryOutput": "",
+      "backendProxyLogReview": "",
+      "errorRateOrObservedFailures": "",
+      "goNoGoDecisionTimeOwner": ""
+    },
+    "rollback": {
+      "previousBackendArtifactPath": "",
+      "previousFrontendArtifactPath": "",
+      "previousExtensionArtifactPath": "",
+      "previousReleaseManifestPath": "",
+      "previousChecksumFilePath": "",
+      "dbBackupRestoreRehearsal": "",
+      "rollbackDryRunOutput": "",
+      "rollbackCommandOutput": "",
+      "postRollbackHealthCanaryOutput": ""
+    }
+  }
+}

@@ -174,6 +174,8 @@ describe('NotionSettingsPage', () => {
 
         expect(wrapper.text()).toContain('연결된 계정 없음');
         expect(wrapper.text()).toContain('연결 필요');
+        expect(wrapper.text()).toContain('공고 정보만 Notion 취업 준비 페이지에 동기화됩니다.');
+        expect(wrapper.text()).toContain('자기소개서, 도화지, 문서 프로필은 Notion으로 보내지 않습니다.');
         await wrapper.get('[data-testid="connect-notion"]').trigger('click');
         await flushPromises();
         expect(mocks.createNotionOAuthState).toHaveBeenCalled();
@@ -263,7 +265,8 @@ describe('NotionSettingsPage', () => {
         const wrapper = await mountPage();
 
         expect(wrapper.text()).toContain('아직 동기화된 공고가 없습니다.');
-        expect(wrapper.text()).toContain('공고를 저장하고 동기화를 켜면 Notion에 기록됩니다.');
+        expect(wrapper.text()).toContain('장바구니에 공고를 저장하면 회사명, 직무, 마감일만 Notion에 기록됩니다.');
+        expect(wrapper.text()).toContain('먼저 공고 장바구니에서 저장된 공고를 확인해 주세요.');
         expect(wrapper.text()).not.toContain('JOB_ONLY');
     });
 
@@ -275,6 +278,7 @@ describe('NotionSettingsPage', () => {
         await flushPromises();
 
         expect(wrapper.text()).toContain('Notion 동기화 설정을 저장하지 못했습니다.');
+        expect(wrapper.text()).toContain('Notion 연결 상태와 네트워크를 확인한 뒤 다시 시도해 주세요.');
     });
 });
 

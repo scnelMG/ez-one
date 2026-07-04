@@ -12,12 +12,18 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+secrets/
 
 # Logs
 *.log
 logs/
 .codex-run-logs/
 docs/superpowers/
+.omo/
+
+# Release operations
+backups/
+release-artifacts/
 
 # Java / Spring
 backend/build/

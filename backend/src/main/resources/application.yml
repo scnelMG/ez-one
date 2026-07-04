@@ -37,7 +37,7 @@ spring:
           starttls:
             enable: true
 
-# 공공데이터포털 API 연동
+# Public data API integration
 public-data:
   api:
     key: ${PUBLIC_DATA_API_KEY:}
@@ -45,6 +45,10 @@ public-data:
 company-enrichment:
   realtime:
     enabled: ${COMPANY_ENRICHMENT_REALTIME_ENABLED:true}
+  venture-company:
+    url: ${VENTURE_COMPANY_API_URL:http://apis.data.go.kr/1423000/VentureCompanyService/getVentureCompanyList}
+  national-pension:
+    url: ${NATIONAL_PENSION_API_URL:http://apis.data.go.kr/B552015/NpsBplcInfoInqireServiceV2/getBassInfoSearchV2}
   financial-company-basic-info:
     url: ${FINANCIAL_COMPANY_BASIC_INFO_URL:}
   public-institution:
@@ -67,14 +71,20 @@ mybatis:
 
 opendart:
   api-key: ${OPENDART_API_KEY:}
+  api-base-url: ${OPENDART_API_BASE_URL:https://opendart.fss.or.kr/api}
+  viewer-base-url: ${OPENDART_VIEWER_BASE_URL:https://dart.fss.or.kr/dsaf001/main.do}
+  company-overview-source-url: ${OPENDART_COMPANY_OVERVIEW_SOURCE_URL:https://opendart.fss.or.kr/guide/detail.do?apiGrpCd=DS001&apiId=2019002}
 
 server:
   port: ${SERVER_PORT:8080}
   address: ${SERVER_ADDRESS:127.0.0.1}
 
 app:
+  public-base-url: ${APP_PUBLIC_BASE_URL:http://localhost:5173}
+  docs:
+    enabled: ${APP_DOCS_ENABLED:false}
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://[::1]:5173,chrome-extension://*}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://[::1]:5173}
 
 mattermost:
   webhook:
@@ -94,6 +104,7 @@ notion:
   token-encryption-key: ${NOTION_TOKEN_ENCRYPTION_KEY:}
 
 gms:
+  key-info-url: ${GMS_KEY_INFO_URL:https://gms.ssafy.io/gmsapi/key-info}
   ai:
     api-key: ${GMS_API_KEY:}
     base-url: ${GMS_AI_BASE_URL:https://gms.ssafy.io/gmsapi/api.openai.com/v1}
@@ -103,9 +114,14 @@ dart:
   ai:
     fast-model: ${DART_AI_FAST_MODEL:gpt-4.1-mini}
     analysis-model: ${DART_AI_ANALYSIS_MODEL:gpt-4.1}
-    compare-model: ${DART_AI_COMPARE_MODEL:gemini-2.5-flash}
+    compare-model: ${DART_AI_COMPARE_MODEL:gpt-4.1-mini}
 
 auth:
+  local-dev-token-enabled: ${AUTH_LOCAL_DEV_TOKEN_ENABLED:false}
+  refresh-cookie:
+    secure: ${AUTH_REFRESH_COOKIE_SECURE:false}
+    same-site: ${AUTH_REFRESH_COOKIE_SAME_SITE:Lax}
+    max-age-seconds: ${AUTH_REFRESH_COOKIE_MAX_AGE_SECONDS:2592000}
   google:
     client-id: ${GOOGLE_CLIENT_ID}
     client-secret: ${GOOGLE_CLIENT_SECRET}

@@ -66,8 +66,13 @@
               <strong>취업 준비</strong>
             </div>
           </div>
+          <p class="notion-sync-help" data-testid="notion-sync-help">
+            공고 정보만 Notion 취업 준비 페이지에 동기화됩니다.
+            자기소개서, 도화지, 문서 프로필은 Notion으로 보내지 않습니다.
+          </p>
         </article>
         <p v-if="statusMessage" class="form-status" role="status">{{ statusMessage }}</p>
+        <p v-if="statusDetail" class="form-status-detail" role="status">{{ statusDetail }}</p>
 
         <section class="sync-log-card" aria-label="최근 동기화 기록">
           <strong class="compact-section-title">최근 동기화</strong>
@@ -83,7 +88,8 @@
           </ul>
           <div v-else class="mypage-empty-state">
             <strong>아직 동기화된 공고가 없습니다.</strong>
-            <p>공고를 저장하고 동기화를 켜면 Notion에 기록됩니다.</p>
+            <p>장바구니에 공고를 저장하면 회사명, 직무, 마감일만 Notion에 기록됩니다.</p>
+            <p>먼저 공고 장바구니에서 저장된 공고를 확인해 주세요.</p>
           </div>
         </section>
       </section>
@@ -112,6 +118,7 @@ const notionStore = useNotionStore();
 const route = useRoute();
 const router = useRouter();
 const statusMessage = ref('');
+const statusDetail = ref('');
 const notionEmail = computed(() => notionStore.connection?.notionAccountEmail ?? '연결된 계정 없음');
 const visibleSyncLogs = computed(() => {
   const seenBasketJobIds = new Set();
@@ -133,6 +140,7 @@ const visibleSyncLogs = computed(() => {
 async function disconnectNotion() {
   if (window.confirm('Notion 연동을 해제하시겠습니까?')) {
     statusMessage.value = '';
+    statusDetail.value = '';
     await notionStore.disconnectNotion();
     if (notionStore.status === 'ready') {
       statusMessage.value = 'Notion 연동이 해제되었습니다.';
@@ -160,6 +168,7 @@ onMounted(async () => {
 async function toggleSync() {
   const nextEnabled = !notionStore.connection?.syncEnabled;
   statusMessage.value = '';
+  statusDetail.value = '';
   await notionStore.updateJobOnlySync(nextEnabled);
   if (notionStore.status === 'ready') {
     statusMessage.value = `공고 자동 동기화가 ${nextEnabled ? '켜졌습니다.' : '꺼졌습니다.'}`;
@@ -167,11 +176,13 @@ async function toggleSync() {
     return;
   }
   statusMessage.value = 'Notion 동기화 설정을 저장하지 못했습니다.';
+  statusDetail.value = 'Notion 연결 상태와 네트워크를 확인한 뒤 다시 시도해 주세요.';
   showToast(statusMessage.value, { tone: 'red' });
 }
 
 async function connectNotion() {
   statusMessage.value = '';
+  statusDetail.value = '';
   const redirectUri = getNotionRedirectUri();
   const state = createNotionOAuthState();
   try {
@@ -179,12 +190,14 @@ async function connectNotion() {
     redirectToNotionOAuth(new URL(authorizationUrl));
   } catch (error) {
     statusMessage.value = messageFromError(error, 'Notion OAuth URL could not be created.');
+    statusDetail.value = 'Notion 연결 설정을 확인한 뒤 다시 시도해 주세요.';
     showToast(statusMessage.value, { tone: 'red' });
   }
 }
 
 async function completeNotionConnection() {
   statusMessage.value = '';
+  statusDetail.value = '';
   try {
     consumeNotionOAuthState(String(route.query.state ?? ''));
     await notionStore.connectNotion({
@@ -230,3 +243,22 @@ function formatSyncStatus(status) {
   return status || '확인 중';
 }
 </script>
+
+<style scoped>
+.notion-sync-help,
+.form-status-detail {
+  color: #64748b;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.notion-sync-help {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 14px;
+}
+
+.form-status-detail {
+  margin-top: -8px;
+}
+</style>

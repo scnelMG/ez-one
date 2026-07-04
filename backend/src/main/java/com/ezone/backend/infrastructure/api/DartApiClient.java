@@ -21,13 +21,16 @@ public class DartApiClient {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private final String apiKey;
+    private final String apiBaseUrl;
 
     public DartApiClient(RestTemplate restTemplate,
-                         @Value("${OPENDART_API_KEY:}") String apiKey) {
+                         @Value("${opendart.api-key:}") String apiKey,
+                         @Value("${opendart.api-base-url}") String apiBaseUrl) {
         this.restTemplate = restTemplate;
         this.objectMapper = new ObjectMapper()
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         this.apiKey = apiKey;
+        this.apiBaseUrl = trimTrailingSlash(apiBaseUrl);
     }
 
     public static class DartCompanyData {
@@ -46,7 +49,7 @@ public class DartApiClient {
         DartCompanyData data = new DartCompanyData();
 
         // 1. Fetch Company Overview (company.json)
-        String companyUrl = String.format("https://opendart.fss.or.kr/api/company.json?crtfc_key=%s&corp_code=%s", apiKey, corpCode);
+        String companyUrl = String.format("%s/company.json?crtfc_key=%s&corp_code=%s", apiBaseUrl, apiKey, corpCode);
         try {
             @SuppressWarnings("unchecked")
             Map<String, Object> response = restTemplate.getForObject(companyUrl, Map.class);
@@ -82,7 +85,7 @@ public class DartApiClient {
     }
 
     private Integer fetchEmployeeCount(String corpCode, int year) {
-        String url = String.format("https://opendart.fss.or.kr/api/empSttus.json?crtfc_key=%s&corp_code=%s&bsns_year=%d&reprt_code=11011", apiKey, corpCode, year);
+        String url = String.format("%s/empSttus.json?crtfc_key=%s&corp_code=%s&bsns_year=%d&reprt_code=11011", apiBaseUrl, apiKey, corpCode, year);
         try {
             @SuppressWarnings("unchecked")
             Map<String, Object> response = restTemplate.getForObject(url, Map.class);
@@ -115,5 +118,16 @@ public class DartApiClient {
             log.warn("Exception fetching DART empSttus.json for corpCode: {}, year: {}", corpCode, year, e);
         }
         return null;
+    }
+
+    private String trimTrailingSlash(String value) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+        String trimmed = value.trim();
+        while (trimmed.endsWith("/")) {
+            trimmed = trimmed.substring(0, trimmed.length() - 1);
+        }
+        return trimmed;
     }
 }

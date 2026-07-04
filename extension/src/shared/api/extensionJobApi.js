@@ -1,4 +1,6 @@
-const SERVER_UNAVAILABLE_MESSAGE = '\uC11C\uBC84\uC5D0 \uC5F0\uACB0\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. EZ-ONE \uC11C\uBC84\uAC00 \uCF1C\uC838 \uC788\uB294\uC9C0 \uD655\uC778\uD574 \uC8FC\uC138\uC694.';
+import { requireApiBaseUrlCandidates, resolveApiBaseUrlCandidates } from './extensionApiBaseUrl';
+
+const SERVER_UNAVAILABLE_MESSAGE = '서버에 연결하지 못했습니다. EZ-ONE 서버가 켜져 있는지 확인해 주세요.';
 
 export function createExtensionJobApi({
     apiBaseUrl,
@@ -9,9 +11,10 @@ export function createExtensionJobApi({
     clearSession,
     fetcher = (...args) => fetch(...args)
 }) {
+    const apiBaseUrls = resolveApiBaseUrlCandidates(apiBaseUrl, apiFallbackBaseUrls);
     const client = {
-        apiBaseUrl,
-        apiBaseUrls: resolveApiBaseUrlCandidates(apiBaseUrl, apiFallbackBaseUrls),
+        apiBaseUrl: apiBaseUrls[0] ?? '',
+        apiBaseUrls,
         getAccessToken,
         getRefreshToken,
         saveSession,
@@ -24,6 +27,7 @@ export function createExtensionJobApi({
     };
 }
 async function request(client, path, payload, retrying = false) {
+    requireApiBaseUrlCandidates(client.apiBaseUrls);
     const token = await client.getAccessToken();
     if (!token) {
         throw new Error('로그인이 필요합니다.');
@@ -48,6 +52,7 @@ async function request(client, path, payload, retrying = false) {
     return envelope.data;
 }
 async function refreshExtensionSession(client, apiBaseUrl = client.apiBaseUrl) {
+    requireApiBaseUrlCandidates([apiBaseUrl].filter(Boolean));
     const refreshToken = await client.getRefreshToken?.();
     if (!refreshToken) {
         await client.clearSession?.();
@@ -97,7 +102,7 @@ function callFetch(client, url, init) {
         if (error?.name === 'AbortError') {
             throw new Error('서버 응답이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.');
         }
-        throw new Error('서버에 연결하지 못했습니다. EZ-ONE 서버가 켜져 있는지 확인해 주세요.');
+        throw new Error(SERVER_UNAVAILABLE_MESSAGE);
     })
         .finally(() => clearTimeout(timeoutId));
 }
@@ -111,20 +116,10 @@ async function readEnvelope(response) {
     }
 }
 
-function resolveApiBaseUrlCandidates(apiBaseUrl, fallbackBaseUrls) {
-    const candidates = [
-        apiBaseUrl,
-        ...(Array.isArray(fallbackBaseUrls) ? fallbackBaseUrls : String(fallbackBaseUrls).split(','))
-    ]
-        .map((value) => String(value ?? '').trim())
-        .filter(Boolean);
-    return [...new Set(candidates)];
-}
-
 function isNetworkUnavailableError(error) {
     const message = error instanceof Error ? error.message : String(error ?? '');
     return message === SERVER_UNAVAILABLE_MESSAGE ||
         message.includes('Failed to fetch') ||
         message.includes('서버') ||
-        message.includes('쒕쾭');
+        message.includes('연결');
 }

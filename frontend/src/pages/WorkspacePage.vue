@@ -140,6 +140,13 @@
             워크스페이스를 불러오는 중입니다.
           </p>
           <template v-else-if="workspaceStore.workspace">
+            <StatePanel
+              v-if="workspaceStore.errorMessage"
+              id="workspace-action-error"
+              tone="navy"
+              title="작업 오류"
+              :body="workspaceStore.errorMessage"
+            />
             <section v-if="activeMode === 'canvas'" class="workspace-mode-surface">
               <aside class="question-rail">
                 <button
@@ -187,6 +194,9 @@
                     >
                       {{ editorStatusLabel }}
                     </span>
+                    <p class="auto-save-detail" data-testid="auto-save-status-detail">
+                      {{ editorStatusDetail }}
+                    </p>
                     <label class="question-limit-field">
                       <span>글자수</span>
                       <input
@@ -424,7 +434,7 @@
             @click="onBeeClick"
             title="참고자료 열기"
           >
-            <img src="/bee-mascot.png" alt="참고자료 열기" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; pointer-events: none;" />
+            <img :src="beeMascotUrl" alt="참고자료 열기" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; pointer-events: none;" />
           </button>
         </Teleport>
 
@@ -623,6 +633,7 @@ import { messageFromError } from '@/shared/errorMessage';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 
 const isCreatingNewVersion = ref(false);
+const beeMascotUrl = '/bee-mascot.png';
 import AppLayout from '@/shared/AppLayout.vue';
 import StatePanel from '@/shared/StatePanel.vue';
 
@@ -631,6 +642,7 @@ const workspaceStore = useWorkspaceStore();
 const workspaceId = computed(() => String(route.params.workspaceId ?? '102'));
 const draftBody = ref('');
 const autoSaveStatus = ref('idle');
+const lastDraftSavedAt = ref(null);
 const activeMode = ref('canvas');
 const activeBoard = ref('JD');
 const activeQuestionIndex = ref(0);
@@ -854,6 +866,13 @@ const editorStatusLabel = computed(() => {
   if (autoSaveStatus.value === 'failed') return '저장실패';
   return '편집 가능';
 });
+const editorStatusDetail = computed(() => {
+  if (autoSaveStatus.value === 'waiting') return '입력이 멈추면 자동 저장합니다.';
+  if (autoSaveStatus.value === 'saving' || workspaceStore.status === 'saving') return '초안을 저장하는 중입니다.';
+  if (autoSaveStatus.value === 'saved') return lastDraftSavedAt.value ? '방금 저장했습니다.' : '저장되었습니다.';
+  if (autoSaveStatus.value === 'failed') return '저장에 실패했습니다. 네트워크를 확인한 뒤 다시 입력하면 재시도합니다.';
+  return '초안을 수정하면 2초 뒤 자동 저장됩니다.';
+});
 const activeBoardComponent = computed(() => {
   return MarkdownBoard;
 });
@@ -879,6 +898,7 @@ watch(currentQuestion, (question) => {
   suppressNextDraftWatch = true;
   draftBody.value = localDrafts[question?.id] ?? question?.draft ?? '';
   autoSaveStatus.value = 'idle';
+  lastDraftSavedAt.value = null;
   editQuestion.prompt = question?.prompt ?? '';
   editQuestion.maxLength = question?.maxLength ?? 1000;
 }, { immediate: true });
@@ -891,6 +911,7 @@ watch(draftBody, () => {
   if (currentQuestion.value?.localOnly) {
     localDrafts[currentQuestion.value.id] = draftBody.value;
     autoSaveStatus.value = 'saved';
+    lastDraftSavedAt.value = new Date();
     return;
   }
   scheduleAutoSave();
@@ -977,9 +998,16 @@ async function saveDraft() {
   if (!currentQuestion.value) return;
   clearAutoSaveTimer();
   autoSaveStatus.value = 'saving';
-  await workspaceStore.saveDraft(workspaceId.value, currentQuestion.value.id, draftBody.value);
-  rememberCurrentWorkspaceIfSaved();
-  autoSaveStatus.value = workspaceStore.status === 'error' ? 'failed' : 'saved';
+  try {
+    await workspaceStore.saveDraft(workspaceId.value, currentQuestion.value.id, draftBody.value);
+    rememberCurrentWorkspaceIfSaved();
+    autoSaveStatus.value = workspaceStore.status === 'error' ? 'failed' : 'saved';
+    if (autoSaveStatus.value === 'saved') {
+      lastDraftSavedAt.value = new Date();
+    }
+  } catch {
+    autoSaveStatus.value = 'failed';
+  }
 }
 
 function scheduleAutoSave() {

@@ -15,6 +15,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -29,22 +30,31 @@ import org.xml.sax.InputSource;
 @Order(20)
 class OpenDartCompanyOverviewProvider implements RealtimeCompanyEnrichmentProvider {
 
-    private static final String BASE_URL = "https://opendart.fss.or.kr/api";
     private static final String SOURCE_TYPE = "OPENDART_COMPANY_OVERVIEW";
     private static final String SOURCE_NAME = "OpenDART 기업개황";
-    private static final String SOURCE_URL = "https://opendart.fss.or.kr/guide/detail.do?apiGrpCd=DS001&apiId=2019002";
     private static final String SOURCE_NOTE = "OpenDART 기업개황 기준";
 
     private final RestTemplate restTemplate;
     private final String apiKey;
+    private final String apiBaseUrl;
+    private final String sourceUrl;
     private volatile Map<String, CorpCode> corpCodeCache;
 
+    @Autowired
     OpenDartCompanyOverviewProvider(
         RestTemplate restTemplate,
-        @Value("${opendart.api-key:}") String apiKey
+        @Value("${opendart.api-key:}") String apiKey,
+        @Value("${opendart.api-base-url}") String apiBaseUrl,
+        @Value("${opendart.company-overview-source-url}") String sourceUrl
     ) {
         this.restTemplate = restTemplate;
         this.apiKey = apiKey;
+        this.apiBaseUrl = trimTrailingSlash(apiBaseUrl);
+        this.sourceUrl = StringUtils.hasText(sourceUrl) ? sourceUrl.trim() : "";
+    }
+
+    OpenDartCompanyOverviewProvider(RestTemplate restTemplate, String apiKey) {
+        this(restTemplate, apiKey, "", "");
     }
 
     @Override
@@ -57,7 +67,7 @@ class OpenDartCompanyOverviewProvider implements RealtimeCompanyEnrichmentProvid
 
     private Optional<RealtimeCompanyEnrichment> requestCompanyOverview(CorpCode corpCode) {
         try {
-            String uri = UriComponentsBuilder.fromHttpUrl(BASE_URL + "/company.json")
+            String uri = UriComponentsBuilder.fromUriString(apiBaseUrl + "/company.json")
                 .queryParam("crtfc_key", apiKey)
                 .queryParam("corp_code", corpCode.corpCode())
                 .toUriString();
@@ -83,9 +93,9 @@ class OpenDartCompanyOverviewProvider implements RealtimeCompanyEnrichmentProvid
                 emptyToNull(root.path("corp_addr").asText("")),
                 SOURCE_TYPE,
                 SOURCE_NAME,
-                SOURCE_URL,
+                sourceUrl,
                 SOURCE_NOTE,
-                List.of(new RealtimeCompanyEnrichment.Source(SOURCE_TYPE, SOURCE_NAME, SOURCE_URL, SOURCE_NOTE))
+                List.of(new RealtimeCompanyEnrichment.Source(SOURCE_TYPE, SOURCE_NAME, sourceUrl, SOURCE_NOTE))
             ));
         } catch (IllegalArgumentException | RestClientException exception) {
             return Optional.empty();
@@ -122,7 +132,7 @@ class OpenDartCompanyOverviewProvider implements RealtimeCompanyEnrichmentProvid
 
     private Map<String, CorpCode> loadCorpCodes() {
         try {
-            String uri = UriComponentsBuilder.fromHttpUrl(BASE_URL + "/corpCode.xml")
+            String uri = UriComponentsBuilder.fromUriString(apiBaseUrl + "/corpCode.xml")
                 .queryParam("crtfc_key", apiKey)
                 .toUriString();
             byte[] zipped = restTemplate.getForObject(uri, byte[].class);
@@ -181,7 +191,7 @@ class OpenDartCompanyOverviewProvider implements RealtimeCompanyEnrichmentProvid
             return null;
         }
         String trimmed = value.trim();
-        return trimmed.startsWith("http://") || trimmed.startsWith("https://") ? trimmed : "https://" + trimmed;
+        return hasHttpScheme(trimmed) ? trimmed : "https:" + "//" + trimmed;
     }
 
     private String domainFromUrl(String value) {
@@ -213,6 +223,26 @@ class OpenDartCompanyOverviewProvider implements RealtimeCompanyEnrichmentProvid
 
     private String normalize(String value) {
         return value == null ? "" : value.replaceAll("\\s+", "").toLowerCase(Locale.ROOT);
+    }
+
+    private boolean hasHttpScheme(String value) {
+        try {
+            String scheme = URI.create(value).getScheme();
+            return "http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme);
+        } catch (IllegalArgumentException exception) {
+            return false;
+        }
+    }
+
+    private String trimTrailingSlash(String value) {
+        if (!StringUtils.hasText(value)) {
+            return "";
+        }
+        String trimmed = value.trim();
+        while (trimmed.endsWith("/")) {
+            trimmed = trimmed.substring(0, trimmed.length() - 1);
+        }
+        return trimmed;
     }
 
     private static String textOf(org.w3c.dom.Node parent, String tagName) {

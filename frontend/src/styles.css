@@ -26,17 +26,9 @@
 
   color: var(--text);
   background: var(--bg);
-  --font-sans: "Pretendard Variable", Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-sans: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
   font-family: var(--font-sans);
   font-synthesis: none;
-}
-
-@font-face {
-  font-family: "Pretendard Variable";
-  font-weight: 45 920;
-  font-style: normal;
-  font-display: swap;
-  src: url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/variable/woff2/PretendardVariable.woff2") format("woff2-variations");
 }
 
 * {
@@ -3830,6 +3822,42 @@ li {
     border-bottom: 0;
   }
 
+  .basket-calendar-panel {
+    overflow: hidden;
+  }
+
+  .basket-calendar-panel .section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .basket-calendar-panel select {
+    width: 100%;
+    max-width: 240px;
+  }
+
+  .basket-calendar-mobile-hint {
+    display: block;
+  }
+
+  .basket-calendar-scroll {
+    margin-inline: -2px;
+    padding: 0 2px 8px;
+  }
+
+  .job-calendar {
+    min-width: 680px;
+  }
+
+  .deadline-day.job-calendar-day {
+    min-height: 92px;
+  }
+
+  .calendar-job-card {
+    padding: 7px;
+  }
+
   .basket-data-head {
     display: none;
   }
@@ -4971,6 +4999,22 @@ li {
   padding: 8px 12px;
 }
 
+.basket-calendar-mobile-hint {
+  display: none;
+  margin: -2px 0 10px;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.basket-calendar-scroll {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
 .job-calendar {
   min-height: 360px;
 }
@@ -5020,6 +5064,27 @@ li {
   justify-self: start;
   font-size: 0.72rem;
   font-style: normal;
+}
+
+.calendar-job-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  min-width: 0;
+}
+
+.calendar-job-meta .status-tag {
+  flex: 0 0 auto;
+  font-size: 0.6rem;
+  padding: 2px 6px;
+}
+
+.calendar-job-meta span {
+  color: #94a3b8;
+  font-size: 0.65rem;
+  font-weight: 900;
+  white-space: nowrap;
 }
 
 .basket-tools .active {
@@ -6474,7 +6539,7 @@ li {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 28px;
+  gap: 10px;
   min-width: 160px;
   flex-shrink: 0;
 }
@@ -11027,6 +11092,25 @@ main, .study-dashboard, .workspace-layout {
 .auto-save-badge[data-save-state="saving"] {
   background: #fef9c3;
   color: #854d0e;
+}
+
+.auto-save-badge[data-save-state="waiting"] {
+  background: #eef2ff;
+  color: #3730a3;
+}
+
+.auto-save-badge[data-save-state="failed"] {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.auto-save-detail {
+  color: #64748b;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  margin: -2px 0 8px;
+  max-width: 190px;
+  text-align: right;
 }
 
 .history-page {

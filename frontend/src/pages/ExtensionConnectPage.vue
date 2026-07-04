@@ -4,7 +4,23 @@
       <img class="auth-logo" src="../assets/ez-one-logo-final.png" alt="EZ-ONE" />
       <h1 id="extension-connect-title">확장프로그램 연결</h1>
       <p>{{ statusMessage }}</p>
-      <RouterLink v-if="hasError" class="primary-button" to="/login">다시 로그인하기</RouterLink>
+      <p v-if="hasError" class="extension-connect-help" data-testid="extension-connect-help">
+        스토어에서 설치한 뒤 지원 중인 채용공고 페이지에서 EZ-ONE을 다시 열어 주세요.
+        그래도 안 되면 확장 프로그램을 새로고침하고 다시 로그인해 주세요.
+      </p>
+      <div v-if="hasError" class="extension-connect-actions">
+        <RouterLink class="primary-button" to="/login">다시 로그인하기</RouterLink>
+        <a
+          v-if="extensionInstallUrl"
+          class="secondary-button"
+          data-testid="extension-install-link"
+          :href="extensionInstallUrl"
+          target="_blank"
+          rel="noreferrer"
+        >
+          설치 페이지 열기
+        </a>
+      </div>
       <RouterLink v-else class="primary-button" to="/main">EZ-ONE 열기</RouterLink>
     </section>
   </main>
@@ -16,11 +32,12 @@ import { useRoute } from 'vue-router';
 import { authApi } from '@/features/auth/api/authApi';
 import { getAccessToken } from '@/features/auth/session/authSession';
 
-const DEFAULT_LOCAL_EXTENSION_ID = 'ikpeibohnopmikegoogggmdipmhmiadi';
+const DEFAULT_LOCAL_EXTENSION_ID = import.meta.env.DEV ? 'ikpeibohnopmikegoogggmdipmhmiadi' : '';
 const route = useRoute();
 const errorMessage = ref('');
 const completed = ref(false);
 const hasError = computed(() => Boolean(errorMessage.value));
+const extensionInstallUrl = computed(() => String(import.meta.env.VITE_EXTENSION_INSTALL_URL ?? '').trim());
 const statusMessage = computed(() => {
     if (errorMessage.value) {
         return errorMessage.value;
@@ -32,7 +49,7 @@ const statusMessage = computed(() => {
 onMounted(async () => {
     const extensionIds = extensionIdCandidates(import.meta.env.VITE_EXTENSION_ID);
     if (extensionIds.length === 0) {
-        errorMessage.value = '확장프로그램 ID가 설정되지 않았습니다. VITE_EXTENSION_ID를 설정해 주세요.';
+        errorMessage.value = '확장프로그램 연결 설정이 완료되지 않았습니다. 잠시 후 다시 시도해 주세요.';
         return;
     }
     if (!getAccessToken()) {
@@ -82,6 +99,9 @@ function normalizeExtensionConnectError(error) {
     const message = error instanceof Error ? error.message : '';
     if (/401|unauthorized|로그인이 만료|authentication is required/i.test(message)) {
         return '로그인 시간이 만료되었습니다. 다시 로그인해 주세요.';
+    }
+    if (/chrome .*?환경|could not establish connection|receiving end does not exist|invalid extension id/i.test(message)) {
+        return 'Chrome 확장프로그램에서 연결을 시작해야 합니다.';
     }
     return message || '확장프로그램 연결에 실패했습니다.';
 }
@@ -165,3 +185,31 @@ function parseSourceUrl(value) {
     return null;
 }
 </script>
+
+<style scoped>
+.extension-connect-help {
+  color: #475569;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.extension-connect-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.secondary-button {
+  align-items: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: #334155;
+  display: inline-flex;
+  font-weight: 800;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 18px;
+  text-decoration: none;
+}
+</style>

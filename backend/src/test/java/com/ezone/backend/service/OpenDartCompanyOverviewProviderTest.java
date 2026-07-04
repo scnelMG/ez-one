@@ -18,6 +18,10 @@ import org.springframework.web.client.RestTemplate;
 
 class OpenDartCompanyOverviewProviderTest {
 
+    private static final String OPENDART_API_BASE_URL = "https://opendart.fss.or.kr/api";
+    private static final String OPENDART_COMPANY_OVERVIEW_SOURCE_URL =
+        "https://opendart.fss.or.kr/guide/detail.do?apiGrpCd=DS001&apiId=2019002";
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
@@ -51,7 +55,9 @@ class OpenDartCompanyOverviewProviderTest {
 
         OpenDartCompanyOverviewProvider provider = new OpenDartCompanyOverviewProvider(
             restTemplate,
-            "opendart-key"
+            "opendart-key",
+            OPENDART_API_BASE_URL,
+            OPENDART_COMPANY_OVERVIEW_SOURCE_URL
         );
 
         Optional<RealtimeCompanyEnrichment> enrichment = provider.enrich("삼성전자");
@@ -88,7 +94,12 @@ class OpenDartCompanyOverviewProviderTest {
                 }
                 """));
 
-        OpenDartCompanyOverviewProvider provider = new OpenDartCompanyOverviewProvider(restTemplate, "opendart-key");
+        OpenDartCompanyOverviewProvider provider = new OpenDartCompanyOverviewProvider(
+            restTemplate,
+            "opendart-key",
+            OPENDART_API_BASE_URL,
+            OPENDART_COMPANY_OVERVIEW_SOURCE_URL
+        );
 
         Optional<RealtimeCompanyEnrichment> enrichment = provider.enrich("KB금융지주");
 
