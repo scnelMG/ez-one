@@ -621,7 +621,7 @@ const sections = [
   { id: 'career', label: '경력', title: '경력' },
   { id: 'projects', label: '프로젝트', title: '프로젝트' },
   { id: 'certificates', label: '자격증 / 어학', title: '자격증 / 어학' },
-  { id: 'other', label: '수상 / 교육 / 대외활동', title: '수상 / 교육 / 대외활동' }
+  { id: 'other', label: '수상 / 교육 / 학내외 활동', title: '수상 / 교육 / 학내외 활동' }
 ];
 
 const saveButtonLabel = computed(() => {
@@ -892,6 +892,7 @@ const selectOptions = {
   activityType: [
     { label: '선택하세요', value: '' },
     { label: '동아리', value: '동아리' },
+    { label: '팀 프로젝트', value: '팀 프로젝트' },
     { label: '학생회', value: '학생회' },
     { label: '서포터즈', value: '서포터즈' },
     { label: '봉사', value: '봉사' },
@@ -1125,9 +1126,9 @@ const sectionSchemas = {
       },
       {
         key: 'activities',
-        title: '대외활동',
-        itemLabel: '대외활동',
-        addLabel: '대외활동 추가',
+        title: '학내외 활동',
+        itemLabel: '학내외 활동',
+        addLabel: '학내외 활동 추가',
         repeatable: true,
         columns: 3,
         fields: [
