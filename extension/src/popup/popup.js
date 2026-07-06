@@ -993,9 +993,21 @@ function renderAutoFillResult(result) {
     const visibleCopyCandidates = copyCandidates.filter((item) => shouldShowCopyCandidate(item, primaryCoverage));
     const groupedCopyCandidates = sortByDisplayOrder(groupActivityCopyCandidates(visibleCopyCandidates));
     const manualReviewItems = sortByDisplayOrder(buildManualReviewItems(visibleFailed));
-    documentResultTitle.textContent = isPreview ? '입력 전 확인' : '입력이 끝났습니다';
+    const hasPartialAutoFillResult = !isPreview &&
+        primaryItems.length > 0 &&
+        (manualReviewItems.length > 0 || groupedCopyCandidates.length > 0);
+    const hasOnlyManualAutoFillResult = !isPreview &&
+        primaryItems.length === 0 &&
+        (manualReviewItems.length > 0 || groupedCopyCandidates.length > 0);
+    documentResultTitle.textContent = isPreview
+        ? '입력 전 확인'
+        : hasPartialAutoFillResult
+            ? '입력 완료, 확인 필요'
+            : hasOnlyManualAutoFillResult
+                ? '확인 필요'
+                : '입력이 끝났습니다';
     autofillFilledLabel.textContent = isPreview ? '입력 예정' : '입력됨';
-    autofillFilledHeading.textContent = isPreview ? '입력 예정' : '자동 입력됨';
+    autofillFilledHeading.textContent = isPreview ? '입력 예정' : '자동 입력';
     autofillFilledCaption.textContent = isPreview
         ? `${primaryItems.length}개 자동 입력 가능`
         : `${primaryItems.length}개 자동 입력 완료`;
@@ -1011,7 +1023,11 @@ function renderAutoFillResult(result) {
     autofillCopyCount.textContent = String(groupedCopyCandidates.length);
     autofillSummary.textContent = isPreview
         ? `자동 입력 전 아래 항목을 확인해 주세요. 입력 예정 ${primaryItems.length}개, 확인 필요 ${manualReviewItems.length}개, 복사 필요 ${groupedCopyCandidates.length}개.`
-        : `${primaryItems.length}개 항목을 입력했습니다. 확인 필요 ${manualReviewItems.length}개, 복사 필요 ${groupedCopyCandidates.length}개.`;
+        : hasPartialAutoFillResult
+            ? `자동 입력은 완료됐고 확인이 필요한 항목이 있습니다. 입력 ${primaryItems.length}개, 확인 필요 ${manualReviewItems.length}개, 복사 필요 ${groupedCopyCandidates.length}개.`
+            : hasOnlyManualAutoFillResult
+                ? `자동 입력된 항목이 없습니다. 확인 필요 ${manualReviewItems.length}개, 복사 필요 ${groupedCopyCandidates.length}개.`
+                : `${primaryItems.length}개 항목을 입력했습니다. 확인 필요 ${manualReviewItems.length}개, 복사 필요 ${groupedCopyCandidates.length}개.`;
     renderPrimaryAutoFillList(autofillFilledList, primaryItems, isPreview);
     renderResultList(autofillFailedList, manualReviewItems, formatManualReviewDisplay, '확인 필요 항목이 없습니다.');
     renderResultList(autofillCopyList, groupedCopyCandidates, formatCopyCandidateDisplay, '복사할 항목이 없습니다.');
@@ -1906,6 +1922,9 @@ function getAutofillFailureMessage(itemOrReason) {
     }
     if (reason === 'control_not_ready') {
         return '\uC785\uB825\uCE78\uC774 \uC544\uC9C1 \uC5F4\uB9AC\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4. \uD56D\uBAA9\uC744 \uC5F0 \uB4A4 \uB2E4\uC2DC \uC778\uC2DD\uC744 \uB20C\uB7EC\uC8FC\uC138\uC694.';
+    }
+    if (reason === 'autofill_timeout') {
+        return '\uC790\uB3D9 \uC785\uB825 \uC2DC\uAC04\uC774 \uCD08\uACFC\uB410\uC2B5\uB2C8\uB2E4. \uD56D\uBAA9\uC744 \uD655\uC778\uD55C \uB4A4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.';
     }
     if (reason === 'apply_failed') {
         return '\uC790\uB3D9 \uC785\uB825 \uC911 \uBB38\uC81C\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4. \uB2E4\uC2DC \uC778\uC2DD \uD6C4 \uC7AC\uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.';

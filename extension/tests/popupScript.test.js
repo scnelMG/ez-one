@@ -1,9 +1,145 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 describe('extension popup script', () => {
     const script = readFileSync(resolve(__dirname, '../src/popup/popup.js'), 'utf-8');
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+        vi.useRealTimers();
+        document.body.innerHTML = '';
+        delete window.__renderAutoFillResult;
+        delete globalThis.chrome;
+        delete globalThis.ResizeObserver;
+    });
+
+    function createPopupFixture() {
+        const listIds = new Set([
+            'essay-question-list',
+            'role-options',
+            'saved-job-list',
+            'autofill-filled-list',
+            'autofill-failed-list',
+            'autofill-copy-list',
+            'activity-assist-list'
+        ]);
+        const buttonIds = new Set([
+            'login-button',
+            'job-save-mode-button',
+            'document-input-mode-button',
+            'save-button',
+            'reload-preview-button',
+            'autofill-apply-button',
+            'autofill-rescan-button',
+            'activity-assist-button'
+        ]);
+        const inputIds = new Set([
+            'company-name-input',
+            'position-title-input',
+            'deadline-label-input',
+            'activity-assist-count-input',
+            'activity-assist-limit-input'
+        ]);
+        const linkIds = new Set(['basket-link', 'home-link', 'web-link', 'feature-web-link']);
+        const ids = [
+            'status-panel',
+            'login-panel',
+            'feature-panel',
+            'preview-panel',
+            'result-panel',
+            'document-result-panel',
+            'status-title',
+            'status-message',
+            ...buttonIds,
+            ...inputIds,
+            'essay-fieldset',
+            ...listIds,
+            'essay-question-status',
+            'role-count',
+            ...linkIds,
+            'result-message',
+            'document-result-title',
+            'autofill-summary',
+            'autofill-filled-count',
+            'autofill-filled-label',
+            'autofill-review-count',
+            'autofill-copy-count',
+            'autofill-filled-heading',
+            'autofill-filled-caption',
+            'activity-assist-section',
+            'activity-assist-caption',
+            'activity-assist-unit-select',
+            'activity-assist-status'
+        ];
+
+        const root = document.createElement('main');
+        for (const id of ids) {
+            let element;
+            if (listIds.has(id)) element = document.createElement('ul');
+            else if (buttonIds.has(id)) element = document.createElement('button');
+            else if (inputIds.has(id)) element = document.createElement('input');
+            else if (linkIds.has(id)) element = document.createElement('a');
+            else if (id === 'activity-assist-unit-select') element = document.createElement('select');
+            else element = document.createElement('div');
+            element.id = id;
+            root.appendChild(element);
+        }
+        document.body.appendChild(root);
+    }
+
+    function loadPopupRuntime() {
+        createPopupFixture();
+        globalThis.ResizeObserver = class {
+            observe() {}
+            disconnect() {}
+        };
+        globalThis.chrome = {
+            storage: {
+                local: {
+                    get: vi.fn(async () => ({})),
+                    set: vi.fn(async () => {}),
+                    remove: vi.fn(async () => {})
+                },
+                onChanged: { addListener: vi.fn() }
+            },
+            tabs: {
+                query: vi.fn(async () => []),
+                create: vi.fn(async () => ({})),
+                sendMessage: vi.fn(async () => ({}))
+            },
+            scripting: {
+                executeScript: vi.fn(async () => [])
+            },
+            runtime: {
+                onMessage: { addListener: vi.fn() },
+                sendMessage: vi.fn(async () => ({}))
+            }
+        };
+        const runnableScript = `
+const __env = {};
+function createExtensionJobApi() { return { save: async () => [] }; }
+function createExtensionDocumentProfileApi() { return { getLatest: async () => null, createActivityRecommendations: async () => [] }; }
+const ACCESS_TOKEN_KEY = 'accessToken';
+const PENDING_EXTENSION_CONTINUATION_KEY = 'pendingExtensionContinuation';
+const REFRESH_TOKEN_KEY = 'refreshToken';
+function buildWebLoginUrl() { return new URL('https://example.test/login'); }
+async function clearStoredSession() {}
+async function saveStoredSession() {}
+async function validateStoredSession() { return null; }
+${script
+        .replace(/import \{ createExtensionJobApi \} from '\.\.\/shared\/api\/extensionJobApi';\r?\n/, '')
+        .replace(/import \{ createExtensionDocumentProfileApi \} from '\.\.\/shared\/api\/extensionDocumentProfileApi';\r?\n/, '')
+        .replace(/import \{[\s\S]*?\} from '\.\.\/shared\/auth\/extensionAuth';\r?\n/, '')
+        .replace(/import '\.\/popup\.css';\r?\n/, '')
+        .replace(/import\.meta\.env\./g, '__env.')
+        .replace('void init();', '')
+        .replace('startPostingChangeWatcher();', '')}
+window.__renderAutoFillResult = renderAutoFillResult;
+`;
+        (0, eval)(runnableScript);
+        return window.__renderAutoFillResult;
+    }
 
     it('requires configured extension origins instead of hardcoded local runtime fallbacks', () => {
         expect(script).toContain('function resolveExtensionApiBaseUrl');
@@ -167,6 +303,66 @@ describe('extension popup script', () => {
         expect(script).toContain('자동 입력 시작');
         expect(script).not.toContain('확인 후 자동 입력');
         expect(script).not.toContain('복사 후보');
+    });
+
+    it('renders partial success with a timed out slow field as automatic input with Korean review-needed output', () => {
+        const renderAutoFillResult = loadPopupRuntime();
+
+        renderAutoFillResult({
+            metadata: {
+                elapsedMs: 1800,
+                fastFilledCount: 1,
+                slowAttemptedCount: 1,
+                timedOutCount: 1
+            },
+            filled: [{
+                fieldKey: 'basicInfo.nameKo',
+                label: '\uC774\uB984',
+                value: '\uD64D\uAE38\uB3D9',
+                displayOrder: 1
+            }],
+            failed: [{
+                label: '\uD559\uAD50\uBA85',
+                reason: 'autofill_timeout',
+                displayOrder: 2
+            }],
+            copyCandidates: []
+        });
+
+        expect(document.getElementById('document-result-title').textContent).toBe('\uC785\uB825 \uC644\uB8CC, \uD655\uC778 \uD544\uC694');
+        expect(document.getElementById('autofill-summary').textContent).toContain('\uC790\uB3D9 \uC785\uB825\uC740 \uC644\uB8CC\uB410\uACE0 \uD655\uC778\uC774 \uD544\uC694\uD55C \uD56D\uBAA9\uC774 \uC788\uC2B5\uB2C8\uB2E4.');
+        expect(document.getElementById('autofill-summary').textContent).toContain('\uC785\uB825 1\uAC1C');
+        expect(document.getElementById('autofill-summary').textContent).toContain('\uD655\uC778 \uD544\uC694 1\uAC1C');
+        expect(document.getElementById('autofill-filled-count').textContent).toBe('1');
+        expect(document.getElementById('autofill-review-count').textContent).toBe('1');
+        expect(document.getElementById('autofill-filled-heading').textContent).toBe('\uC790\uB3D9 \uC785\uB825');
+        expect(document.getElementById('autofill-failed-list').textContent).toContain('\uD559\uAD50\uBA85');
+        expect(document.getElementById('autofill-failed-list').textContent).toContain('\uC790\uB3D9 \uC785\uB825 \uC2DC\uAC04\uC774 \uCD08\uACFC');
+        expect(document.getElementById('autofill-summary').textContent).not.toContain('1800');
+        expect(document.getElementById('autofill-summary').textContent).not.toContain('fastFilledCount');
+    });
+
+    it('renders all-failed autofill results as 확인 필요 manual guidance without a fake success count', () => {
+        const renderAutoFillResult = loadPopupRuntime();
+
+        renderAutoFillResult({
+            filled: [],
+            failed: [{
+                label: '\uD559\uAD50\uBA85',
+                reason: 'control_not_ready',
+                displayOrder: 1
+            }],
+            copyCandidates: []
+        });
+
+        expect(document.getElementById('document-result-title').textContent).toBe('\uD655\uC778 \uD544\uC694');
+        expect(document.getElementById('autofill-summary').textContent).toContain('\uC790\uB3D9 \uC785\uB825\uB41C \uD56D\uBAA9\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.');
+        expect(document.getElementById('autofill-summary').textContent).toContain('\uD655\uC778 \uD544\uC694 1\uAC1C');
+        expect(document.getElementById('autofill-summary').textContent).not.toContain('1\uAC1C \uD56D\uBAA9\uC744 \uC785\uB825');
+        expect(document.getElementById('autofill-filled-count').textContent).toBe('0');
+        expect(document.getElementById('autofill-review-count').textContent).toBe('1');
+        expect(document.getElementById('autofill-filled-list').textContent).toContain('\uC790\uB3D9 \uC785\uB825\uB41C \uD56D\uBAA9\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.');
+        expect(document.getElementById('autofill-failed-list').textContent).toContain('\uD559\uAD50\uBA85');
     });
 
     it('keeps copy-needed items out of the manual review list', () => {

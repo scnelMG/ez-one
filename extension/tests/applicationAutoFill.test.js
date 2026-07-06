@@ -95,6 +95,1086 @@ describe('applicationAutoFill', () => {
         ]);
     });
 
+    it('EXT-021 fast fields are not blocked by slow autocomplete', async () => {
+        vi.useFakeTimers();
+        const originalRequestAnimationFrame = window.requestAnimationFrame;
+        const originalScrollTo = window.scrollTo;
+        window.requestAnimationFrame = undefined;
+        window.scrollTo = vi.fn();
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <div>
+          <button id="slow-language" type="button" aria-haspopup="listbox"><span>Language test</span></button>
+        </div>
+        <label>Name<input id="name" /></label>
+        <label>Career
+          <select id="career">
+            <option value="">Select</option>
+            <option value="new">New graduate</option>
+          </select>
+        </label>
+        <fieldset>
+          <legend>Gender</legend>
+          <label><input id="gender-male" type="radio" name="gender" value="male" /> Male</label>
+          <label><input id="gender-female" type="radio" name="gender" value="female" /> Female</label>
+        </fieldset>
+      </form>
+    `;
+        const slowControl = doc.getElementById('slow-language');
+        const nameInput = doc.getElementById('name');
+        const careerSelect = doc.getElementById('career');
+        const genderMale = doc.getElementById('gender-male');
+
+        try {
+            const resultPromise = applyAutoFillPlanFastAsync({
+                fillable: [{
+                    element: slowControl,
+                    fieldKey: 'certificates.languageTests.0.score',
+                    label: 'Language test score',
+                    value: 'IM1',
+                    customSelectControl: true,
+                    displayOrder: 0
+                }, {
+                    element: nameInput,
+                    fieldKey: 'basicInfo.nameKo',
+                    label: 'Name',
+                    value: 'Hong Gil Dong',
+                    displayOrder: 1
+                }, {
+                    element: careerSelect,
+                    fieldKey: 'basicInfo.applicationCareerType',
+                    label: 'Career',
+                    value: 'new',
+                    displayOrder: 2
+                }, {
+                    element: genderMale,
+                    fieldKey: 'basicInfo.gender',
+                    label: 'Gender',
+                    value: 'male',
+                    displayOrder: 3
+                }],
+                failed: [],
+                skipped: [],
+                copyCandidates: []
+            });
+
+            await vi.advanceTimersByTimeAsync(0);
+
+            expect(nameInput.value).toBe('Hong Gil Dong');
+            expect(careerSelect.value).toBe('new');
+            expect(genderMale.checked).toBe(true);
+
+            await vi.runAllTimersAsync();
+            const result = await resultPromise;
+
+            expect(result.filled).toEqual([
+                expect.objectContaining({ fieldKey: 'basicInfo.nameKo', value: 'Hong Gil Dong', displayOrder: 1 }),
+                expect.objectContaining({ fieldKey: 'basicInfo.applicationCareerType', value: 'new', displayOrder: 2 }),
+                expect.objectContaining({ fieldKey: 'basicInfo.gender', value: 'Male', displayOrder: 3 })
+            ]);
+            expect(result.failed).toEqual([
+                expect.objectContaining({ fieldKey: 'certificates.languageTests.0.score', reason: 'select_option_not_found' })
+            ]);
+        }
+        finally {
+            window.requestAnimationFrame = originalRequestAnimationFrame;
+        }
+    });
+
+    it('EXT-021: returns partial result when a true autocomplete never resolves', async () => {
+        vi.useFakeTimers();
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <label>학교정보<input id="school-name" role="combobox" aria-autocomplete="list" placeholder="학교명을 검색해주세요." /></label>
+        <label>Name<input id="name" /></label>
+      </form>
+    `;
+        const schoolInput = doc.getElementById('school-name');
+        const nameInput = doc.getElementById('name');
+
+        const resultPromise = applyAutoFillPlanFastAsync({
+            fillable: [{
+                element: schoolInput,
+                fieldKey: 'education.highSchool.schoolName',
+                label: '학교정보',
+                value: 'Missing High School',
+                autocompleteSearchControl: true,
+                relatedValues: [],
+                displayOrder: 0
+            }, {
+                element: nameInput,
+                fieldKey: 'basicInfo.nameKo',
+                label: 'Name',
+                value: 'Hong Gil Dong',
+                displayOrder: 1
+            }],
+            failed: [],
+            skipped: [],
+            copyCandidates: []
+        });
+
+        await vi.advanceTimersByTimeAsync(30000);
+        const result = await resultPromise;
+
+        expect(result.mode).toBe('applied');
+        expect(nameInput.value).toBe('Hong Gil Dong');
+        expect(result.filled).toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'basicInfo.nameKo', value: 'Hong Gil Dong' })
+        ]));
+        expect(result.failed).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                fieldKey: 'education.highSchool.schoolName',
+                reason: expect.stringMatching(/^(autofill_timeout|control_not_ready)$/)
+            })
+        ]));
+    });
+
+    it('EXT-021: total fast apply deadline returns applied partial arrays', async () => {
+        vi.useFakeTimers();
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = '<form><input id="name" /></form>';
+        const nameInput = doc.getElementById('name');
+        const slowItems = Array.from({ length: 20 }, (_, index) => ({
+            element: doc.body,
+            fieldKey: `education.universities.0.majors.${index}.majorName`,
+            label: `Major ${index + 1}`,
+            value: `Missing major ${index + 1}`,
+            waitForControlBeforeFill: true,
+            relatedValues: [],
+            displayOrder: index
+        }));
+
+        const resultPromise = applyAutoFillPlanFastAsync({
+            fillable: [
+                ...slowItems,
+                {
+                    element: nameInput,
+                    fieldKey: 'basicInfo.nameKo',
+                    label: 'Name',
+                    value: 'Hong Gil Dong',
+                    displayOrder: 100
+                }
+            ],
+            failed: [],
+            skipped: [],
+            copyCandidates: []
+        });
+
+        await vi.advanceTimersByTimeAsync(30000);
+        const result = await resultPromise;
+
+        expect(result.mode).toBe('applied');
+        expect(Array.isArray(result.filled)).toBe(true);
+        expect(Array.isArray(result.failed)).toBe(true);
+        expect(nameInput.value).toBe('Hong Gil Dong');
+        expect(result.failed).toEqual(expect.arrayContaining([
+            expect.objectContaining({ reason: 'autofill_timeout' })
+        ]));
+    });
+
+    it('EXT-021: fast async apply honors caller deadline spent before apply starts', async () => {
+        vi.useFakeTimers();
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = '<form><label>Name<input id="name" /></label></form>';
+        const nameInput = doc.getElementById('name');
+
+        const result = await applyAutoFillPlanFastAsync({
+            fillable: [{
+                element: nameInput,
+                fieldKey: 'basicInfo.nameKo',
+                label: 'Name',
+                value: 'Hong Gil Dong',
+                displayOrder: 0
+            }],
+            failed: [],
+            skipped: [],
+            copyCandidates: []
+        }, { deadlineAt: Date.now() - 1 });
+
+        expect(result.mode).toBe('applied');
+        expect(nameInput.value).toBe('');
+        expect(result.filled).toEqual([]);
+        expect(result.failed).toEqual([
+            expect.objectContaining({ fieldKey: 'basicInfo.nameKo', reason: 'autofill_timeout' })
+        ]);
+    });
+
+    it('EXT-021: fast async apply returns partial result when an inner autocomplete wait never settles', async () => {
+        vi.useFakeTimers();
+        const now = Date.now();
+        const dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(now);
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <label>Name<input id="name" /></label>
+        <label>School<input id="school" role="combobox" aria-autocomplete="list" /></label>
+      </form>
+    `;
+
+        let outcome = null;
+        try {
+            const resultPromise = applyAutoFillPlanFastAsync({
+                fillable: [{
+                    element: doc.getElementById('school'),
+                    fieldKey: 'education.universities.0.schoolName',
+                    label: 'School',
+                    value: 'Missing University',
+                    autocompleteSearchControl: true,
+                    relatedValues: [],
+                    displayOrder: 1
+                }, {
+                    element: doc.getElementById('name'),
+                    fieldKey: 'basicInfo.nameKo',
+                    label: 'Name',
+                    value: 'Hong Gil Dong',
+                    displayOrder: 0
+                }],
+                failed: [],
+                skipped: [],
+                copyCandidates: []
+            }, { deadlineAt: now + 100 });
+            const bounded = Promise.race([
+                resultPromise.then((result) => ({ status: 'resolved', result })),
+                new Promise((resolve) => setTimeout(() => resolve({ status: 'hung' }), 500))
+            ]);
+
+            await vi.advanceTimersByTimeAsync(500);
+            outcome = await bounded;
+        }
+        finally {
+            dateNowSpy.mockRestore();
+            await vi.advanceTimersByTimeAsync(30000);
+        }
+
+        expect(outcome.status).toBe('resolved');
+        expect(outcome.result.mode).toBe('applied');
+        expect(outcome.result.filled).toEqual([
+            expect.objectContaining({ fieldKey: 'basicInfo.nameKo', value: 'Hong Gil Dong' })
+        ]);
+        expect(outcome.result.failed).toEqual([
+            expect.objectContaining({ fieldKey: 'education.universities.0.schoolName', reason: 'autofill_timeout' })
+        ]);
+        expect(outcome.result.copyCandidates).toEqual([
+            expect.objectContaining({ key: 'education.universities.0.schoolName', value: 'Missing University' })
+        ]);
+    });
+
+    it('EXT-031: unresolved school combobox detail wait is bounded and does not block normal fields', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uB300\uD559\uC6D0">
+          <label>\uD559\uAD50\uC815\uBCF4
+            <input
+              id="graduate-school-name"
+              name="educationalBackground.graduateSchools.0.schoolName"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-expanded="true"
+              placeholder="\uD559\uAD50\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694."
+            />
+          </label>
+          <div id="graduate-detail"></div>
+        </section>
+        <label>Name<input id="name" /></label>
+      </form>
+    `;
+        const schoolInput = doc.getElementById('graduate-school-name');
+        const nameInput = doc.getElementById('name');
+        let outcome = null;
+
+        const resultPromise = applyAutoFillPlanFastAsync({
+            fillable: [{
+                element: schoolInput,
+                fieldKey: 'education.graduateSchools.0.schoolName',
+                label: '\uB300\uD559\uC6D0 \uD559\uAD50\uC815\uBCF4',
+                value: '\uC11C\uC6B8\uB300\uD559\uAD50',
+                autocompleteSearchControl: true,
+                relatedValues: [{
+                    key: 'education.graduateSchools.0.graduationDate',
+                    label: '\uB300\uD559\uC6D0 \uC878\uC5C5\uC77C',
+                    value: '2024-02-28'
+                }],
+                displayOrder: 0
+            }, {
+                element: nameInput,
+                fieldKey: 'basicInfo.nameKo',
+                label: 'Name',
+                value: 'Hong Gil Dong',
+                displayOrder: 1
+            }],
+            failed: [],
+            skipped: [],
+            copyCandidates: []
+        }, { deadlineAt: Date.now() + 2600 });
+        const bounded = Promise.race([
+            resultPromise.then((result) => ({ status: 'resolved', result })),
+            new Promise((resolve) => setTimeout(() => resolve({ status: 'hung' }), 2400))
+        ]);
+
+        outcome = await bounded;
+
+        expect(outcome.status).toBe('resolved');
+        expect(outcome.result.mode).toBe('applied');
+        expect(nameInput.value).toBe('Hong Gil Dong');
+        expect(schoolInput.getAttribute('aria-expanded')).toBe('true');
+        expect(outcome.result.filled).toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'basicInfo.nameKo', value: 'Hong Gil Dong' })
+        ]));
+        expect(outcome.result.failed).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                fieldKey: 'education.graduateSchools.0.schoolName',
+                value: '\uC11C\uC6B8\uB300\uD559\uAD50'
+            })
+        ]));
+        expect(outcome.result.copyCandidates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                key: 'education.graduateSchools.0.schoolName',
+                value: '\uC11C\uC6B8\uB300\uD559\uAD50'
+            })
+        ]));
+    });
+
+    it('EXT-031: missing control after section open is bounded and does not block later fields', async () => {
+        vi.useFakeTimers();
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uB300\uD559\uAD50">
+          <button id="section-open" type="button">\uB300\uD559\uAD50 \uCD94\uAC00</button>
+        </section>
+        <label>Name<input id="name" /></label>
+      </form>
+    `;
+        const opener = doc.getElementById('section-open');
+        const nameInput = doc.getElementById('name');
+        let openClicks = 0;
+        opener.addEventListener('click', () => {
+            openClicks += 1;
+        });
+
+        const resultPromise = applyAutoFillPlanFastAsync({
+            fillable: [{
+                element: opener,
+                fieldKey: 'education.universities.0.open',
+                label: '\uB300\uD559\uAD50 \uC785\uB825\uCE78 \uC5F4\uAE30',
+                value: '\uC785\uB825\uCE78 \uC5F4\uAE30',
+                sectionOpenControl: true,
+                relatedValues: [],
+                displayOrder: 0
+            }, {
+                element: opener,
+                fieldKey: 'education.universities.0.schoolName',
+                label: '\uB300\uD559\uAD50 \uD559\uAD50\uBA85',
+                value: '\uBD80\uC0B0\uB300\uD559\uAD50',
+                waitForControlBeforeFill: true,
+                relatedValues: [],
+                displayOrder: 1
+            }, {
+                element: nameInput,
+                fieldKey: 'basicInfo.nameKo',
+                label: 'Name',
+                value: 'Hong Gil Dong',
+                displayOrder: 2
+            }],
+            failed: [],
+            skipped: [],
+            copyCandidates: []
+        });
+        const bounded = Promise.race([
+            resultPromise.then((result) => ({ status: 'resolved', result })),
+            new Promise((resolve) => setTimeout(() => resolve({ status: 'hung' }), 2400))
+        ]);
+
+        await vi.advanceTimersByTimeAsync(2400);
+        const outcome = await bounded;
+
+        expect(outcome.status).toBe('resolved');
+        expect(openClicks).toBe(1);
+        expect(nameInput.value).toBe('Hong Gil Dong');
+        expect(outcome.result.filled).toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'basicInfo.nameKo', value: 'Hong Gil Dong' })
+        ]));
+        expect(outcome.result.failed).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                fieldKey: 'education.universities.0.schoolName',
+                reason: 'control_not_ready'
+            })
+        ]));
+        expect(outcome.result.copyCandidates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                key: 'education.universities.0.schoolName',
+                value: '\uBD80\uC0B0\uB300\uD559\uAD50'
+            })
+        ]));
+    });
+
+    it('EXT-021: apply message reuses preview plan after validating unchanged signature', async () => {
+        vi.useRealTimers();
+        const originalChrome = globalThis.chrome;
+        const originalLoaded = window.ezOneAutoFillApplicationLoaded;
+        const listeners = [];
+        globalThis.chrome = {
+            runtime: {
+                onMessage: {
+                    addListener(listener) {
+                        listeners.push(listener);
+                    }
+                }
+            }
+        };
+        window.ezOneAutoFillApplicationLoaded = false;
+        document.body.innerHTML = `
+      <form>
+        <button id="signature-only" type="button">Signature only</button>
+        <label>Name<input id="name" /></label>
+      </form>
+    `;
+
+        try {
+            await import('../src/content/applicationAutoFill.js?runtime-cache');
+            const listener = listeners.at(-1);
+            const sendMessage = (message) => new Promise((resolve, reject) => {
+                try {
+                    listener(message, {}, resolve);
+                }
+                catch (error) {
+                    reject(error);
+                }
+            });
+
+            const preview = await sendMessage({ type: 'EZONE_PREVIEW_APPLICATION_AUTOFILL', profile });
+            expect(preview.plannedCount).toBeGreaterThan(0);
+
+            const originalQuerySelectorAll = document.querySelectorAll.bind(document);
+            let queryCount = 0;
+            document.querySelectorAll = (selector) => {
+                queryCount += 1;
+                if (queryCount > 1) {
+                    throw new Error(`preview plan rebuilt with selector ${selector}`);
+                }
+                return originalQuerySelectorAll(selector);
+            };
+            try {
+                const apply = await sendMessage({ type: 'EZONE_APPLY_APPLICATION_AUTOFILL', profile });
+
+                expect(apply.mode).toBe('applied');
+                expect(document.getElementById('name').value).toBe('Hong Gil Dong');
+                expect(queryCount).toBe(1);
+            }
+            finally {
+                document.querySelectorAll = originalQuerySelectorAll;
+            }
+        }
+        finally {
+            globalThis.chrome = originalChrome;
+            window.ezOneAutoFillApplicationLoaded = originalLoaded;
+        }
+    });
+
+    it('EXT-021: cached preview apply does not fill a control disabled after preview', async () => {
+        vi.useRealTimers();
+        const originalChrome = globalThis.chrome;
+        const originalLoaded = window.ezOneAutoFillApplicationLoaded;
+        const listeners = [];
+        globalThis.chrome = {
+            runtime: {
+                onMessage: {
+                    addListener(listener) {
+                        listeners.push(listener);
+                    }
+                }
+            }
+        };
+        window.ezOneAutoFillApplicationLoaded = false;
+        document.body.innerHTML = '<form><label>Name<input id="name" /></label></form>';
+
+        try {
+            await import('../src/content/applicationAutoFill.js?runtime-disabled-cache');
+            const listener = listeners.at(-1);
+            const sendMessage = (message) => new Promise((resolve, reject) => {
+                try {
+                    listener(message, {}, resolve);
+                }
+                catch (error) {
+                    reject(error);
+                }
+            });
+
+            const preview = await sendMessage({ type: 'EZONE_PREVIEW_APPLICATION_AUTOFILL', profile });
+            expect(preview.planned).toEqual(expect.arrayContaining([
+                expect.objectContaining({ fieldKey: 'basicInfo.nameKo' })
+            ]));
+
+            const nameInput = document.getElementById('name');
+            nameInput.disabled = true;
+            const apply = await sendMessage({ type: 'EZONE_APPLY_APPLICATION_AUTOFILL', profile });
+
+            expect(nameInput.value).toBe('');
+            expect(apply.filled).not.toEqual(expect.arrayContaining([
+                expect.objectContaining({ fieldKey: 'basicInfo.nameKo' })
+            ]));
+            expect(apply.failed).toEqual(expect.arrayContaining([
+                expect.objectContaining({ fieldKey: 'basicInfo.nameKo' })
+            ]));
+        }
+        finally {
+            globalThis.chrome = originalChrome;
+            window.ezOneAutoFillApplicationLoaded = originalLoaded;
+        }
+    });
+
+    it('EXT-021: reuses certificate entry scans while building a preview plan', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <section aria-label="Certificates">
+        <div id="certificate-entry">
+          <label>Certificate name<input name="licenseAnswers.0.certificateName" /></label>
+          <label>Issuer<input name="licenseAnswers.0.issuer" /></label>
+          <label>Registration number<input name="licenseAnswers.0.registrationNumber" /></label>
+          <label>Acquired date<input name="licenseAnswers.0.acquiredDate" /></label>
+        </div>
+      </section>
+    `;
+        const certificateProfile = {
+            sections: {
+                certificates: {
+                    certificates: [{
+                        certificateName: 'SQLD',
+                        issuer: 'Korea Data Agency',
+                        registrationNumber: 'SQLD-1',
+                        acquiredDate: '2024-01-01'
+                    }]
+                }
+            }
+        };
+        const entry = doc.getElementById('certificate-entry');
+        const originalQuerySelectorAll = entry.querySelectorAll.bind(entry);
+        let broadEntryScans = 0;
+        entry.querySelectorAll = (selector) => {
+            if (String(selector).includes('input, textarea, select, button')) {
+                broadEntryScans += 1;
+            }
+            return originalQuerySelectorAll(selector);
+        };
+
+        const preview = previewAutoFillPlan(buildAutoFillPlan(doc, certificateProfile));
+
+        expect(preview.planned.map((item) => item.fieldKey)).toEqual(expect.arrayContaining([
+            'certificates.certificates.0.certificateName',
+            'certificates.certificates.0.issuer',
+            'certificates.certificates.0.registrationNumber',
+            'certificates.certificates.0.acquiredDate'
+        ]));
+        expect(broadEntryScans).toBeLessThanOrEqual(8);
+    });
+
+    it('EXT-021: reuses visibility and section heading checks while building a preview plan', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section id="education-section">
+          <h3>University</h3>
+          <div>
+            <label>School name<input name="educationAnswers.0.schoolName" /></label>
+            <label>Major<input name="educationAnswers.0.majorName" /></label>
+            <label>Admission date<input name="educationAnswers.0.admissionDate" /></label>
+            <label>Graduation date<input name="educationAnswers.0.graduationDate" /></label>
+          </div>
+        </section>
+        <section id="career-section">
+          <h3>Career</h3>
+          <div>
+            <label>Company name<input name="careerGroupAnswers.0.companyName" /></label>
+            <label>Department<input name="careerGroupAnswers.0.department" /></label>
+            <label>Position<input name="careerGroupAnswers.0.position" /></label>
+            <label>Duties<textarea name="careerGroupAnswers.0.comment"></textarea></label>
+          </div>
+        </section>
+      </form>
+    `;
+        const performanceProfile = {
+            sections: {
+                education: {
+                    universities: [{
+                        schoolName: 'Test University',
+                        majorName: 'Computer Science',
+                        admissionDate: '2016-03-01',
+                        graduationDate: '2020-02-28'
+                    }]
+                },
+                career: {
+                    careers: [{
+                        companyName: 'Test Company',
+                        department: 'Platform',
+                        position: 'Engineer',
+                        duties: 'Built internal tools'
+                    }]
+                }
+            },
+            customFields: []
+        };
+        const originalGetAttribute = Element.prototype.getAttribute;
+        const getAttributeSpy = vi.spyOn(Element.prototype, 'getAttribute').mockImplementation(function getAttribute(name) {
+            if (name === 'style' || name === 'aria-hidden') visibilityReads += 1;
+            return originalGetAttribute.call(this, name);
+        });
+        const headingSections = [
+            doc.getElementById('education-section'),
+            doc.getElementById('career-section')
+        ];
+        let visibilityReads = 0;
+        let headingQueries = 0;
+        const restoreHeadingQueries = headingSections.map((section) => {
+            const originalQuerySelector = section.querySelector.bind(section);
+            section.querySelector = (selector) => {
+                if (String(selector).includes('h1, h2, h3, h4, h5, legend')) headingQueries += 1;
+                return originalQuerySelector(selector);
+            };
+            return () => {
+                section.querySelector = originalQuerySelector;
+            };
+        });
+
+        try {
+            const preview = previewAutoFillPlan(buildAutoFillPlan(doc, performanceProfile));
+
+            expect(preview.planned.map((item) => item.fieldKey)).toEqual(expect.arrayContaining([
+                'education.universities.0.schoolName',
+                'career.careers.0.companyName'
+            ]));
+            expect(visibilityReads).toBeLessThanOrEqual(80);
+            expect(headingQueries).toBeLessThanOrEqual(4);
+        }
+        finally {
+            getAttributeSpy.mockRestore();
+            restoreHeadingQueries.forEach((restore) => restore());
+        }
+    });
+
+    it('EXT-021: fast async apply does not hang when requestAnimationFrame is paused', async () => {
+        vi.useFakeTimers();
+        const originalRequestAnimationFrame = window.requestAnimationFrame;
+        window.requestAnimationFrame = () => 1;
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <button id="first-slow" type="button" aria-haspopup="listbox">First slow select</button>
+        <button id="second-slow" type="button" aria-haspopup="listbox">Second slow select</button>
+      </form>
+    `;
+
+        try {
+            const resultPromise = applyAutoFillPlanFastAsync({
+                fillable: [{
+                    element: doc.getElementById('first-slow'),
+                    fieldKey: 'military.rank',
+                    label: 'First slow select',
+                    value: 'Sergeant',
+                    customSelectControl: true,
+                    displayOrder: 0
+                }, {
+                    element: doc.getElementById('second-slow'),
+                    fieldKey: 'military.dischargeType',
+                    label: 'Second slow select',
+                    value: 'Completed',
+                    customSelectControl: true,
+                    displayOrder: 1
+                }],
+                failed: [],
+                skipped: [],
+                copyCandidates: []
+            });
+            const bounded = Promise.race([
+                resultPromise.then((result) => ({ status: 'resolved', result })),
+                new Promise((resolve) => setTimeout(() => resolve({ status: 'hung' }), 1000))
+            ]);
+
+            await vi.advanceTimersByTimeAsync(1000);
+            const outcome = await bounded;
+
+            expect(outcome.status).toBe('resolved');
+            expect(outcome.result.mode).toBe('applied');
+        }
+        finally {
+            window.requestAnimationFrame = originalRequestAnimationFrame;
+        }
+    });
+
+    it('EXT-034: slow certificate primary timeout holds visible fast detail inputs', async () => {
+        vi.useFakeTimers();
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="자격증">
+          <label>자격증명<input id="certificate-name" role="combobox" aria-autocomplete="list" placeholder="자격증명을 검색해주세요." /></label>
+          <label>발급기관<input id="certificate-issuer" /></label>
+          <label>취득일<input id="certificate-date" /></label>
+          <label>등록번호<input id="certificate-registration" /></label>
+        </section>
+      </form>
+    `;
+        const certificateName = doc.getElementById('certificate-name');
+        const issuer = doc.getElementById('certificate-issuer');
+        const acquiredDate = doc.getElementById('certificate-date');
+        const registration = doc.getElementById('certificate-registration');
+        const relatedValues = [{
+            key: 'certificates.certificates.0.certificateName',
+            label: '자격증 자격증명',
+            value: 'SQLD(SQL개발자)'
+        }, {
+            key: 'certificates.certificates.0.issuer',
+            label: '자격증 발급기관',
+            value: '한국데이터산업진흥원'
+        }, {
+            key: 'certificates.certificates.0.acquiredDate',
+            label: '자격증 취득일',
+            value: '2022-09-30'
+        }, {
+            key: 'certificates.certificates.0.registrationNumber',
+            label: '자격증 등록번호',
+            value: 'SQLD-046012160'
+        }];
+
+        const resultPromise = applyAutoFillPlanFastAsync({
+            fillable: [{
+                element: certificateName,
+                fieldKey: 'certificates.certificates.0.certificateName',
+                label: '자격증 자격증명',
+                value: 'SQLD(SQL개발자)',
+                autocompleteSearchControl: true,
+                relatedValues,
+                displayOrder: 0
+            }, {
+                element: issuer,
+                fieldKey: 'certificates.certificates.0.issuer',
+                label: '자격증 발급기관',
+                value: '한국데이터산업진흥원',
+                displayOrder: 1
+            }, {
+                element: acquiredDate,
+                fieldKey: 'certificates.certificates.0.acquiredDate',
+                label: '자격증 취득일',
+                value: '2022-09-30',
+                displayOrder: 2
+            }, {
+                element: registration,
+                fieldKey: 'certificates.certificates.0.registrationNumber',
+                label: '자격증 등록번호',
+                value: 'SQLD-046012160',
+                displayOrder: 3
+            }],
+            failed: [],
+            skipped: [],
+            copyCandidates: []
+        });
+
+        await vi.advanceTimersByTimeAsync(30000);
+        const result = await resultPromise;
+
+        expect(issuer.value).toBe('');
+        expect(acquiredDate.value).toBe('');
+        expect(registration.value).toBe('');
+        expect(result.filled.map((item) => item.fieldKey)).not.toEqual(expect.arrayContaining([
+            'certificates.certificates.0.issuer',
+            'certificates.certificates.0.acquiredDate',
+            'certificates.certificates.0.registrationNumber'
+        ]));
+        expect(result.failed).toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'certificates.certificates.0.issuer' }),
+            expect.objectContaining({ fieldKey: 'certificates.certificates.0.acquiredDate' }),
+            expect.objectContaining({ fieldKey: 'certificates.certificates.0.registrationNumber' })
+        ]));
+        expect(result.copyCandidates).toEqual(expect.arrayContaining([
+            expect.objectContaining({ key: 'certificates.certificates.0.issuer', value: '한국데이터산업진흥원' }),
+            expect.objectContaining({ key: 'certificates.certificates.0.acquiredDate', value: '2022-09-30' }),
+            expect.objectContaining({ key: 'certificates.certificates.0.registrationNumber', value: 'SQLD-046012160' })
+        ]));
+    });
+
+    it('EXT-031: slow major primary timeout holds dependent education fields', async () => {
+        vi.useFakeTimers();
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="대학교">
+          <label>전공명<input id="major-name" role="combobox" aria-autocomplete="list" placeholder="전공명을 검색해주세요." /></label>
+          <label>전공구분<input id="major-type" /></label>
+          <label>주간/야간<input id="major-day" /></label>
+        </section>
+      </form>
+    `;
+        const majorName = doc.getElementById('major-name');
+        const majorType = doc.getElementById('major-type');
+        const dayNight = doc.getElementById('major-day');
+        const relatedValues = [{
+            key: 'education.universities.0.majors.0.majorName',
+            label: '대학교 전공명',
+            value: '빅데이터연계전공'
+        }, {
+            key: 'education.universities.0.majors.0.majorType',
+            label: '대학교 전공구분',
+            value: '주전공'
+        }, {
+            key: 'education.universities.0.majors.0.dayNight',
+            label: '대학교 주간/야간',
+            value: '주간'
+        }];
+
+        const resultPromise = applyAutoFillPlanFastAsync({
+            fillable: [{
+                element: majorName,
+                fieldKey: 'education.universities.0.majors.0.majorName',
+                label: '대학교 전공명',
+                value: '빅데이터연계전공',
+                autocompleteSearchControl: true,
+                relatedValues: [],
+                displayOrder: 0
+            }, {
+                element: majorType,
+                fieldKey: 'education.universities.0.majors.0.majorType',
+                label: '대학교 전공구분',
+                value: '주전공',
+                displayOrder: 1
+            }, {
+                element: dayNight,
+                fieldKey: 'education.universities.0.majors.0.dayNight',
+                label: '대학교 주간/야간',
+                value: '주간',
+                displayOrder: 2
+            }],
+            failed: [],
+            skipped: [],
+            copyCandidates: []
+        });
+
+        await vi.advanceTimersByTimeAsync(30000);
+        const result = await resultPromise;
+
+        expect(majorType.value).toBe('');
+        expect(dayNight.value).toBe('');
+        expect(result.filled.map((item) => item.fieldKey)).not.toEqual(expect.arrayContaining([
+            'education.universities.0.majors.0.majorType',
+            'education.universities.0.majors.0.dayNight'
+        ]));
+        expect(result.failed).toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'education.universities.0.majors.0.majorType' }),
+            expect.objectContaining({ fieldKey: 'education.universities.0.majors.0.dayNight' })
+        ]));
+    });
+
+    it('EXT-021: apply reuses education major entry scans across dependent fields', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="University">
+          <div class="major-row">
+            <input id="major-name-0" placeholder="majorName" value="Computer Science" />
+            <button id="major-type-0" type="button" data-value="Primary major">Primary major</button>
+            <button id="major-category-0" type="button" data-value="Engineering">Engineering</button>
+            <button id="major-day-0" type="button" data-value="Day">Day</button>
+          </div>
+          <div class="major-row">
+            <input id="major-name-1" placeholder="majorName" value="Data Science" />
+            <button id="major-type-1" type="button" data-value="Double major">Double major</button>
+            <button id="major-category-1" type="button" data-value="Engineering">Engineering</button>
+            <button id="major-day-1" type="button" data-value="Day">Day</button>
+          </div>
+        </section>
+      </form>
+    `;
+        const relatedValues = [
+            { key: 'education.universities.0.majors.0.majorName', value: 'Computer Science' },
+            { key: 'education.universities.0.majors.1.majorName', value: 'Data Science' }
+        ];
+        const fillable = [
+            ['0', 'majorType', 'Primary major'],
+            ['0', 'majorCategory', 'Engineering'],
+            ['0', 'dayNight', 'Day'],
+            ['1', 'majorType', 'Double major'],
+            ['1', 'majorCategory', 'Engineering'],
+            ['1', 'dayNight', 'Day']
+        ].map(([majorIndex, field, value], index) => ({
+            element: doc.getElementById(`major-${field === 'majorType' ? 'type' : field === 'majorCategory' ? 'category' : 'day'}-${majorIndex}`),
+            fieldKey: `education.universities.0.majors.${majorIndex}.${field}`,
+            label: `major ${majorIndex} ${field}`,
+            value,
+            waitForControlBeforeFill: true,
+            relatedValues,
+            displayOrder: index
+        }));
+        const originalQuerySelectorAll = Element.prototype.querySelectorAll;
+        let majorEntryQueries = 0;
+        const querySpy = vi.spyOn(Element.prototype, 'querySelectorAll').mockImplementation(function querySelectorAll(selector) {
+            if (String(selector).includes('input') || String(selector).includes('button') || String(selector).includes('[role="button"]')) {
+                majorEntryQueries += 1;
+            }
+            return originalQuerySelectorAll.call(this, selector);
+        });
+
+        try {
+            const result = await applyAutoFillPlanFastAsync({
+                fillable,
+                failed: [],
+                skipped: [],
+                copyCandidates: []
+            });
+
+            expect(result.mode).toBe('applied');
+            expect(majorEntryQueries).toBeLessThanOrEqual(30);
+        }
+        finally {
+            querySpy.mockRestore();
+        }
+    });
+
+    it('EXT-031: reuses descendant control scans while applying details from the same selected entry', async () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="Certificates">
+          <div id="certificate-entry" class="certificate-row">
+            <input id="certificate-name" name="licenseAnswers.0.name" value="SQLD" />
+            <input id="certificate-issuer" name="licenseAnswers.0.organization" />
+            <input id="certificate-registration" name="licenseAnswers.0.registrationNumber" />
+            <input id="certificate-date" name="licenseAnswers.0.acquiredDate" />
+          </div>
+        </section>
+      </form>
+    `;
+        const entry = doc.getElementById('certificate-entry');
+        const primary = doc.getElementById('certificate-name');
+        const relatedValues = [
+            { key: 'certificates.certificates.0.certificateName', value: 'SQLD' }
+        ];
+        const fillable = [{
+            element: primary,
+            fieldKey: 'certificates.certificates.0.issuer',
+            label: 'Issuer',
+            value: 'Korea Data Agency',
+            waitForControlBeforeFill: true,
+            relatedValues,
+            displayOrder: 0
+        }, {
+            element: primary,
+            fieldKey: 'certificates.certificates.0.registrationNumber',
+            label: 'Registration number',
+            value: 'SQLD-1',
+            waitForControlBeforeFill: true,
+            relatedValues,
+            displayOrder: 1
+        }, {
+            element: primary,
+            fieldKey: 'certificates.certificates.0.acquiredDate',
+            label: 'Acquired date',
+            value: '2024-01-01',
+            waitForControlBeforeFill: true,
+            relatedValues,
+            displayOrder: 2
+        }];
+        const originalQuerySelectorAll = Element.prototype.querySelectorAll;
+        let repeatedEntryScans = 0;
+        const entryScansBySelector = new Map();
+        const querySpy = vi.spyOn(Element.prototype, 'querySelectorAll').mockImplementation(function querySelectorAll(selector) {
+            if (this === entry && (String(selector).includes('input, textarea, select') || String(selector).includes('[aria-haspopup'))) {
+                repeatedEntryScans += 1;
+                entryScansBySelector.set(selector, (entryScansBySelector.get(selector) ?? 0) + 1);
+            }
+            return originalQuerySelectorAll.call(this, selector);
+        });
+
+        try {
+            const result = await applyAutoFillPlanFastAsync({
+                fillable,
+                failed: [],
+                skipped: [],
+                copyCandidates: []
+            });
+
+            expect(result.failed).toEqual([]);
+            expect(doc.getElementById('certificate-issuer').value).toBe('Korea Data Agency');
+            expect(doc.getElementById('certificate-registration').value).toBe('SQLD-1');
+            expect(doc.getElementById('certificate-date').value).toBe('2024-01-01');
+            expect(Math.max(...entryScansBySelector.values())).toBeLessThanOrEqual(3);
+            expect(repeatedEntryScans).toBeLessThanOrEqual(5);
+        }
+        finally {
+            querySpy.mockRestore();
+        }
+    });
+
+    it('EXT-031: invalidates descendant selector cache when a detail option becomes selectable by attribute mutation', async () => {
+        const originalRequestAnimationFrame = window.requestAnimationFrame;
+        window.requestAnimationFrame = undefined;
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uACF5\uC778\uC678\uAD6D\uC5B4\uC2DC\uD5D8">
+          <div id="language-entry" class="language-row">
+            <div class="remix-css-zezw7x"><p>TOEIC</p><svg></svg></div>
+            <label>\uCDE8\uB4DD\uC77C<input id="language-date" placeholder="\uCDE8\uB4DD\uC77C" /></label>
+            <span>\uC810\uC218/\uB4F1\uAE09</span>
+            <div id="language-score">야간</div>
+          </div>
+        </section>
+      </form>
+    `;
+        const dateInput = doc.getElementById('language-date');
+        const scoreOption = doc.getElementById('language-score');
+        const relatedValues = [
+            { key: 'certificates.languageTests.1.testName', value: 'TOEIC' }
+        ];
+        let scoreClicked = false;
+        dateInput.addEventListener('input', () => {
+            scoreOption.className = 'activated-score-option';
+            scoreOption.setAttribute('aria-label', '\uC810\uC218/\uB4F1\uAE09');
+            scoreOption.setAttribute('data-option', '야간');
+        });
+        scoreOption.addEventListener('click', () => {
+            scoreClicked = true;
+        });
+
+        try {
+            const resultPromise = applyAutoFillPlanFastAsync({
+                fillable: [{
+                    element: doc.body,
+                    fieldKey: 'certificates.languageTests.1.acquiredDate',
+                    label: '\uCDE8\uB4DD\uC77C',
+                    value: '2025-04-21',
+                    waitForControlBeforeFill: true,
+                    relatedValues,
+                    displayOrder: 0
+                }, {
+                    element: doc.body,
+                    fieldKey: 'certificates.languageTests.1.score',
+                    label: '\uC810\uC218/\uB4F1\uAE09',
+                    value: '야간',
+                    waitForControlBeforeFill: true,
+                    relatedValues,
+                    displayOrder: 1
+                }],
+                failed: [],
+                skipped: [],
+                copyCandidates: []
+            }, { deadlineAt: Date.now() + 200 });
+
+            const result = await resultPromise;
+
+            expect(dateInput.value).toBe('2025-04-21');
+            expect(scoreClicked).toBe(true);
+            expect(result.failed).toEqual([]);
+            expect(result.filled).toEqual(expect.arrayContaining([
+                expect.objectContaining({ fieldKey: 'certificates.languageTests.1.acquiredDate', value: '2025-04-21' }),
+                expect.objectContaining({ fieldKey: 'certificates.languageTests.1.score', value: '야간' })
+            ]));
+        }
+        finally {
+            window.requestAnimationFrame = originalRequestAnimationFrame;
+        }
+    });
+
     it('EXT-013: matches label, placeholder, name/id, table header, and nearby text controls', () => {
         const doc = document.implementation.createHTMLDocument('application');
         doc.body.innerHTML = `
@@ -191,6 +1271,454 @@ describe('applicationAutoFill', () => {
         expect(input.files[0].name).toBe('resume-photo.png');
         expect(input.files[0].type).toBe('image/png');
         expect(changeCount).toBe(1);
+    });
+
+    it('EXT-032: does not match recruiter application source text as gender', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <label>
+          \uC9C0\uC6D0\uACBD\uB85C
+          <select id="source">
+            <option>\uC9C0\uC6D0\uACBD\uB85C\uB97C \uC120\uD0DD\uD558\uC138\uC694.</option>
+            <option>SNS(ex.\uD398\uC774\uC2A4\uBD81, \uC778\uC2A4\uD0C0\uADF8\uB7A8)</option>
+          </select>
+        </label>
+      </form>
+    `;
+        const genderOnlyProfile = {
+            sections: {
+                basicInfo: {
+                    gender: '\uB0A8\uC131'
+                }
+            },
+            customFields: []
+        };
+
+        const plan = buildAutoFillPlan(doc, genderOnlyProfile);
+
+        expect(plan.fillable).toEqual([]);
+        expect(plan.failed).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                label: '\uC9C0\uC6D0\uACBD\uB85C',
+                reason: 'no_match'
+            })
+        ]));
+    });
+
+    it('EXT-032: matches standalone Sex label as gender without matching Section', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <label>Sex<input id="sex" /></label>
+        <label>Section<input id="section" /></label>
+      </form>
+    `;
+        const genderOnlyProfile = {
+            sections: {
+                basicInfo: {
+                    gender: 'Male'
+                }
+            },
+            customFields: []
+        };
+
+        const plan = buildAutoFillPlan(doc, genderOnlyProfile);
+
+        expect(plan.fillable).toEqual([
+            expect.objectContaining({
+                fieldKey: 'basicInfo.gender',
+                label: 'Sex',
+                value: '\uB0A8\uC131',
+                element: doc.getElementById('sex')
+            })
+        ]);
+        expect(plan.failed).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                label: 'Section',
+                reason: 'no_match'
+            })
+        ]));
+    });
+
+    it('EXT-033: does not fill a login page as an application form', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <main>
+        <h1>\uB85C\uADF8\uC778</h1>
+        <form>
+          <label>\uC774\uBA54\uC77C \uC8FC\uC18C<input name="email" /></label>
+          <label>\uBE44\uBC00\uBC88\uD638<input type="password" /></label>
+          <button type="submit">\uB85C\uADF8\uC778</button>
+        </form>
+      </main>
+    `;
+
+        const plan = buildAutoFillPlan(doc, profile);
+
+        expect(plan.fillable).toEqual([]);
+        expect(plan.failed).toEqual([
+            expect.objectContaining({
+                label: '\uC9C0\uC6D0\uC11C \uC785\uB825 \uD654\uBA74',
+                reason: 'unsupported_page'
+            })
+        ]);
+    });
+
+    it('EXT-033: does not fill a recruiter resume lookup page as an application form', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <main>
+        <h1>\uC9C0\uC6D0\uC11C \uC218\uC815</h1>
+        <form>
+          <label>\uACF5\uACE0\uBA85
+            <select><option>\uACF5\uACE0\uBA85\uC744 \uC120\uD0DD\uD558\uC138\uC694.</option></select>
+          </label>
+          <label>\uC131\uBA85<input name="applicantName" /></label>
+          <label>\uC774\uBA54\uC77C<input name="email" /></label>
+          <label>\uBE44\uBC00\uBC88\uD638<input type="password" /></label>
+          <a>\uBE44\uBC00\uBC88\uD638 \uCC3E\uAE30</a>
+          <button type="submit">\uC9C0\uC6D0\uC11C \uC218\uC815</button>
+          <button type="button">\uC9C0\uC6D0\uC11C \uC0AD\uC81C</button>
+        </form>
+      </main>
+    `;
+
+        const plan = buildAutoFillPlan(doc, profile);
+
+        expect(plan.fillable).toEqual([]);
+        expect(plan.failed).toEqual([
+            expect.objectContaining({
+                label: '\uC9C0\uC6D0\uC11C \uC785\uB825 \uD654\uBA74',
+                reason: 'unsupported_page'
+            })
+        ]);
+    });
+
+    it('EXT-033: treats school name controls as education fields, not applicant name', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <label>\uD559\uAD50\uBA85 *<input name="educations.0.schoolName" /></label>
+      </form>
+    `;
+        const schoolProfile = {
+            sections: {
+                basicInfo: {
+                    nameKo: '\uAE40\uD14C\uC2A4\uD2B8'
+                },
+                education: {
+                    universities: [{
+                        schoolName: '\uBD80\uC0B0\uB300\uD559\uAD50'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const plan = buildAutoFillPlan(doc, schoolProfile);
+
+        expect(plan.fillable).toEqual([
+            expect.objectContaining({
+                fieldKey: 'education.universities.0.schoolName',
+                label: expect.stringContaining('\uD559\uAD50\uBA85'),
+                value: '\uBD80\uC0B0\uB300\uD559\uAD50'
+            })
+        ]);
+    });
+
+    it('EXT-033: does not fill Hanja name with Korean applicant name', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <label>\uD55C\uBB38\uC774\uB984<input id="hanja-name" /></label>
+      </form>
+    `;
+
+        const plan = buildAutoFillPlan(doc, profile);
+
+        expect(plan.fillable).toEqual([]);
+        expect(plan.failed).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                label: '\uD55C\uBB38\uC774\uB984',
+                reason: 'no_match'
+            })
+        ]));
+    });
+
+    it('EXT-033: treats company name controls as career fields, not applicant name', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <label>\uD68C\uC0AC\uBA85 *<input /></label>
+      </form>
+    `;
+        const careerProfile = {
+            sections: {
+                basicInfo: {
+                    nameKo: '\uAE40\uD14C\uC2A4\uD2B8'
+                },
+                career: {
+                    careers: [{
+                        companyName: '\uD14C\uC2A4\uD2B8\uCEF4\uD37C\uB2C8'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const plan = buildAutoFillPlan(doc, careerProfile);
+
+        expect(plan.fillable).toEqual([
+            expect.objectContaining({
+                fieldKey: 'career.careers.0.companyName',
+                label: expect.stringContaining('\uD68C\uC0AC\uBA85'),
+                value: '\uD14C\uC2A4\uD2B8\uCEF4\uD37C\uB2C8'
+            })
+        ]);
+    });
+
+    it('EXT-033: does not fill company name with Korean applicant name when career is missing', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <label>\uD68C\uC0AC\uBA85 *<input name="careers.0.companyName" /></label>
+      </form>
+    `;
+
+        const plan = buildAutoFillPlan(doc, profile);
+
+        expect(plan.fillable).toEqual([]);
+        expect(plan.failed).toEqual([]);
+    });
+
+    it('EXT-033: does not fill project name with Korean applicant name when activity is saved for manual copy', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <label>\uD504\uB85C\uC81D\uD2B8\uBA85 *<input /></label>
+      </form>
+    `;
+        const activityProfile = {
+            sections: {
+                basicInfo: {
+                    nameKo: '\uAE40\uD14C\uC2A4\uD2B8'
+                },
+                activities: [{
+                    activityName: '\uB370\uC774\uD130 \uBD84\uC11D \uD300 \uD504\uB85C\uC81D\uD2B8'
+                }]
+            },
+            customFields: []
+        };
+
+        const plan = buildAutoFillPlan(doc, activityProfile);
+
+        expect(plan.fillable).toEqual([]);
+    });
+
+    it('EXT-033: does not fill project name with Korean applicant name when activity is missing', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <label>\uD504\uB85C\uC81D\uD2B8\uBA85 *<input /></label>
+      </form>
+    `;
+
+        const plan = buildAutoFillPlan(doc, profile);
+
+        expect(plan.fillable).toEqual([]);
+        expect(plan.failed).toEqual([]);
+    });
+
+    it('EXT-033: does not fill program name with Korean applicant name', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <label>\uD504\uB85C\uADF8\uB7A8\uBA85 *<input /></label>
+      </form>
+    `;
+
+        const plan = buildAutoFillPlan(doc, profile);
+
+        expect(plan.fillable).toEqual([]);
+        expect(plan.failed).toEqual([]);
+    });
+
+    it('EXT-033: does not fill course name with Korean applicant name', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <label>\uACFC\uC815\uBA85 *<input /></label>
+      </form>
+    `;
+
+        const plan = buildAutoFillPlan(doc, profile);
+
+        expect(plan.fillable).toEqual([]);
+        expect(plan.failed).toEqual([]);
+    });
+
+    it('EXT-033: does not fill award name with Korean applicant name', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <label>\uC0C1\uD6C8\uBA85 *<input name="awards.0.awardName" /></label>
+      </form>
+    `;
+
+        const plan = buildAutoFillPlan(doc, profile);
+
+        expect(plan.fillable).toEqual([]);
+        expect(plan.failed).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                label: expect.stringContaining('\uC0C1\uD6C8\uBA85'),
+                reason: 'no_match'
+            })
+        ]));
+    });
+
+    it('EXT-033: treats work position rank as career position, not military rank', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <label>\uC9C1\uAE09 *<input name="workHistory.workExperiences.0.positionRank" /></label>
+      </form>
+    `;
+        const careerProfile = {
+            sections: {
+                military: {
+                    rank: '\uBCD1\uC7A5'
+                },
+                career: {
+                    careers: [{
+                        position: '\uC778\uD134'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const plan = buildAutoFillPlan(doc, careerProfile);
+
+        expect(plan.fillable).toEqual([
+            expect.objectContaining({
+                fieldKey: 'career.careers.0.position',
+                label: expect.stringContaining('\uC9C1\uAE09'),
+                value: '\uC778\uD134'
+            })
+        ]);
+    });
+
+    it('EXT-033: does not fill education institution with language test name', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <label>\uAD50\uC721\uAE30\uAD00 *<input name="completedCoursesTrainings.0.educationalInstitution" /></label>
+      </form>
+    `;
+        const languageProfile = {
+            sections: {
+                certificates: {
+                    languageTests: [{
+                        testName: 'TOEIC'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const plan = buildAutoFillPlan(doc, languageProfile);
+
+        expect(plan.fillable).toEqual([]);
+    });
+
+    it('EXT-034: does not fill standalone time label with language test name while explicit 시험명 works', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="공인외국어시험">
+          <h3>어학</h3>
+          <label>시간<input id="standalone-time" /></label>
+          <label>시험명<input id="language-test-name" /></label>
+        </section>
+      </form>
+    `;
+        const languageProfile = {
+            sections: {
+                certificates: {
+                    languageTests: [{
+                        testName: 'TOEIC'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = applyAutoFillPlan(buildAutoFillPlan(doc, languageProfile));
+
+        expect(doc.getElementById('standalone-time').value).toBe('');
+        expect(doc.getElementById('language-test-name').value).toBe('TOEIC');
+        expect(result.filled).toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'certificates.languageTests.0.testName', value: 'TOEIC' })
+        ]));
+        expect(result.filled).not.toEqual(expect.arrayContaining([
+            expect.objectContaining({ label: expect.stringContaining('시간'), value: 'TOEIC' })
+        ]));
+    });
+
+    it('EXT-033: does not fill rating with certificate name', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <label>\uB4F1\uAE09<input name="certificatesLicenses.0.rating" /></label>
+      </form>
+    `;
+        const certificateProfile = {
+            sections: {
+                certificates: {
+                    certificates: [{
+                        certificateName: 'SQLD(SQL\uAC1C\uBC1C\uC790)'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const plan = buildAutoFillPlan(doc, certificateProfile);
+
+        expect(plan.fillable).toEqual([]);
+    });
+
+    it('EXT-033: does not fill repeated certificate rating with certificate name from section context', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section>
+          <h2>\uC790\uACA9\uC99D / \uBA74\uD5C8</h2>
+          <label>\uB4F1\uAE09<input name="languagesCertificationsAndOtherActivity.certificatesLicenses.0.rating" /></label>
+        </section>
+      </form>
+    `;
+        const certificateProfile = {
+            sections: {
+                certificates: {
+                    certificates: [{
+                        certificateName: 'SQLD(SQL\uAC1C\uBC1C\uC790)'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const plan = buildAutoFillPlan(doc, certificateProfile);
+
+        expect(plan.fillable).toEqual([]);
+        expect(plan.failed).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                label: expect.stringContaining('\uB4F1\uAE09'),
+                reason: 'no_match'
+            })
+        ]));
     });
 
     it('TC-EXT-DOC-PHOTO-002: leaves ambiguous image file inputs manual', () => {
@@ -434,6 +1962,37 @@ describe('applicationAutoFill', () => {
         expect(candidateKeys).not.toContain('education.0.schoolName');
         expect(candidateKeys).not.toContain('projects.0.title');
         expect(candidateKeys).not.toContain('customFields.7');
+    });
+
+    it('EXT-034: does not fill zip code with full address when postal value is missing', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <label>우편번호<input id="zip" name="addressGroupResumeItemAnswers.currentAddress.zipCode" /></label>
+        <label>postalCode<input id="postal" /></label>
+        <label>주소<input id="address" /></label>
+      </form>
+    `;
+        const addressProfile = {
+            sections: {
+                basicInfo: {
+                    address: '서울특별시 강남구 테헤란로 123'
+                }
+            },
+            customFields: []
+        };
+
+        const result = applyAutoFillPlan(buildAutoFillPlan(doc, addressProfile));
+
+        expect(doc.getElementById('zip').value).toBe('');
+        expect(doc.getElementById('postal').value).toBe('');
+        expect(doc.getElementById('address').value).toBe('서울특별시 강남구 테헤란로 123');
+        expect(result.filled).not.toEqual(expect.arrayContaining([
+            expect.objectContaining({ label: expect.stringMatching(/우편번호|postalCode/), fieldKey: 'basicInfo.address' })
+        ]));
+        expect(result.failed).toEqual(expect.arrayContaining([
+            expect.objectContaining({ label: expect.stringContaining('우편번호'), reason: expect.stringMatching(/missing_profile_value|no_match/) })
+        ]));
     });
 
     it('EXT-021: fills Kakao ATS basic info controls from stable names and visible choices', () => {
@@ -1515,6 +3074,51 @@ describe('applicationAutoFill', () => {
         expect(doc.getElementById('high-school-start').value).toBe('2017.03.02');
         expect(doc.getElementById('university-name').value).toBe('\uBD80\uC0B0\uB300\uD559\uAD50');
         expect(doc.getElementById('university-grade').value).toBe('3.93');
+    });
+
+    it('EXT-031: does not retry opener-dependent education fields forever when the opener never creates the control', async () => {
+        vi.useFakeTimers();
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section id="university-section">
+          <button id="open-university" type="button"><p>\uB300\uD559\uAD50 *</p></button>
+        </section>
+      </form>
+    `;
+        let openClicks = 0;
+        doc.getElementById('open-university').addEventListener('click', () => {
+            openClicks += 1;
+        });
+        const educationProfile = {
+            sections: {
+                education: {
+                    universities: [{
+                        schoolName: '\uBD80\uC0B0\uB300\uD559\uAD50'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const resultPromise = applyAutoFillPlanFastAsync(buildAutoFillPlan(doc, educationProfile));
+        await vi.advanceTimersByTimeAsync(30000);
+        const result = await resultPromise;
+
+        expect(result.mode).toBe('applied');
+        expect(openClicks).toBe(1);
+        expect(result.failed).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                fieldKey: 'education.universities.0.schoolName',
+                reason: expect.stringMatching(/^(control_not_ready|autofill_timeout)$/)
+            })
+        ]));
+        expect(result.copyCandidates).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                key: 'education.universities.0.schoolName',
+                value: '\uBD80\uC0B0\uB300\uD559\uAD50'
+            })
+        ]));
     });
 
     it('EXT-031: fast apply follows page order before filling visible lower fields', async () => {
@@ -3827,6 +5431,255 @@ describe('applicationAutoFill', () => {
         expect(majorOpenIndex).toBeGreaterThan(schoolIndex);
         expect(result.failed).toEqual([]);
         expect(doc.getElementById('major-name-0')).not.toBeNull();
+    });
+
+    it('EXT-031: does not resolve a university school name to a graduate school combobox', async () => {
+        vi.useFakeTimers();
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uB300\uD559\uC6D0">
+          <label>\uD559\uAD50\uC815\uBCF4
+            <input
+              id="graduate-school-name"
+              name="educationalBackground.graduateSchools.0.schoolName"
+              role="combobox"
+              aria-expanded="true"
+              placeholder="\uD559\uAD50\uBA85\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694."
+            />
+          </label>
+        </section>
+      </form>
+    `;
+        const graduateInput = doc.getElementById('graduate-school-name');
+        let focusCount = 0;
+        graduateInput.addEventListener('focus', () => {
+            focusCount += 1;
+        });
+
+        const resultPromise = applyAutoFillPlanFastAsync({
+            fillable: [{
+                element: doc.body,
+                fieldKey: 'education.universities.0.schoolName',
+                label: '\uB300\uD559\uAD50 \uD559\uAD50\uBA85',
+                value: '\uBD80\uC0B0\uB300\uD559\uAD50',
+                waitForControlBeforeFill: true,
+                autocompleteSearchControl: true,
+                relatedValues: []
+            }],
+            failed: [],
+            skipped: [],
+            copyCandidates: []
+        }, { deadlineAt: Date.now() + 200 });
+        await vi.advanceTimersByTimeAsync(1000);
+        const result = await resultPromise;
+
+        expect(graduateInput.value).toBe('');
+        expect(focusCount).toBe(0);
+        expect(result.filled).toEqual([]);
+        expect(result.failed).toEqual(expect.arrayContaining([
+            expect.objectContaining({
+                fieldKey: 'education.universities.0.schoolName',
+                reason: expect.stringMatching(/^(control_not_ready|autofill_timeout)$/)
+            })
+        ]));
+    });
+
+    it('EXT-031: fast async apply yields after button choice controls before the next fill', async () => {
+        vi.useFakeTimers();
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <button id="choice" type="button" role="radio">\uD574\uB2F9 \uC5C6\uC74C</button>
+        <label>\uC774\uB984<input id="name" /></label>
+      </form>
+    `;
+        const events = [];
+        const choice = doc.getElementById('choice');
+        const name = doc.getElementById('name');
+        choice.addEventListener('click', () => {
+            events.push('choice');
+            setTimeout(() => events.push('settled'), 0);
+        });
+        name.addEventListener('input', () => {
+            events.push('name');
+        });
+
+        const resultPromise = applyAutoFillPlanFastAsync({
+            fillable: [{
+                element: choice,
+                fieldKey: 'military.hasDisability',
+                label: '\uC7A5\uC560 \uC5EC\uBD80',
+                value: 'false'
+            }, {
+                element: name,
+                fieldKey: 'basicInfo.nameKo',
+                label: '\uC774\uB984',
+                value: '\uD64D\uAE38\uB3D9'
+            }],
+            failed: [],
+            skipped: [],
+            copyCandidates: []
+        });
+        await vi.advanceTimersByTimeAsync(100);
+        const result = await resultPromise;
+
+        expect(events).toEqual(['choice', 'settled', 'name']);
+        expect(result.filled.map((item) => item.fieldKey)).toEqual([
+            'military.hasDisability',
+            'basicInfo.nameKo'
+        ]);
+    });
+
+    it('EXT-031: hidden apply does not wait on throttled page timers between fields', async () => {
+        vi.useFakeTimers();
+        const originalRequestAnimationFrame = window.requestAnimationFrame;
+        const originalScrollTo = window.scrollTo;
+        window.requestAnimationFrame = undefined;
+        window.scrollTo = vi.fn();
+        const visibilityDescriptor = Object.getOwnPropertyDescriptor(Document.prototype, 'visibilityState') ??
+            Object.getOwnPropertyDescriptor(document, 'visibilityState');
+        const hiddenDescriptor = Object.getOwnPropertyDescriptor(Document.prototype, 'hidden') ??
+            Object.getOwnPropertyDescriptor(document, 'hidden');
+        Object.defineProperty(document, 'visibilityState', {
+            configurable: true,
+            value: 'hidden'
+        });
+        Object.defineProperty(document, 'hidden', {
+            configurable: true,
+            value: true
+        });
+        document.body.innerHTML = `
+      <form>
+        <button id="choice" type="button" role="radio">\uD574\uB2F9 \uC5C6\uC74C</button>
+        <label>\uC774\uB984<input id="name" /></label>
+      </form>
+    `;
+        const choice = document.getElementById('choice');
+        const name = document.getElementById('name');
+
+        try {
+            const resultPromise = applyAutoFillPlanFastAsync({
+                fillable: [{
+                    element: choice,
+                    fieldKey: 'military.hasDisability',
+                    label: '\uC7A5\uC560 \uC5EC\uBD80',
+                    value: 'false'
+                }, {
+                    element: name,
+                    fieldKey: 'basicInfo.nameKo',
+                    label: '\uC774\uB984',
+                    value: '\uD64D\uAE38\uB3D9'
+                }],
+                failed: [],
+                skipped: [],
+                copyCandidates: []
+            }, { deadlineAt: Date.now() + 1000 });
+            const settled = await Promise.race([
+                resultPromise.then(() => true),
+                new Promise((resolve) => setImmediate(() => resolve(false)))
+            ]);
+            if (!settled) {
+                await vi.advanceTimersByTimeAsync(1000);
+            }
+            const result = await resultPromise;
+
+            expect(settled).toBe(true);
+            expect(name.value).toBe('\uD64D\uAE38\uB3D9');
+            expect(result?.filled.map((item) => item.fieldKey)).toEqual([
+                'military.hasDisability',
+                'basicInfo.nameKo'
+            ]);
+        }
+        finally {
+            window.requestAnimationFrame = originalRequestAnimationFrame;
+            window.scrollTo = originalScrollTo;
+            if (visibilityDescriptor) {
+                Object.defineProperty(document, 'visibilityState', visibilityDescriptor);
+            }
+            else {
+                delete document.visibilityState;
+            }
+            if (hiddenDescriptor) {
+                Object.defineProperty(document, 'hidden', hiddenDescriptor);
+            }
+            else {
+                delete document.hidden;
+            }
+            vi.useRealTimers();
+        }
+    });
+
+    it('EXT-031: hidden apply does not wait on throttled page timers while resolving missing dependent controls', async () => {
+        vi.useFakeTimers();
+        const originalScrollTo = window.scrollTo;
+        window.scrollTo = vi.fn();
+        const visibilityDescriptor = Object.getOwnPropertyDescriptor(Document.prototype, 'visibilityState') ??
+            Object.getOwnPropertyDescriptor(document, 'visibilityState');
+        const hiddenDescriptor = Object.getOwnPropertyDescriptor(Document.prototype, 'hidden') ??
+            Object.getOwnPropertyDescriptor(document, 'hidden');
+        Object.defineProperty(document, 'visibilityState', {
+            configurable: true,
+            value: 'hidden'
+        });
+        Object.defineProperty(document, 'hidden', {
+            configurable: true,
+            value: true
+        });
+        document.body.innerHTML = `
+      <form>
+        <button id="opener" type="button">전공 추가</button>
+      </form>
+    `;
+
+        try {
+            const resultPromise = applyAutoFillPlanFastAsync({
+                fillable: [{
+                    element: document.getElementById('opener'),
+                    fieldKey: 'education.universities.0.majors.1.majorName',
+                    label: '대학교 전공 2 전공명',
+                    value: '컴퓨터공학',
+                    waitForControlBeforeFill: true,
+                    relatedValues: []
+                }],
+                failed: [],
+                skipped: [],
+                copyCandidates: []
+            }, { deadlineAt: Date.now() + 1000 });
+            const settled = await Promise.race([
+                resultPromise.then(() => true),
+                new Promise((resolve) => setImmediate(() => resolve(false)))
+            ]);
+            if (!settled) {
+                await vi.advanceTimersByTimeAsync(1000);
+            }
+            const result = await resultPromise;
+
+            expect(settled).toBe(true);
+            expect(result.filled).toEqual([]);
+            expect(result.failed).toEqual(expect.arrayContaining([
+                expect.objectContaining({
+                    fieldKey: 'education.universities.0.majors.1.majorName',
+                    reason: 'control_not_ready'
+                })
+            ]));
+        }
+        finally {
+            window.scrollTo = originalScrollTo;
+            if (visibilityDescriptor) {
+                Object.defineProperty(document, 'visibilityState', visibilityDescriptor);
+            }
+            else {
+                delete document.visibilityState;
+            }
+            if (hiddenDescriptor) {
+                Object.defineProperty(document, 'hidden', hiddenDescriptor);
+            }
+            else {
+                delete document.hidden;
+            }
+            vi.useRealTimers();
+        }
     });
 
     it('EXT-031: waits for a Midas major add wrapper to become enabled after school selection', async () => {
@@ -8137,6 +9990,89 @@ describe('applicationAutoFill', () => {
         expect(doc.getElementById('certificate-issuer-0').value).toBe('');
         expect(doc.getElementById('certificate-date-0').value).toBe('');
         expect(doc.getElementById('certificate-registration-0').value).toBe('');
+    });
+
+    it('EXT-034: holds certificate details when certificate name is not selected for SQLD', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="자격증">
+          <h3>자격증</h3>
+          <div class="certificate-row">
+            <label>발급기관<input id="certificate-issuer" name="licenseGroupAnswer.licenseAnswers.0.organization" /></label>
+            <label>취득일<input id="certificate-date" placeholder="취득일" /></label>
+            <label>등록번호<input id="certificate-registration" name="licenseGroupAnswer.licenseAnswers.0.registNumber" /></label>
+          </div>
+        </section>
+      </form>
+    `;
+        const certificateProfile = {
+            sections: {
+                certificates: {
+                    certificates: [{
+                        certificateName: 'SQLD(SQL개발자)',
+                        issuer: '한국데이터산업진흥원',
+                        acquiredDate: '2022-09-30',
+                        registrationNumber: 'SQLD-046012160'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = applyAutoFillPlan(buildAutoFillPlan(doc, certificateProfile));
+
+        expect(doc.getElementById('certificate-issuer').value).toBe('');
+        expect(doc.getElementById('certificate-date').value).toBe('');
+        expect(doc.getElementById('certificate-registration').value).toBe('');
+        expect(result.filled).not.toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'certificates.certificates.0.issuer' }),
+            expect.objectContaining({ fieldKey: 'certificates.certificates.0.acquiredDate' }),
+            expect.objectContaining({ fieldKey: 'certificates.certificates.0.registrationNumber' })
+        ]));
+    });
+
+    it('EXT-034: holds language test details when test name primary is not selected', () => {
+        const doc = document.implementation.createHTMLDocument('application');
+        doc.body.innerHTML = `
+      <form>
+        <section aria-label="\uACF5\uC778\uC678\uAD6D\uC5B4\uC2DC\uD5D8">
+          <h3>\uC5B4\uD559</h3>
+          <div class="language-test-row">
+            <label>\uC2DC\uD5D8\uBA85
+              <input id="language-test-name" role="combobox" aria-autocomplete="list" placeholder="\uC2DC\uD5D8\uC744 \uAC80\uC0C9\uD574\uC8FC\uC138\uC694" />
+            </label>
+            <label>\uC810\uC218/\uB4F1\uAE09<input id="language-score" /></label>
+            <label>\uCDE8\uB4DD\uC77C<input id="language-date" /></label>
+            <label>\uB4F1\uB85D\uBC88\uD638<input id="language-registration" /></label>
+          </div>
+        </section>
+      </form>
+    `;
+        const languageProfile = {
+            sections: {
+                certificates: {
+                    languageTests: [{
+                        testName: 'OPIc(\uC601\uC5B4)',
+                        score: 'IM1',
+                        acquiredDate: '2025-04-21',
+                        registrationNumber: '2K0014711552'
+                    }]
+                }
+            },
+            customFields: []
+        };
+
+        const result = applyAutoFillPlan(buildAutoFillPlan(doc, languageProfile));
+
+        expect(doc.getElementById('language-score').value).toBe('');
+        expect(doc.getElementById('language-date').value).toBe('');
+        expect(doc.getElementById('language-registration').value).toBe('');
+        expect(result.filled).not.toEqual(expect.arrayContaining([
+            expect.objectContaining({ fieldKey: 'certificates.languageTests.0.score' }),
+            expect.objectContaining({ fieldKey: 'certificates.languageTests.0.acquiredDate' }),
+            expect.objectContaining({ fieldKey: 'certificates.languageTests.0.registrationNumber' })
+        ]));
     });
 
     it('EXT-032: keeps revealed certificate details with the selected row after each autocomplete click', async () => {
