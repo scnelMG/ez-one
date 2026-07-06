@@ -6,6 +6,7 @@ describe('router', () => {
     it('registers P1 route shells before API-backed slices', () => {
         const routeNames = router.getRoutes().map((route) => route.name);
         expect(routeNames).toContain('login');
+        expect(routeNames).toContain('privacy');
         expect(routeNames).toContain('extension-connect');
         expect(routeNames).not.toContain('onboarding');
         expect(routeNames).toContain('main');
@@ -27,6 +28,7 @@ describe('router', () => {
         const routes = router.getRoutes();
         expect(routes.find((route) => route.path === '/')?.name).toBe('main');
         expect(routes.find((route) => route.path === '/login')?.name).toBe('login');
+        expect(routes.find((route) => route.path === '/privacy')?.name).toBe('privacy');
         expect(routes.find((route) => route.path === '/main')?.redirect).toBe('/');
         expect(routes.find((route) => route.path === '/basket/:basketJobId')?.name).toBe('basket-detail');
         expect(routes.find((route) => route.path === '/recommendations/mattermost')?.name).toBe('recommendations-mattermost');
@@ -40,6 +42,10 @@ describe('router', () => {
         await router.push('/?redirect=%2Fextension%2Fconnect%3FsourceUrl%3Dhttps%253A%252F%252Fwww.jasoseol.com%252Frecruit%252F1%26sourceTabId%3D42');
         expect(router.currentRoute.value.name).toBe('login');
         expect(router.currentRoute.value.query.redirect).toBe('/extension/connect?sourceUrl=https%3A%2F%2Fwww.jasoseol.com%2Frecruit%2F1&sourceTabId=42');
+    });
+    it('allows the public privacy page without login', async () => {
+        await router.push('/privacy');
+        expect(router.currentRoute.value.name).toBe('privacy');
     });
     it('preserves extension connect redirects from the current local extension handoff URL', async () => {
         await router.push('/?redirect=%2Fextension%2Fconnect%3FsourceUrl%3Dhttps%253A%252F%252Fjasoseol.com%252Frecruit%26sourceTabId%3D1361782977');

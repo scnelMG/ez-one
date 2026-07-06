@@ -55,7 +55,8 @@ function makeRouter() {
             { path: '/mypage', component: { template: '<div>mypage</div>' } },
             { path: '/mypage/notion', component: { template: '<div>notion</div>' } },
             { path: '/mypage/onboarding', component: { template: '<div>onboarding</div>' } },
-            { path: '/mypage/terms', component: { template: '<div>terms</div>' } }
+            { path: '/mypage/terms', component: { template: '<div>terms</div>' } },
+            { path: '/privacy', component: { template: '<div>privacy</div>' } }
         ]
     });
 }
@@ -142,7 +143,7 @@ describe('AppLayout', () => {
         expect(footer.text()).not.toContain('제휴' + ' 문의');
         expect(footerLinks).toEqual([
             '/mypage/terms',
-            '/mypage/terms#privacy',
+            '/privacy',
             'mailto:qkralsrb4407@naver.com',
             'mailto:eunjaelee058@gmail.com'
         ]);

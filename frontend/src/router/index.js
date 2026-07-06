@@ -14,6 +14,7 @@ import StudyListPage from '@/pages/StudyListPage.vue';
 import StudyDetailPage from '@/pages/StudyDetailPage.vue';
 import PastHistoryPage from '@/pages/PastHistoryPage.vue';
 import MattermostRecommendationsPage from '@/pages/MattermostRecommendationsPage.vue';
+import PrivacyPage from '@/pages/PrivacyPage.vue';
 
 export const router = createRouter({
     history: createWebHistory(),
@@ -33,6 +34,11 @@ export const router = createRouter({
             path: '/login/callback',
             name: 'login-callback',
             component: LoginCallbackPage
+        },
+        {
+            path: '/privacy',
+            name: 'privacy',
+            component: PrivacyPage
         },
         {
             path: '/extension/connect',
