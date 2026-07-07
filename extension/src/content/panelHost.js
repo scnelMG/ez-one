@@ -29,7 +29,8 @@
 
         const shadow = host.attachShadow({ mode: 'closed' });
         const style = document.createElement('style');
-        const frame = document.createElement('iframe');
+        const canEmbedPopup = canLoadPopupFrameOnCurrentPage();
+        const frame = canEmbedPopup ? document.createElement('iframe') : null;
         const closeButton = document.createElement('button');
         const resizeHandle = document.createElement('div');
         const heightResizeHandle = document.createElement('div');
@@ -133,6 +134,35 @@
                 background: #f7f8fb;
             }
 
+            .unsupported-content {
+                box-sizing: border-box;
+                display: grid;
+                align-content: center;
+                gap: 12px;
+                width: 100%;
+                height: 100%;
+                padding: 32px;
+                color: #334155;
+                font-family: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+                text-align: center;
+                word-break: keep-all;
+            }
+
+            .unsupported-content strong {
+                color: #0f172a;
+                font-size: 17px;
+                font-weight: 800;
+                line-height: 1.45;
+            }
+
+            .unsupported-content p {
+                margin: 0;
+                color: #64748b;
+                font-size: 14px;
+                font-weight: 500;
+                line-height: 1.7;
+            }
+
             button {
                 position: fixed;
                 top: 26px;
@@ -175,8 +205,10 @@
             }
         `;
 
-        frame.src = chrome.runtime.getURL('popup.html?embedded=1');
-        frame.title = 'EZ-ONE';
+        if (frame) {
+            frame.src = chrome.runtime.getURL('popup.html?embedded=1');
+            frame.title = 'EZ-ONE';
+        }
         closeButton.type = 'button';
         closeButton.setAttribute('aria-label', 'EZ-ONE close');
         closeButton.title = 'Close';
@@ -192,15 +224,17 @@
 
         const panel = document.createElement('div');
         panel.className = 'panel';
-        panel.append(resizeHandle, frame, heightResizeHandle);
+        panel.append(resizeHandle, frame ?? createUnsupportedPageContent(), heightResizeHandle);
         shadow.append(style, panel, closeButton);
         document.documentElement.append(host);
 
         applyStoredPanelDimensions(panel);
-        panelMessageHandler = (event) => {
-            handlePanelMessage(event, frame);
-        };
-        window.addEventListener('message', panelMessageHandler);
+        if (frame) {
+            panelMessageHandler = (event) => {
+                handlePanelMessage(event, frame);
+            };
+            window.addEventListener('message', panelMessageHandler);
+        }
         resizeHandle.addEventListener('pointerdown', (event) => {
             startResize(event, panel);
         });
@@ -214,6 +248,77 @@
             return;
         }
         // Popup contents scroll internally; resizing the outer panel on each content change makes it look like the window is dropping.
+    }
+
+    function createUnsupportedPageContent() {
+        const content = document.createElement('section');
+        const title = document.createElement('strong');
+        const message = document.createElement('p');
+        content.className = 'unsupported-content';
+        title.textContent = '지원하지 않는 페이지입니다';
+        message.textContent = '자소설닷컴 공고 또는 지원서 입력 페이지에서 다시 열어 주세요.';
+        content.append(title, message);
+        return content;
+    }
+
+    function canLoadPopupFrameOnCurrentPage() {
+        const currentUrl = window.location.href;
+        const manifest = globalThis.chrome?.runtime?.getManifest?.();
+        const webAccessibleResources = Array.isArray(manifest?.web_accessible_resources)
+            ? manifest.web_accessible_resources
+            : [];
+        return webAccessibleResources.some((entry) => {
+            const resources = Array.isArray(entry?.resources) ? entry.resources : [];
+            const matches = Array.isArray(entry?.matches) ? entry.matches : [];
+            return resources.includes('popup.html') && matches.some((pattern) => matchPatternMatchesUrl(pattern, currentUrl));
+        });
+    }
+
+    function matchPatternMatchesUrl(pattern, value) {
+        const patternMatch = String(pattern ?? '').match(/^(\*|http|https):\/\/([^/]+)(\/.*)$/);
+        if (!patternMatch) {
+            return false;
+        }
+
+        try {
+            const url = new URL(value);
+            const [, scheme, hostPattern, pathPattern] = patternMatch;
+            return schemeMatchesUrl(scheme, url)
+                && hostMatchesPattern(hostPattern, url.hostname)
+                && pathMatchesPattern(pathPattern, `${url.pathname}${url.search}${url.hash}`);
+        }
+        catch {
+            return false;
+        }
+    }
+
+    function schemeMatchesUrl(scheme, url) {
+        return scheme === '*' || url.protocol === `${scheme}:`;
+    }
+
+    function hostMatchesPattern(pattern, hostname) {
+        const normalizedHost = hostname.toLowerCase();
+        const normalizedPattern = String(pattern ?? '').toLowerCase();
+        if (normalizedPattern === '*') {
+            return true;
+        }
+        if (normalizedPattern.startsWith('*.')) {
+            const baseHost = normalizedPattern.slice(2);
+            return normalizedHost === baseHost || normalizedHost.endsWith(`.${baseHost}`);
+        }
+        return normalizedHost === normalizedPattern;
+    }
+
+    function pathMatchesPattern(pattern, path) {
+        const escapedPattern = String(pattern ?? '')
+            .split('*')
+            .map(escapeRegexLiteral)
+            .join('.*');
+        return new RegExp(`^${escapedPattern}$`).test(path);
+    }
+
+    function escapeRegexLiteral(value) {
+        return value.replace(/[\\^$+?.()|{}[\]]/g, '\\$&');
     }
 
     async function applyStoredPanelDimensions(panel) {

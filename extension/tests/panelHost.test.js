@@ -1,9 +1,17 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { JSDOM } from 'jsdom';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 describe('extension in-page panel host', () => {
     const script = readFileSync(resolve(__dirname, '../src/content/panelHost.js'), 'utf-8');
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+        document.body.innerHTML = '';
+        document.documentElement.innerHTML = '<head></head><body></body>';
+        delete globalThis.chrome;
+    });
 
     it('injects popup.html as a fixed right-aligned iframe inside the current page', () => {
         expect(script).toContain('(() => {');
@@ -80,5 +88,80 @@ describe('extension in-page panel host', () => {
     it('does not animate automatic height changes when popup content is clicked', () => {
         expect(script).not.toContain('transition: height 160ms ease;');
         expect(script).toContain('transition: none;');
+    });
+
+    it('EXT-012: shows unsupported-page guidance instead of a Chrome-blocked popup iframe', () => {
+        const shadowRoots = [];
+        const attachShadow = Element.prototype.attachShadow;
+        vi.spyOn(Element.prototype, 'attachShadow').mockImplementation(function attachInspectableShadow(init) {
+            const root = attachShadow.call(this, { ...init, mode: 'open' });
+            shadowRoots.push(root);
+            return root;
+        });
+        globalThis.chrome = {
+            runtime: {
+                getURL: vi.fn((path) => `chrome-extension://extension-id/${path}`)
+            },
+            storage: {
+                local: {
+                    get: vi.fn(async () => ({})),
+                    set: vi.fn(async () => {})
+                }
+            }
+        };
+
+        (0, eval)(script);
+
+        expect(shadowRoots).toHaveLength(1);
+        expect(shadowRoots[0].querySelector('iframe')).toBeNull();
+        expect(shadowRoots[0].textContent).toContain('지원하지 않는 페이지입니다');
+        expect(chrome.runtime.getURL).not.toHaveBeenCalledWith('popup.html?embedded=1');
+    });
+
+    it('keeps embedding the popup iframe when the manifest allows the current page', () => {
+        const dom = new JSDOM('<!doctype html><html><head></head><body></body></html>', {
+            url: 'http://localhost:3000/supported',
+            runScripts: 'outside-only'
+        });
+        const shadowRoots = [];
+        const attachShadow = dom.window.Element.prototype.attachShadow;
+        vi.spyOn(dom.window.Element.prototype, 'attachShadow').mockImplementation(function attachInspectableShadow(init) {
+            const root = attachShadow.call(this, { ...init, mode: 'open' });
+            shadowRoots.push(root);
+            return root;
+        });
+        Object.defineProperty(dom.window, 'chrome', {
+            configurable: true,
+            value: {
+                runtime: {
+                    getManifest: vi.fn(() => ({
+                        web_accessible_resources: [
+                            {
+                                resources: ['popup.html', 'assets/*.js', 'assets/*.css'],
+                                matches: ['http://localhost/*']
+                            }
+                        ]
+                    })),
+                    getURL: vi.fn((path) => `chrome-extension://extension-id/${path}`)
+                },
+                storage: {
+                    local: {
+                        get: vi.fn(async () => ({})),
+                        set: vi.fn(async () => {})
+                    }
+                }
+            }
+        });
+        Object.defineProperty(dom.window.globalThis, 'chrome', {
+            configurable: true,
+            value: dom.window.chrome
+        });
+
+        dom.window.eval(script);
+
+        expect(shadowRoots).toHaveLength(1);
+        expect(shadowRoots[0].querySelector('iframe')?.getAttribute('src')).toBe('chrome-extension://extension-id/popup.html?embedded=1');
+        expect(dom.window.chrome.runtime.getURL).toHaveBeenCalledWith('popup.html?embedded=1');
+        dom.window.close();
     });
 });
