@@ -1,8 +1,10 @@
+<p align="center">
+  <img src="./docs/assets/brand/ez-one-readme-logo.png" alt="EZ-ONE 실제 서비스 로고" width="520" />
+</p>
+
 # EZ-ONE
 
-<p align="center">
-  <img src="./docs/assets/brand/ez-one-readme-logo.png" alt="EZ-ONE" width="520" />
-</p>
+<p align="center">취업 준비 워크스페이스 · Spring Boot · Vue 3 · Chrome Extension · MySQL</p>
 
 <p align="center">
   <strong>채용 공고 저장부터 자기소개서 준비까지 한곳에서 관리하는 취업 준비 워크스페이스</strong>
@@ -31,11 +33,11 @@ EZ-ONE은 취업 준비자가 여러 채용 공고와 지원 준비 과정을 �
 | [docs/13_api-spec.md](./docs/13_api-spec.md) | REST API 명세와 요청/응답 구조 |
 | [docs/23_traceability.md](./docs/23_traceability.md) | 요구사항과 구현/검증 산출물 연결 |
 
-## 직무 연결점
+## 설계 의도
 
-- **은행 IT / 디지털**: 사용자 업무 흐름을 공고 단위 workspace로 구조화하고, 인증, 데이터 저장, 외부 서비스 연동을 포함한 웹 서비스를 구현했습니다.
-- **금융권 데이터·서비스 개발**: OpenDART와 금융위원회 기업기본정보를 활용해 기업 참고자료를 보강하는 흐름을 설계했습니다.
-- **공기업 전산직**: 요구사항, API 명세, ERD, 테스트 계획, 추적성 문서까지 남겨 협업과 운영 관점의 산출물을 정리했습니다.
+- **공고 단위 워크스페이스**: 채용 공고와 자기소개서, 참고자료, 반복 입력 정보를 한 맥락에서 관리합니다.
+- **입력 반복 최소화**: 문서 프로필과 Chrome Extension을 이용해 사용자가 반복 입력하는 지원 정보를 재사용합니다.
+- **근거 기반 준비**: 공고별 JD, 뉴스, DART, 인재상 정보를 연결해 자기소개서 작성의 참고 맥락을 남깁니다.
 
 ## 발표 자료
 
@@ -118,63 +120,25 @@ npm run build:local
 
 빌드 후 Chrome에서 `chrome://extensions`를 열고 개발자 모드를 켠 뒤 `extension/dist`를 로드합니다. 운영 배포용 zip은 `npm run package` 또는 릴리즈 artifact packaging 스크립트로 만듭니다.
 
-## 검증
+## 검증과 배포
 
-배포 전 전체 로컬 릴리즈 게이트:
+전체 릴리즈 검증은 다음 명령으로 실행합니다.
 
 ```powershell
 .\scripts\release-local-gate.ps1
 ```
 
-빠른 정적/계약 검사만 확인할 때:
+로컬 실행, 배포 절차, 운영 검증 기준은 별도 문서로 분리했습니다.
 
-```powershell
-.\scripts\release-local-gate.ps1 -SkipSlow
-```
+- [릴리즈 준비 QA](./docs/38_release-readiness-qa.md)
+- [첫 배포 가이드](./docs/42_first-deployment-ko.md)
+- [운영 배포 런북](./docs/39_production-deployment-runbook.md)
 
-릴리즈 준비 현황은 [docs/38_release-readiness-qa.md](./docs/38_release-readiness-qa.md)에 정리합니다.
+## 공개 범위와 제한
 
-## 배포
-
-처음 배포하는 경우 한국어 실행본인 [docs/42_first-deployment-ko.md](./docs/42_first-deployment-ko.md)를 먼저 따라갑니다. 영문 보조 가이드는 [docs/41_beginner-deployment-guide.md](./docs/41_beginner-deployment-guide.md), 실제 Go/No-go 기준과 증거 체크리스트는 [docs/39_production-deployment-runbook.md](./docs/39_production-deployment-runbook.md)를 기준으로 합니다.
-
-배포 순서:
-
-1. AWS EC2, Elastic IP, DNS, HTTPS 인증서를 준비합니다.
-2. 운영 env 파일을 만들고 production policy를 검증합니다.
-3. 전체 로컬 릴리즈 게이트를 통과시킵니다.
-4. MySQL 백업을 만들고 staging/restored DB에서 restore와 Flyway migration을 리허설합니다.
-5. backend/frontend/extension release artifact를 만듭니다.
-6. artifact와 backend env 파일을 EC2에 업로드합니다.
-7. EC2 deploy dry-run으로 checksum, 경로, systemd/Nginx 동작을 확인합니다.
-8. `DRY_RUN=false`로 실제 배포합니다.
-9. 실제 사용자 smoke test를 수행합니다.
-10. 30분 canary를 실행합니다.
-11. release evidence를 채우고 Go/No-go를 결정합니다.
-
-핵심 명령:
-
-```powershell
-.\scripts\check-prod-env.ps1 -EnvFile .\secrets\ez-one.prod.env
-.\scripts\check-client-prod-env.ps1 -FrontendEnvFile .\secrets\frontend.prod.env -ExtensionEnvFile .\secrets\extension.prod.env
-.\scripts\package-release-artifacts.ps1 -ReleaseId <release-id> -FrontendEnvFile .\secrets\frontend.prod.env -ExtensionEnvFile .\secrets\extension.prod.env
-.\scripts\run-release-canary.ps1 -BaseUrl https://ez-one.kr -AccessToken <canary-access-token> -WorkspaceId <workspace-id> -RequireWorkspace
-.\scripts\new-release-evidence.ps1 -ReleaseId <release-id> -Owner <owner-name> -LocalGateLog .\.codex-run-logs\release-local-gate-full-<timestamp>.log
-.\scripts\show-release-evidence-gaps.ps1 -EvidenceFile .\release-artifacts\<release-id>\release-evidence.json
-.\scripts\check-release-evidence.ps1 -EvidenceFile .\release-artifacts\<release-id>\release-evidence.json
-```
-
-`show-release-evidence-gaps.ps1` prints `Suggested evidence examples`,
-`First next command`, and `Suggested next commands` so the next missing release
-gate starts with one actionable command.
-
-## 범위와 제한
-
-- P1 핵심 루프는 `login -> onboarding -> main -> job save -> basket -> workspace -> essay/reference/document profile -> Notion JOB_ONLY sync`입니다.
-- P2/P3 기능은 문서나 IA에 남아 있어도 사용자에게 활성 P1 기능으로 홍보하지 않습니다.
 - 실제 `.env`, token, OAuth secret, API key, 개인 데이터는 저장소에 포함하지 않습니다.
-- 외부 연동 실패는 핵심 DB 저장 트랜잭션을 롤백하지 않도록 분리합니다.
-- 운영 배포 완료는 로컬 테스트만으로 선언하지 않습니다. EC2, DB rehearsal, 실제 smoke test, canary, release evidence가 모두 필요합니다.
+- 설계 문서에만 남은 기능은 현재 구현 기능으로 소개하지 않습니다.
+- 운영 배포 여부는 릴리즈 문서와 검증 결과를 기준으로 확인합니다.
 
 ## 주요 문서
 
