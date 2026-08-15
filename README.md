@@ -16,6 +16,11 @@
 [![Portfolio](https://img.shields.io/badge/Portfolio-Service%20Project-2ea44f)](./docs/37_final-submission-report.md)
 
 <p align="center">
+  <a href="https://ez-one.o-r.kr/">서비스 바로가기</a> ·
+  <a href="https://chromewebstore.google.com/detail/ez-one-job-saver/oamnhdoaefndncadifgaidefcjaomgdo?hl=ko">Chrome Web Store에서 확장 프로그램 설치</a>
+</p>
+
+<p align="center">
   <img src="./docs/assets/presentation/ez-one-dashboard-final-presentation.png" alt="최종 발표자료에 수록된 EZ-ONE 실제 대시보드 화면" width="960" />
 </p>
 
