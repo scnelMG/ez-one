@@ -391,8 +391,17 @@ if ($status) {
 
 $artifacts = @($backendArtifact, $frontendArtifact, $extensionArtifact, $manifestPath)
 $hashLines = foreach ($artifact in $artifacts) {
-  $hash = Get-FileHash -Algorithm SHA256 -LiteralPath $artifact
-  "$($hash.Hash)  $([System.IO.Path]::GetFileName($artifact))"
+  $stream = [System.IO.File]::OpenRead($artifact)
+  $sha256 = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    $hash = $sha256.ComputeHash($stream)
+  } finally {
+    $sha256.Dispose()
+    $stream.Dispose()
+  }
+
+  $hexHash = -join ($hash | ForEach-Object { $_.ToString("x2") })
+  "$hexHash  $([System.IO.Path]::GetFileName($artifact))"
 }
 $hashLines | Set-Content -Encoding ASCII -LiteralPath $hashPath
 

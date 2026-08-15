@@ -181,8 +181,17 @@ function New-TestArtifactDirectory {
   ) | Set-Content -Encoding ASCII -LiteralPath $manifestPath
 
   foreach ($artifact in @($backendArtifact, $frontendArtifact, $extensionArtifact, $manifestPath)) {
-    $hash = Get-FileHash -Algorithm SHA256 -LiteralPath $artifact
-    "$($hash.Hash)  $([System.IO.Path]::GetFileName($artifact))" | Add-Content -Encoding ASCII -LiteralPath $hashPath
+    $stream = [System.IO.File]::OpenRead($artifact)
+    $sha256 = [System.Security.Cryptography.SHA256]::Create()
+    try {
+      $hash = $sha256.ComputeHash($stream)
+    } finally {
+      $sha256.Dispose()
+      $stream.Dispose()
+    }
+
+    $hexHash = -join ($hash | ForEach-Object { $_.ToString("x2") })
+    "$hexHash  $([System.IO.Path]::GetFileName($artifact))" | Add-Content -Encoding ASCII -LiteralPath $hashPath
   }
 }
 

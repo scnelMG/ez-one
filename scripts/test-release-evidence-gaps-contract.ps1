@@ -318,6 +318,7 @@ try {
   }
 
   Write-Host "[PASS] release evidence gaps contract test passed."
+  exit 0
 } finally {
   Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
 }

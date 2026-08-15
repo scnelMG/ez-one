@@ -15,6 +15,23 @@
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-4285F4?logo=googlechrome&logoColor=white)](./extension)
 [![Portfolio](https://img.shields.io/badge/Portfolio-Service%20Project-2ea44f)](./docs/37_final-submission-report.md)
 
+<p align="center">
+  <img src="./docs/assets/presentation/ez-one-dashboard-final-presentation.png" alt="최종 발표자료에 수록된 EZ-ONE 실제 대시보드 화면" width="960" />
+</p>
+
+<p align="center"><sub>최종 발표자료에 수록된 실제 서비스 대시보드 화면</sub></p>
+
+## 프로젝트 한눈에 보기
+
+| 항목 | 내용 |
+| --- | --- |
+| 문제 | 채용 공고, 자기소개서 초안, 반복 입력 서류 정보가 여러 서비스에 흩어져 지원 준비 맥락이 끊기는 문제 |
+| 해결 | 공고를 중심으로 공고 저장 → 장바구니 → 워크스페이스 → 자기소개서·참고자료·서류 정보 → Notion 동기화를 연결 |
+| 팀 | 이은재 · 박민규 (2명) |
+| 핵심 구현 | Spring Boot API, Vue SPA, Chrome Extension, MySQL/Flyway, Google OAuth, Notion `JOB_ONLY` 동기화 |
+| 검증 | 최신 로컬 릴리즈 게이트 기준 Backend 231개, Frontend 244개, Extension 320개 테스트 통과. 운영 배포는 별도 외부 증거가 필요한 No-go 상태 |
+| 발표 자료 | [최종 발표 PDF](./docs/presentations/ez-one-final-presentation.pdf) · [PPTX](./docs/presentations/ez-one-final-presentation.pptx) |
+
 ## 프로젝트 소개
 
 EZ-ONE은 취업 준비자가 여러 채용 공고와 지원 준비 과정을 공고 단위로 관리할 수 있도록 만든 서비스입니다.
@@ -39,6 +56,21 @@ EZ-ONE은 취업 준비자가 여러 채용 공고와 지원 준비 과정을 �
 - **입력 반복 최소화**: 문서 프로필과 Chrome Extension을 이용해 사용자가 반복 입력하는 지원 정보를 재사용합니다.
 - **근거 기반 준비**: 공고별 JD, 뉴스, DART, 인재상 정보를 연결해 자기소개서 작성의 참고 맥락을 남깁니다.
 
+## 핵심 흐름
+
+```text
+Google 로그인 → 온보딩 → 공고 저장 → 장바구니 → 지원 워크스페이스
+→ 자기소개서·참고자료·서류 정보 → Notion JOB_ONLY 동기화
+```
+
+<p align="center">
+  <img src="./docs/assets/presentation/ez-one-extension-flow-final-presentation.png" alt="최종 발표자료에 수록된 Chrome Extension 공고 저장과 장바구니 연동 화면" width="960" />
+</p>
+
+<p align="center"><sub>최종 발표자료에 수록된 실제 Chrome Extension 공고 저장·장바구니 연동 흐름</sub></p>
+
+현재 배포 준비 기준은 위 P1 흐름입니다. 문서에 남아 있는 P2/IA 기능은 명시적으로 승인되기 전까지 운영 기능으로 홍보하거나 활성화하지 않습니다.
+
 ## 발표 자료
 
 | 자료 | 설명 |
@@ -46,14 +78,14 @@ EZ-ONE은 취업 준비자가 여러 채용 공고와 지원 준비 과정을 �
 | [최종 발표 PDF](./docs/presentations/ez-one-final-presentation.pdf) | GitHub에서 바로 열어볼 수 있는 발표 자료 |
 | [최종 발표 PPTX](./docs/presentations/ez-one-final-presentation.pptx) | 편집 가능한 원본 발표 파일 |
 
-## 핵심 사용자 흐름
+## 팀과 담당 역할
 
-```text
-Google login -> onboarding -> main -> job save -> basket -> workspace
--> essay/reference/document profile -> Notion JOB_ONLY sync
-```
+최종 발표자료의 역할 분담을 기준으로 정리했습니다.
 
-현재 배포 준비 기준은 위 P1 흐름입니다. 문서에 남아 있는 P2/IA 기능은 명시적으로 승인되기 전까지 운영 기능으로 홍보하거나 활성화하지 않습니다.
+| 구성원 | 담당 기능 |
+| --- | --- |
+| 이은재 | 기획 문서 작성, 공고 장바구니·지원 상태 관리, 워크스페이스·자소서 버전 관리, 참고자료·서류 정보 관리, 대시보드·취업 스터디 구현 |
+| 박민규 | 설계 문서 작성, 로그인·온보딩, Mattermost 추천 공고, 서류 자동 입력·Chrome Extension, Notion·마이페이지, 과거 지원 내역 구현 |
 
 ## 주요 기능
 
@@ -128,17 +160,37 @@ npm run build:local
 .\scripts\release-local-gate.ps1
 ```
 
+실제 배포 전에는 릴리즈 증적 파일의 공백을 먼저 확인합니다.
+
+```powershell
+.\scripts\show-release-evidence-gaps.ps1 -EvidenceFile .\release-artifacts\<release-id>\release-evidence.json
+```
+
+이 보고서는 `Suggested next commands`와 `First next command`를 출력해, 누락된 증적을 채운 뒤에만 최종 Go/No-go 판단으로 넘어가도록 안내합니다.
+
 로컬 실행, 배포 절차, 운영 검증 기준은 별도 문서로 분리했습니다.
 
 - [릴리즈 준비 QA](./docs/38_release-readiness-qa.md)
 - [첫 배포 가이드](./docs/42_first-deployment-ko.md)
 - [운영 배포 런북](./docs/39_production-deployment-runbook.md)
 
+### 검증 근거
+
+2026-06-30 최신 로컬 릴리즈 게이트에서 다음을 확인했습니다. 이는 로컬 코드·패키징 검증 결과이며, 실제 운영 배포 완료를 뜻하지 않습니다.
+
+| 영역 | 확인 결과 |
+| --- | --- |
+| Backend | 231 tests · 실패 0 · 오류 0 · skip 2 · 패키징 통과 |
+| Frontend | 39 files · 244 tests · production build 통과 |
+| Chrome Extension | 16 files · 320 tests · production/local build 통과 |
+| 운영 배포 | EC2, 운영 환경 변수, DB 복구 리허설, 실제 연동 smoke, canary 증거가 없어 No-go 유지 |
+
 ## 공개 범위와 제한
 
 - 실제 `.env`, token, OAuth secret, API key, 개인 데이터는 저장소에 포함하지 않습니다.
 - 설계 문서에만 남은 기능은 현재 구현 기능으로 소개하지 않습니다.
 - 운영 배포 여부는 릴리즈 문서와 검증 결과를 기준으로 확인합니다.
+- README의 화면은 실제 최종 발표자료에서 추출한 이미지이며, 임의로 생성한 이미지를 사용하지 않습니다.
 
 ## 주요 문서
 

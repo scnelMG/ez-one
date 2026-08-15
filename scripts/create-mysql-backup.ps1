@@ -93,8 +93,17 @@ try {
   [Environment]::SetEnvironmentVariable("MYSQL_PWD", $previousMysqlPwd, "Process")
 }
 
-$hash = Get-FileHash -Algorithm SHA256 -LiteralPath $backupPath
-"$($hash.Hash)  $([System.IO.Path]::GetFileName($backupPath))" | Set-Content -Encoding ASCII -LiteralPath $hashPath
+$stream = [System.IO.File]::OpenRead($backupPath)
+$sha256 = [System.Security.Cryptography.SHA256]::Create()
+try {
+  $hash = $sha256.ComputeHash($stream)
+} finally {
+  $sha256.Dispose()
+  $stream.Dispose()
+}
+
+$hexHash = -join ($hash | ForEach-Object { $_.ToString("x2") })
+"$hexHash  $([System.IO.Path]::GetFileName($backupPath))" | Set-Content -Encoding ASCII -LiteralPath $hashPath
 
 Write-Host "[PASS] Backup created: $backupPath"
 Write-Host "[PASS] SHA256 written: $hashPath"

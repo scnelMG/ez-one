@@ -53,8 +53,17 @@ function Write-ChecksumLine {
     [string]$OutputFile
   )
 
-  $hash = Get-FileHash -Algorithm SHA256 -LiteralPath $File
-  "$($hash.Hash)  $([System.IO.Path]::GetFileName($File))" | Add-Content -Encoding ASCII -LiteralPath $OutputFile
+  $stream = [System.IO.File]::OpenRead($File)
+  $sha256 = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    $hash = $sha256.ComputeHash($stream)
+  } finally {
+    $sha256.Dispose()
+    $stream.Dispose()
+  }
+
+  $hexHash = -join ($hash | ForEach-Object { $_.ToString("x2") })
+  "$hexHash  $([System.IO.Path]::GetFileName($File))" | Add-Content -Encoding ASCII -LiteralPath $OutputFile
 }
 
 function Invoke-Deploy {

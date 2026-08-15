@@ -52,9 +52,13 @@ $frontendDist = Join-Path $repoRoot "frontend\dist"
 $frontendDistBackup = Join-Path $tempRoot "frontend-dist-original"
 $frontendTestBundle = Join-Path $frontendDist "assets\package-contract-clean.js"
 $backendTarget = Join-Path $repoRoot "backend\target"
+$backendTargetBackup = Join-Path $tempRoot "backend-target-original"
+$backendJarSource = Join-Path $tempRoot "backend-jar-source"
+$backendTestJar = Join-Path $backendTarget "ez-one-backend-package-contract.jar"
 $invalidBackendJar = Join-Path $backendTarget "zz-package-contract-invalid.jar"
 $hadExtensionDist = Test-Path -LiteralPath $extensionDist
 $hadFrontendDist = Test-Path -LiteralPath $frontendDist
+$hadBackendTarget = Test-Path -LiteralPath $backendTarget
 
 New-Item -ItemType Directory -Force -Path $tempRoot | Out-Null
 
@@ -65,11 +69,18 @@ try {
   if ($hadFrontendDist) {
     Move-Item -LiteralPath $frontendDist -Destination $frontendDistBackup
   }
+  if ($hadBackendTarget) {
+    Move-Item -LiteralPath $backendTarget -Destination $backendTargetBackup
+  }
 
   New-Item -ItemType Directory -Force -Path $extensionDist | Out-Null
   New-Item -ItemType Directory -Force -Path (Join-Path $extensionDist "assets") | Out-Null
   New-Item -ItemType Directory -Force -Path (Join-Path $frontendDist "assets") | Out-Null
+  New-Item -ItemType Directory -Force -Path (Join-Path $backendJarSource "BOOT-INF\classes") | Out-Null
+  New-Item -ItemType Directory -Force -Path $backendTarget | Out-Null
   Set-Content -Encoding ASCII -LiteralPath (Join-Path $frontendDist "index.html") -Value '<div id="app"></div>'
+  Set-Content -Encoding ASCII -LiteralPath (Join-Path $backendJarSource "BOOT-INF\classes\application.properties") -Value "spring.application.name=ez-one"
+  Compress-Archive -Path (Join-Path $backendJarSource "*") -DestinationPath $backendTestJar -Force
 
   @(
     "VITE_API_BASE_URL=https://app.example.com/api",
@@ -165,7 +176,6 @@ try {
   }
   Set-Content -Encoding ASCII -LiteralPath (Join-Path $frontendDist "index.html") -Value '<div id="app"></div>'
 
-  New-Item -ItemType Directory -Force -Path $backendTarget | Out-Null
   Set-Content -Encoding ASCII -LiteralPath $invalidBackendJar -Value "not a jar"
   try {
     & $scriptPath `
@@ -239,11 +249,15 @@ try {
   Remove-Item -LiteralPath $invalidBackendJar -Force -ErrorAction SilentlyContinue
   Remove-Item -LiteralPath $extensionDist -Recurse -Force -ErrorAction SilentlyContinue
   Remove-Item -LiteralPath $frontendDist -Recurse -Force -ErrorAction SilentlyContinue
+  Remove-Item -LiteralPath $backendTarget -Recurse -Force -ErrorAction SilentlyContinue
   if ($hadExtensionDist -and (Test-Path -LiteralPath $extensionDistBackup)) {
     Move-Item -LiteralPath $extensionDistBackup -Destination $extensionDist
   }
   if ($hadFrontendDist -and (Test-Path -LiteralPath $frontendDistBackup)) {
     Move-Item -LiteralPath $frontendDistBackup -Destination $frontendDist
+  }
+  if ($hadBackendTarget -and (Test-Path -LiteralPath $backendTargetBackup)) {
+    Move-Item -LiteralPath $backendTargetBackup -Destination $backendTarget
   }
   Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
 }

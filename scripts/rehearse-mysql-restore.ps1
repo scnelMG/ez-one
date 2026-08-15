@@ -132,7 +132,16 @@ $expectedHash = ((Get-Content -LiteralPath $checksumPath | Select-Object -First 
 if ($expectedHash -notmatch "^[A-Fa-f0-9]{64}$") {
   throw "Checksum file must start with a SHA256 hash: $checksumPath"
 }
-$actualHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $backupPath).Hash
+$stream = [System.IO.File]::OpenRead($backupPath)
+$sha256 = [System.Security.Cryptography.SHA256]::Create()
+try {
+  $hash = $sha256.ComputeHash($stream)
+} finally {
+  $sha256.Dispose()
+  $stream.Dispose()
+}
+
+$actualHash = -join ($hash | ForEach-Object { $_.ToString("x2") })
 if ($actualHash.ToUpperInvariant() -ne $expectedHash.ToUpperInvariant()) {
   throw "Backup checksum mismatch. Expected $expectedHash but got $actualHash."
 }
