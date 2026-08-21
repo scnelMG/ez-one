@@ -212,3 +212,7 @@ npm run build:local
 | 첫 배포 한국어 실행 가이드 | [docs/42_first-deployment-ko.md](./docs/42_first-deployment-ko.md) |
 | 배포 초보자 가이드 | [docs/41_beginner-deployment-guide.md](./docs/41_beginner-deployment-guide.md) |
 | 운영 배포 런북 | [docs/39_production-deployment-runbook.md](./docs/39_production-deployment-runbook.md) |
+
+## 이용 안내
+
+이 저장소는 포트폴리오·학습 기록 열람을 위해 공개합니다. 코드·문서·이미지의 재사용, 수정, 배포는 사전 문의가 필요합니다.
