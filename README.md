@@ -45,16 +45,6 @@ EZ-ONE은 취업 준비자가 여러 채용 공고와 지원 준비 과정을 �
 
 이 저장소는 최종 제출 기능, 아키텍처, 요구사항 추적, 테스트 근거, 발표 자료를 함께 확인할 수 있도록 정리한 포트폴리오 버전입니다.
 
-## 포트폴리오 리뷰 경로
-
-| 먼저 볼 것 | 확인할 내용 |
-| --- | --- |
-| [docs/presentations/ez-one-final-presentation.pdf](./docs/presentations/ez-one-final-presentation.pdf) | 프로젝트 문제 정의, 서비스 흐름, 최종 발표 요약 |
-| [docs/37_final-submission-report.md](./docs/37_final-submission-report.md) | 최종 제출 범위, 구현 결과, 검증 요약 |
-| [docs/16_system-architecture.md](./docs/16_system-architecture.md) | 백엔드, 프론트엔드, 확장 프로그램, 외부 API 연동 구조 |
-| [docs/13_api-spec.md](./docs/13_api-spec.md) | REST API 명세와 요청/응답 구조 |
-| [docs/23_traceability.md](./docs/23_traceability.md) | 요구사항과 구현/검증 산출물 연결 |
-
 ## 설계 의도
 
 - **공고 단위 워크스페이스**: 채용 공고와 자기소개서, 참고자료, 반복 입력 정보를 한 맥락에서 관리합니다.
@@ -212,3 +202,7 @@ npm run build:local
 | 첫 배포 한국어 실행 가이드 | [docs/42_first-deployment-ko.md](./docs/42_first-deployment-ko.md) |
 | 배포 초보자 가이드 | [docs/41_beginner-deployment-guide.md](./docs/41_beginner-deployment-guide.md) |
 | 운영 배포 런북 | [docs/39_production-deployment-runbook.md](./docs/39_production-deployment-runbook.md) |
+
+## 이용 안내
+
+이 저장소는 포트폴리오 열람을 위해 공개합니다. 코드·문서·이미지의 재사용, 수정, 배포는 사전 문의가 필요합니다.
