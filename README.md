@@ -32,9 +32,12 @@
 | --- | --- |
 | 문제 | 채용 공고, 자기소개서 초안, 반복 입력 서류 정보가 여러 서비스에 흩어져 지원 준비 맥락이 끊기는 문제 |
 | 해결 | 공고를 중심으로 공고 저장 → 장바구니 → 워크스페이스 → 자기소개서·참고자료·서류 정보 → Notion 동기화를 연결 |
+| 기간·대회 | 2026.01–06 · SSAFY 1학기 AI 관통 프로젝트 |
+| 성과 | SSAFY 1학기 관통 프로젝트 최우수상 · 대전 5반 1등 |
 | 팀 | 이은재 · 박민규 (2명) |
 | 핵심 구현 | Spring Boot API, Vue SPA, Chrome Extension, MySQL/Flyway, Google OAuth, Notion `JOB_ONLY` 동기화 |
-| 검증 | 최신 로컬 릴리즈 게이트 기준 Backend 231개, Frontend 244개, Extension 320개 테스트 통과. 운영 배포는 별도 외부 증거가 필요한 No-go 상태 |
+| 검증 | 최신 로컬 릴리즈 게이트 기준 Backend 231개, Frontend 244개, Extension 320개 테스트 통과 |
+| 배포 | [외부 서비스](https://ez-one.o-r.kr/) · 프로젝트 이후 EC2/Nginx/systemd 기반 배포 |
 | 발표 자료 | [최종 발표 PDF](./docs/presentations/ez-one-final-presentation.pdf) · [PPTX](./docs/presentations/ez-one-final-presentation.pptx) |
 
 ## 프로젝트 소개
