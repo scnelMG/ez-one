@@ -27,6 +27,7 @@ const makeRouter = () => createRouter({
         { path: '/study', component: { template: '<div>study</div>' } },
         { path: '/history', component: { template: '<div>history</div>' } },
         { path: '/mypage', component: { template: '<div>mypage</div>' } },
+        { path: '/privacy', component: { template: '<div>privacy</div>' } },
         { path: '/mypage/terms', component: { template: '<div>terms</div>' } },
         { path: '/mypage/partnership', component: { template: '<div>partnership</div>' } },
     ]

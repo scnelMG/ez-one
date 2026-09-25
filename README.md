@@ -131,7 +131,7 @@ Google 로그인 → 온보딩 → 공고 저장 → 장바구니 → 지원 워
 
 1. [Backend 환경 변수 예시](./backend/.env.example), [Frontend 환경 변수 예시](./frontend/.env.example), [Extension 환경 변수 예시](./extension/.env.example)를 각 폴더의 `.env`로 복사합니다. 기존 `.env`가 있으면 덮어쓰지 않습니다.
 2. Backend에는 DB 접속 정보, Google OAuth client ID/secret, 서로 다른 JWT access/refresh secret을 입력합니다. Frontend의 Google client ID와 redirect URI도 OAuth 설정과 일치시킵니다.
-3. DB와 계정·권한을 준비하고 [DB 마이그레이션 정책](./docs/34_database-migration-policy.md)에 따라 스키마를 준비합니다. 예시 파일은 `FLYWAY_ENABLED=false`이므로 복사만으로 테이블이 생성되지 않습니다.
+3. 빈 MySQL DB와 계정·권한을 준비합니다. 예시 파일의 `FLYWAY_ENABLED=true`로 첫 기동 시 Flyway가 스키마를 생성합니다. `schema-mysql.sql`을 먼저 수동 실행하지 않습니다. 기존 DB는 [DB 마이그레이션 정책](./docs/34_database-migration-policy.md)을 확인합니다.
 4. Notion 연동을 시험할 때는 Notion OAuth 설정과 Base64로 인코딩한 32바이트 `NOTION_TOKEN_ENCRYPTION_KEY`가 추가로 필요합니다. 실제 `.env`와 키는 커밋하지 않습니다.
 
 환경 변수와 포트 기준은 [로컬 개발 문서](./docs/17_tech-stack-and-local-development.md)에서 확인할 수 있습니다.
@@ -166,6 +166,8 @@ npm run build:local
 빌드 후 Chrome에서 `chrome://extensions`를 열고 개발자 모드를 켠 뒤 `extension/dist`를 로드합니다. 운영 배포용 zip은 `npm run package` 또는 릴리즈 artifact packaging 스크립트로 만듭니다.
 
 ## 검증과 배포
+
+[Tests CI](https://github.com/scnelMG/ez-one/actions/workflows/tests.yml)는 매 push·PR에서 Backend·Frontend·Extension 테스트를 실행합니다. Backend는 비어 있는 MySQL 8.4에서 Flyway 마이그레이션 후 이메일 회원가입·로그인·인증 사용자 조회까지 검사합니다. Google OAuth·Notion 실제 계정 연동과 운영 배포 검증은 별도입니다. 아래 6월 결과는 당시 이력이며, 현재 커밋 결과는 CI 로그와 Backend 테스트 artifact를 기준으로 확인합니다.
 
 전체 릴리즈 검증은 다음 명령으로 실행합니다.
 

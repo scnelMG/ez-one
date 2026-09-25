@@ -48,6 +48,8 @@ Notion OAuth access tokens are stored only as AES-GCM ciphertext. `NOTION_TOKEN_
 
 ## 로컬 실행
 
+먼저 각 앱의 `.env.example`을 `.env`로 복사하고 DB·OAuth·JWT 값을 설정합니다. Backend 예시는 `FLYWAY_ENABLED=true`를 사용합니다. 새 빈 DB는 첫 기동 시 버전별 마이그레이션으로 초기화하므로 `schema-mysql.sql`을 미리 실행하지 않습니다. 기존 DB에는 [DB 마이그레이션 정책](./34_database-migration-policy.md)을 적용합니다.
+
 ### Backend
 
 ```powershell
@@ -74,6 +76,10 @@ npm run build:local
 Chrome에서 `chrome://extensions`를 열고 개발자 모드를 켠 뒤 `extension/dist`를 로드합니다. 운영 배포용 extension zip은 `npm run build` 또는 `scripts/package-release-artifacts.ps1` 경로로 만듭니다.
 
 ## 검증 명령
+
+현재 커밋 검증은 [Tests CI](https://github.com/scnelMG/ez-one/actions/workflows/tests.yml)에서 확인합니다. Backend 전체 테스트와 빈 MySQL 8.4 첫 실행, Frontend·Extension 테스트를 실행합니다. 외부 Google/Notion 계정이나 운영 비밀값은 사용하지 않습니다.
+
+`FreshMysqlStartupTest`는 전용 빈 DB의 `EZONE_MYSQL_TEST_URL`, `EZONE_MYSQL_TEST_USER`, `EZONE_MYSQL_TEST_PASSWORD`를 설정한 경우에만 실행합니다. 이 테스트는 테이블을 생성하고 테스트 계정을 기록하므로 개발·운영 DB를 지정하지 않습니다. 일반 로컬 실행에서 환경 변수가 없으면 해당 테스트만 건너뜁니다.
 
 전체 로컬 릴리즈 게이트:
 

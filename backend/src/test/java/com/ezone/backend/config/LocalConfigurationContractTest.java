@@ -11,6 +11,12 @@ import org.junit.jupiter.api.Test;
 class LocalConfigurationContractTest {
 
     @Test
+    void exampleEnvironmentEnablesFirstRunMigrations() throws IOException {
+        String example = Files.readString(Path.of(".env.example"), StandardCharsets.UTF_8);
+        assertThat(example.lines()).contains("FLYWAY_ENABLED=true");
+    }
+
+    @Test
     void applicationImportsBackendDotEnvForLocalRuns() throws IOException {
         String applicationYaml = Files.readString(Path.of("src/main/resources/application.yml"), StandardCharsets.UTF_8);
 
