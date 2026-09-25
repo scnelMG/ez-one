@@ -70,6 +70,11 @@
 
 ## 검증 규칙
 
+- `TC-DB-FRESH-001` (`AUTH-002/003/006`, `COMMON-005`): `FreshMysqlStartupTest`가 전용 빈 MySQL에서 V1부터 마이그레이션한 후 이메일 회원가입·로그인·`GET /api/me`와 잘못된 비밀번호의 401을 검사한다. 실제 Google OAuth는 기존 mock 계약 검사와 별도의 실제 계정 smoke 범위로 구분한다.
+- `LocalConfigurationContractTest.exampleEnvironmentEnablesFirstRunMigrations`는 `.env.example`의 Flyway 활성 기본값을 검사한다.
+- `.github/workflows/tests.yml`에서 Backend 전체 검사(빈 MySQL 포함), Frontend와 Extension 검사를 매 push·PR에 실행한다. 수동 외부 연동 검사는 기존 opt-in 조건을 유지한다.
+- Frontend API fallback 테스트는 테스트 내에서 주소를 지정하고 원복하며, 개인 `.env` 없이 실행 가능해야 한다. 문서 프로필 페이지의 테스트 라우터는 실제 `/privacy` 링크를 포함한다.
+
 - 모든 P1 요구사항은 화면, API, DB, 테스트 연결을 가진다.
 - P2 기능은 P1 필수 테스트처럼 보이지 않도록 분리한다.
 - 권한, token refresh/revoke, 중복, 외부 연동 실패, 마감 경과 상태는 대표 실패 케이스로 테스트한다.

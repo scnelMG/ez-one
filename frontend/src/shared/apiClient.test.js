@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AxiosError } from 'axios';
 import { clearAuthSession, getAccessToken, getRefreshToken, saveAuthSession } from '@/features/auth/session/authSession';
 import { defaultHttpClient, resolveApiBaseUrl, resolveApiBaseUrlCandidates, setLoginRedirectHandler } from './apiClient';
@@ -9,6 +9,7 @@ describe('apiClient', () => {
         setLoginRedirectHandler(() => {});
     });
     afterEach(() => {
+        vi.unstubAllEnvs();
         defaultHttpClient.defaults.adapter = originalAdapter;
         setLoginRedirectHandler(undefined);
         clearAuthSession();
@@ -34,6 +35,10 @@ describe('apiClient', () => {
     });
 
     it('retries the next configured API base URL when the current backend is unreachable', async () => {
+        vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8081/api');
+        vi.stubEnv('VITE_API_FALLBACK_BASE_URLS', 'http://localhost:8080/api');
+        vi.resetModules();
+        const { defaultHttpClient } = await import('./apiClient');
         const seenBaseUrls = [];
         defaultHttpClient.defaults.baseURL = 'http://localhost:8081';
         defaultHttpClient.defaults.adapter = async (config) => {
@@ -54,9 +59,7 @@ describe('apiClient', () => {
         const response = await defaultHttpClient.get('/api/me');
 
         expect(response.data.data.email).toBe('user@example.com');
-        expect(seenBaseUrls.length).toBeGreaterThanOrEqual(2);
-        expect(seenBaseUrls[0]).toBe('http://localhost:8081');
-        expect(seenBaseUrls[1]).not.toBe('http://localhost:8081');
+        expect(seenBaseUrls).toEqual(['http://localhost:8081', 'http://localhost:8080']);
     });
     it('AUTH-003/AUTH-004: does not attach a stale access token to public auth requests', async () => {
         localStorage.setItem('ezone.accessToken', 'stale-access-token');
