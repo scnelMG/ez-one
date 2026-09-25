@@ -36,7 +36,7 @@
 | 성과 | SSAFY 1학기 관통 프로젝트 최우수상 · 대전 5반 1등 |
 | 팀 | 이은재 · 박민규 (2명) |
 | 핵심 구현 | Spring Boot API, Vue SPA, Chrome Extension, MySQL/Flyway, Google OAuth, Notion `JOB_ONLY` 동기화 |
-| 검증 | 최신 로컬 릴리즈 게이트 기준 Backend 231개, Frontend 244개, Extension 320개 테스트 통과 |
+| 검증 이력 | 2026-06-30 로컬 게이트 기록: Backend 231 tests(실패 0·오류 0·skip 2), Frontend 244 tests, Extension 320 tests. 현재 커밋 재실행 결과는 아님 |
 | 배포 | [외부 서비스](https://ez-one.o-r.kr/) · 프로젝트 이후 EC2/Nginx/systemd 기반 배포 |
 | 발표 자료 | [최종 발표 PDF](./docs/presentations/ez-one-final-presentation.pdf) · [PPTX](./docs/presentations/ez-one-final-presentation.pptx) |
 
@@ -125,6 +125,19 @@ Google 로그인 → 온보딩 → 공고 저장 → 장바구니 → 지원 워
 
 ## 로컬 실행
 
+### 실행 전 준비
+
+아래 명령은 **Windows PowerShell** 기준입니다. JDK 17, Node.js/npm, 실행 중인 MySQL이 필요합니다.
+
+1. [Backend 환경 변수 예시](./backend/.env.example), [Frontend 환경 변수 예시](./frontend/.env.example), [Extension 환경 변수 예시](./extension/.env.example)를 각 폴더의 `.env`로 복사합니다. 기존 `.env`가 있으면 덮어쓰지 않습니다.
+2. Backend에는 DB 접속 정보, Google OAuth client ID/secret, 서로 다른 JWT access/refresh secret을 입력합니다. Frontend의 Google client ID와 redirect URI도 OAuth 설정과 일치시킵니다.
+3. DB와 계정·권한을 준비하고 [DB 마이그레이션 정책](./docs/34_database-migration-policy.md)에 따라 스키마를 준비합니다. 예시 파일은 `FLYWAY_ENABLED=false`이므로 복사만으로 테이블이 생성되지 않습니다.
+4. Notion 연동을 시험할 때는 Notion OAuth 설정과 Base64로 인코딩한 32바이트 `NOTION_TOKEN_ENCRYPTION_KEY`가 추가로 필요합니다. 실제 `.env`와 키는 커밋하지 않습니다.
+
+환경 변수와 포트 기준은 [로컬 개발 문서](./docs/17_tech-stack-and-local-development.md)에서 확인할 수 있습니다.
+
+각 명령은 저장소 루트에서 시작하는 별도 터미널 기준입니다.
+
 ### Backend
 
 ```powershell
@@ -136,15 +149,17 @@ cd backend
 
 ```powershell
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
+
+`npm run dev`는 [로컬 개발 스크립트](./tools/start-local-dev.ps1)를 실행해 MySQL·환경 변수를 확인하고, Backend가 꺼져 있으면 함께 시작합니다. Backend를 별도 실행했다면 기존 서버를 사용합니다. Frontend만 실행하려면 `npm run dev:vite`를 사용합니다.
 
 ### Chrome Extension
 
 ```powershell
 cd extension
-npm install
+npm ci
 npm run build:local
 ```
 
@@ -172,16 +187,16 @@ npm run build:local
 - [첫 배포 가이드](./docs/42_first-deployment-ko.md)
 - [운영 배포 런북](./docs/39_production-deployment-runbook.md)
 
-### 검증 근거
+### 검증 근거 — 2026-06-30 기록
 
-2026-06-30 최신 로컬 릴리즈 게이트에서 다음을 확인했습니다. 이는 로컬 코드·패키징 검증 결과이며, 실제 운영 배포 완료를 뜻하지 않습니다.
+아래는 [릴리즈 준비 QA](./docs/38_release-readiness-qa.md)에 남은 2026-06-30의 로컬 코드·패키징 검증 기록입니다. 현재 커밋의 재검증 결과나 현재 서비스 가용성을 뜻하지 않습니다.
 
 | 영역 | 확인 결과 |
 | --- | --- |
 | Backend | 231 tests · 실패 0 · 오류 0 · skip 2 · 패키징 통과 |
 | Frontend | 39 files · 244 tests · production build 통과 |
 | Chrome Extension | 16 files · 320 tests · production/local build 통과 |
-| 운영 배포 | EC2, 운영 환경 변수, DB 복구 리허설, 실제 연동 smoke, canary 증거가 없어 No-go 유지 |
+| 당시 운영 배포 판정 | 2026-06-30 기록상 EC2, 운영 환경 변수, DB 복구 리허설, 실제 연동 smoke, canary 증거가 없어 No-go |
 
 ## 공개 범위와 제한
 
