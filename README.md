@@ -16,9 +16,11 @@
 [![Portfolio](https://img.shields.io/badge/Portfolio-Service%20Project-2ea44f)](./docs/37_final-submission-report.md)
 
 <p align="center">
-  <a href="https://ez-one.o-r.kr/">서비스 바로가기</a> ·
+  <a href="./docs/presentations/ez-one-final-presentation.pdf">최종 발표 자료 보기</a> ·
   <a href="https://chromewebstore.google.com/detail/ez-one-job-saver/oamnhdoaefndncadifgaidefcjaomgdo?hl=ko">Chrome Web Store에서 확장 프로그램 설치</a>
 </p>
+
+> **서비스 접속 상태 (2026-10-11 확인):** 운영 주소 `ez-one.o-r.kr`의 TLS 인증서 만료로 정상 HTTPS 접속을 확인하지 못했습니다. 인증서 복구 전에는 아래 실제 화면과 발표 PDF로 프로젝트를 확인해 주세요. [인증서 복구·검증 절차](./docs/tls-renewal.md)
 
 <p align="center">
   <img src="./docs/assets/presentation/ez-one-dashboard-final-presentation.png" alt="최종 발표자료에 수록된 EZ-ONE 실제 대시보드 화면" width="960" />
@@ -37,7 +39,7 @@
 | 팀 | 이은재 · 박민규 (2명) |
 | 핵심 구현 | Spring Boot API, Vue SPA, Chrome Extension, MySQL/Flyway, Google OAuth, Notion `JOB_ONLY` 동기화 |
 | 검증 이력 | 2026-06-30 로컬 게이트 기록: Backend 231 tests(실패 0·오류 0·skip 2), Frontend 244 tests, Extension 320 tests. 현재 커밋 재실행 결과는 아님 |
-| 배포 | [외부 서비스](https://ez-one.o-r.kr/) · 프로젝트 이후 EC2/Nginx/systemd 기반 배포 |
+| 배포 | EC2/Nginx/systemd 배포 이력 · 현재 TLS 인증서 갱신 필요 (2026-10-11 확인) |
 | 발표 자료 | [최종 발표 PDF](./docs/presentations/ez-one-final-presentation.pdf) · [PPTX](./docs/presentations/ez-one-final-presentation.pptx) |
 
 ## 프로젝트 소개
