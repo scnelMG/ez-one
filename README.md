@@ -34,7 +34,7 @@
   <a href="https://chromewebstore.google.com/detail/ez-one-job-saver/oamnhdoaefndncadifgaidefcjaomgdo?hl=ko">Chrome Web Store에서 확장 프로그램 설치</a>
 </p>
 
-> **서비스 접속 상태 (2026-10-11 확인):** 운영 주소 `ez-one.o-r.kr`의 TLS 인증서 만료로 정상 HTTPS 접속을 확인하지 못했습니다. 인증서 복구 전에는 아래 실제 화면과 발표 PDF로 프로젝트를 확인해 주세요. [인증서 복구·검증 절차](./docs/tls-renewal.md)
+> **서비스 접속 상태 (2026-10-11 확인):** 운영 주소 `ez-one.o-r.kr`의 TLS 인증서 만료로 정상 HTTPS 접속을 확인하지 못했다. 인증서 복구 전에는 아래 실제 화면과 발표 PDF로 프로젝트를 확인한다. [인증서 복구·검증 절차](./docs/tls-renewal.md)
 
 <p align="center">
   <img src="./docs/assets/presentation/ez-one-dashboard-final-presentation.png" alt="최종 발표자료에 수록된 EZ-ONE 실제 대시보드 화면" width="960" />
@@ -59,17 +59,17 @@
 
 ## 프로젝트 소개
 
-EZ-ONE은 취업 준비자가 여러 채용 공고와 지원 준비 과정을 공고 단위로 관리할 수 있도록 만든 서비스입니다.
+EZ-ONE은 취업 준비자가 여러 채용 공고와 지원 준비 과정을 공고 단위로 관리할 수 있도록 만든 서비스다.
 
-사용자는 관심 공고를 저장하고, 공고별 워크스페이스에서 자기소개서 문항, 초안, 참고자료, 기업 정보, 반복 입력하는 서류 정보를 함께 관리할 수 있습니다. Chrome Extension은 지원 사이트에서 공고를 빠르게 저장하고, 저장된 문서 프로필을 지원 페이지 입력 보조에 사용할 수 있게 합니다.
+사용자는 관심 공고를 저장하고, 공고별 워크스페이스에서 자기소개서 문항, 초안, 참고자료, 기업 정보, 반복 입력하는 서류 정보를 함께 관리할 수 있다. Chrome Extension은 지원 사이트에서 공고를 빠르게 저장하고, 저장된 문서 프로필을 지원 페이지 입력 보조에 사용할 수 있게 한다.
 
-이 저장소는 최종 제출 기능, 아키텍처, 요구사항 추적, 테스트 근거, 발표 자료를 함께 확인할 수 있도록 정리한 포트폴리오 버전입니다.
+이 저장소는 최종 제출 기능, 아키텍처, 요구사항 추적, 테스트 근거, 발표 자료를 함께 확인할 수 있도록 정리한 포트폴리오 버전이다.
 
 ## 설계 의도
 
-- **공고 단위 워크스페이스**: 채용 공고와 자기소개서, 참고자료, 반복 입력 정보를 한 맥락에서 관리합니다.
-- **입력 반복 최소화**: 문서 프로필과 Chrome Extension을 이용해 사용자가 반복 입력하는 지원 정보를 재사용합니다.
-- **근거 기반 준비**: 공고별 JD, 뉴스, DART, 인재상 정보를 연결해 자기소개서 작성의 참고 맥락을 남깁니다.
+- **공고 단위 워크스페이스**: 채용 공고와 자기소개서, 참고자료, 반복 입력 정보를 한 맥락에서 관리한다.
+- **입력 반복 최소화**: 문서 프로필과 Chrome Extension을 이용해 사용자가 반복 입력하는 지원 정보를 재사용한다.
+- **근거 기반 준비**: 공고별 JD, 뉴스, DART, 인재상 정보를 연결해 자기소개서 작성의 참고 맥락을 남긴다.
 
 ## 핵심 흐름
 
@@ -84,7 +84,7 @@ Google 로그인 → 온보딩 → 공고 저장 → 장바구니 → 지원 워
 
 <p align="center"><sub>최종 발표자료에 수록된 실제 Chrome Extension 공고 저장·장바구니 연동 흐름</sub></p>
 
-현재 배포 준비 기준은 위 P1 흐름입니다. 문서에 남아 있는 P2/IA 기능은 명시적으로 승인되기 전까지 운영 기능으로 홍보하거나 활성화하지 않습니다.
+현재 배포 준비 기준은 위 P1 흐름이다. 문서에 남아 있는 P2/IA 기능은 명시적으로 승인되기 전까지 운영 기능으로 홍보하거나 활성화하지 않는다.
 
 ## 발표 자료
 
@@ -95,7 +95,7 @@ Google 로그인 → 온보딩 → 공고 저장 → 장바구니 → 지원 워
 
 ## 팀과 담당 역할
 
-최종 발표자료의 역할 분담을 기준으로 정리했습니다.
+최종 발표자료의 역할 분담을 기준으로 정리했다.
 
 | 구성원 | 담당 기능 |
 | --- | --- |
@@ -144,16 +144,16 @@ Google 로그인 → 온보딩 → 공고 저장 → 장바구니 → 지원 워
 
 ### 실행 전 준비
 
-아래 명령은 **Windows PowerShell** 기준입니다. JDK 17, Node.js/npm, 실행 중인 MySQL이 필요합니다.
+아래 명령은 **Windows PowerShell** 기준이다. JDK 17, Node.js/npm, 실행 중인 MySQL이 필요하다.
 
-1. [Backend 환경 변수 예시](./backend/.env.example), [Frontend 환경 변수 예시](./frontend/.env.example), [Extension 환경 변수 예시](./extension/.env.example)를 각 폴더의 `.env`로 복사합니다. 기존 `.env`가 있으면 덮어쓰지 않습니다.
-2. Backend에는 DB 접속 정보, Google OAuth client ID/secret, 서로 다른 JWT access/refresh secret을 입력합니다. Frontend의 Google client ID와 redirect URI도 OAuth 설정과 일치시킵니다.
-3. 빈 MySQL DB와 계정·권한을 준비합니다. 예시 파일의 `FLYWAY_ENABLED=true`로 첫 기동 시 Flyway가 스키마를 생성합니다. `schema-mysql.sql`을 먼저 수동 실행하지 않습니다. 기존 DB는 [DB 마이그레이션 정책](./docs/34_database-migration-policy.md)을 확인합니다.
-4. Notion 연동을 시험할 때는 Notion OAuth 설정과 Base64로 인코딩한 32바이트 `NOTION_TOKEN_ENCRYPTION_KEY`가 추가로 필요합니다. 실제 `.env`와 키는 커밋하지 않습니다.
+1. [Backend 환경 변수 예시](./backend/.env.example), [Frontend 환경 변수 예시](./frontend/.env.example), [Extension 환경 변수 예시](./extension/.env.example)를 각 폴더의 `.env`로 복사한다. 기존 `.env`가 있으면 덮어쓰지 않는다.
+2. Backend에는 DB 접속 정보, Google OAuth client ID/secret, 서로 다른 JWT access/refresh secret을 입력한다. Frontend의 Google client ID와 redirect URI도 OAuth 설정과 일치시킨다.
+3. 빈 MySQL DB와 계정·권한을 준비한다. 예시 파일의 `FLYWAY_ENABLED=true`로 첫 기동 시 Flyway가 스키마를 생성한다. `schema-mysql.sql`을 먼저 수동 실행하지 않는다. 기존 DB는 [DB 마이그레이션 정책](./docs/34_database-migration-policy.md)을 확인한다.
+4. Notion 연동을 시험할 때는 Notion OAuth 설정과 Base64로 인코딩한 32바이트 `NOTION_TOKEN_ENCRYPTION_KEY`가 추가로 필요하다. 실제 `.env`와 키는 커밋하지 않는다.
 
-환경 변수와 포트 기준은 [로컬 개발 문서](./docs/17_tech-stack-and-local-development.md)에서 확인할 수 있습니다.
+환경 변수와 포트 기준은 [로컬 개발 문서](./docs/17_tech-stack-and-local-development.md)에서 확인할 수 있다.
 
-각 명령은 저장소 루트에서 시작하는 별도 터미널 기준입니다.
+각 명령은 저장소 루트에서 시작하는 별도 터미널 기준이다.
 
 ### Backend
 
@@ -170,7 +170,7 @@ npm ci
 npm run dev
 ```
 
-`npm run dev`는 [로컬 개발 스크립트](./tools/start-local-dev.ps1)를 실행해 MySQL·환경 변수를 확인하고, Backend가 꺼져 있으면 함께 시작합니다. Backend를 별도 실행했다면 기존 서버를 사용합니다. Frontend만 실행하려면 `npm run dev:vite`를 사용합니다.
+`npm run dev`는 [로컬 개발 스크립트](./tools/start-local-dev.ps1)를 실행해 MySQL·환경 변수를 확인하고, Backend가 꺼져 있으면 함께 시작한다. Backend를 별도 실행했다면 기존 서버를 사용한다. Frontend만 실행하려면 `npm run dev:vite`를 사용한다.
 
 ### Chrome Extension
 
@@ -180,27 +180,27 @@ npm ci
 npm run build:local
 ```
 
-빌드 후 Chrome에서 `chrome://extensions`를 열고 개발자 모드를 켠 뒤 `extension/dist`를 로드합니다. 운영 배포용 zip은 `npm run package` 또는 릴리즈 artifact packaging 스크립트로 만듭니다.
+빌드 후 Chrome에서 `chrome://extensions`를 열고 개발자 모드를 켠 뒤 `extension/dist`를 로드한다. 운영 배포용 zip은 `npm run package` 또는 릴리즈 artifact packaging 스크립트로 만든다.
 
 ## 검증과 배포
 
-[Tests CI](https://github.com/scnelMG/ez-one/actions/workflows/tests.yml)는 매 push·PR에서 Backend·Frontend·Extension 테스트를 실행합니다. Backend는 비어 있는 MySQL 8.4에서 Flyway 마이그레이션 후 이메일 회원가입·로그인·인증 사용자 조회까지 검사합니다. Google OAuth·Notion 실제 계정 연동과 운영 배포 검증은 별도입니다. 아래 6월 결과는 당시 이력이며, 현재 커밋 결과는 CI 로그와 Backend 테스트 artifact를 기준으로 확인합니다.
+[Tests CI](https://github.com/scnelMG/ez-one/actions/workflows/tests.yml)는 매 push·PR에서 Backend·Frontend·Extension 테스트를 실행한다. Backend는 비어 있는 MySQL 8.4에서 Flyway 마이그레이션 후 이메일 회원가입·로그인·인증 사용자 조회까지 검사한다. Google OAuth·Notion 실제 계정 연동과 운영 배포 검증은 별도다. 아래 6월 결과는 당시 이력이며, 현재 커밋 결과는 CI 로그와 Backend 테스트 artifact를 기준으로 확인한다.
 
-전체 릴리즈 검증은 다음 명령으로 실행합니다.
+전체 릴리즈 검증은 다음 명령으로 실행한다.
 
 ```powershell
 .\scripts\release-local-gate.ps1
 ```
 
-실제 배포 전에는 릴리즈 증적 파일의 공백을 먼저 확인합니다.
+실제 배포 전에는 릴리즈 증적 파일의 공백을 먼저 확인한다.
 
 ```powershell
 .\scripts\show-release-evidence-gaps.ps1 -EvidenceFile .\release-artifacts\<release-id>\release-evidence.json
 ```
 
-이 보고서는 `Suggested next commands`와 `First next command`를 출력해, 누락된 증적을 채운 뒤에만 최종 Go/No-go 판단으로 넘어가도록 안내합니다.
+이 보고서는 `Suggested next commands`와 `First next command`를 출력해, 누락된 증적을 채운 뒤에만 최종 Go/No-go 판단으로 넘어가도록 안내한다.
 
-로컬 실행, 배포 절차, 운영 검증 기준은 별도 문서로 분리했습니다.
+로컬 실행, 배포 절차, 운영 검증 기준은 별도 문서로 분리했다.
 
 - [릴리즈 준비 QA](./docs/38_release-readiness-qa.md)
 - [첫 배포 가이드](./docs/42_first-deployment-ko.md)
@@ -208,7 +208,7 @@ npm run build:local
 
 ### 검증 근거 — 2026-06-30 기록
 
-아래는 [릴리즈 준비 QA](./docs/38_release-readiness-qa.md)에 남은 2026-06-30의 로컬 코드·패키징 검증 기록입니다. 현재 커밋의 재검증 결과나 현재 서비스 가용성을 뜻하지 않습니다.
+아래는 [릴리즈 준비 QA](./docs/38_release-readiness-qa.md)에 남은 2026-06-30의 로컬 코드·패키징 검증 기록이다. 현재 커밋의 재검증 결과나 현재 서비스 가용성을 뜻하지 않는다.
 
 | 영역 | 확인 결과 |
 | --- | --- |
@@ -219,10 +219,10 @@ npm run build:local
 
 ## 공개 범위와 제한
 
-- 실제 `.env`, token, OAuth secret, API key, 개인 데이터는 저장소에 포함하지 않습니다.
-- 설계 문서에만 남은 기능은 현재 구현 기능으로 소개하지 않습니다.
-- 운영 배포 여부는 릴리즈 문서와 검증 결과를 기준으로 확인합니다.
-- README의 화면은 실제 최종 발표자료에서 추출한 이미지이며, 임의로 생성한 이미지를 사용하지 않습니다.
+- 실제 `.env`, token, OAuth secret, API key, 개인 데이터는 저장소에 포함하지 않는다.
+- 설계 문서에만 남은 기능은 현재 구현 기능으로 소개하지 않는다.
+- 운영 배포 여부는 릴리즈 문서와 검증 결과를 기준으로 확인한다.
+- README의 화면은 실제 최종 발표자료에서 추출한 이미지이며, 임의로 생성한 이미지를 사용하지 않는다.
 
 ## 주요 문서
 
@@ -242,4 +242,4 @@ npm run build:local
 
 ## 이용 안내
 
-이 저장소는 포트폴리오·학습 기록 열람을 위해 공개합니다. 코드·문서·이미지의 재사용, 수정, 배포는 사전 문의가 필요합니다.
+이 저장소는 포트폴리오·학습 기록 열람을 위해 공개한다. 코드·문서·이미지의 재사용, 수정, 배포는 사전 문의가 필요하다.
