@@ -15,6 +15,20 @@
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-4285F4?logo=googlechrome&logoColor=white)](./extension)
 [![Portfolio](https://img.shields.io/badge/Portfolio-Service%20Project-2ea44f)](./docs/37_final-submission-report.md)
 
+## 개인 기여
+
+**박민규 · 로그인·온보딩, Chrome Extension, Notion 연동 구현**
+
+공고를 보던 브라우저에서 웹 로그인과 확장 프로그램을 거쳐 지원 준비를 이어가는 흐름을 맡았다. 팀 전체 기능과 세부 분담은 [팀과 담당 역할](#팀과-담당-역할)에 정리했다.
+
+| 담당 | 직접 구현한 내용 | 코드·검증 근거 |
+| --- | --- | --- |
+| 로그인·확장 프로그램 연결 | 웹 로그인에 원래 공고와 탭 정보를 전달하고, 세션 저장 뒤 공고 탭으로 복귀하도록 연결했다 | [확장 프로그램 인증](extension/src/shared/auth/extensionAuth.js) |
+| 인증 상태·오류 처리 | 같은 세션의 동시 갱신 요청을 공유하고, 인증 실패와 일시적 네트워크·서버 오류를 구분했다 | [인증 회귀 테스트](extension/tests/extensionAuth.test.js) |
+| Notion 연동 | 공고 중심 `JOB_ONLY` 동기화를 서비스 흐름에 연결했다 | [연동 서비스](backend/src/main/java/com/ezone/backend/service/NotionIntegrationService.java) |
+
+**설계 사례 — 연결 오류를 로그아웃으로 처리하지 않았다.** 인증 갱신이 401·403으로 거절되면 해당 세션을 정리하지만, 네트워크·일시적 서버 오류에는 저장된 세션을 보존한다. 과거 요청의 실패가 더 최근 로그인 세션을 지우지 않도록 현재 refresh token도 대조한다. 해당 경계 조건은 위 인증 테스트에서 확인할 수 있다.
+
 <p align="center">
   <a href="./docs/presentations/ez-one-final-presentation.pdf">최종 발표 자료 보기</a> ·
   <a href="https://chromewebstore.google.com/detail/ez-one-job-saver/oamnhdoaefndncadifgaidefcjaomgdo?hl=ko">Chrome Web Store에서 확장 프로그램 설치</a>
@@ -37,6 +51,7 @@
 | 기간·대회 | 2026.01–06 · SSAFY 1학기 AI 관통 프로젝트 |
 | 성과 | SSAFY 1학기 관통 프로젝트 최우수상 · 대전 5반 1등 |
 | 팀 | 이은재 · 박민규 (2명) |
+| 박민규 담당 | 로그인·온보딩 · Chrome Extension · Notion 연동 ([개인 기여](#개인-기여)) |
 | 핵심 구현 | Spring Boot API, Vue SPA, Chrome Extension, MySQL/Flyway, Google OAuth, Notion `JOB_ONLY` 동기화 |
 | 검증 이력 | 2026-06-30 로컬 게이트 기록: Backend 231 tests(실패 0·오류 0·skip 2), Frontend 244 tests, Extension 320 tests. 현재 커밋 재실행 결과는 아님 |
 | 배포 | EC2/Nginx/systemd 배포 이력 · 현재 TLS 인증서 갱신 필요 (2026-10-11 확인) |
