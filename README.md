@@ -46,14 +46,14 @@
 
 | 항목 | 내용 |
 | --- | --- |
-| 문제 | 채용 공고, 자기소개서 초안, 반복 입력 서류 정보가 여러 서비스에 흩어져 지원 준비 맥락이 끊기는 문제 |
+| 문제 | 채용 공고, 자기소개서 초안, 반복 입력 서류 정보가 여러 서비스에 흩어져 지원 준비 맥락이 끊기는 문제. 사전 설문 76명 중 66명(86.8%)이 공고 정보를 옮겨 적는 일이 번거롭다고 응답 |
 | 해결 | 공고를 중심으로 공고 저장 → 장바구니 → 워크스페이스 → 자기소개서·참고자료·서류 정보 → Notion 동기화를 연결 |
-| 기간·대회 | 2026.01–06 · SSAFY 1학기 AI 관통 프로젝트 |
-| 성과 | SSAFY 1학기 관통 프로젝트 최우수상 · 대전 5반 1등 |
+| 기간·대회 | 2026.01–06 · SSAFY 1학기 프로젝트 |
+| 성과 | SSAFY 1학기 프로젝트 경진대회 최우수상 |
 | 팀 | 이은재 · 박민규 (2명) |
 | 박민규 담당 | 로그인·온보딩 · Chrome Extension · Notion 연동 ([개인 기여](#개인-기여)) |
 | 핵심 구현 | Spring Boot API, Vue SPA, Chrome Extension, MySQL/Flyway, Google OAuth, Notion `JOB_ONLY` 동기화 |
-| 검증 이력 | 2026-06-30 로컬 게이트 기록: Backend 231 tests(실패 0·오류 0·skip 2), Frontend 244 tests, Extension 320 tests. 현재 커밋 재실행 결과는 아님 |
+| 검증 이력 | 2026-06-30 로컬 게이트 기록: Backend 231 tests(실패 0·오류 0·skip 2), Frontend 244 tests, Extension 320 tests. 현재 커밋 재실행 결과는 아님. 2026-11-19 `extensionAuth.test.js` 17개 재실행 통과 |
 | 배포 | EC2/Nginx/systemd 배포 이력 · 현재 TLS 인증서 갱신 필요 (2026-10-11 확인) |
 | 발표 자료 | [최종 발표 PDF](./docs/presentations/ez-one-final-presentation.pdf) · [PPTX](./docs/presentations/ez-one-final-presentation.pptx) |
 
